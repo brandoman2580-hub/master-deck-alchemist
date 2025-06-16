@@ -2,9 +2,9 @@
 
 import type React from "react";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useDeck } from "@/context/deck-context";
-import { getMasterDuelBanlist, searchCards } from "@/lib/api";
+import { searchCards } from "@/lib/api";
 import {
   DndContext,
   type DragEndEvent,
@@ -37,7 +37,6 @@ import { Virtuoso } from "react-virtuoso";
 import {
   AlertCircle,
   Download,
-  Save,
   Trash2,
   Upload,
   Lightbulb,
@@ -55,6 +54,7 @@ import {
   Sparkles,
   Sword,
   Layers,
+  Edit,
 } from "lucide-react";
 import {
   Dialog,
@@ -101,15 +101,17 @@ export default function DeckBuilder() {
     currentDeck,
     removeCardFromDeck,
     clearDeck,
-    saveDeck,
+    // saveDeck,
     exportDeck,
     importDeck,
+    renameDeck,
     getDeckStats,
     getSynergyTips,
     addCardToDeck,
   } = useDeck();
 
-  const [deckName, setDeckName] = useState("");
+  const [isRenameOpen, setIsRenameOpen] = useState(false);
+  const [deckName, setDeckName] = useState(currentDeck.name || "");
   const [importText, setImportText] = useState("");
   const [activeTab, setActiveTab] = useState("main");
   const [searchQuery, setSearchQuery] = useState("");
@@ -121,8 +123,6 @@ export default function DeckBuilder() {
   const [deckTier, setDeckTier] = useState<number | null>(null);
   const [deckPlayStyle, setDeckPlayStyle] = useState<string[]>([]);
   const [banlist, setBanlist] = useState<Record<string, BanStatus>>({});
-  const [showSavedIcon, setShowSavedIcon] = useState(false);
-  const saveTimeout = useRef<NodeJS.Timeout | null>(null);
   const [searchParams, setSearchParams] = useState({
     name: "",
     type: "",
@@ -186,6 +186,12 @@ export default function DeckBuilder() {
   }, []);
 
   useEffect(() => {
+    if (isRenameOpen) {
+      setDeckName(currentDeck.name || "");
+    }
+  }, [isRenameOpen, currentDeck.name]);
+
+  useEffect(() => {
     // Filter cards based on search query
     if (searchQuery.trim() === "") {
       setFilteredCards(cardList);
@@ -202,24 +208,17 @@ export default function DeckBuilder() {
   }, [searchQuery, cardList]);
 
   useEffect(() => {
-    getMasterDuelBanlist().then(setBanlist);
-  }, []);
-
-  // Auto-save deck name with debounce and show icon
-  useEffect(() => {
-    if (deckName.trim() === "") return;
-    if (saveTimeout.current) clearTimeout(saveTimeout.current);
-
-    saveTimeout.current = setTimeout(() => {
-      saveDeck(deckName);
-      setShowSavedIcon(true);
-      setTimeout(() => setShowSavedIcon(false), 1200); // Show icon for 1.2s
-    }, 500); // Debounce delay
-    // Cleanup on unmount
-    return () => {
-      if (saveTimeout.current) clearTimeout(saveTimeout.current);
-    };
-  }, [deckName, saveDeck]);
+  fetch("/data/master-duel-banlist.json")
+    .then((res) => {
+      if (!res.ok) throw new Error("Failed to load banlist");
+      return res.json();
+    })
+    .then(setBanlist)
+    .catch((err) => {
+      console.error("Error loading banlist:", err);
+      setBanlist({}); // fallback to empty banlist if needed
+    });
+}, []);
 
   const analyzeDeck = useCallback(() => {
     const stats = getDeckStats();
@@ -394,19 +393,18 @@ export default function DeckBuilder() {
   };
 
   const handleDragStart = (event: DragStartEvent) => {
-    const { active } = event;
-    const cardId = active.id as number;
+  const { active } = event;
+  // Try to find by deckInstanceId first (deck), then by id (browser)
+  const draggedCard =
+    currentDeck.mainDeck.find((card) => card.deckInstanceId === active.id) ||
+    currentDeck.extraDeck.find((card) => card.deckInstanceId === active.id) ||
+    filteredCards.find((card) => card.id === active.id);
 
-    // Find the card being dragged
-    const draggedCard =
-      filteredCards.find((card) => card.id === cardId) ||
-      currentDeck.mainDeck.find((card) => card.id === cardId) ||
-      currentDeck.extraDeck.find((card) => card.id === cardId);
+  if (draggedCard) {
+    setActiveDragCard(draggedCard);
+  }
+};
 
-    if (draggedCard) {
-      setActiveDragCard(draggedCard);
-    }
-  };
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
@@ -537,20 +535,55 @@ export default function DeckBuilder() {
                 <CardHeader className="pb-2">
                   <div className="flex items-center justify-between w-full">
                     <div className="flex items-center gap-2">
-                      <InputWithClear
-                        className="text-2xl font-bold w-auto px-2 py-1"
-                        value={deckName}
-                        onChange={(e) => setDeckName(e.target.value)}
-                        onClear={() => setDeckName("")}
-                        placeholder="Enter deck name..."
-                        maxLength={40}
-                        spellCheck={false}
-                      />
-                      {showSavedIcon && (
-                        <span className="text-green-600 flex items-center">
-                          <Save className="h-5 w-5 ml-1 animate-fade-in-out" />
-                        </span>
-                      )}
+                      <span className="text-xl font-bold">
+                        {currentDeck.name || "New Deck"}
+                      </span>
+                      <Dialog
+                        open={isRenameOpen}
+                        onOpenChange={setIsRenameOpen}
+                      >
+                        <DialogTrigger asChild>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            aria-label="Rename deck"
+                          >
+                            <Edit className="h-5 w-5" />
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Rename Deck</DialogTitle>
+                            <DialogDescription>
+                              Enter a new name for your deck.
+                            </DialogDescription>
+                          </DialogHeader>
+                          <InputWithClear
+                            value={deckName}
+                            onChange={(e) => setDeckName(e.target.value)}
+                            placeholder="Deck name"
+                            maxLength={40}
+                            autoFocus
+                          />
+                          <DialogFooter>
+                            <Button
+                              onClick={() => {
+                                // Only save if changed and not empty
+                                if (
+                                  deckName.trim() &&
+                                  deckName.trim() !== currentDeck.name
+                                ) {
+                                  // Use your context's renameDeck (see below)
+                                  renameDeck(deckName.trim());
+                                }
+                                setIsRenameOpen(false);
+                              }}
+                            >
+                              Save
+                            </Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
                     </div>
 
                     <TooltipProvider>
@@ -695,12 +728,13 @@ export default function DeckBuilder() {
                                 </span>
                               </div>
                             ) : (
-                              currentDeck.mainDeck.map((card, index) => (
+                              currentDeck.mainDeck.map((card) => (
                                 <DraggableCard
-                                  key={`${card.id}-${index}`}
+                                  id={card.deckInstanceId}
+                                  key={card.deckInstanceId} 
                                   card={card}
                                   onRemove={() =>
-                                    removeCardFromDeck(card.id, "mainDeck")
+                                    removeCardFromDeck(card.deckInstanceId, "mainDeck")
                                   }
                                 />
                               ))
@@ -748,12 +782,13 @@ export default function DeckBuilder() {
                                 </span>
                               </div>
                             ) : (
-                              currentDeck.extraDeck.map((card, index) => (
+                              currentDeck.extraDeck.map((card) => (
                                 <DraggableCard
-                                  key={`${card.id}-${index}`}
+                                  id={card.deckInstanceId}
+                                  key={card.deckInstanceId} 
                                   card={card}
                                   onRemove={() =>
-                                    removeCardFromDeck(card.id, "extraDeck")
+                                    removeCardFromDeck(card.deckInstanceId, "extraDeck")
                                   }
                                 />
                               ))
@@ -804,12 +839,13 @@ export default function DeckBuilder() {
                                 </span>
                               </div>
                             ) : (
-                              currentDeck.sideDeck.map((card, index) => (
+                              currentDeck.sideDeck.map((card) => (
                                 <DraggableCard
-                                  key={`${card.id}-${index}`}
+                                  id={card.deckInstanceId}
+                                  key={card.deckInstanceId} 
                                   card={card}
                                   onRemove={() =>
-                                    removeCardFromDeck(card.id, "sideDeck")
+                                    removeCardFromDeck(card.deckInstanceId, "sideDeck")
                                   }
                                 />
                               ))

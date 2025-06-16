@@ -1,15 +1,21 @@
 import { Card } from "./card"
 
+export interface DeckCard extends Card {
+  deckInstanceId: string;
+}
+
 export type NormalizedDeck = {
-    mainDeck: string[];
-    extraDeck: string[];
-    sideDeck: string[];
+    mainDeck: string[]
+    extraDeck: string[]
+    sideDeck: string[]
 };
 
 export type DeckType = {
-    mainDeck: Card[]
-    extraDeck: Card[]
-    sideDeck: Card[]
+    id: string
+    name: string
+    mainDeck: DeckCard[]
+    extraDeck: DeckCard[]
+    sideDeck: DeckCard[]
 }
 
 type DeckListByCategory = {
@@ -52,4 +58,4 @@ export type DeckFormat4 = { // { main, extra, side }
 
 export type ImportedDeck = DeckFormat1 | DeckFormat2 | DeckFormat3 | DeckFormat4
 
-export type BanStatus = "Forbidden" | "Limited" | "Semi-Limited" | "Unlimited" | undefined;
+export type BanStatus = "Forbidden" | "Limited" | "Semi-Limited" | "Unlimited" | undefined
