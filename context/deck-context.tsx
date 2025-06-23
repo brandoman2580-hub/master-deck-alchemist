@@ -72,26 +72,26 @@ export function DeckProvider({ children }: { children: ReactNode }) {
   }, [savedDecks]);
 
   useEffect(() => {
-  fetch("/data/master-duel-banlist.json")
-    .then((res) => res.json())
-    .then(setBanlist)
-    .catch(() => setBanlist({}));
-}, []);
+    fetch("/data/master-duel-banlist.json")
+      .then((res) => res.json())
+      .then(setBanlist)
+      .catch(() => setBanlist({}));
+  }, []);
 
   const addCardToDeck = (card: Card, deckType: DeckSection) => {
-  const banStatus = banlist[card.name] || "Unlimited";
-  let maxCopies = 3;
-  if (banStatus === "Limited") maxCopies = 1;
-  if (banStatus === "Semi-Limited") maxCopies = 2;
-  if (banStatus === "Forbidden") maxCopies = 0;
-
   setCurrentDeck((prev) => {
-    const currentSection = Array.isArray(prev[deckType]) ? prev[deckType] : [];
+    const currentSection = Array.isArray(prev[deckType])
+      ? prev[deckType]
+      : [];
+    const banStatus = banlist[card.name] || "Unlimited";
+    let maxCopies = 3;
+    if (banStatus === "Limited") maxCopies = 1;
+    if (banStatus === "Semi-Limited") maxCopies = 2;
+    if (banStatus === "Forbidden") maxCopies = 0;
+
     const count = currentSection.filter((c) => c.id === card.id).length;
-    if (count >= maxCopies) {
-      return prev;
-    }
-    // Add a unique deckInstanceId to distinguish each physical copy
+    if (count >= maxCopies) return prev;
+    // Always add a new deckInstanceId for each deck card
     const cardWithInstanceId = { ...card, deckInstanceId: uuidv4() };
     return {
       ...prev,
@@ -100,18 +100,19 @@ export function DeckProvider({ children }: { children: ReactNode }) {
   });
 };
 
-  const removeCardFromDeck = (cardId: string, deckType: DeckSection) => {
-    setCurrentDeck((prev) => {
-      const newDeck = [...prev[deckType]];
-      const index = newDeck.findIndex((card) => Number(card.id) === Number(cardId));
-      if (index === -1) return prev;
-      newDeck.splice(index, 1);
-      return {
-        ...prev,
-        [deckType]: newDeck,
-      };
-    });
-  };
+
+  const removeCardFromDeck = (deckInstanceId: string, deckType: DeckSection) => {
+  setCurrentDeck((prev) => {
+    const newDeck = prev[deckType].filter(
+      (card) => card.deckInstanceId !== deckInstanceId
+    );
+    return {
+      ...prev,
+      [deckType]: newDeck,
+    };
+  });
+};
+
 
   const clearDeck = () => {
     setCurrentDeck({

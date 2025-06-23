@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { Button } from "@/components/ui/button";
@@ -22,8 +22,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Card } from "@/types/card";
 import Image from "next/image";
+import { v4 as uuidv4 } from "uuid";
 
 interface CardItemProps {
+  isBeingDragged: boolean;
   card: Card;
   onAddToMainDeck: () => void;
   onAddToExtraDeck: () => void;
@@ -35,6 +37,7 @@ interface CardItemProps {
 }
 
 export default function CardItem({
+  isBeingDragged,
   card,
   onAddToMainDeck,
   onAddToExtraDeck,
@@ -47,11 +50,13 @@ export default function CardItem({
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const disabled = addToMainDisabled || addToExtraDisabled || addToSideDisabled;
 
-  const { attributes, listeners, setNodeRef, transform } = useDraggable({
-    id: card.id,
-    disabled,
-  });
+  const dragInstanceId = useMemo(() => uuidv4(), []);
 
+  const { attributes, listeners, setNodeRef, transform } = useDraggable({
+    id: dragInstanceId, // Unique per render
+    data: { cardId: card.id }, // Store the actual card id for lookup
+    disabled: disabled,
+  });
   const style = transform
     ? {
         transform: CSS.Transform.toString(transform),
@@ -69,15 +74,17 @@ export default function CardItem({
             {...attributes}
             className="w-12 h-18 flex-shrink-0 cursor-grab active:cursor-grabbing"
           >
-            <Image
-              width={80}
-              height={120}
-              src={card.card_images[0].image_url_small || "/placeholder.svg"}
-              alt={card.name}
-              className={`w-full h-auto object-contain rounded ${
-                disabled ? "opacity-60" : ""
-              }`}
-            />
+            {!isBeingDragged && (
+              <Image
+                width={80}
+                height={120}
+                src={card.card_images[0].image_url_small || "/placeholder.svg"}
+                alt={card.name}
+                className={`w-full h-auto object-contain rounded ${
+                  disabled ? "opacity-60" : ""
+                }`}
+              />
+            )}
           </div>
 
           <div className="flex-1 min-w-0">

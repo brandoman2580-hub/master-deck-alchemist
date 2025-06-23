@@ -13,9 +13,9 @@ import {
   useSensors,
   PointerSensor,
   DragOverlay,
+  UniqueIdentifier,
 } from "@dnd-kit/core";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Card as CardUI,
   CardContent,
@@ -32,7 +32,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
 import { Virtuoso } from "react-virtuoso";
 import {
   AlertCircle,
@@ -40,12 +39,9 @@ import {
   Trash2,
   Upload,
   Lightbulb,
-  Search,
   MessageSquare,
-  Filter,
   Trophy,
   Tag,
-  Loader2,
   Shuffle,
   BarChart,
   Sliders,
@@ -73,14 +69,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Progress } from "@/components/ui/progress";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
 import CardItem from "@/components/card-item";
 import AIChatbot from "@/components/ai-chatbot";
 import { Card } from "@/types/card";
@@ -92,9 +80,11 @@ import {
 } from "@/lib/constants";
 import { DeckDropZone } from "@/components/ui/deck-drop-zone";
 import { DraggableCard } from "@/components/ui/draggable-card";
-import { getDisabledCards } from "@/lib/helpers";
+import { filterCards, getDisabledCards } from "@/lib/helpers";
 import { BanStatus } from "@/types/types";
 import { InputWithClear } from "@/components/ui/input-with-clear";
+import { v4 as uuidv4 } from "uuid";
+import { FilterMenu } from "@/components/ui/filter-menu";
 
 export default function DeckBuilder() {
   const {
@@ -123,6 +113,9 @@ export default function DeckBuilder() {
   const [deckTier, setDeckTier] = useState<number | null>(null);
   const [deckPlayStyle, setDeckPlayStyle] = useState<string[]>([]);
   const [banlist, setBanlist] = useState<Record<string, BanStatus>>({});
+  const [activeDragId, setActiveDragId] = useState<UniqueIdentifier | null>(
+    null
+  );
   const [searchParams, setSearchParams] = useState({
     name: "",
     type: "",
@@ -135,6 +128,7 @@ export default function DeckBuilder() {
     effect: "",
     sort: "name",
     sortDirection: "asc" as "asc" | "desc",
+    misc: "",
   });
 
   const playstyleIcons: Record<string, React.ElementType> = {
@@ -208,17 +202,17 @@ export default function DeckBuilder() {
   }, [searchQuery, cardList]);
 
   useEffect(() => {
-  fetch("/data/master-duel-banlist.json")
-    .then((res) => {
-      if (!res.ok) throw new Error("Failed to load banlist");
-      return res.json();
-    })
-    .then(setBanlist)
-    .catch((err) => {
-      console.error("Error loading banlist:", err);
-      setBanlist({}); // fallback to empty banlist if needed
-    });
-}, []);
+    fetch("/data/master-duel-banlist.json")
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to load banlist");
+        return res.json();
+      })
+      .then(setBanlist)
+      .catch((err) => {
+        console.error("Error loading banlist:", err);
+        setBanlist({}); // fallback to empty banlist if needed
+      });
+  }, []);
 
   const analyzeDeck = useCallback(() => {
     const stats = getDeckStats();
@@ -271,7 +265,7 @@ export default function DeckBuilder() {
     // Check for beatdown: high ATK monsters
     // This is a simplified check; ideally, you'd check for monsters with ATK above a threshold
     const highAtkMonsters = currentDeck.mainDeck.filter(
-      (card) => card.type === "monster" && card.atk && card.atk >= 2500
+      (card) => card.type === "monster" && card.atk && Number(card.atk) >= 2500
     );
     if (highAtkMonsters.length >= 6) {
       playStyles.push("Beatdown");
@@ -351,9 +345,10 @@ export default function DeckBuilder() {
   const handleSearch = async () => {
     setLoading(true);
     try {
-      const results = await searchCards(searchParams);
+      const results = await searchCards(searchParams); // fetches cards from API
+      const filtered = filterCards(results, searchParams); // client-side filter
       setCardList(results);
-      setFilteredCards(results);
+      setFilteredCards(filtered);
     } catch (error) {
       console.error("Error searching cards:", error);
     } finally {
@@ -393,56 +388,58 @@ export default function DeckBuilder() {
   };
 
   const handleDragStart = (event: DragStartEvent) => {
-  const { active } = event;
-  // Try to find by deckInstanceId first (deck), then by id (browser)
-  const draggedCard =
-    currentDeck.mainDeck.find((card) => card.deckInstanceId === active.id) ||
-    currentDeck.extraDeck.find((card) => card.deckInstanceId === active.id) ||
-    filteredCards.find((card) => card.id === active.id);
+    const { active } = event;
+    setActiveDragId(active.id);
+    const cardId = active.data?.current?.cardId;
+    const deckCard =
+      currentDeck.mainDeck.find((c) => c.deckInstanceId === active.id) ||
+      currentDeck.extraDeck.find((c) => c.deckInstanceId === active.id) ||
+      currentDeck.sideDeck.find((c) => c.deckInstanceId === active.id);
 
-  if (draggedCard) {
-    setActiveDragCard(draggedCard);
-  }
-};
+    const browserCard = cardId
+      ? filteredCards.find((c) => c.id === cardId)
+      : null;
 
+    setActiveDragCard(deckCard || browserCard || null);
+  };
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
+    setActiveDragId(null);
     setActiveDragCard(null);
-
     if (!over) return;
 
-    const cardId = active.id as number;
+    const cardId = active.data?.current?.cardId;
+    const deckCard =
+      currentDeck.mainDeck.find((c) => c.deckInstanceId === active.id) ||
+      currentDeck.extraDeck.find((c) => c.deckInstanceId === active.id) ||
+      currentDeck.sideDeck.find((c) => c.deckInstanceId === active.id);
+    const browserCard = cardId
+      ? filteredCards.find((c) => c.id === cardId)
+      : null;
+
+    const cardToAdd = browserCard
+      ? { ...browserCard, deckInstanceId: uuidv4() }
+      : deckCard;
+
+    if (!cardToAdd) return;
+
     const targetId = over.id as string;
-
-    // Find the card being dragged
-    const draggedCard =
-      filteredCards.find((card) => card.id === cardId) ||
-      currentDeck.mainDeck.find((card) => card.id === cardId) ||
-      currentDeck.extraDeck.find((card) => card.id === cardId);
-
-    if (!draggedCard) return;
-
-    // Handle dropping onto deck areas
-    if (targetId === "main-deck") {
-      if (!isExtraDeckCard(draggedCard)) {
-        addCardToDeck(draggedCard, "mainDeck");
-      }
-    } else if (targetId === "extra-deck") {
-      if (isExtraDeckCard(draggedCard)) {
-        addCardToDeck(draggedCard, "extraDeck");
-      }
+    if (targetId === "main-deck" && !isExtraDeckCard(cardToAdd)) {
+      addCardToDeck(cardToAdd, "mainDeck");
+    } else if (targetId === "extra-deck" && isExtraDeckCard(cardToAdd)) {
+      addCardToDeck(cardToAdd, "extraDeck");
     } else if (targetId === "side-deck") {
-      addCardToDeck(draggedCard, "sideDeck");
+      addCardToDeck(cardToAdd, "sideDeck");
     }
   };
 
   const isExtraDeckCard = (card: Card) => {
     return (
-      card.type.includes("Fusion") ||
-      card.type.includes("Synchro") ||
-      card.type.includes("Xyz") ||
-      card.type.includes("Link")
+      card.type.includes("Fusion Monster") ||
+      card.type.includes("Synchro Monster") ||
+      card.type.includes("XYZ Monster") ||
+      card.type.includes("Link Monster")
     );
   };
 
@@ -731,10 +728,13 @@ export default function DeckBuilder() {
                               currentDeck.mainDeck.map((card) => (
                                 <DraggableCard
                                   id={card.deckInstanceId}
-                                  key={card.deckInstanceId} 
+                                  key={card.deckInstanceId}
                                   card={card}
                                   onRemove={() =>
-                                    removeCardFromDeck(card.deckInstanceId, "mainDeck")
+                                    removeCardFromDeck(
+                                      card.deckInstanceId,
+                                      "mainDeck"
+                                    )
                                   }
                                 />
                               ))
@@ -785,10 +785,13 @@ export default function DeckBuilder() {
                               currentDeck.extraDeck.map((card) => (
                                 <DraggableCard
                                   id={card.deckInstanceId}
-                                  key={card.deckInstanceId} 
+                                  key={card.deckInstanceId}
                                   card={card}
                                   onRemove={() =>
-                                    removeCardFromDeck(card.deckInstanceId, "extraDeck")
+                                    removeCardFromDeck(
+                                      card.deckInstanceId,
+                                      "extraDeck"
+                                    )
                                   }
                                 />
                               ))
@@ -842,10 +845,13 @@ export default function DeckBuilder() {
                               currentDeck.sideDeck.map((card) => (
                                 <DraggableCard
                                   id={card.deckInstanceId}
-                                  key={card.deckInstanceId} 
+                                  key={card.deckInstanceId}
                                   card={card}
                                   onRemove={() =>
-                                    removeCardFromDeck(card.deckInstanceId, "sideDeck")
+                                    removeCardFromDeck(
+                                      card.deckInstanceId,
+                                      "sideDeck"
+                                    )
                                   }
                                 />
                               ))
@@ -905,112 +911,13 @@ export default function DeckBuilder() {
                           className="w-full"
                         />
                       </div>
-                      <Sheet>
-                        <SheetTrigger asChild>
-                          <Button variant="outline">
-                            <Filter className="h-4 w-4 mr-2" />
-                            Filters
-                          </Button>
-                        </SheetTrigger>
-                        <SheetContent side="right">
-                          <SheetHeader>
-                            <SheetTitle>Filter Cards</SheetTitle>
-                            <SheetDescription>
-                              Refine your card search
-                            </SheetDescription>
-                          </SheetHeader>
-                          <div className="grid gap-4 py-4">
-                            <div className="space-y-2">
-                              <Label htmlFor="type">Card Type</Label>
-                              <Select
-                                value={searchParams.type}
-                                onValueChange={(value: string) =>
-                                  handleSelectChange("type", value)
-                                }
-                              >
-                                <SelectTrigger id="type">
-                                  <SelectValue placeholder="Select type" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="any">Any</SelectItem>
-                                  <SelectItem value="Effect Monster">
-                                    Effect Monster
-                                  </SelectItem>
-                                  <SelectItem value="Normal Monster">
-                                    Normal Monster
-                                  </SelectItem>
-                                  <SelectItem value="Fusion Monster">
-                                    Fusion Monster
-                                  </SelectItem>
-                                  <SelectItem value="Synchro Monster">
-                                    Synchro Monster
-                                  </SelectItem>
-                                  <SelectItem value="Xyz Monster">
-                                    Xyz Monster
-                                  </SelectItem>
-                                  <SelectItem value="Link Monster">
-                                    Link Monster
-                                  </SelectItem>
-                                  <SelectItem value="Spell Card">
-                                    Spell Card
-                                  </SelectItem>
-                                  <SelectItem value="Trap Card">
-                                    Trap Card
-                                  </SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-
-                            <div className="space-y-2">
-                              <Label htmlFor="attribute">Attribute</Label>
-                              <Select
-                                value={searchParams.attribute}
-                                onValueChange={(value: string) =>
-                                  handleSelectChange("attribute", value)
-                                }
-                              >
-                                <SelectTrigger id="attribute">
-                                  <SelectValue placeholder="Select attribute" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="any">Any</SelectItem>
-                                  <SelectItem value="DARK">DARK</SelectItem>
-                                  <SelectItem value="LIGHT">LIGHT</SelectItem>
-                                  <SelectItem value="EARTH">EARTH</SelectItem>
-                                  <SelectItem value="WATER">WATER</SelectItem>
-                                  <SelectItem value="FIRE">FIRE</SelectItem>
-                                  <SelectItem value="WIND">WIND</SelectItem>
-                                  <SelectItem value="DIVINE">DIVINE</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-
-                            <div className="space-y-2">
-                              <Label htmlFor="effect">Effect Text</Label>
-                              <Input
-                                id="effect"
-                                name="effect"
-                                placeholder="Search card effects..."
-                                value={searchParams.effect}
-                                onChange={handleInputChange}
-                              />
-                            </div>
-
-                            <Button
-                              onClick={handleSearch}
-                              className="w-full"
-                              disabled={loading}
-                            >
-                              {loading ? (
-                                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                              ) : (
-                                <Search className="h-4 w-4 mr-2" />
-                              )}
-                              Apply Filters
-                            </Button>
-                          </div>
-                        </SheetContent>
-                      </Sheet>
+                      <FilterMenu
+                        loading={loading}
+                        searchParams={searchParams}
+                        handleSelectChange={handleSelectChange}
+                        handleInputChange={handleInputChange}
+                        handleSearch={handleSearch}
+                      />
                     </div>
 
                     <div className="flex items-center justify-between">
@@ -1075,6 +982,7 @@ export default function DeckBuilder() {
 
                           return (
                             <CardItem
+                              isBeingDragged={activeDragId === card.id}
                               card={card}
                               onAddToMainDeck={() =>
                                 addCardToDeck(card, "mainDeck")

@@ -14,6 +14,7 @@ export async function searchCards(params: CardSearchParams): Promise<Card[]> {
   if (params.atk) queryParams.append("atk", params.atk)
   if (params.def) queryParams.append("def", params.def)
   if (params.archetype) queryParams.append("archetype", params.archetype)
+  if (params.misc) queryParams.append("misc", params.misc)
 
   // For effect search, we'll filter the results client-side
 
@@ -146,7 +147,7 @@ export interface BanlistEntry {
   banStatus: BanStatus;
 }
 
-export async function getMasterDuelBanlist(): Promise<Record<string, BanStatus>> {
+export async function getTCGBanlist(): Promise<Record<string, BanStatus>> {
   const url = "https://db.ygoprodeck.com/api/v7/cardinfo.php?banlist=TCG";
   try {
     const response = await fetch(url);

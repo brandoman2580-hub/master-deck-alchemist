@@ -1,14 +1,22 @@
 export interface Card {
   id: number
+  deckInstanceId: string
   name: string
   type: string
   desc: string
-  atk?: number
-  def?: number
+  atk?: number | string
+  def?: number | string
   level?: number
   race: string
   attribute?: string
   archetype?: string
+  card_sets: {
+    set_name: string
+    set_code: string
+    set_rarity: string
+    set_rarity_code: string
+    set_price: string
+  }
   card_images: {
     id: number
     image_url: string
@@ -34,4 +42,5 @@ export interface CardSearchParams {
   effect?: string
   sort?: string
   sortDirection?: "asc" | "desc"
+  misc?: string
 }

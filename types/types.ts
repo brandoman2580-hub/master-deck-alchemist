@@ -59,3 +59,23 @@ export type DeckFormat4 = { // { main, extra, side }
 export type ImportedDeck = DeckFormat1 | DeckFormat2 | DeckFormat3 | DeckFormat4
 
 export type BanStatus = "Forbidden" | "Limited" | "Semi-Limited" | "Unlimited" | undefined
+
+export type FilterConfig = {
+    label: string
+    key: string
+    options: { value: string, label: string }[]
+}
+
+export type SearchParams = {
+  type?: string
+  attribute?: string
+  level?: string
+  atk?: string
+  def?: string
+  archetype?: string
+  race?: string
+  rarity?: string
+  effect?: string
+  atkRange?: string
+  defRange?: string
+}
