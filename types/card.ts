@@ -10,6 +10,11 @@ export interface Card {
   race: string
   attribute?: string
   archetype?: string
+  misc_info: [
+    {
+      md_rarity: string
+    }
+  ]
   card_sets: {
     set_name: string
     set_code: string

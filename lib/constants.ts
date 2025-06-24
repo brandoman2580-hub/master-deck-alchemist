@@ -123,6 +123,7 @@ const CARD_RARITY_FILTERS = [
     { value: "Normal", label: "N" },
     { value: "Uncommon", label: "U" },
     { value: "Rare", label: "R" },
+    { value: "Super Rare", label: "SR" },
     { value: "Ultra Rare", label: "UR" },
 ];
 

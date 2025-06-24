@@ -153,18 +153,17 @@ export function filterCards(cards: Card[], params: SearchParams): Card[] {
         }
       }
     }
-    // Rarity (checks card_sets[].rarity)
+    // Master Duel Rarity
     if (params.rarity) {
-      if (
-        !card.card_sets ||
-        !Array.isArray(card.card_sets) ||
-        !card.card_sets.some((set: any) =>
-          set.set_rarity?.toLowerCase().includes(params.rarity?.toLowerCase())
-        )
-      ) {
+      const rarities = params.rarity
+        .split(",")
+        .map((r) => r.trim().toLowerCase());
+      const mdRarity = card.misc_info?.[0]?.md_rarity?.toLowerCase();
+      if (!mdRarity || !rarities.includes(mdRarity)) {
         return false;
       }
     }
+
     // ...other filters (type, attribute, etc)...
     if (params.type && params.type !== "" && card.type !== params.type)
       return false;
@@ -194,7 +193,6 @@ export function filterCards(cards: Card[], params: SearchParams): Card[] {
       !card.desc.toLowerCase().includes(params.effect.toLowerCase())
     )
       return false;
-    // ...add any other filters as needed...
     return true;
   });
 }

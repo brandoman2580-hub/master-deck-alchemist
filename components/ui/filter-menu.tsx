@@ -10,41 +10,65 @@ import { Button } from "@/components/ui/button";
 import { Filter } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Search } from "lucide-react";
 import { FILTER_CONFIGS } from "@/lib/constants";
 import { ToggleFilter } from "./filter-toggle";
 import { SearchParams } from "@/types/types";
 
 type HandleSelectChange = (key: string, value: string) => void;
 type HandleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => void;
-type HandleSearch = () => void;
 
 interface FilterMenuProps {
-  loading: boolean;
   searchParams: SearchParams;
+  setSearchParams: React.Dispatch<React.SetStateAction<{
+    name: string;
+    type: string;
+    race: string;
+    attribute: string;
+    level: string;
+    atk: string;
+    def: string;
+    atkRange: string;
+    defRange: string;
+    rarity: string;
+    archetype: string;
+    effect: string;
+    sort: string;
+    sortDirection: "asc" | "desc";
+    misc: string;
+  }>>;
+  setSearchQuery: React.Dispatch<React.SetStateAction<string>>;
   handleSelectChange: HandleSelectChange;
   handleInputChange: HandleInputChange;
-  handleSearch: HandleSearch;
 }
 
 export function FilterMenu({
-  loading,
   searchParams,
+  setSearchParams,
+  setSearchQuery,
   handleSelectChange,
   handleInputChange,
-  handleSearch,
 }: FilterMenuProps) {
   const handleClearFilters = () => {
-    // Clear all toggle filters
-    FILTER_CONFIGS.forEach((config) => {
-      handleSelectChange(config.key, "");
-    });
+  setSearchParams({
+    name: "",
+    type: "",
+    race: "",
+    attribute: "",
+    level: "",
+    atk: "",
+    def: "",
+    atkRange: "",
+    defRange: "",
+    rarity: "",
+    archetype: "",
+    effect: "",
+    sort: "name",
+    sortDirection: "asc",
+    misc: "",
+  });
+  setSearchQuery(""); // if you want to clear the text search as well
+};
 
-    // Clear effect text (if present in your SearchParams)
-    handleInputChange({
-      target: { name: "effect", value: "" },
-    } as React.ChangeEvent<HTMLInputElement>);
-  };
 
   return (
     <Sheet>
@@ -97,14 +121,6 @@ export function FilterMenu({
               className="w-1/2"
             >
               Clear Filters
-            </Button>
-            <Button onClick={handleSearch} className="w-1/2" disabled={loading}>
-              {loading ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              ) : (
-                <Search className="h-4 w-4 mr-2" />
-              )}
-              Apply Filters
             </Button>
           </div>
         </div>

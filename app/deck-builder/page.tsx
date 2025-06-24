@@ -129,6 +129,9 @@ export default function DeckBuilder() {
     sort: "name",
     sortDirection: "asc" as "asc" | "desc",
     misc: "",
+    atkRange: "",
+    defRange: "",
+    rarity: "",
   });
 
   const playstyleIcons: Record<string, React.ElementType> = {
@@ -186,20 +189,19 @@ export default function DeckBuilder() {
   }, [isRenameOpen, currentDeck.name]);
 
   useEffect(() => {
-    // Filter cards based on search query
-    if (searchQuery.trim() === "") {
-      setFilteredCards(cardList);
-    } else {
+    let filtered = cardList;
+    if (searchQuery.trim() !== "") {
       const query = searchQuery.toLowerCase();
-      const filtered = cardList.filter(
+      filtered = filtered.filter(
         (card) =>
           card.name.toLowerCase().includes(query) ||
           card.desc.toLowerCase().includes(query) ||
           (card.archetype && card.archetype.toLowerCase().includes(query))
       );
-      setFilteredCards(filtered);
     }
-  }, [searchQuery, cardList]);
+    filtered = filterCards(filtered, searchParams);
+    setFilteredCards(filtered);
+  }, [searchQuery, cardList, searchParams]);
 
   useEffect(() => {
     fetch("/data/master-duel-banlist.json")
@@ -345,16 +347,24 @@ export default function DeckBuilder() {
   const handleSearch = async () => {
     setLoading(true);
     try {
-      const results = await searchCards(searchParams); // fetches cards from API
-      const filtered = filterCards(results, searchParams); // client-side filter
+      const results = await searchCards({
+        ...searchParams,
+        misc: "yes", // Always fetch md_rarity data
+      });
       setCardList(results);
-      setFilteredCards(filtered);
+      setFilteredCards(results);
     } catch (error) {
       console.error("Error searching cards:", error);
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    // Only fetch when actual search params change (not on every keystroke in searchQuery)
+    handleSearch();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -912,11 +922,11 @@ export default function DeckBuilder() {
                         />
                       </div>
                       <FilterMenu
-                        loading={loading}
                         searchParams={searchParams}
+                        setSearchParams={setSearchParams}
+                        setSearchQuery={setSearchQuery}
                         handleSelectChange={handleSelectChange}
                         handleInputChange={handleInputChange}
-                        handleSearch={handleSearch}
                       />
                     </div>
 

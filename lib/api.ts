@@ -14,7 +14,8 @@ export async function searchCards(params: CardSearchParams): Promise<Card[]> {
   if (params.atk) queryParams.append("atk", params.atk)
   if (params.def) queryParams.append("def", params.def)
   if (params.archetype) queryParams.append("archetype", params.archetype)
-  if (params.misc) queryParams.append("misc", params.misc)
+  if (params.misc) queryParams.append("misc", "yes");
+
 
   // For effect search, we'll filter the results client-side
 
