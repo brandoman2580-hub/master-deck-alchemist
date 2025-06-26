@@ -4,7 +4,6 @@ import type React from "react";
 
 import { useState, useEffect, useCallback } from "react";
 import { useDeck } from "@/context/deck-context";
-import { searchCards } from "@/lib/api";
 import {
   DndContext,
   type DragEndEvent,
@@ -85,6 +84,7 @@ import { BanStatus } from "@/types/types";
 import { InputWithClear } from "@/components/ui/input-with-clear";
 import { v4 as uuidv4 } from "uuid";
 import { FilterMenu } from "@/components/ui/filter-menu";
+import { useCardStore } from "@/store/cardStore";
 
 export default function DeckBuilder() {
   const {
@@ -105,7 +105,6 @@ export default function DeckBuilder() {
   const [importText, setImportText] = useState("");
   const [activeTab, setActiveTab] = useState("main");
   const [searchQuery, setSearchQuery] = useState("");
-  const [cardList, setCardList] = useState<Card[]>([]);
   const [filteredCards, setFilteredCards] = useState<Card[]>([]);
   const [loading, setLoading] = useState(false);
   const [activeDragCard, setActiveDragCard] = useState<Card | null>(null);
@@ -133,6 +132,7 @@ export default function DeckBuilder() {
     defRange: "",
     rarity: "",
   });
+  const cardList = useCardStore((state) => state.cardList);
 
   const playstyleIcons: Record<string, React.ElementType> = {
     combo: Shuffle,
@@ -159,28 +159,6 @@ export default function DeckBuilder() {
       },
     })
   );
-
-  useEffect(() => {
-    // Load initial card list
-    const fetchInitialCards = async () => {
-      setLoading(true);
-      try {
-        const results = await searchCards({
-          name: "",
-          sort: "name",
-          sortDirection: "asc",
-        });
-        setCardList(results);
-        setFilteredCards(results);
-      } catch (error) {
-        console.error("Error fetching cards:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchInitialCards();
-  }, []);
 
   useEffect(() => {
     if (isRenameOpen) {
@@ -344,21 +322,28 @@ export default function DeckBuilder() {
     analyzeDeck();
   }, [currentDeck, analyzeDeck]);
 
-  const handleSearch = async () => {
-    setLoading(true);
-    try {
-      const results = await searchCards({
-        ...searchParams,
-        misc: "yes", // Always fetch md_rarity data
-      });
-      setCardList(results);
-      setFilteredCards(results);
-    } catch (error) {
-      console.error("Error searching cards:", error);
-    } finally {
-      setLoading(false);
+  const handleSearch = () => {
+  setLoading(true);
+  try {
+    // Optionally, filter by searchQuery first
+    let filtered = cardList;
+    if (searchQuery.trim() !== "") {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(
+        (card) =>
+          card.name.toLowerCase().includes(query) ||
+          card.desc.toLowerCase().includes(query) ||
+          (card.archetype && card.archetype.toLowerCase().includes(query))
+      );
     }
-  };
+    filtered = filterCards(filtered, searchParams);
+    setFilteredCards(filtered);
+  } catch (error) {
+    console.error("Error filtering cards:", error);
+  } finally {
+    setLoading(false);
+  }
+};
 
   useEffect(() => {
     // Only fetch when actual search params change (not on every keystroke in searchQuery)

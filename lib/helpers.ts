@@ -181,12 +181,15 @@ export function filterCards(cards: Card[], params: SearchParams): Card[] {
       String(card.level) !== params.level
     )
       return false;
-    if (
-      params.archetype &&
-      params.archetype !== "" &&
-      card.archetype !== params.archetype
-    )
-      return false;
+    if (params.archetype && params.archetype !== "") {
+      const archetypes = params.archetype
+        .split(",")
+        .map((a) => a.trim())
+        .filter(Boolean);
+      if (!card.archetype || !archetypes.includes(card.archetype)) {
+        return false;
+      }
+    }
     if (
       params.effect &&
       params.effect !== "" &&

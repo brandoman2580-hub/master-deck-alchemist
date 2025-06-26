@@ -1,18 +1,44 @@
-"use client"
+"use client";
 
-import { ThemeProvider } from "next-themes"
-import { DeckProvider } from "@/context/deck-context"
-import Navbar from "@/components/navbar"
+import { useEffect } from "react";
+import { ThemeProvider } from "next-themes";
+import { DeckProvider } from "@/context/deck-context";
+import Navbar from "@/components/navbar";
+import { useCardStore } from "@/store/cardStore";
+import { searchCards } from "@/lib/api";
 
 export function Providers({ children }: { children: React.ReactNode }) {
-    return (
-        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
-            <DeckProvider>
-                <div className="flex min-h-screen flex-col">
-                    <Navbar />
-                    <main className="flex-1">{children}</main>
-                </div>
-            </DeckProvider>
-        </ThemeProvider>
-    )
+  const setCardList = useCardStore((state) => state.setCardList);
+  const setLoading = useCardStore((state) => state.setLoading);
+
+  useEffect(() => {
+    // Only fetch cards once, on client
+    const fetchAllCards = async () => {
+      setLoading(true);
+      try {
+        const results = await searchCards({
+          name: "",
+          sort: "name",
+          sortDirection: "asc",
+        });
+        setCardList(results);
+      } catch (error) {
+        console.error("Error fetching cards:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchAllCards();
+  }, [setCardList, setLoading]);
+
+  return (
+    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
+      <DeckProvider>
+        <div className="flex min-h-screen flex-col">
+          <Navbar />
+          <main className="flex-1">{children}</main>
+        </div>
+      </DeckProvider>
+    </ThemeProvider>
+  );
 }
