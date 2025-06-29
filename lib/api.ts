@@ -3,7 +3,7 @@ import { BanStatus } from "@/types/types"
 
 const API_BASE_URL = "https://db.ygoprodeck.com/api/v7/cardinfo.php"
 
-export async function searchCards(params: CardSearchParams): Promise<Card[]> {
+export async function getCardData(params: CardSearchParams): Promise<Card[]> {
   const queryParams = new URLSearchParams()
 
   if (params.name) queryParams.append("fname", params.name)
@@ -47,66 +47,6 @@ export async function searchCards(params: CardSearchParams): Promise<Card[]> {
     return []
   }
 }
-
-export async function getCardById(id: number): Promise<Card | null> {
-  try {
-    const response = await fetch(`${API_BASE_URL}?id=${id}`)
-    if (!response.ok) {
-      throw new Error(`API error: ${response.status}`)
-    }
-
-    const data = await response.json()
-    return data.data[0] as Card
-  } catch (error) {
-    console.error("Error fetching card:", error)
-    return null
-  }
-}
-
-export async function getCardTypes(): Promise<string[]> {
-  try {
-    const response = await fetch("https://db.ygoprodeck.com/api/v7/cardtypes.php")
-    if (!response.ok) {
-      throw new Error(`API error: ${response.status}`)
-    }
-
-    const data = await response.json()
-    return data.map((item: { type: string }) => item.type)
-  } catch (error) {
-    console.error("Error fetching card types:", error)
-    return []
-  }
-}
-
-export async function getCardRaces(): Promise<string[]> {
-  try {
-    const response = await fetch("https://db.ygoprodeck.com/api/v7/races.php")
-    if (!response.ok) {
-      throw new Error(`API error: ${response.status}`)
-    }
-
-    const data = await response.json()
-    return data.map((item: { race: string }) => item.race)
-  } catch (error) {
-    console.error("Error fetching card races:", error)
-    return []
-  }
-}
-
-export async function getCardAttributes(): Promise<string[]> {
-  try {
-    const response = await fetch("https://db.ygoprodeck.com/api/v7/attributes.php")
-    if (!response.ok) {
-      throw new Error(`API error: ${response.status}`)
-    }
-    const data = await response.json()
-    return data
-  } catch (error) {
-    console.error("Error fetching card attributes:", error)
-    return []
-  }
-}
-
 
 function sortCards(cards: Card[], sortBy: string, direction: "asc" | "desc"): Card[] {
   return [...cards].sort((a, b) => {

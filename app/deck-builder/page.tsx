@@ -79,19 +79,19 @@ import {
 } from "@/lib/constants";
 import { DeckDropZone } from "@/components/ui/deck-drop-zone";
 import { DraggableCard } from "@/components/ui/draggable-card";
-import { filterCards, getDisabledCards } from "@/lib/helpers";
+import { filterCards, getDisabledCards, openLoginModal } from "@/lib/helpers";
 import { BanStatus } from "@/types/types";
 import { InputWithClear } from "@/components/ui/input-with-clear";
 import { v4 as uuidv4 } from "uuid";
 import { FilterMenu } from "@/components/ui/filter-menu";
 import { useCardStore } from "@/store/cardStore";
+import { useUserStore } from "@/store/useUserStore";
 
 export default function DeckBuilder() {
   const {
     currentDeck,
     removeCardFromDeck,
     clearDeck,
-    // saveDeck,
     exportDeck,
     importDeck,
     renameDeck,
@@ -133,6 +133,7 @@ export default function DeckBuilder() {
     rarity: "",
   });
   const cardList = useCardStore((state) => state.cardList);
+  const user = useUserStore((state) => state.user);
 
   const playstyleIcons: Record<string, React.ElementType> = {
     combo: Shuffle,
@@ -534,15 +535,26 @@ export default function DeckBuilder() {
                         open={isRenameOpen}
                         onOpenChange={setIsRenameOpen}
                       >
-                        <DialogTrigger asChild>
+                        {!user ? (
                           <Button
                             size="icon"
                             variant="ghost"
                             aria-label="Rename deck"
+                            onClick={openLoginModal}
                           >
                             <Edit className="h-5 w-5" />
                           </Button>
-                        </DialogTrigger>
+                        ) : (
+                          <DialogTrigger asChild>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              aria-label="Rename deck"
+                            >
+                              <Edit className="h-5 w-5" />
+                            </Button>
+                          </DialogTrigger>
+                        )}
                         <DialogContent>
                           <DialogHeader>
                             <DialogTitle>Rename Deck</DialogTitle>
@@ -565,7 +577,6 @@ export default function DeckBuilder() {
                                   deckName.trim() &&
                                   deckName.trim() !== currentDeck.name
                                 ) {
-                                  // Use your context's renameDeck (see below)
                                   renameDeck(deckName.trim());
                                 }
                                 setIsRenameOpen(false);
@@ -586,7 +597,13 @@ export default function DeckBuilder() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={handleExportDeck}
+                              onClick={() => {
+                                if (!user) {
+                                  openLoginModal();
+                                } else {
+                                  handleExportDeck();
+                                }
+                              }}
                             >
                               <Download className="h-4 w-4" />
                             </Button>
@@ -625,7 +642,13 @@ export default function DeckBuilder() {
                                 </div>
                                 <DialogFooter>
                                   <Button
-                                    onClick={handleImportDeck}
+                                    onClick={() => {
+                                      if (!user) {
+                                        openLoginModal();
+                                      } else {
+                                        handleImportDeck();
+                                      }
+                                    }}
                                     disabled={!importText.trim()}
                                   >
                                     Import

@@ -1,8 +1,21 @@
 import { Card } from "./card"
 
+export type AuthProvider = 'google' | 'facebook' | 'discord' | 'apple'
+
 export interface DeckCard extends Card {
   deckInstanceId: string;
 }
+
+// Add to your types
+export type Deck = {
+  id: string; // Add this for Supabase IDs
+  name: string;
+  mainDeck: Card[];
+  extraDeck: Card[];
+  sideDeck: Card[];
+  created_at: string;
+  updated_at: string;
+};
 
 export type NormalizedDeck = {
     mainDeck: string[]
@@ -16,6 +29,7 @@ export type DeckType = {
     mainDeck: DeckCard[]
     extraDeck: DeckCard[]
     sideDeck: DeckCard[]
+    updated_at?: string
 }
 
 type DeckListByCategory = {
@@ -78,4 +92,10 @@ export type SearchParams = {
   effect?: string
   atkRange?: string
   defRange?: string
+}
+
+export type SignupFormState = {
+  success: boolean
+  error?: string
+  email?: string
 }

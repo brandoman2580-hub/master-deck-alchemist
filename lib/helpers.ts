@@ -12,6 +12,7 @@ import {
   SearchParams,
 } from "@/types/types";
 import { ATK_RANGE_MAP, DEF_RANGE_MAP } from "./constants";
+import { useLoginModalStore } from "@/store/useLoginModalStore";
 
 function expandCardList(list?: (string | CountedCard)[]): string[] {
   if (!list) return [];
@@ -198,4 +199,10 @@ export function filterCards(cards: Card[], params: SearchParams): Card[] {
       return false;
     return true;
   });
+}
+
+// This function can be imported and called anywhere (client-side)
+export function openLoginModal() {
+  // Directly set the Zustand state
+  useLoginModalStore.getState().openLoginModal()
 }

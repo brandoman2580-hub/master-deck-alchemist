@@ -5,18 +5,20 @@ import { ThemeProvider } from "next-themes";
 import { DeckProvider } from "@/context/deck-context";
 import Navbar from "@/components/navbar";
 import { useCardStore } from "@/store/cardStore";
-import { searchCards } from "@/lib/api";
+import { getCardData } from "@/lib/api";
+import { useSupabaseUserSync } from "@/hooks/useSupabaseUserSync";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const setCardList = useCardStore((state) => state.setCardList);
   const setLoading = useCardStore((state) => state.setLoading);
+  useSupabaseUserSync();
 
   useEffect(() => {
     // Only fetch cards once, on client
     const fetchAllCards = async () => {
       setLoading(true);
       try {
-        const results = await searchCards({
+        const results = await getCardData({
           name: "",
           sort: "name",
           sortDirection: "asc",

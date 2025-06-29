@@ -7,7 +7,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:inline-block",
   {
     variants: {
       variant: {
@@ -61,11 +61,12 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     const Comp = asChild ? Slot : "button";
     const content = (
       <>
-        {startIcon && <span className="mr-2">{startIcon}</span>}
+        {startIcon && <span className="flex items-center">{startIcon}</span>}
         {children}
-        {endIcon && <span className="ml-2">{endIcon}</span>}
+        {endIcon && <span className="flex items-center">{endIcon}</span>}
       </>
     );
+
     // If using Slot, wrap content in a single element
     return (
       <Comp

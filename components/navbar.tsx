@@ -6,9 +6,13 @@ import { Button } from "@/components/ui/button"
 import { ModeToggle } from "@/components/mode-toggle"
 import { cn } from "@/lib/utils"
 import { Search, Layers, Save } from "lucide-react"
+import { openLoginModal } from "@/lib/helpers"
+import { useUserStore } from "@/store/useUserStore"
+import { UserMenu } from "./ui/user-menu"
 
 export default function Navbar() {
   const pathname = usePathname()
+  const user = useUserStore((state) => state.user)
 
   const navItems = [
     {
@@ -48,6 +52,11 @@ export default function Navbar() {
         </nav>
         <div className="ml-auto flex items-center space-x-4">
           <ModeToggle />
+          {!user ? (
+          <button className="btn btn-primary" onClick={openLoginModal}>Login</button>
+        ) : (
+          <UserMenu />
+        )}
         </div>
       </div>
     </header>
