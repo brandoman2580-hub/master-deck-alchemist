@@ -1,17 +1,16 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { useDeck } from "@/context/deck-context"
-import { searchCards } from "@/lib/api"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card as CardUI, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
-import { X, Send, Bot, User, Plus, Loader2 } from "lucide-react"
-import { Card } from "@/types/card"
-import Image from "next/image"
+import { X, Send, Bot, User, Plus, Loader2, Badge } from "lucide-react"
+import { useDeck } from "../context/deck-context.tsx";
+import { Card } from "../types/card.ts";
+import { Avatar, AvatarFallback } from "./ui/avatar.tsx";
+import { Button } from "./ui/button.tsx";
+import { Card as CardUI, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "./ui/card.tsx";
+import { Input } from "./ui/input.tsx";
+import { ScrollArea } from "./ui/scroll-area.tsx";
+import { getCardData } from "../lib/api.ts";
+import { Image } from "@radix-ui/react-avatar";
 
 interface Message {
   id: string
@@ -49,7 +48,7 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }
 
-  const handleSendMessage = async () => {
+  const handleSendMessage = () => {
     if (input.trim() === "") return
 
     const userMessage: Message = {
@@ -96,7 +95,7 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
           "Dark Magician decks benefit from cards that specifically support the archetype. Here are some great synergy cards for Dark Magician:"
 
         // Suggest specific cards
-        const suggestedCards = await searchCards({ name: searchTerm, sort: "name" })
+        const suggestedCards = await getCardData({ name: searchTerm, sort: "name" })
         message.suggestedCards = suggestedCards.slice(0, 5)
       } else if (lowerCaseMessage.includes("blue-eyes") || lowerCaseMessage.includes("blue eyes")) {
         searchTerm = "Blue-Eyes"
@@ -104,7 +103,7 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
           "Blue-Eyes White Dragon decks focus on summoning powerful dragons and overwhelming your opponent. Here are some cards that synergize well with Blue-Eyes:"
 
         // Suggest specific cards
-        const suggestedCards = await searchCards({ archetype: searchTerm, sort: "name" })
+        const suggestedCards = await getCardData({ archetype: searchTerm, sort: "name" })
         message.suggestedCards = suggestedCards.slice(0, 5)
       } else if (lowerCaseMessage.includes("red-eyes") || lowerCaseMessage.includes("red eyes")) {
         searchTerm = "Red-Eyes"
@@ -112,7 +111,7 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
           "Red-Eyes decks focus on fusion summoning and burn damage. Here are some cards that work well with Red-Eyes:"
 
         // Suggest specific cards
-        const suggestedCards = await searchCards({ archetype: searchTerm, sort: "name" })
+        const suggestedCards = await getCardData({ archetype: searchTerm, sort: "name" })
         message.suggestedCards = suggestedCards.slice(0, 5)
       } else {
         // Generic synergy advice
@@ -417,7 +416,7 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
                               />
                               <div className="flex-1 min-w-0">
                                 <p className="text-xs font-medium truncate">{card.name}</p>
-                                <Badge variant="outline" className="text-[10px] mt-1">
+                                <Badge className="text-[10px] mt-1">
                                   {card.type}
                                 </Badge>
                               </div>

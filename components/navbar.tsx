@@ -9,6 +9,7 @@ import { Search, Layers, Save } from "lucide-react"
 import { openLoginModal } from "@/lib/helpers"
 import { useUserStore } from "@/store/useUserStore"
 import { UserMenu } from "./ui/user-menu"
+import HeaderLogo from "@/public/images/mda_header_logo.svg";
 
 export default function Navbar() {
   const pathname = usePathname()
@@ -36,7 +37,7 @@ export default function Navbar() {
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-14 items-center">
         <Link href="/" className="mr-6 flex items-center space-x-2">
-          <span className="font-bold text-xl">Master Deck Alchemist</span>
+          <HeaderLogo alt="Master Deck Alchemist" className="h-32 w-52" />
         </Link>
         <nav className="flex items-center space-x-2 md:space-x-4 mx-6">
           {navItems.map((item) => (

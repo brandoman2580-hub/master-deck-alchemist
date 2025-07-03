@@ -2,11 +2,13 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import Link from "next/link"
 import { ArrowRight, Search, Layers, Save } from "lucide-react"
+import BodyLogo from "@/public/images/mda_body_logo.svg"
 
 export default function Home() {
   return (
     <div className="container mx-auto px-4 py-12">
       <div className="flex flex-col items-center justify-center space-y-8 text-center">
+        <BodyLogo className="h-96 w-96" />
         <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl">Master Deck Alchemist</h1>
         <p className="max-w-[700px] text-lg text-muted-foreground">
           Build, optimize, and master your Yu-Gi-Oh! decks with advanced tools and insights

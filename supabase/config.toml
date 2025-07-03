@@ -1,0 +1,22 @@
+
+[functions.deck-analysis]
+enabled = true
+verify_jwt = true
+import_map = "./functions/deck-analysis/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/deck-analysis/index.ts"
+# Specifies static files to be bundled with the function. Supports glob patterns.
+# For example, if you want to serve static HTML pages in your function:
+# static_files = [ "./functions/deck-analysis/*.html" ]
+
+[functions.duel-simulation]
+enabled = true
+verify_jwt = true
+import_map = "./functions/duel-simulation/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/duel-simulation/index.ts"
+# Specifies static files to be bundled with the function. Supports glob patterns.
+# For example, if you want to serve static HTML pages in your function:
+# static_files = [ "./functions/duel-simulation/*.html" ]
