@@ -1,6 +1,5 @@
-import { Card, CardSearchParams } from "../types/card.ts";
-import { BanStatus } from "../types/types.ts";
-
+import { Card, CardSearchParams } from "@/types/card"
+import { BanStatus } from "@/types/types"
 
 const API_BASE_URL = "https://db.ygoprodeck.com/api/v7/cardinfo.php"
 

@@ -2,15 +2,14 @@
 
 import { useState, useRef, useEffect } from "react"
 import { X, Send, Bot, User, Plus, Loader2, Badge } from "lucide-react"
-import { useDeck } from "../context/deck-context.tsx";
-import { Card } from "../types/card.ts";
-import { Avatar, AvatarFallback } from "./ui/avatar.tsx";
-import { Button } from "./ui/button.tsx";
-import { Card as CardUI, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "./ui/card.tsx";
-import { Input } from "./ui/input.tsx";
-import { ScrollArea } from "./ui/scroll-area.tsx";
-import { getCardData } from "../lib/api.ts";
-import { Image } from "@radix-ui/react-avatar";
+import { Avatar, AvatarFallback, Image } from "@radix-ui/react-avatar";
+import { useDeck } from "@/context/deck-context";
+import { getCardData } from "@/lib/api";
+import { Card } from "@/types/card";
+import { ScrollArea } from "@radix-ui/react-scroll-area";
+import { Button } from "./ui/button";
+import { Card as CardUI, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "./ui/card";
+import { Input } from "./ui/input";
 
 interface Message {
   id: string
