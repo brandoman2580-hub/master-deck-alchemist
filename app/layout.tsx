@@ -9,6 +9,9 @@ const inter = Inter({ subsets: ["latin"] })
 export const metadata: Metadata = {
   title: "Master Deck Alchemist",
   description: "Build and optimize your Yu-Gi-Oh! decks",
+  icons: {
+    icon: "/icon.svg",
+  }
 }
 
 export default function RootLayout({

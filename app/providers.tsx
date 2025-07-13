@@ -34,11 +34,16 @@ export function Providers({ children }: { children: React.ReactNode }) {
   }, [setCardList, setLoading]);
 
   return (
-    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
+    <ThemeProvider
+      attribute="class"
+      defaultTheme="dark"
+      enableSystem
+      disableTransitionOnChange
+    >
       <DeckProvider>
-        <div className="flex min-h-screen flex-col">
+        <div className="relative z-20">
           <Navbar />
-          <main className="flex-1">{children}</main>
+          <main className="flex-1 min-h-screen">{children}</main>
         </div>
       </DeckProvider>
     </ThemeProvider>

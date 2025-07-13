@@ -18,7 +18,6 @@ export async function saveDeck(deck: DeckType, userId: string) {
     .select()
     .single();
 
-  console.log("[supabaseDecks] Upsert result:", { data, error });
   if (error) throw error;
   return data;
 }
