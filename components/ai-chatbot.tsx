@@ -36,8 +36,10 @@ interface AIChatbotProps {
 
 const generateAIResponse = async (
   userMessage: string,
-  currentDeck: DeckType,
-  allCards: Card[]
+  currentDeck,
+  allCards: Card[],
+  playStyles: string[],
+  deckTier: number,
 ): Promise<Message> => {
   const message: Message = {
     id: crypto.randomUUID(),
@@ -64,7 +66,7 @@ const generateAIResponse = async (
     ];
 
     const response = await fetch(
-      "https://izshwywgfaozmisedwxm.supabase.co/functions/v1/deck-analysis",
+      `https://izshwywgfaozmisedwxm.supabase.co/functions/v1/deck-analysis`,
       {
         method: "POST",
         headers: {
@@ -72,10 +74,12 @@ const generateAIResponse = async (
           ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
         },
         body: JSON.stringify({
-          deck_id: currentDeck.id,
+          deck_id: deckId,
           question: userMessage,
           deck_cards: cardPool,
           card_pool: allCards,
+          play_styles: playStyles,
+          deck_tier: deckTier,
         }),
       }
     );
@@ -97,58 +101,7 @@ const generateAIResponse = async (
   }
 };
 
-export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
-  const { currentDeck, addCardToDeck } = useDeck();
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "welcome",
-      role: "assistant",
-      content:
-        "Hello! I'm your Yu-Gi-Oh! deck assistant. Ask me about card synergies, deck improvements, or strategies!",
-      timestamp: new Date(),
-    },
-  ]);
-  const [input, setInput] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  // If you want to include the full card pool from your API:
-  const allCards = useCardStore((state) => state.cardList);
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
-  const handleSendMessage = () => {
-    if (input.trim() === "") return;
-
-    const userMessage: Message = {
-      id: crypto.randomUUID(),
-      role: "user",
-      content: input,
-      timestamp: new Date(),
-    };
-
-    setMessages((prev) => [...prev, userMessage]);
-    setInput("");
-    setIsLoading(true);
-
-    // Simulate AI processing
-    setTimeout(async () => {
-      const response = await generateAIResponse(
-        userMessage.content,
-        currentDeck,
-        allCards,
-      );
-      setMessages((prev) => [...prev, response]);
-      setIsLoading(false);
-    }, 1500);
-  };
-
-  const getDeckStats = () => {
+const getDeckStats = (currentDeck: DeckType) => {
     const { mainDeck } = currentDeck;
 
     const monsterCount = mainDeck.filter((card) =>
@@ -169,9 +122,9 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
     };
   };
 
-  const determinePlayStyle = () => {
+  const determinePlayStyle = (currentDeck: DeckType) => {
     const { mainDeck } = currentDeck;
-    const stats = getDeckStats();
+    const stats = getDeckStats(currentDeck);
     const playStyles: string[] = [];
 
     // Check for aggro style (high ATK monsters, low spell/trap count)
@@ -225,9 +178,9 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
     return playStyles;
   };
 
-  const evaluateDeckTier = () => {
+  const evaluateDeckTier = (currentDeck: DeckType) => {
     const { mainDeck } = currentDeck;
-    const stats = getDeckStats();
+    const stats = getDeckStats(currentDeck);
 
     if (stats.mainCount < 30) {
       return 4; // Casual - not enough cards
@@ -271,6 +224,61 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
     } else {
       return 4; // Tier 4 - Casual
     }
+  };
+
+export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
+  const { currentDeck, addCardToDeck } = useDeck();
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      id: "welcome",
+      role: "assistant",
+      content:
+        "Hello! I'm your Yu-Gi-Oh! deck assistant. Ask me about card synergies, deck improvements, or strategies!",
+      timestamp: new Date(),
+    },
+  ]);
+  const [input, setInput] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  // If you want to include the full card pool from your API:
+  const allCards = useCardStore((state) => state.cardList);
+  const playStyles = determinePlayStyle(currentDeck);
+  const deckTier = evaluateDeckTier(currentDeck);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  const handleSendMessage = () => {
+    if (input.trim() === "") return;
+
+    const userMessage: Message = {
+      id: crypto.randomUUID(),
+      role: "user",
+      content: input,
+      timestamp: new Date(),
+    };
+
+    setMessages((prev) => [...prev, userMessage]);
+    setInput("");
+    setIsLoading(true);
+
+    // Simulate AI processing
+    setTimeout(async () => {
+      const response = await generateAIResponse(
+        userMessage.content,
+        currentDeck,
+        allCards,
+        playStyles,
+        deckTier
+      );
+      setMessages((prev) => [...prev, response]);
+      setIsLoading(false);
+    }, 1500);
   };
 
   const handleAddCardToDeck = (card: Card) => {

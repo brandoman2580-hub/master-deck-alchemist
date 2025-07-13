@@ -1,8 +1,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 
-const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
-const MODEL_NAME = "llama3-70b-8192";
+const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -34,7 +33,26 @@ Deno.serve(async (req) => {
     const deckCards = Array.isArray(deck_cards) ? deck_cards : [];
     const allCards = Array.isArray(card_pool) ? card_pool : [];
 
-    // Now safe to map:
+    if (!deckCards.length) {
+      return new Response(
+        JSON.stringify({ error: "No cards in the current deck." }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+    if (!allCards.length) {
+      return new Response(
+        JSON.stringify({ error: "No card pool available for analysis." }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // Prepare context for LLM
     const deckContext = deckCards
       .map(
         (card) =>
@@ -49,30 +67,30 @@ Deno.serve(async (req) => {
       )
       .join("\n\n");
 
-    // Build prompt using both contexts as needed
+    // Build your prompt with both contexts as needed
     const prompt = `
-As a Yu-Gi-Oh expert analyzing this deck:
-Deck: ${deckContext}
+      As a Yu-Gi-Oh expert analyzing this deck:
+      Deck:
+        ${deckContext}
 
-Full card pool (for suggestions): 
-${poolContext}
+      Full card pool (for suggestions):
+        ${poolContext}
 
-User question: ${question}
+      User question: ${question}
 
-Provide detailed recommendations and suggest cards from the pool if relevant.
-`;
+      Provide detailed recommendations and suggest cards from the pool if relevant.
+    `;
 
-    // Call Groq API
-    const groqResponse = await fetch(
-      "https://api.groq.com/openai/v1/chat/completions",
+    const openaiResponse = await fetch(
+      "https://api.openai.com/v1/chat/completions",
       {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${GROQ_API_KEY}`,
+          Authorization: `Bearer ${OPENAI_API_KEY}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: MODEL_NAME,
+          model: "gpt-3.5-turbo", // or "gpt-4"
           messages: [{ role: "user", content: prompt }],
           temperature: 0.5,
           max_tokens: 1024,
@@ -80,15 +98,15 @@ Provide detailed recommendations and suggest cards from the pool if relevant.
       }
     );
 
-    if (!groqResponse.ok) {
-      const error = await groqResponse.text();
+    if (!openaiResponse.ok) {
+      const error = await openaiResponse.text();
       return new Response(JSON.stringify({ error }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const result = await groqResponse.json();
+    const result = await openaiResponse.json();
     const aiContent =
       result.choices?.[0]?.message?.content || "No response from AI.";
 
