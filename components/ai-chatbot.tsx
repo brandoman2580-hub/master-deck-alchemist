@@ -131,7 +131,7 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  //@TODO: Add way to add cards to deck from AI response
+  //@TODO: Add way to add cards to deck from AI response from chatbot message
 
   // Quota (requests left for user), default to unknown ("-")
   const [quota, setQuota] = useState<Quota>({
