@@ -52,6 +52,11 @@ export default function Home() {
                 <Link href="/card-browser">Browse Cards</Link>
               </Button>
             </div>
+            <div className="flex justify-center">
+              <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl flex items-center justify-center mb-[-64px]">
+                BUILD. &nbsp; TEST. &nbsp; DUEL.
+              </h1>
+            </div>
           </div>
         </div>
       </div>

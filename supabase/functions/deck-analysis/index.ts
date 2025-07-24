@@ -1,15 +1,80 @@
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { createClient } from "@supabase/supabase-js";
 import { corsHeaders } from "../_shared/cors.ts";
+import { join } from "https://deno.land/std@0.198.0/path/mod.ts";
 
-const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
+type Card = {
+  id: number;
+  name: string;
+  type: string;
+  desc: string;
+  level?: number;
+  race?: string;
+  attribute?: string;
+  archetype?: string;
+};
+
+const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
+const MODEL_NAME = "llama3-70b-8192";
+
+// Helper: dedup by name
+function onlyUniqueByName(arr: Card[]): Card[] {
+  const seen = new Set<string>();
+  return arr.filter((card) => {
+    const name = card.name.toLowerCase();
+    if (seen.has(name)) return false;
+    seen.add(name);
+    return true;
+  });
+}
+
+// --- Banlist Helpers ---
+
+// Master Duel - load local JSON
+async function loadMasterDuelBanlist(): Promise<Record<string, string>> {
+  try {
+    const path = join(Deno.cwd(), "public/data/master-duel-banlist.json");
+    const fileContent = await Deno.readTextFile(path);
+    // Format: [{ name, ban_status }, ...] or { "Card Name": "Forbidden", ... }
+    const data = JSON.parse(fileContent);
+    // If array, convert to map:
+    if (Array.isArray(data)) {
+      const out: Record<string, string> = {};
+      for (const entry of data) out[entry.name] = entry.ban_status;
+      return out;
+    }
+    return data;
+  } catch (err) {
+    console.error("Error loading Master Duel banlist:", err);
+    return {};
+  }
+}
+
+// TCG - fetch from online API (adapted from your function)
+async function fetchTCGBanlist(): Promise<Record<string, string>> {
+  const url = "https://db.ygoprodeck.com/api/v7/cardinfo.php?banlist=TCG";
+  try {
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error(`API error: ${resp.status}`);
+    const data = await resp.json();
+    const banlist: Record<string, string> = {};
+    for (const card of data.data) {
+      if (card.banlist_info && card.banlist_info.ban_tcg) {
+        banlist[card.name] = card.banlist_info.ban_tcg as string;
+      }
+    }
+    return banlist;
+  } catch (err) {
+    console.error("Error fetching TCG banlist:", err);
+    return {};
+  }
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
-
   try {
-    const supabaseClient = createClient(
+    const supabase = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_ANON_KEY") ?? "",
       {
@@ -19,78 +84,185 @@ Deno.serve(async (req) => {
       }
     );
 
-    // Get the JWT from the Authorization header
     const token = req.headers.get("Authorization")?.replace("Bearer ", "");
-
-    // Get the user object
     const {
       data: { user },
-    } = await supabaseClient.auth.getUser(token);
-
-    // Parse request body
-    const { question, deck_cards, card_pool } = await req.json();
-
-    const deckCards = Array.isArray(deck_cards) ? deck_cards : [];
-    const allCards = Array.isArray(card_pool) ? card_pool : [];
-
-    if (!deckCards.length) {
+    } = await supabase.auth.getUser(token);
+    if (!user) {
       return new Response(
-        JSON.stringify({ error: "No cards in the current deck." }),
+        JSON.stringify({ error: "User not authenticated." }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // --- Parse request (add format param) ---
+    const { question, deck_id, banlist_format = "TCG" } = await req.json();
+    if (!deck_id) {
+      return new Response(JSON.stringify({ error: "Missing deck ID." }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // --- Load banlist ---
+    let banlist: Record<string, string> = {};
+    if (banlist_format === "MASTER_DUEL") {
+      banlist = await loadMasterDuelBanlist();
+    } else if (banlist_format === "TCG") {
+      banlist = await fetchTCGBanlist();
+      // Consider caching this in Supabase or memory to prevent rate limiting
+    } else {
+      return new Response(
+        JSON.stringify({ error: "Invalid banlist format." }),
         {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         }
       );
     }
-    if (!allCards.length) {
-      return new Response(
-        JSON.stringify({ error: "No card pool available for analysis." }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
+
+    // --- Deck loading ---
+    const { data: deckData, error: deckErr } = await supabase
+      .from("decks")
+      .select("cards, name")
+      .eq("id", deck_id)
+      .eq("user_id", user.id)
+      .single();
+
+    if (deckErr || !deckData) {
+      return new Response(JSON.stringify({ error: "Could not find deck." }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    // Prepare context for LLM
-    const deckContext = deckCards
+    const deckCardsBySection = deckData.cards as {
+      main: number[];
+      side: number[];
+      extra: number[];
+    };
+    const allDeckCardIds = [
+      ...(deckCardsBySection.main || []),
+      ...(deckCardsBySection.side || []),
+      ...(deckCardsBySection.extra || []),
+    ];
+
+    // --- Fetch deck card details ---
+    const { data: deckCardDetails } = await supabase
+      .from("cards")
+      .select("id, name, type, desc, level, race, attribute, archetype")
+      .in("id", allDeckCardIds);
+
+    // Remove forbidden cards from deck (optional: or just warn user in prompt)
+    const safeDeckCards = (deckCardDetails ?? []).filter(
+      (card) => banlist[card.name] !== "Forbidden"
+    );
+
+    // --- Context builder: archetypes/types/attributes for pool filtering ---
+    const deckArchetypes = new Set(
+      safeDeckCards.map((c) => c.archetype).filter(Boolean)
+    );
+    const deckTypes = new Set(safeDeckCards.map((c) => c.type).filter(Boolean));
+    const deckAttributes = new Set(
+      safeDeckCards.map((c) => c.attribute).filter(Boolean)
+    );
+
+    // --- Unified card pool filtering using match and banlist ---
+    // Build 'or' filter string:
+    const filterParts = [
+      deckArchetypes.size
+        ? `archetype.in.(${[...deckArchetypes].map((s) => `"${s}"`).join(",")})`
+        : undefined,
+      deckTypes.size
+        ? `type.in.(${[...deckTypes].map((s) => `"${s}"`).join(",")})`
+        : undefined,
+      deckAttributes.size
+        ? `attribute.in.(${[...deckAttributes].map((s) => `"${s}"`).join(",")})`
+        : undefined,
+    ].filter(Boolean);
+
+    let { data: relevantPoolCards } = await supabase
+      .from("cards")
+      .select("id, name, type, desc, level, race, attribute, archetype")
+      .or(filterParts.join(","))
+      .not("id", "in", `(${allDeckCardIds.join(",")})`)
+      .order("name", { ascending: true })
+      .limit(60);
+
+    // Exclude forbidden cards
+    relevantPoolCards = (relevantPoolCards ?? []).filter(
+      (card) => banlist[card.name] !== "Forbidden"
+    );
+
+    // Dedupe by name and limit
+    const relevantCards = onlyUniqueByName(relevantPoolCards).slice(0, 50);
+
+    // --- Prompt context assembly ---
+    const deckSummary = `
+Format: ${banlist_format}
+Deck Name: ${deckData.name}
+Key cards: ${safeDeckCards
+      .slice(0, 12)
+      .map((c) => c.name)
+      .join(", ")}
+Archetypes: ${[...deckArchetypes].join(", ")}
+Types: ${[...deckTypes].join(", ")}
+Attributes: ${[...deckAttributes].join(", ")}
+`;
+
+    const deckDetailContext = safeDeckCards
+      .slice(0, 10)
       .map(
         (card) =>
-          `${card.name} (${card.type}): ${card.description || card.desc}`
+          `${card.name} (${card.type}${
+            card.archetype ? ", " + card.archetype : ""
+          }): ${card.desc}`
       )
       .join("\n\n");
 
-    const poolContext = allCards
+    const relevantCardsContext = relevantCards
       .map(
-        (card) =>
-          `${card.name} (${card.type}): ${card.description || card.desc}`
+        (card: Card) =>
+          `${card.name} (${card.type}${
+            card.archetype ? ", " + card.archetype : ""
+          }): ${card.desc}`
       )
       .join("\n\n");
 
-    // Build your prompt with both contexts as needed
     const prompt = `
-      As a Yu-Gi-Oh expert analyzing this deck:
-      Deck:
-        ${deckContext}
+You are an expert Yu-Gi-Oh! ${
+      banlist_format === "MASTER_DUEL" ? "Master Duel" : "TCG"
+    } deckbuilder. Enforce card legality for the chosen format.
 
-      Full card pool (for suggestions):
-        ${poolContext}
+Deck summary:
+${deckSummary}
 
-      User question: ${question}
+Key deck cards (with effects):
+${deckDetailContext}
 
-      Provide detailed recommendations and suggest cards from the pool if relevant.
-    `;
+Relevant legal pool cards ('not in deck', matching deck archetype/type/attribute):
+${relevantCardsContext}
 
-    const openaiResponse = await fetch(
-      "https://api.openai.com/v1/chat/completions",
+User question:
+${question}
+
+Final advice: suggest only legal cards for this format and explain any forbidden/illegal cards the user currently runs.
+`;
+
+    // --- LLM call ---
+    const groqResponse = await fetch(
+      "https://api.groq.com/openai/v1/chat/completions",
       {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${OPENAI_API_KEY}`,
+          Authorization: `Bearer ${GROQ_API_KEY}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "gpt-3.5-turbo", // or "gpt-4"
+          model: MODEL_NAME,
           messages: [{ role: "user", content: prompt }],
           temperature: 0.5,
           max_tokens: 1024,
@@ -98,21 +270,38 @@ Deno.serve(async (req) => {
       }
     );
 
-    if (!openaiResponse.ok) {
-      const error = await openaiResponse.text();
+    if (!groqResponse.ok) {
+      const error = await groqResponse.text();
       return new Response(JSON.stringify({ error }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const result = await openaiResponse.json();
+    const result = await groqResponse.json();
     const aiContent =
       result.choices?.[0]?.message?.content || "No response from AI.";
+    const requestsLeft = Number(
+      groqResponse.headers.get("x-ratelimit-remaining-requests")
+    );
+    const maxRequests = Number(
+      groqResponse.headers.get("x-ratelimit-limit-requests")
+    );
 
-    // Return user, AI answer, and optionally deck/cards for debugging/context
     return new Response(
-      JSON.stringify({ user, answer: aiContent, deck_cards, card_pool }),
+      JSON.stringify({
+        user,
+        answer: aiContent,
+        deck_cards: safeDeckCards,
+        relevant_card_pool: relevantCards,
+        banned_in_deck:
+          deckCardDetails &&
+          deckCardDetails
+            .filter((card) => banlist[card.name] === "Forbidden")
+            .map((card) => card.name),
+        requests_left: requestsLeft,
+        max_requests: maxRequests,
+      }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
