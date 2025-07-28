@@ -19,6 +19,14 @@ const config = {
       },
     },
     extend: {
+      fontFamily: {
+        audiowide: ["var(--font-audiowide)"],
+        geist: ["var(--font-geist)"],
+        "geist-mono": ["var(--font-geist-mono)"],
+        cinzel: ["var(--font-cinzel)"],
+        orbitron: ["var(--font-orbitron)"],
+        rowdies: ["var(--font-rowdies)"],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",

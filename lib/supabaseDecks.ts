@@ -14,6 +14,7 @@ export async function saveDeck(deck: DeckType, userId: string) {
         side: deck.sideDeck,
       },
       updated_at: new Date().toISOString(),
+      mode: deck.mode,
     })
     .select()
     .single();
@@ -58,5 +59,6 @@ export async function loadDeck(deckId: string, userId: string): Promise<DeckType
     mainDeck: data.cards.main,
     extraDeck: data.cards.extra,
     sideDeck: data.cards.side,
+    mode: data.mode,
   };
 }

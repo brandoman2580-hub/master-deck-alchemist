@@ -15,6 +15,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Edit, Trash2, Clock } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getUserDecks, deleteDeck } from "@/lib/supabaseDecks";
@@ -46,6 +47,7 @@ export default function SavedDecks() {
           extraDeck: deck.cards.extra,
           sideDeck: deck.cards.side,
           updated_at: deck.updated_at,
+          mode: deck.mode || "Master Duel",
         }));
         setDecks(decks);
       } catch (err: any) {
@@ -77,6 +79,7 @@ export default function SavedDecks() {
       setError(err.message || "Failed to delete deck");
     }
   };
+
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -120,7 +123,19 @@ export default function SavedDecks() {
             {decks.map((deck) => (
               <Card key={deck.id}>
                 <CardHeader>
-                  <CardTitle>{deck.name}</CardTitle>
+                  <div className="flex items-center gap-2">
+                    <CardTitle>{deck.name}</CardTitle>
+                    <Badge 
+                      variant="secondary" 
+                      className={`text-xs font-medium pointer-events-none ${
+                        deck.mode === "TCG" 
+                          ? "bg-blue-100 text-blue-800 border-blue-200" 
+                          : "bg-yellow-100 text-yellow-800 border-yellow-200"
+                      }`}
+                    >
+                      {deck.mode}
+                    </Badge>
+                  </div>
                   <CardDescription className="flex items-center">
                     <Clock className="h-3 w-3 mr-1" />
                     Last updated: {deck.updated_at ? formatDate(deck.updated_at) : "Unknown"}
@@ -191,6 +206,7 @@ export default function SavedDecks() {
             ))}
           </div>
         )}
+
       </div>
     </div>
   );

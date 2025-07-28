@@ -2,7 +2,14 @@
 
 import type React from "react";
 
-import { useState, useEffect, useCallback } from "react";
+import {
+  useState,
+  useEffect,
+  useCallback,
+  useLayoutEffect,
+  useRef,
+  useMemo,
+} from "react";
 import { useDeck } from "@/context/deck-context";
 import {
   DndContext,
@@ -68,7 +75,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Progress } from "@/components/ui/progress";
-import CardItem from "@/components/card-item";
+import { CardStack } from "@/components/ui/card-stack";
 import AIChatbot from "@/components/ai-chatbot";
 import { Card } from "@/types/card";
 import Image from "next/image";
@@ -79,13 +86,21 @@ import {
 } from "@/lib/constants";
 import { DeckDropZone } from "@/components/ui/deck-drop-zone";
 import { DraggableCard } from "@/components/ui/draggable-card";
-import { filterCards, getDisabledCards, openLoginModal } from "@/lib/helpers";
+import { filterCards, openLoginModal } from "@/lib/helpers";
 import { BanStatus } from "@/types/types";
 import { InputWithClear } from "@/components/ui/input-with-clear";
-import { v4 as uuidv4 } from "uuid";
 import { FilterMenu } from "@/components/ui/filter-menu";
 import { useCardStore } from "@/store/cardStore";
 import { useUserStore } from "@/store/useUserStore";
+import { Skeleton } from "@/components/ui/skeleton";
+import { getTCGBanlist } from "@/lib/api";
+
+const DECK_MODES = ["TCG", "Master Duel"] as const;
+type DeckMode = (typeof DECK_MODES)[number];
+const MODE_COLORS: Record<DeckMode, string> = {
+  TCG: "bg-yellow-500",
+  "Master Duel": "bg-blue-600",
+};
 
 export default function DeckBuilder() {
   const {
@@ -98,15 +113,16 @@ export default function DeckBuilder() {
     getDeckStats,
     getSynergyTips,
     addCardToDeck,
+    updateDeckMode,
   } = useDeck();
 
+  // State -----------------------------------------------
   const [isRenameOpen, setIsRenameOpen] = useState(false);
   const [deckName, setDeckName] = useState(currentDeck.name || "");
   const [importText, setImportText] = useState("");
   const [activeTab, setActiveTab] = useState("main");
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredCards, setFilteredCards] = useState<Card[]>([]);
-  const [loading, setLoading] = useState(false);
   const [activeDragCard, setActiveDragCard] = useState<Card | null>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [deckTier, setDeckTier] = useState<number | null>(null);
@@ -132,7 +148,14 @@ export default function DeckBuilder() {
     defRange: "",
     rarity: "",
   });
+  const [deckMode, setDeckMode] = useState<DeckMode>(
+    currentDeck.mode || "Master Duel"
+  );
+
+  // Zustand Store -----------------------------------------
   const cardList = useCardStore((state) => state.cardList);
+  const loading = useCardStore((state) => state.loading);
+  const setLoading = useCardStore((state) => state.setLoading);
   const user = useUserStore((state) => state.user);
 
   const playstyleIcons: Record<string, React.ElementType> = {
@@ -156,7 +179,7 @@ export default function DeckBuilder() {
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8,
+        distance: 3, // Reduced distance for easier drag activation
       },
     })
   );
@@ -166,6 +189,13 @@ export default function DeckBuilder() {
       setDeckName(currentDeck.name || "");
     }
   }, [isRenameOpen, currentDeck.name]);
+
+  useEffect(() => {
+    // Sync deck mode with current deck's mode when deck changes
+    if (currentDeck.mode && currentDeck.mode !== deckMode) {
+      setDeckMode(currentDeck.mode as DeckMode);
+    }
+  }, [currentDeck.mode, deckMode]);
 
   useEffect(() => {
     let filtered = cardList;
@@ -183,17 +213,50 @@ export default function DeckBuilder() {
   }, [searchQuery, cardList, searchParams]);
 
   useEffect(() => {
-    fetch("/data/master-duel-banlist.json")
-      .then((res) => {
-        if (!res.ok) throw new Error("Failed to load banlist");
-        return res.json();
-      })
-      .then(setBanlist)
-      .catch((err) => {
+    const loadBanlist = async () => {
+      try {
+        if (deckMode === "TCG") {
+          // Load TCG banlist from Supabase
+          const tcgBanlist = await getTCGBanlist();
+          setBanlist(tcgBanlist);
+        } else {
+          // Load Master Duel banlist from JSON file
+          const response = await fetch("/data/master-duel-banlist.json");
+          if (!response.ok) throw new Error("Failed to load Master Duel banlist");
+          const masterDuelBanlist = await response.json();
+          setBanlist(masterDuelBanlist);
+        }
+      } catch (err) {
         console.error("Error loading banlist:", err);
         setBanlist({}); // fallback to empty banlist if needed
+      }
+    };
+
+    loadBanlist();
+  }, [deckMode]);
+
+  const tcgRef = useRef<HTMLButtonElement>(null);
+  const masterDuelRef = useRef<HTMLButtonElement>(null);
+  const btnRefs = useMemo(
+    () => ({
+      TCG: tcgRef,
+      "Master Duel": masterDuelRef,
+    }),
+    []
+  );
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [sliderStyle, setSliderStyle] = useState<React.CSSProperties>({});
+
+  useLayoutEffect(() => {
+    if (containerRef.current && btnRefs[deckMode].current) {
+      const containerRect = containerRef.current.getBoundingClientRect();
+      const btnRect = btnRefs[deckMode].current.getBoundingClientRect();
+      setSliderStyle({
+        left: btnRect.left - containerRect.left,
+        width: btnRect.width,
       });
-  }, []);
+    }
+  }, [deckMode, btnRefs]);
 
   const analyzeDeck = useCallback(() => {
     const stats = getDeckStats();
@@ -324,27 +387,27 @@ export default function DeckBuilder() {
   }, [currentDeck, analyzeDeck]);
 
   const handleSearch = () => {
-  setLoading(true);
-  try {
-    // Optionally, filter by searchQuery first
-    let filtered = cardList;
-    if (searchQuery.trim() !== "") {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (card) =>
-          card.name.toLowerCase().includes(query) ||
-          card.desc.toLowerCase().includes(query) ||
-          (card.archetype && card.archetype.toLowerCase().includes(query))
-      );
+    setLoading(true);
+    try {
+      // Optionally, filter by searchQuery first
+      let filtered = cardList;
+      if (searchQuery.trim() !== "") {
+        const query = searchQuery.toLowerCase();
+        filtered = filtered.filter(
+          (card) =>
+            card.name.toLowerCase().includes(query) ||
+            card.desc.toLowerCase().includes(query) ||
+            (card.archetype && card.archetype.toLowerCase().includes(query))
+        );
+      }
+      filtered = filterCards(filtered, searchParams);
+      setFilteredCards(filtered);
+    } catch (error) {
+      console.error("Error filtering cards:", error);
+    } finally {
+      setLoading(false);
     }
-    filtered = filterCards(filtered, searchParams);
-    setFilteredCards(filtered);
-  } catch (error) {
-    console.error("Error filtering cards:", error);
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   useEffect(() => {
     // Only fetch when actual search params change (not on every keystroke in searchQuery)
@@ -386,47 +449,123 @@ export default function DeckBuilder() {
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;
     setActiveDragId(active.id);
-    const cardId = active.data?.current?.cardId;
-    const deckCard =
-      currentDeck.mainDeck.find((c) => c.deckInstanceId === active.id) ||
-      currentDeck.extraDeck.find((c) => c.deckInstanceId === active.id) ||
-      currentDeck.sideDeck.find((c) => c.deckInstanceId === active.id);
 
-    const browserCard = cardId
-      ? filteredCards.find((c) => c.id === cardId)
-      : null;
-
-    setActiveDragCard(deckCard || browserCard || null);
+    const dragType = active.data?.current?.type;
+    if (dragType === "browser") {
+      const cardId = active.data?.current?.cardId;
+      const browserCard = cardId
+        ? filteredCards.find((c) => c.id === cardId)
+        : null;
+      setActiveDragCard(browserCard || null);
+    } else if (dragType === "deck") {
+      const deckInstanceId = active.data?.current?.deckInstanceId;
+      const deckCard =
+        currentDeck.mainDeck.find((c) => c.deckInstanceId === deckInstanceId) ||
+        currentDeck.extraDeck.find(
+          (c) => c.deckInstanceId === deckInstanceId
+        ) ||
+        currentDeck.sideDeck.find((c) => c.deckInstanceId === deckInstanceId);
+      setActiveDragCard(deckCard || null);
+    } else {
+      setActiveDragCard(null);
+    }
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveDragId(null);
     setActiveDragCard(null);
+
     if (!over) return;
 
-    const cardId = active.data?.current?.cardId;
-    const deckCard =
-      currentDeck.mainDeck.find((c) => c.deckInstanceId === active.id) ||
-      currentDeck.extraDeck.find((c) => c.deckInstanceId === active.id) ||
-      currentDeck.sideDeck.find((c) => c.deckInstanceId === active.id);
-    const browserCard = cardId
-      ? filteredCards.find((c) => c.id === cardId)
-      : null;
-
-    const cardToAdd = browserCard
-      ? { ...browserCard, deckInstanceId: uuidv4() }
-      : deckCard;
-
-    if (!cardToAdd) return;
-
     const targetId = over.id as string;
-    if (targetId === "main-deck" && !isExtraDeckCard(cardToAdd)) {
-      addCardToDeck(cardToAdd, "mainDeck");
-    } else if (targetId === "extra-deck" && isExtraDeckCard(cardToAdd)) {
-      addCardToDeck(cardToAdd, "extraDeck");
-    } else if (targetId === "side-deck") {
-      addCardToDeck(cardToAdd, "sideDeck");
+    const dragType = active.data?.current?.type;
+
+    // Helper function to determine which deck section a target belongs to
+    const getDeckSectionFromTarget = (targetId: string): "mainDeck" | "extraDeck" | "sideDeck" | null => {
+      // Direct drop zone targets
+      if (targetId === "main-deck") return "mainDeck";
+      if (targetId === "extra-deck") return "extraDeck";
+      if (targetId === "side-deck") return "sideDeck";
+      
+      // Check if dropping on an existing card in a deck section
+      const sections: ("mainDeck" | "extraDeck" | "sideDeck")[] = ["mainDeck", "extraDeck", "sideDeck"];
+      for (const section of sections) {
+        const found = currentDeck[section].find((c) => c.deckInstanceId === targetId);
+        if (found) return section;
+      }
+      
+      return null;
+    };
+
+    // Browser -> Deck
+    if (dragType === "browser") {
+      const cardId = active.data?.current?.cardId;
+      const browserCard = cardId
+        ? filteredCards.find((c) => c.id === cardId)
+        : null;
+      if (!browserCard) return;
+      
+      const targetSection = getDeckSectionFromTarget(targetId);
+      
+      if (targetSection === "mainDeck" && !isExtraDeckCard(browserCard)) {
+        addCardToDeck(browserCard, "mainDeck");
+      } else if (targetSection === "extraDeck" && isExtraDeckCard(browserCard)) {
+        addCardToDeck(browserCard, "extraDeck");
+      } else if (targetSection === "sideDeck") {
+        addCardToDeck(browserCard, "sideDeck");
+      }
+      return;
+    }
+
+    // Deck -> Browser or move section
+    if (dragType === "deck") {
+      const deckInstanceId = active.data?.current?.deckInstanceId;
+      const sections: ("mainDeck" | "extraDeck" | "sideDeck")[] = [
+        "mainDeck",
+        "extraDeck",
+        "sideDeck",
+      ];
+      let deckCard: Card | null = null,
+        currentSection: "mainDeck" | "extraDeck" | "sideDeck" | null = null;
+
+      for (const section of sections) {
+        const found = currentDeck[section].find(
+          (c) => c.deckInstanceId === deckInstanceId
+        );
+        if (found) {
+          deckCard = found;
+          currentSection = section;
+          break;
+        }
+      }
+      if (!deckCard || !currentSection) return;
+
+      // Deck -> Card Browser: remove card from deck
+      if (targetId === "card-browser") {
+        removeCardFromDeck(deckInstanceId, currentSection);
+        return;
+      }
+
+      const targetSection = getDeckSectionFromTarget(targetId);
+      
+      // If dropping on the same section, do nothing
+      if (targetSection === currentSection) return;
+      
+      // Deck section moves (remove from current, add to new)
+      removeCardFromDeck(deckInstanceId, currentSection);
+      
+      if (targetSection === "mainDeck" && !isExtraDeckCard(deckCard)) {
+        addCardToDeck(deckCard, "mainDeck");
+      } else if (targetSection === "extraDeck" && isExtraDeckCard(deckCard)) {
+        addCardToDeck(deckCard, "extraDeck");
+      } else if (targetSection === "sideDeck") {
+        addCardToDeck(deckCard, "sideDeck");
+      } else {
+        // Restore if dropped on invalid target
+        addCardToDeck(deckCard, currentSection);
+      }
+      return;
     }
   };
 
@@ -437,6 +576,23 @@ export default function DeckBuilder() {
       card.type.includes("XYZ Monster") ||
       card.type.includes("Link Monster")
     );
+  };
+
+  const getRemainingCopies = (card: Card) => {
+    const banStatus = banlist[card.name] || "Unlimited";
+    let maxCopies = 3;
+    if (banStatus === "Limited") maxCopies = 1;
+    if (banStatus === "Semi-Limited") maxCopies = 2;
+    if (banStatus === "Forbidden") maxCopies = 0;
+
+    // Count current copies in all deck sections
+    const currentCopies = [
+      ...currentDeck.mainDeck,
+      ...currentDeck.extraDeck,
+      ...currentDeck.sideDeck,
+    ].filter((c) => c.id === card.id).length;
+
+    return Math.max(0, maxCopies - currentCopies);
   };
 
   const renderTierBadge = () => {
@@ -587,6 +743,42 @@ export default function DeckBuilder() {
                           </DialogFooter>
                         </DialogContent>
                       </Dialog>
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="relative flex w-fit rounded-full bg-zinc-100 shadow-inner"
+                          ref={containerRef}
+                        >
+                          {/* Animated background: matches active button */}
+                          <span
+                            className={`absolute top-0 bottom-0 rounded-full transition-all duration-200 ${MODE_COLORS[deckMode]}`}
+                            style={{
+                              ...sliderStyle,
+                              zIndex: 0,
+                            }}
+                          />
+                          {DECK_MODES.map((mode) => (
+                            <button
+                              key={mode}
+                              ref={btnRefs[mode]}
+                              type="button"
+                              onClick={() => {
+                                setDeckMode(mode);
+                                updateDeckMode(mode);
+                              }}
+                              className={`relative z-10 px-4 py-1 font-semibold rounded-full transition-colors duration-200 focus:outline-none
+            ${deckMode === mode ? "text-white" : "text-gray-700"}
+          `}
+                              aria-pressed={deckMode === mode}
+                              style={{
+                                background: "transparent",
+                                position: "relative",
+                              }}
+                            >
+                              {mode}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                     </div>
 
                     <TooltipProvider>
@@ -614,53 +806,64 @@ export default function DeckBuilder() {
                         </Tooltip>
 
                         {/* Import Button */}
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Dialog>
-                              <DialogTrigger asChild>
-                                <Button variant="ghost" size="icon">
-                                  <Upload className="h-4 w-4" />
-                                </Button>
-                              </DialogTrigger>
-                              <DialogContent>
-                                <DialogHeader>
-                                  <DialogTitle>Import Deck</DialogTitle>
-                                  <DialogDescription>
-                                    Paste the JSON data of a previously exported
-                                    deck.
-                                  </DialogDescription>
-                                </DialogHeader>
-                                <div className="py-4">
-                                  <textarea
-                                    className="w-full h-32 p-2 border rounded-md"
-                                    placeholder="Paste JSON data here..."
-                                    value={importText}
-                                    onChange={(e) =>
-                                      setImportText(e.target.value)
-                                    }
-                                  />
-                                </div>
-                                <DialogFooter>
-                                  <Button
-                                    onClick={() => {
-                                      if (!user) {
-                                        openLoginModal();
-                                      } else {
-                                        handleImportDeck();
-                                      }
-                                    }}
-                                    disabled={!importText.trim()}
-                                  >
-                                    Import
+                        {!user ? (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={openLoginModal}
+                              >
+                                <Upload className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Import Deck</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        ) : (
+                          <Dialog>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <DialogTrigger asChild>
+                                  <Button variant="ghost" size="icon">
+                                    <Upload className="h-4 w-4" />
                                   </Button>
-                                </DialogFooter>
-                              </DialogContent>
-                            </Dialog>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Import Deck</p>
-                          </TooltipContent>
-                        </Tooltip>
+                                </DialogTrigger>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Import Deck</p>
+                              </TooltipContent>
+                            </Tooltip>
+                            <DialogContent>
+                              <DialogHeader>
+                                <DialogTitle>Import Deck</DialogTitle>
+                                <DialogDescription>
+                                  Paste the JSON data of a previously exported
+                                  deck.
+                                </DialogDescription>
+                              </DialogHeader>
+                              <div className="py-4">
+                                <textarea
+                                  className="w-full h-32 p-2 border rounded-md"
+                                  placeholder="Paste JSON data here..."
+                                  value={importText}
+                                  onChange={(e) =>
+                                    setImportText(e.target.value)
+                                  }
+                                />
+                              </div>
+                              <DialogFooter>
+                                <Button
+                                  onClick={handleImportDeck}
+                                  disabled={!importText.trim()}
+                                >
+                                  Import
+                                </Button>
+                              </DialogFooter>
+                            </DialogContent>
+                          </Dialog>
+                        )}
 
                         {/* Clear Button */}
                         <Tooltip>
@@ -681,8 +884,8 @@ export default function DeckBuilder() {
                     </TooltipProvider>
                   </div>
                   <CardDescription>
-                    Drag cards from the right panel or click to add them to your
-                    deck
+                    Drag cards from the right panel to add them to your deck, or
+                    drag cards back to the browser to remove them
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="p-0">
@@ -692,16 +895,18 @@ export default function DeckBuilder() {
                     value={activeTab}
                   >
                     <div className="px-6">
-                      <TabsList className="grid w-full grid-cols-3">
+                      <TabsList className={`grid w-full ${deckMode === "Master Duel" ? "grid-cols-2" : "grid-cols-3"}`}>
                         <TabsTrigger value="main">
                           Main Deck ({stats.mainCount})
                         </TabsTrigger>
                         <TabsTrigger value="extra">
                           Extra Deck ({stats.extraCount})
                         </TabsTrigger>
-                        <TabsTrigger value="side">
-                          Side Deck ({stats.sideCount})
-                        </TabsTrigger>
+                        {deckMode === "TCG" && (
+                          <TabsTrigger value="side">
+                            Side Deck ({stats.sideCount})
+                          </TabsTrigger>
+                        )}
                       </TabsList>
                     </div>
 
@@ -743,19 +948,21 @@ export default function DeckBuilder() {
                                 </span>
                               </div>
                             ) : (
-                              currentDeck.mainDeck.map((card) => (
-                                <DraggableCard
-                                  id={card.deckInstanceId}
-                                  key={card.deckInstanceId}
-                                  card={card}
-                                  onRemove={() =>
-                                    removeCardFromDeck(
-                                      card.deckInstanceId,
-                                      "mainDeck"
-                                    )
-                                  }
-                                />
-                              ))
+                              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2 max-h-[400px] overflow-y-auto">
+                                {currentDeck.mainDeck.map((card) => (
+                                  <DraggableCard
+                                    id={card.deckInstanceId}
+                                    key={card.deckInstanceId}
+                                    card={card}
+                                    onRemove={() =>
+                                      removeCardFromDeck(
+                                        card.deckInstanceId,
+                                        "mainDeck"
+                                      )
+                                    }
+                                  />
+                                ))}
+                              </div>
                             )}
                           </DeckDropZone>
                         </div>
@@ -800,19 +1007,21 @@ export default function DeckBuilder() {
                                 </span>
                               </div>
                             ) : (
-                              currentDeck.extraDeck.map((card) => (
-                                <DraggableCard
-                                  id={card.deckInstanceId}
-                                  key={card.deckInstanceId}
-                                  card={card}
-                                  onRemove={() =>
-                                    removeCardFromDeck(
-                                      card.deckInstanceId,
-                                      "extraDeck"
-                                    )
-                                  }
-                                />
-                              ))
+                              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2 max-h-[400px] overflow-y-auto">
+                                {currentDeck.extraDeck.map((card) => (
+                                  <DraggableCard
+                                    id={card.deckInstanceId}
+                                    key={card.deckInstanceId}
+                                    card={card}
+                                    onRemove={() =>
+                                      removeCardFromDeck(
+                                        card.deckInstanceId,
+                                        "extraDeck"
+                                      )
+                                    }
+                                  />
+                                ))}
+                              </div>
                             )}
                           </DeckDropZone>
                         </div>
@@ -860,19 +1069,21 @@ export default function DeckBuilder() {
                                 </span>
                               </div>
                             ) : (
-                              currentDeck.sideDeck.map((card) => (
-                                <DraggableCard
-                                  id={card.deckInstanceId}
-                                  key={card.deckInstanceId}
-                                  card={card}
-                                  onRemove={() =>
-                                    removeCardFromDeck(
-                                      card.deckInstanceId,
-                                      "sideDeck"
-                                    )
-                                  }
-                                />
-                              ))
+                              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2 max-h-[400px] overflow-y-auto">
+                                {currentDeck.sideDeck.map((card) => (
+                                  <DraggableCard
+                                    id={card.deckInstanceId}
+                                    key={card.deckInstanceId}
+                                    card={card}
+                                    onRemove={() =>
+                                      removeCardFromDeck(
+                                        card.deckInstanceId,
+                                        "sideDeck"
+                                      )
+                                    }
+                                  />
+                                ))}
+                              </div>
                             )}
                           </DeckDropZone>
                         </div>
@@ -939,11 +1150,16 @@ export default function DeckBuilder() {
                     </div>
 
                     <div className="flex items-center justify-between">
-                      <p className="text-sm text-muted-foreground">
-                        {loading
-                          ? "Searching..."
-                          : `Found ${filteredCards.length} cards`}
-                      </p>
+                      {loading ? (
+                        <div className="flex items-center gap-2">
+                          <Skeleton className="h-4 w-20" />
+                          <Skeleton className="h-4 w-12" />
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">
+                          Found {filteredCards.length} cards
+                        </p>
+                      )}
                       <div className="flex items-center gap-2">
                         <Select
                           value={searchParams.sort}
@@ -979,47 +1195,74 @@ export default function DeckBuilder() {
                   </div>
 
                   <div className="h-[500px] border-t">
-                    {filteredCards.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center h-full">
-                        <p className="text-muted-foreground">No cards found</p>
-                        <p className="text-sm text-muted-foreground">
-                          Try adjusting your search filters
-                        </p>
-                      </div>
-                    ) : (
-                      <Virtuoso
-                        style={{ height: "100%" }}
-                        totalCount={filteredCards.length}
-                        itemContent={(index) => {
-                          const card = filteredCards[index];
-                          const {
-                            isMainDisabled,
-                            isExtraDisabled,
-                            isSideDisabled,
-                          } = getDisabledCards(card, currentDeck, banlist);
+                    <DeckDropZone id="card-browser" isEmpty={false}>
+                      {loading ? (
+                        <div className="flex flex-col items-center justify-center h-full">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-4"></div>
+                          <p className="text-muted-foreground">
+                            Loading cards...
+                          </p>
+                        </div>
+                      ) : filteredCards.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center h-full">
+                          <p className="text-muted-foreground">
+                            No cards found
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            Try adjusting your search filters
+                          </p>
+                        </div>
+                      ) : filteredCards.length > 100 ? (
+                        <Virtuoso
+                          style={{ height: "100%" }}
+                          totalCount={filteredCards.length}
+                          itemContent={(index) => {
+                            const card = filteredCards[index];
+                            const banStatus = banlist[card.name] || "Unlimited";
+                            let maxCopies = 3;
+                            if (banStatus === "Limited") maxCopies = 1;
+                            if (banStatus === "Semi-Limited") maxCopies = 2;
+                            if (banStatus === "Forbidden") maxCopies = 0;
 
-                          return (
-                            <CardItem
-                              isBeingDragged={activeDragId === card.id}
-                              card={card}
-                              onAddToMainDeck={() =>
-                                addCardToDeck(card, "mainDeck")
-                              }
-                              onAddToExtraDeck={() =>
-                                addCardToDeck(card, "extraDeck")
-                              }
-                              onAddToSideDeck={() =>
-                                addCardToDeck(card, "sideDeck")
-                              }
-                              isExtraDeckCard={isExtraDeckCard(card)}
-                              addToMainDisabled={isMainDisabled}
-                              addToExtraDisabled={isExtraDisabled}
-                              addToSideDisabled={isSideDisabled}
-                            />
-                          );
-                        }}
-                      />
-                    )}
+                            return (
+                              <CardStack
+                                key={card.id}
+                                card={card}
+                                remainingCopies={getRemainingCopies(card)}
+                                maxCopies={maxCopies}
+                                banStatus={banStatus}
+                                isBeingDragged={
+                                  activeDragId === `browser-${card.id}`
+                                }
+                              />
+                            );
+                          }}
+                        />
+                      ) : (
+                        <div className="overflow-y-auto h-full">
+                          {filteredCards.map((card) => {
+                            const banStatus = banlist[card.name] || "Unlimited";
+                            let maxCopies = 3;
+                            if (banStatus === "Limited") maxCopies = 1;
+                            if (banStatus === "Semi-Limited") maxCopies = 2;
+                            if (banStatus === "Forbidden") maxCopies = 0;
+
+                            return (
+                              <CardStack
+                                key={card.id}
+                                card={card}
+                                remainingCopies={getRemainingCopies(card)}
+                                maxCopies={maxCopies}
+                                banStatus={banStatus}
+                                isBeingDragged={
+                                  activeDragId === `browser-${card.id}`
+                                }
+                              />
+                            );
+                          })}
+                        </div>
+                      )}
+                    </DeckDropZone>
                   </div>
                 </CardContent>
               </CardUI>

@@ -14,24 +14,27 @@ export const DeckDropZone: React.FC<DeckDropZoneProps> = ({
 }) => {
   const { setNodeRef, isOver } = useDroppable({ id });
 
+  // Special handling for card browser - don't apply grid layout
+  const isCardBrowser = id === "card-browser";
+
   return (
     <div
       ref={setNodeRef}
       id={id}
       className={`
         w-full h-full min-h-[300px] transition
-        border-2 border-dashed rounded-lg p-4
+        ${isCardBrowser ? "" : "border-2 border-dashed rounded-lg p-4"}
         ${isEmpty
           ? "flex items-center justify-center"
-          : "flex flex-wrap items-start justify-start gap-2"}
-        ${isOver ? "bg-blue-100 border-blue-400" : ""}
+          : "relative"}
+        ${isOver ? "bg-blue-100 border-blue-400" : isCardBrowser ? "" : "border-gray-300"}
       `}
       style={{ position: "relative" }}
     >
       {children}
-      {/* Optional: Overlay for visual feedback */}
+      {/* Full-area overlay for better drop detection */}
       {isOver && (
-        <div className="absolute inset-0 pointer-events-none bg-blue-100 opacity-50 rounded-lg" />
+        <div className="absolute inset-0 pointer-events-none bg-blue-100 opacity-30 rounded-lg border-2 border-blue-400 border-dashed" />
       )}
     </div>
   );

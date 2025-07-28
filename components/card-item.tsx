@@ -22,7 +22,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Card } from "@/types/card";
 import Image from "next/image";
-import { v4 as uuidv4 } from "uuid";
 
 interface CardItemProps {
   isBeingDragged: boolean;
@@ -34,6 +33,7 @@ interface CardItemProps {
   addToMainDisabled?: boolean;
   addToExtraDisabled?: boolean;
   addToSideDisabled?: boolean;
+  remainingCopies?: number;
 }
 
 export default function CardItem({
@@ -46,15 +46,16 @@ export default function CardItem({
   addToMainDisabled,
   addToExtraDisabled,
   addToSideDisabled,
+  remainingCopies,
 }: CardItemProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const disabled = addToMainDisabled || addToExtraDisabled || addToSideDisabled;
 
-  const dragInstanceId = useMemo(() => uuidv4(), []);
+  const dragInstanceId = useMemo(() => `browser-${card.id}`, [card.id]);
 
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
-    id: dragInstanceId, // Unique per render
-    data: { cardId: card.id }, // Store the actual card id for lookup
+    id: dragInstanceId, // Stable ID based on card ID
+    data: { cardId: card.id, type: 'browser' }, // Store the actual card id and type for lookup
     disabled: disabled,
   });
   const style = transform
@@ -65,7 +66,7 @@ export default function CardItem({
 
   return (
     <>
-      <div className="p-2 border-b hover:bg-accent/10">
+      <div className={`p-2 border-b hover:bg-accent/10 ${isBeingDragged ? 'opacity-50' : ''}`}>
         <div className="flex gap-3">
           <div
             ref={setNodeRef}
@@ -74,17 +75,15 @@ export default function CardItem({
             {...attributes}
             className="w-12 h-18 flex-shrink-0 cursor-grab active:cursor-grabbing"
           >
-            {!isBeingDragged && (
-              <Image
-                width={80}
-                height={120}
-                src={card.card_images[0].image_url_small || "/placeholder.svg"}
-                alt={card.name}
-                className={`w-full h-auto object-contain rounded ${
-                  disabled ? "opacity-60" : ""
-                }`}
-              />
-            )}
+            <Image
+              width={80}
+              height={120}
+              src={card.card_images[0].image_url_small || "/placeholder.svg"}
+              alt={card.name}
+              className={`w-full h-auto object-contain rounded ${
+                disabled ? "opacity-60" : ""
+              } ${isBeingDragged ? "opacity-30" : ""}`}
+            />
           </div>
 
           <div className="flex-1 min-w-0">
@@ -96,6 +95,11 @@ export default function CardItem({
               {card.attribute && (
                 <Badge variant="outline" className="text-xs">
                   {card.attribute}
+                </Badge>
+              )}
+              {remainingCopies !== undefined && (
+                <Badge variant="secondary" className="text-xs">
+                  {remainingCopies} left
                 </Badge>
               )}
             </div>

@@ -23,6 +23,8 @@ export type NormalizedDeck = {
     sideDeck: string[]
 };
 
+export type DeckSection = "mainDeck" | "extraDeck" | "sideDeck";
+
 export type DeckType = {
     id: string
     name: string
@@ -30,6 +32,7 @@ export type DeckType = {
     extraDeck: DeckCard[]
     sideDeck: DeckCard[]
     updated_at?: string
+    mode: 'TCG' | 'Master Duel'
 }
 
 type DeckListByCategory = {

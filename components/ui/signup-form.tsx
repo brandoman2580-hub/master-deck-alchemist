@@ -16,7 +16,7 @@ function getPasswordRequirements(password: string) {
     { label: "Uppercase letter", valid: /[A-Z]/.test(password) },
     { label: "Lowercase letter", valid: /[a-z]/.test(password) },
     { label: "Number", valid: /\d/.test(password) },
-    { label: "Symbol", valid: /[!@#$%^&*(),.?\":{}|<>]/.test(password) },
+    { label: "Symbol", valid: /[!@#$%^&*(),.?":{}|<>]/.test(password) },
   ]
 }
 

@@ -1,26 +1,29 @@
-"use client"
-
-import { useSortable } from "@dnd-kit/sortable"
-import { CSS } from "@dnd-kit/utilities"
-import { X } from "lucide-react"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { Card } from "@/types/card"
-import Image from "next/image"
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { X } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Card } from "@/types/card";
+import Image from "next/image";
 
 interface DeckCardProps {
-  card: Card
-  onRemove: () => void
+  card: Card;
+  onRemove: () => void;
 }
 
 export default function DeckCard({ card, onRemove }: DeckCardProps) {
+  const deckInstanceId = card.deckInstanceId;
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({
-    id: card.id,
-  })
+    id: deckInstanceId,
+    data: {
+      type: "deck",
+      deckInstanceId,
+    }
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-  }
+  };
 
   return (
     <TooltipProvider>
@@ -42,8 +45,8 @@ export default function DeckCard({ card, onRemove }: DeckCardProps) {
             />
             <button
               onClick={(e) => {
-                e.stopPropagation()
-                onRemove()
+                e.stopPropagation();
+                onRemove();
               }}
               className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
               aria-label="Remove card"
@@ -66,5 +69,5 @@ export default function DeckCard({ card, onRemove }: DeckCardProps) {
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
-  )
+  );
 }

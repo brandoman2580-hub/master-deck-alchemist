@@ -34,7 +34,7 @@ export default function Home() {
         <div className="relative flex flex-col items-center justify-center">
           {/* Overlayed Content */}
           <div className="relative z-10 flex flex-col items-center space-y-8 text-center mt-[500px]">
-            <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl flex items-center mb-[-64px] pr-16">
+            <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl flex items-center mb-[-64px] pr-16 font-rowdies">
               <DragonIcon className="h-48 w-48 mr-[-32px]" />
               MASTER DECK ALCHEMIST
             </h1>
@@ -53,7 +53,7 @@ export default function Home() {
               </Button>
             </div>
             <div className="flex justify-center">
-              <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl flex items-center justify-center mb-[-64px]">
+              <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl flex items-center justify-center mb-[-64px] font-rowdies">
                 BUILD. &nbsp; TEST. &nbsp; DUEL.
               </h1>
             </div>

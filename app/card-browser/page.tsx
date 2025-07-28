@@ -11,7 +11,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogClose,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
@@ -45,6 +44,7 @@ export default function CardBrowser() {
     defRange: "",
     rarity: "",
   });
+  
   const cardList = useCardStore((state) => state.cardList);
 
   useEffect(() => {
@@ -65,7 +65,6 @@ export default function CardBrowser() {
   const handleSearch = () => {
     setLoading(true);
     try {
-      // Optionally, filter by searchQuery first
       let filtered = cardList;
       if (searchQuery.trim() !== "") {
         const query = searchQuery.toLowerCase();
@@ -86,7 +85,6 @@ export default function CardBrowser() {
   };
 
   useEffect(() => {
-    // Only fetch when actual search params change (not on every keystroke in searchQuery)
     handleSearch();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
@@ -113,16 +111,18 @@ export default function CardBrowser() {
   const renderCardRow = useCallback(
     (index: number) => {
       const card = filteredCards[index];
+      if (!card) return null;
+      
       return (
         <div
           className="grid grid-cols-[80px_1fr_100px_100px_100px_120px] gap-2 p-2 border-b hover:bg-accent/10 items-center"
-          key={card.id}
+          key={`card-${card.id}-${index}`}
         >
           <div className="flex items-center">
             <Image
               width={80}
               height={120}
-              src={card.card_images[0].image_url_small || "/placeholder.svg"}
+              src={card.card_images?.[0]?.image_url_small || "/placeholder.svg"}
               alt={card.name}
               className="w-16 h-auto object-contain"
               loading="lazy"
@@ -156,74 +156,18 @@ export default function CardBrowser() {
             {card.def !== undefined ? card.def : "-"}
           </div>
           <div className="flex justify-end gap-2">
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setSelectedCard(card)}
-                >
-                  <Info className="h-4 w-4" />
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-md">
-                {selectedCard && (
-                  <>
-                    <DialogHeader>
-                      <DialogTitle>{selectedCard.name}</DialogTitle>
-                      <DialogDescription>
-                        {selectedCard.type} • {selectedCard.race}
-                        {selectedCard.attribute &&
-                          ` • ${selectedCard.attribute}`}
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="flex flex-col sm:flex-row gap-4">
-                      <Image
-                        width={80}
-                        height={120}
-                        src={
-                          selectedCard.card_images[0].image_url ||
-                          "/placeholder.svg"
-                        }
-                        alt={selectedCard.name}
-                        className="w-full sm:w-1/3 object-contain"
-                      />
-                      <div className="flex-1 space-y-2">
-                        <p className="text-sm">{selectedCard.desc}</p>
-                        {selectedCard.atk !== undefined && (
-                          <p className="text-sm">
-                            <span className="font-medium">ATK/DEF:</span>{" "}
-                            {selectedCard.atk} / {selectedCard.def}
-                          </p>
-                        )}
-                        {selectedCard.level !== undefined && (
-                          <p className="text-sm">
-                            <span className="font-medium">Level:</span>{" "}
-                            {selectedCard.level}
-                          </p>
-                        )}
-                        {selectedCard.archetype && (
-                          <p className="text-sm">
-                            <span className="font-medium">Archetype:</span>{" "}
-                            {selectedCard.archetype}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex justify-end gap-2 mt-4">
-                      <DialogClose asChild>
-                        <Button variant="outline">Close</Button>
-                      </DialogClose>
-                    </div>
-                  </>
-                )}
-              </DialogContent>
-            </Dialog>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSelectedCard(card)}
+            >
+              <Info className="h-4 w-4" />
+            </Button>
           </div>
         </div>
       );
     },
-    [filteredCards, selectedCard]
+    [filteredCards]
   );
 
   const TableHeader = () => (
@@ -351,6 +295,62 @@ export default function CardBrowser() {
           </div>
         </div>
       </div>
+
+      {/* Card Info Dialog */}
+      <Dialog open={!!selectedCard} onOpenChange={() => setSelectedCard(null)}>
+        <DialogContent className="max-w-md">
+          {selectedCard && (
+            <>
+              <DialogHeader>
+                <DialogTitle>{selectedCard.name}</DialogTitle>
+                <DialogDescription>
+                  {selectedCard.type} • {selectedCard.race}
+                  {selectedCard.attribute &&
+                    ` • ${selectedCard.attribute}`}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="flex flex-col sm:flex-row gap-4">
+                <Image
+                  width={80}
+                  height={120}
+                  src={
+                    selectedCard.card_images?.[0]?.image_url ||
+                    "/placeholder.svg"
+                  }
+                  alt={selectedCard.name}
+                  className="w-full sm:w-1/3 object-contain"
+                />
+                <div className="flex-1 space-y-2">
+                  <p className="text-sm">{selectedCard.desc}</p>
+                  {selectedCard.atk !== undefined && (
+                    <p className="text-sm">
+                      <span className="font-medium">ATK/DEF:</span>{" "}
+                      {selectedCard.atk} / {selectedCard.def}
+                    </p>
+                  )}
+                  {selectedCard.level !== undefined && (
+                    <p className="text-sm">
+                      <span className="font-medium">Level:</span>{" "}
+                      {selectedCard.level}
+                    </p>
+                  )}
+                  {selectedCard.archetype && (
+                    <p className="text-sm">
+                      <span className="font-medium">Archetype:</span>{" "}
+                      {selectedCard.archetype}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 mt-4">
+                <DialogClose asChild>
+                  <Button variant="outline">Close</Button>
+                </DialogClose>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

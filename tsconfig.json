@@ -10,6 +10,8 @@
     "checkJs": true,
     "skipLibCheck": true,
     "noImplicitAny": false,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
     "strict": true,
     "noEmit": true,
     "esModuleInterop": true,

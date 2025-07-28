@@ -36,6 +36,7 @@ interface DeckContextType {
   exportDeck: () => string;
   importDeck: (jsonData: string) => void;
   renameDeck: (name: string) => void;
+  updateDeckMode: (mode: "TCG" | "Master Duel") => void;
   getDeckStats: () => {
     mainCount: number;
     extraCount: number;
@@ -58,6 +59,7 @@ export function DeckProvider({ children }: { children: ReactNode }) {
     mainDeck: [],
     extraDeck: [],
     sideDeck: [],
+    mode: "Master Duel",
   });
   const [savedDecks, setSavedDecks] = useState<Deck[]>([]);
   const [banlist, setBanlist] = useState<Record<string, BanStatus>>({});
@@ -72,26 +74,6 @@ export function DeckProvider({ children }: { children: ReactNode }) {
       .then(setBanlist)
       .catch(() => setBanlist({}));
   }, []);
-
-  // Debounced auto-save effect
-  useEffect(() => {
-    if (saveTimeout.current) clearTimeout(saveTimeout.current);
-    // Don't auto-save if the deck is empty and named "New Deck"
-    if (
-      currentDeck.name === "New Deck" &&
-      currentDeck.mainDeck.length === 0 &&
-      currentDeck.extraDeck.length === 0 &&
-      currentDeck.sideDeck.length === 0
-    ) {
-      return;
-    }
-    saveTimeout.current = setTimeout(() => {
-      saveDeck(currentDeck);
-    }, 500); // Save 500ms after the last change
-    return () => {
-      if (saveTimeout.current) clearTimeout(saveTimeout.current);
-    };
-  }, [currentDeck]); // Triggers on any deck change
 
   // --- Deck Operations ---
 
@@ -138,6 +120,7 @@ export function DeckProvider({ children }: { children: ReactNode }) {
       mainDeck: [],
       extraDeck: [],
       sideDeck: [],
+      mode: "Master Duel",
     });
   }, []);
 
@@ -177,12 +160,27 @@ export function DeckProvider({ children }: { children: ReactNode }) {
 
         const deckToSave = deckData || currentDeck;
 
+        // Validate deck data before saving
+        if (!deckToSave.id || !deckToSave.name) {
+          throw new Error("Invalid deck data: missing id or name");
+        }
+
+        // Ensure arrays are properly initialized
+        const validatedDeck = {
+          ...deckToSave,
+          mainDeck: deckToSave.mainDeck || [],
+          extraDeck: deckToSave.extraDeck || [],
+          sideDeck: deckToSave.sideDeck || [],
+          mode: deckToSave.mode || "Master Duel",
+        };
+
         // Use supabaseDecks function
-        await saveDeckToSupabase(deckToSave, user.id);
+        await saveDeckToSupabase(validatedDeck, user.id);
 
         await getUserDecks();
       } catch (err: any) {
-        setError(err?.message || JSON.stringify(err) || "Failed to save deck");
+        const errorMessage = err?.message || err?.error_description || err?.details || "Failed to save deck";
+        setError(errorMessage);
         console.error("saveDeck error:", err);
       } finally {
         setLoading(false);
@@ -232,6 +230,26 @@ export function DeckProvider({ children }: { children: ReactNode }) {
     [getUserDecks]
   );
 
+  // Debounced auto-save effect
+  useEffect(() => {
+    if (saveTimeout.current) clearTimeout(saveTimeout.current);
+    // Don't auto-save if the deck is empty and named "New Deck"
+    if (
+      currentDeck.name === "New Deck" &&
+      currentDeck.mainDeck.length === 0 &&
+      currentDeck.extraDeck.length === 0 &&
+      currentDeck.sideDeck.length === 0
+    ) {
+      return;
+    }
+    saveTimeout.current = setTimeout(() => {
+      saveDeck(currentDeck);
+    }, 1000); // Increased delay to 1000ms to reduce interference with drag operations
+    return () => {
+      if (saveTimeout.current) clearTimeout(saveTimeout.current);
+    };
+  }, [currentDeck, saveDeck]); // Triggers on any deck change
+
   // --- Utility Functions ---
 
   const exportDeck = () => JSON.stringify(currentDeck);
@@ -239,7 +257,12 @@ export function DeckProvider({ children }: { children: ReactNode }) {
   const importDeck = (jsonData: string) => {
     try {
       const importedDeck = JSON.parse(jsonData) as DeckType;
-      setCurrentDeck(importedDeck);
+      // Ensure the imported deck has a mode property, default to "Master Duel" if missing
+      const deckWithMode = {
+        ...importedDeck,
+        mode: importedDeck.mode || "Master Duel" as const,
+      };
+      setCurrentDeck(deckWithMode);
     } catch (error) {
       setError("Failed to import deck: Invalid JSON");
     }
@@ -249,6 +272,13 @@ export function DeckProvider({ children }: { children: ReactNode }) {
     setCurrentDeck((prev) => ({
       ...prev,
       name,
+    }));
+  };
+
+  const updateDeckMode = (mode: "TCG" | "Master Duel") => {
+    setCurrentDeck((prev) => ({
+      ...prev,
+      mode,
     }));
   };
 
@@ -346,6 +376,7 @@ export function DeckProvider({ children }: { children: ReactNode }) {
     exportDeck,
     importDeck,
     renameDeck,
+    updateDeckMode,
     getDeckStats,
     getSynergyTips,
     loading,

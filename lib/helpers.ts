@@ -166,16 +166,30 @@ export function filterCards(cards: Card[], params: SearchParams): Card[] {
     }
 
     // ...other filters (type, attribute, etc)...
-    if (params.type && params.type !== "" && card.type !== params.type)
-      return false;
+    if (params.type && params.type !== "") {
+      const types = params.type
+        .split(",")
+        .map((t) => t.trim())
+        .filter(Boolean);
+      if (!card.type || !types.includes(card.type)) {
+        return false;
+      }
+    }
     if (
       params.attribute &&
       params.attribute !== "" &&
       card.attribute !== params.attribute
     )
       return false;
-    if (params.race && params.race !== "" && card.race !== params.race)
-      return false;
+    if (params.race && params.race !== "") {
+      const races = params.race
+        .split(",")
+        .map((r) => r.trim())
+        .filter(Boolean);
+      if (!card.race || !races.includes(card.race)) {
+        return false;
+      }
+    }
     if (
       params.level &&
       params.level !== "" &&

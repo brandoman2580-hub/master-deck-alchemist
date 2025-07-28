@@ -38,7 +38,7 @@ export default function Navbar() {
       <div className="container flex h-14 items-center">
         <Link href="/" className="mr-6 flex items-center space-x-0">
           <DragonIcon className="h-32 w-32 mr-[-32px]" />
-          <span className="hidden font-bold sm:inline-block">
+          <span className="hidden font-bold sm:inline-block font-rowdies text-3xl">
             MASTER DECK ALCHEMIST
           </span>
         </Link>
