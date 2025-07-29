@@ -43,7 +43,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <DeckProvider>
         <div className="relative z-20">
           <Navbar />
-          <main className="flex-1 min-h-screen">{children}</main>
+          <main className="flex-1">{children}</main>
         </div>
       </DeckProvider>
     </ThemeProvider>

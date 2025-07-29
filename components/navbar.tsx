@@ -9,7 +9,7 @@ import { Search, Layers, Save } from "lucide-react";
 import { openLoginModal } from "@/lib/helpers";
 import { useUserStore } from "@/store/useUserStore";
 import { UserMenu } from "./ui/user-menu";
-import DragonIcon from "@/public/images/mda_dragon_icon.svg";
+import PotionLogo from "@/public/images/potion_icon.svg"
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -37,9 +37,9 @@ export default function Navbar() {
     <header className="sticky top-0 z-50 w-full bg-black/40 backdrop-blur supports-[backdrop-filter]:bg-transparent">
       <div className="container flex h-14 items-center">
         <Link href="/" className="mr-6 flex items-center space-x-0">
-          <DragonIcon className="h-32 w-32 mr-[-32px]" />
-          <span className="hidden font-bold sm:inline-block font-rowdies text-3xl">
-            MASTER DECK ALCHEMIST
+          <span className="hidden font-bold sm:flex sm:items-center font-rowdies text-3xl">
+            <PotionLogo className="w-14 h-14" />
+            MASTER DECK <span className="text-red-600 pl-2">ALCHEMIST</span>
           </span>
         </Link>
         <nav className="flex items-center space-x-2 md:space-x-4 mx-6">
@@ -65,7 +65,12 @@ export default function Navbar() {
         </nav>
         <div className="ml-auto flex items-center space-x-4">
           {!user ? (
-            <Button asChild variant="outline" size="md" onClick={openLoginModal}>
+            <Button
+              asChild
+              variant="outline"
+              size="md"
+              onClick={openLoginModal}
+            >
               Login
             </Button>
           ) : (
