@@ -32,10 +32,6 @@ export const DeckDropZone: React.FC<DeckDropZoneProps> = ({
       style={{ position: "relative" }}
     >
       {children}
-      {/* Full-area overlay for better drop detection */}
-      {isOver && (
-        <div className="absolute inset-0 pointer-events-none bg-blue-100 opacity-30 rounded-lg border-2 border-blue-400 border-dashed" />
-      )}
     </div>
   );
 };

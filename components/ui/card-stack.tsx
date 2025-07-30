@@ -15,6 +15,7 @@ interface CardStackProps {
   banStatus: BanStatus;
   isBeingDragged: boolean;
   onStackClick?: () => void;
+  onDoubleClick?: (card: Card) => void;
 }
 
 export function CardStack({
@@ -24,6 +25,7 @@ export function CardStack({
   banStatus,
   isBeingDragged,
   onStackClick,
+  onDoubleClick,
 }: CardStackProps) {
   // Consistent drag id per card row
   const dragInstanceId = useMemo(() => `browser-${card.id}`, [card.id]);
@@ -56,11 +58,18 @@ export function CardStack({
     }
   };
 
+  const handleDoubleClick = () => {
+    if (!disabled && onDoubleClick) {
+      onDoubleClick(card);
+    }
+  };
+
   return (
     <div
       className={`p-2 border-b hover:bg-accent/10 ${
         isBeingDragged ? "opacity-50" : ""
-      }`}
+      } ${!disabled ? "cursor-pointer" : ""}`}
+      onDoubleClick={handleDoubleClick}
     >
       <div className="flex gap-3">
         {/* DRAGGABLE STACK IMAGE -- IMAGES ARE HIDDEN WHILE isBeingDragged */}

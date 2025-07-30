@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 // import { ModeToggle } from "@/components/mode-toggle"
 import { cn } from "@/lib/utils";
-import { Search, Layers, Save } from "lucide-react";
+import { Layers, Save, FlaskConical } from "lucide-react";
 import { openLoginModal } from "@/lib/helpers";
 import { useUserStore } from "@/store/useUserStore";
 import { UserMenu } from "./ui/user-menu";
@@ -17,11 +17,6 @@ export default function Navbar() {
 
   const navItems = [
     {
-      name: "Card Browser",
-      href: "/card-browser",
-      icon: <Search className="h-4 w-4 mr-2" />,
-    },
-    {
       name: "Deck Builder",
       href: "/deck-builder",
       icon: <Layers className="h-4 w-4 mr-2" />,
@@ -31,6 +26,11 @@ export default function Navbar() {
       href: "/saved-decks",
       icon: <Save className="h-4 w-4 mr-2" />,
     },
+    {
+      name: "Deck Tester",
+      href: "/deck-tester",
+      icon: <FlaskConical className="h-4 w-4 mr-2" />,
+    }
   ];
 
   return (
@@ -66,7 +66,6 @@ export default function Navbar() {
         <div className="ml-auto flex items-center space-x-4">
           {!user ? (
             <Button
-              asChild
               variant="outline"
               size="md"
               onClick={openLoginModal}

@@ -222,7 +222,8 @@ export default function DeckBuilder() {
         } else {
           // Load Master Duel banlist from JSON file
           const response = await fetch("/data/master-duel-banlist.json");
-          if (!response.ok) throw new Error("Failed to load Master Duel banlist");
+          if (!response.ok)
+            throw new Error("Failed to load Master Duel banlist");
           const masterDuelBanlist = await response.json();
           setBanlist(masterDuelBanlist);
         }
@@ -482,19 +483,27 @@ export default function DeckBuilder() {
     const dragType = active.data?.current?.type;
 
     // Helper function to determine which deck section a target belongs to
-    const getDeckSectionFromTarget = (targetId: string): "mainDeck" | "extraDeck" | "sideDeck" | null => {
+    const getDeckSectionFromTarget = (
+      targetId: string
+    ): "mainDeck" | "extraDeck" | "sideDeck" | null => {
       // Direct drop zone targets
       if (targetId === "main-deck") return "mainDeck";
       if (targetId === "extra-deck") return "extraDeck";
       if (targetId === "side-deck") return "sideDeck";
-      
+
       // Check if dropping on an existing card in a deck section
-      const sections: ("mainDeck" | "extraDeck" | "sideDeck")[] = ["mainDeck", "extraDeck", "sideDeck"];
+      const sections: ("mainDeck" | "extraDeck" | "sideDeck")[] = [
+        "mainDeck",
+        "extraDeck",
+        "sideDeck",
+      ];
       for (const section of sections) {
-        const found = currentDeck[section].find((c) => c.deckInstanceId === targetId);
+        const found = currentDeck[section].find(
+          (c) => c.deckInstanceId === targetId
+        );
         if (found) return section;
       }
-      
+
       return null;
     };
 
@@ -505,12 +514,15 @@ export default function DeckBuilder() {
         ? filteredCards.find((c) => c.id === cardId)
         : null;
       if (!browserCard) return;
-      
+
       const targetSection = getDeckSectionFromTarget(targetId);
-      
+
       if (targetSection === "mainDeck" && !isExtraDeckCard(browserCard)) {
         addCardToDeck(browserCard, "mainDeck");
-      } else if (targetSection === "extraDeck" && isExtraDeckCard(browserCard)) {
+      } else if (
+        targetSection === "extraDeck" &&
+        isExtraDeckCard(browserCard)
+      ) {
         addCardToDeck(browserCard, "extraDeck");
       } else if (targetSection === "sideDeck") {
         addCardToDeck(browserCard, "sideDeck");
@@ -548,13 +560,13 @@ export default function DeckBuilder() {
       }
 
       const targetSection = getDeckSectionFromTarget(targetId);
-      
+
       // If dropping on the same section, do nothing
       if (targetSection === currentSection) return;
-      
+
       // Deck section moves (remove from current, add to new)
       removeCardFromDeck(deckInstanceId, currentSection);
-      
+
       if (targetSection === "mainDeck" && !isExtraDeckCard(deckCard)) {
         addCardToDeck(deckCard, "mainDeck");
       } else if (targetSection === "extraDeck" && isExtraDeckCard(deckCard)) {
@@ -576,6 +588,24 @@ export default function DeckBuilder() {
       card.type.includes("XYZ Monster") ||
       card.type.includes("Link Monster")
     );
+  };
+
+  // Double-click handlers
+  const handleCardDoubleClick = (card: Card) => {
+    if (getRemainingCopies(card) === 0) return; // Can't add if no copies remaining
+
+    if (isExtraDeckCard(card)) {
+      addCardToDeck(card, "extraDeck");
+    } else {
+      addCardToDeck(card, "mainDeck");
+    }
+  };
+
+  const handleDeckCardDoubleClick = (
+    deckInstanceId: string,
+    section: "mainDeck" | "extraDeck" | "sideDeck"
+  ) => {
+    removeCardFromDeck(deckInstanceId, section);
   };
 
   const getRemainingCopies = (card: Card) => {
@@ -670,7 +700,16 @@ export default function DeckBuilder() {
             </div>
 
             <div className="flex flex-wrap gap-2">
-              <Button variant="default" onClick={() => setIsChatOpen(true)}>
+              <Button
+                variant="default"
+                onClick={() => {
+                  if (!user) {
+                    openLoginModal();
+                  } else {
+                    setIsChatOpen(true);
+                  }
+                }}
+              >
                 <MessageSquare className="h-4 w-4 mr-2" />
                 AI Assistant
               </Button>
@@ -871,7 +910,13 @@ export default function DeckBuilder() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={clearDeck}
+                              onClick={() => {
+                                if (!user) {
+                                  openLoginModal();
+                                } else {
+                                  clearDeck();
+                                }
+                              }}
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -895,7 +940,13 @@ export default function DeckBuilder() {
                     value={activeTab}
                   >
                     <div className="px-6">
-                      <TabsList className={`grid w-full ${deckMode === "Master Duel" ? "grid-cols-2" : "grid-cols-3"}`}>
+                      <TabsList
+                        className={`grid w-full ${
+                          deckMode === "Master Duel"
+                            ? "grid-cols-2"
+                            : "grid-cols-3"
+                        }`}
+                      >
                         <TabsTrigger value="main">
                           Main Deck ({stats.mainCount})
                         </TabsTrigger>
@@ -948,7 +999,13 @@ export default function DeckBuilder() {
                                 </span>
                               </div>
                             ) : (
-                              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2 max-h-[400px] overflow-y-auto">
+                              <div
+                                className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2"
+                                style={{
+                                  minHeight: "140px",
+                                  maxHeight: "400px",
+                                }}
+                              >
                                 {currentDeck.mainDeck.map((card) => (
                                   <DraggableCard
                                     id={card.deckInstanceId}
@@ -956,6 +1013,12 @@ export default function DeckBuilder() {
                                     card={card}
                                     onRemove={() =>
                                       removeCardFromDeck(
+                                        card.deckInstanceId,
+                                        "mainDeck"
+                                      )
+                                    }
+                                    onDoubleClick={() =>
+                                      handleDeckCardDoubleClick(
                                         card.deckInstanceId,
                                         "mainDeck"
                                       )
@@ -1007,7 +1070,13 @@ export default function DeckBuilder() {
                                 </span>
                               </div>
                             ) : (
-                              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2 max-h-[400px] overflow-y-auto">
+                              <div
+                                className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2"
+                                style={{
+                                  minHeight: "140px",
+                                  maxHeight: "400px",
+                                }}
+                              >
                                 {currentDeck.extraDeck.map((card) => (
                                   <DraggableCard
                                     id={card.deckInstanceId}
@@ -1015,6 +1084,12 @@ export default function DeckBuilder() {
                                     card={card}
                                     onRemove={() =>
                                       removeCardFromDeck(
+                                        card.deckInstanceId,
+                                        "extraDeck"
+                                      )
+                                    }
+                                    onDoubleClick={() =>
+                                      handleDeckCardDoubleClick(
                                         card.deckInstanceId,
                                         "extraDeck"
                                       )
@@ -1069,7 +1144,13 @@ export default function DeckBuilder() {
                                 </span>
                               </div>
                             ) : (
-                              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2 max-h-[400px] overflow-y-auto">
+                              <div
+                                className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2"
+                                style={{
+                                  minHeight: "140px",
+                                  maxHeight: "400px",
+                                }}
+                              >
                                 {currentDeck.sideDeck.map((card) => (
                                   <DraggableCard
                                     id={card.deckInstanceId}
@@ -1077,6 +1158,12 @@ export default function DeckBuilder() {
                                     card={card}
                                     onRemove={() =>
                                       removeCardFromDeck(
+                                        card.deckInstanceId,
+                                        "sideDeck"
+                                      )
+                                    }
+                                    onDoubleClick={() =>
+                                      handleDeckCardDoubleClick(
                                         card.deckInstanceId,
                                         "sideDeck"
                                       )
@@ -1234,6 +1321,9 @@ export default function DeckBuilder() {
                                 isBeingDragged={
                                   activeDragId === `browser-${card.id}`
                                 }
+                                onDoubleClick={() =>
+                                  handleCardDoubleClick(card)
+                                }
                               />
                             );
                           }}
@@ -1256,6 +1346,9 @@ export default function DeckBuilder() {
                                 banStatus={banStatus}
                                 isBeingDragged={
                                   activeDragId === `browser-${card.id}`
+                                }
+                                onDoubleClick={() =>
+                                  handleCardDoubleClick(card)
                                 }
                               />
                             );

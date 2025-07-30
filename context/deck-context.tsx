@@ -242,9 +242,23 @@ export function DeckProvider({ children }: { children: ReactNode }) {
     ) {
       return;
     }
-    saveTimeout.current = setTimeout(() => {
-      saveDeck(currentDeck);
-    }, 1000); // Increased delay to 1000ms to reduce interference with drag operations
+    
+    // Check if user is authenticated before auto-saving
+    const checkUserAndSave = async () => {
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (user) {
+          saveDeck(currentDeck);
+        }
+      } catch (error) {
+        // Silently fail if user check fails - don't auto-save
+        console.log("Auto-save skipped: user not authenticated");
+      }
+    };
+    
+    saveTimeout.current = setTimeout(checkUserAndSave, 1000); // Increased delay to 1000ms to reduce interference with drag operations
     return () => {
       if (saveTimeout.current) clearTimeout(saveTimeout.current);
     };

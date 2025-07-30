@@ -8,9 +8,10 @@ interface DraggableCardProps {
   card: Card;
   onRemove: () => void;
   disabled?: boolean;
+  onDoubleClick?: () => void;
 }
 
-export const DraggableCard: React.FC<DraggableCardProps> = ({ id, card, onRemove, disabled }) => {
+export const DraggableCard: React.FC<DraggableCardProps> = ({ id, card, onRemove, disabled, onDoubleClick }) => {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id,
     data: { type: "deck", deckInstanceId: id },
@@ -18,6 +19,12 @@ export const DraggableCard: React.FC<DraggableCardProps> = ({ id, card, onRemove
   });
 
   const style = transform ? { transform: CSS.Transform.toString(transform) } : undefined;
+
+  const handleDoubleClick = () => {
+    if (onDoubleClick) {
+      onDoubleClick();
+    }
+  };
 
   return (
     <div
@@ -27,6 +34,7 @@ export const DraggableCard: React.FC<DraggableCardProps> = ({ id, card, onRemove
       style={style}
       className={`cursor-grab active:cursor-grabbing ${isDragging ? "opacity-50" : ""}`}
       aria-disabled={disabled}
+      onDoubleClick={handleDoubleClick}
     >
       <DeckCard card={card} onRemove={onRemove} />
     </div>

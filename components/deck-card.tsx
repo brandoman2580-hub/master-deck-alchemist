@@ -1,5 +1,3 @@
-import { useSortable } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
 import { X } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Card } from "@/types/card";
@@ -11,31 +9,11 @@ interface DeckCardProps {
 }
 
 export default function DeckCard({ card, onRemove }: DeckCardProps) {
-  const deckInstanceId = card.deckInstanceId;
-  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({
-    id: deckInstanceId,
-    data: {
-      type: "deck",
-      deckInstanceId,
-    }
-  });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  };
-
   return (
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <div
-            ref={setNodeRef}
-            style={style}
-            {...attributes}
-            {...listeners}
-            className="relative group cursor-grab active:cursor-grabbing"
-          >
+          <div className="relative group">
             <Image
               width={80}
               height={120}
