@@ -1,9 +1,22 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { getUserDecks } from "@/lib/supabaseDecks";
 import { useUserStore } from "@/store/useUserStore";
@@ -22,27 +35,75 @@ import {
   CartesianGrid,
   ResponsiveContainer,
   LineChart,
-  Line
-} from 'recharts';
+  Line,
+} from "recharts";
+import { DECK_MODES, MODE_COLORS } from "@/lib/constants";
+import { useModeStore } from "@/store/modeStore";
+import { useDeck } from "@/context/deck-context";
 
-const COLORS = ['#8884d8', '#FF8042', '#00C49F', '#FFBB28'];
+const COLORS = ["#8884d8", "#FF8042", "#00C49F", "#FFBB28"];
 
 const META_DECKS: DeckType[] = [
-  { id: "meta1", name: "Tearlaments Meta", mainDeck: [], extraDeck: [], sideDeck: [], mode: "TCG", updated_at: "" },
-  { id: "meta2", name: "Kashtira Meta", mainDeck: [], extraDeck: [], sideDeck: [], mode: "TCG", updated_at: "" },
+  {
+    id: "meta1",
+    name: "Tearlaments Meta",
+    mainDeck: [],
+    extraDeck: [],
+    sideDeck: [],
+    mode: "TCG",
+    updated_at: "",
+  },
+  {
+    id: "meta2",
+    name: "Kashtira Meta",
+    mainDeck: [],
+    extraDeck: [],
+    sideDeck: [],
+    mode: "TCG",
+    updated_at: "",
+  },
 ];
 
 export default function DeckTester() {
   const [decks, setDecks] = useState<DeckType[]>([]);
+  const [opponentDecks, setOpponentDecks] = useState<Partial<DeckType[]>>([]);
   const [loading, setLoading] = useState(false);
 
   const [selectedDeckId, setSelectedDeckId] = useState<string | null>(null);
-  const [opponentDeckId, setOpponentDeckId] = useState<string | null>(META_DECKS[0].id);
+  const [opponentDeckId, setOpponentDeckId] = useState<string | null>(
+    META_DECKS[0].id
+  );
   const [numSimulations, setNumSimulations] = useState(100);
   const [simulationLoading, setSimulationLoading] = useState(false);
   const [simulationResult, setSimulationResult] = useState<any>(null);
 
   const user = useUserStore((state) => state.user);
+  const deckMode = useModeStore((state) => state.deckMode);
+  const setDeckMode = useModeStore((state) => state.setDeckMode);
+  const { updateDeckMode } = useDeck();
+
+  const tcgRef = useRef<HTMLButtonElement>(null);
+    const masterDuelRef = useRef<HTMLButtonElement>(null);
+    const btnRefs = useMemo(
+      () => ({
+        TCG: tcgRef,
+        "Master Duel": masterDuelRef,
+      }),
+      []
+    );
+    const containerRef = useRef<HTMLDivElement>(null);
+    const [sliderStyle, setSliderStyle] = useState<React.CSSProperties>({});
+  
+    useLayoutEffect(() => {
+      if (containerRef.current && btnRefs[deckMode].current) {
+        const containerRect = containerRef.current.getBoundingClientRect();
+        const btnRect = btnRefs[deckMode].current.getBoundingClientRect();
+        setSliderStyle({
+          left: btnRect.left - containerRect.left,
+          width: btnRect.width,
+        });
+      }
+    }, [deckMode, btnRefs]);
 
   useEffect(() => {
     const fetchDecks = async () => {
@@ -61,7 +122,7 @@ export default function DeckTester() {
         }));
         setDecks(decks);
       } catch (error) {
-        console.error('Failed to fetch decks:', error);
+        console.error("Failed to fetch decks:", error);
       }
       setLoading(false);
     };
@@ -101,24 +162,37 @@ export default function DeckTester() {
         comboData,
         lineChartData,
         heatmapData,
-        gamesSimulated: numSimulations
+        gamesSimulated: numSimulations,
       });
       setSimulationLoading(false);
     }, 1400);
   };
 
   // EMPTY DATA for placeholder charts
-  const emptyPieData = [{ name: "Wins", value: 0 }, { name: "Losses", value: 0 }];
-  const emptyBarData = [{ combo: "A", frequency: 0 }, { combo: "B", frequency: 0 }];
-  const emptyLineData = Array.from({ length: 5 }).map((_, i) => ({ attempt: i + 1, winRate: 0 }));
+  const emptyPieData = [
+    { name: "Wins", value: 0 },
+    { name: "Losses", value: 0 },
+  ];
+  const emptyBarData = [
+    { combo: "A", frequency: 0 },
+    { combo: "B", frequency: 0 },
+  ];
+  const emptyLineData = Array.from({ length: 5 }).map((_, i) => ({
+    attempt: i + 1,
+    winRate: 0,
+  }));
   const emptyHeatmapData = [{ cardA: "?", cardB: "?", count: 0 }];
 
   // Show placeholders before results available
   const chartData = {
     winRateData: simulationResult ? simulationResult.winRateData : emptyPieData,
     comboData: simulationResult ? simulationResult.comboData : emptyBarData,
-    lineChartData: simulationResult ? simulationResult.lineChartData : emptyLineData,
-    heatmapData: simulationResult ? simulationResult.heatmapData : emptyHeatmapData,
+    lineChartData: simulationResult
+      ? simulationResult.lineChartData
+      : emptyLineData,
+    heatmapData: simulationResult
+      ? simulationResult.heatmapData
+      : emptyHeatmapData,
   };
 
   return (
@@ -128,13 +202,54 @@ export default function DeckTester() {
         {/* Filter Panel */}
         <Card className="w-full md:w-80 shrink-0">
           <CardHeader>
-            <CardTitle>Filter Panel</CardTitle>
-            <CardDescription>Select deck(s) and simulation options.</CardDescription>
+            <CardTitle>Control Panel</CardTitle>
+            <CardDescription>
+              Select deck(s) and simulation options.
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div className="flex items-center gap-2">
+              <div
+                className="relative flex w-fit rounded-full bg-zinc-100 shadow-inner"
+                ref={containerRef}
+              >
+                {/* Animated background: matches active button */}
+                <span
+                  className={`absolute top-0 bottom-0 rounded-full transition-all duration-200 ${MODE_COLORS[deckMode]}`}
+                  style={{
+                    ...sliderStyle,
+                    zIndex: 0,
+                  }}
+                />
+                {DECK_MODES.map((mode) => (
+                  <button
+                    key={mode}
+                    ref={btnRefs[mode]}
+                    type="button"
+                    onClick={() => {
+                      setDeckMode(mode);
+                      updateDeckMode(mode);
+                    }}
+                    className={`relative z-10 px-4 py-1 font-semibold rounded-full transition-colors duration-200 focus:outline-none
+            ${deckMode === mode ? "text-white" : "text-gray-700"}
+          `}
+                    aria-pressed={deckMode === mode}
+                    style={{
+                      background: "transparent",
+                      position: "relative",
+                    }}
+                  >
+                    {mode}
+                  </button>
+                ))}
+              </div>
+            </div>
             <div>
               <label className="block mb-2 font-medium">Your Deck</label>
-              <Select value={selectedDeckId || ""} onValueChange={setSelectedDeckId}>
+              <Select
+                value={selectedDeckId || ""}
+                onValueChange={setSelectedDeckId}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Choose your deck" />
                 </SelectTrigger>
@@ -149,7 +264,10 @@ export default function DeckTester() {
             </div>
             <div>
               <label className="block mb-2 font-medium">Opponent Deck</label>
-              <Select value={opponentDeckId || ""} onValueChange={setOpponentDeckId}>
+              <Select
+                value={opponentDeckId || ""}
+                onValueChange={setOpponentDeckId}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Choose opponent deck" />
                 </SelectTrigger>
@@ -159,7 +277,11 @@ export default function DeckTester() {
                       {deck.name} ({deck.mode})
                     </SelectItem>
                   ))}
-                  <SelectItem disabled className="opacity-50 select-none" value="divider">
+                  <SelectItem
+                    disabled
+                    className="opacity-50 select-none"
+                    value="divider"
+                  >
                     ----
                   </SelectItem>
                   {decks.map((deck) => (
@@ -171,20 +293,30 @@ export default function DeckTester() {
               </Select>
             </div>
             <div>
-              <label className="block mb-2 font-medium">Number of Simulations</label>
+              <label className="block mb-2 font-medium">
+                Number of Simulations
+              </label>
               <Input
                 type="number"
                 min={10}
                 max={1000}
                 value={numSimulations}
-                onChange={e => setNumSimulations(Number(e.target.value))}
+                onChange={(e) => setNumSimulations(Number(e.target.value))}
                 className="w-32"
                 disabled={simulationLoading}
               />
             </div>
           </CardContent>
           <CardFooter>
-            <Button onClick={handleRunSimulation} disabled={simulationLoading || loading || !selectedDeckId || !opponentDeckId}>
+            <Button
+              onClick={handleRunSimulation}
+              disabled={
+                simulationLoading ||
+                loading ||
+                !selectedDeckId ||
+                !opponentDeckId
+              }
+            >
               {simulationLoading ? "Running..." : "Run Test"}
             </Button>
           </CardFooter>
@@ -194,7 +326,9 @@ export default function DeckTester() {
           <div className="grid grid-cols-1 md:grid-cols-2 grid-rows-2 gap-6 h-full">
             {/* Pie Chart */}
             <Card>
-              <CardHeader><CardTitle>Win Rate</CardTitle></CardHeader>
+              <CardHeader>
+                <CardTitle>Win Rate</CardTitle>
+              </CardHeader>
               <CardContent style={{ height: 250 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
@@ -202,13 +336,17 @@ export default function DeckTester() {
                       data={chartData.winRateData}
                       dataKey="value"
                       nameKey="name"
-                      cx="50%" cy="50%"
+                      cx="50%"
+                      cy="50%"
                       outerRadius={80}
                       fill="#8884d8"
                       label
                     >
                       {chartData.winRateData.map((_, index: number) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={COLORS[index % COLORS.length]}
+                        />
                       ))}
                     </Pie>
                     <Tooltip />
@@ -219,10 +357,15 @@ export default function DeckTester() {
             </Card>
             {/* Bar Chart */}
             <Card>
-              <CardHeader><CardTitle>Combo Frequency</CardTitle></CardHeader>
+              <CardHeader>
+                <CardTitle>Combo Frequency</CardTitle>
+              </CardHeader>
               <CardContent style={{ height: 250 }}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={chartData.comboData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                  <BarChart
+                    data={chartData.comboData}
+                    margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                  >
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="combo" />
                     <YAxis />
@@ -235,10 +378,15 @@ export default function DeckTester() {
             </Card>
             {/* Line Chart */}
             <Card>
-              <CardHeader><CardTitle>Opening Hands Over Time</CardTitle></CardHeader>
+              <CardHeader>
+                <CardTitle>Opening Hands Over Time</CardTitle>
+              </CardHeader>
               <CardContent style={{ height: 250 }}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={chartData.lineChartData} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
+                  <LineChart
+                    data={chartData.lineChartData}
+                    margin={{ top: 20, right: 30, left: 0, bottom: 0 }}
+                  >
                     <XAxis dataKey="attempt" />
                     <YAxis domain={[0, 100]} />
                     <Line type="monotone" dataKey="winRate" stroke="#8884d8" />
@@ -249,8 +397,10 @@ export default function DeckTester() {
             </Card>
             {/* Heatmap Table (simplified) */}
             <Card>
-              <CardHeader><CardTitle>Combo Piece Heatmap (Simplified)</CardTitle></CardHeader>
-              <CardContent style={{ height: 250, overflowY: 'auto' }}>
+              <CardHeader>
+                <CardTitle>Combo Piece Heatmap (Simplified)</CardTitle>
+              </CardHeader>
+              <CardContent style={{ height: 250, overflowY: "auto" }}>
                 <table className="w-full text-xs table-auto border border-gray-300">
                   <thead>
                     <tr>
@@ -262,9 +412,15 @@ export default function DeckTester() {
                   <tbody>
                     {chartData.heatmapData.map((entry: any, idx: number) => (
                       <tr key={idx} className="odd:bg-white even:bg-gray-50">
-                        <td className="border border-gray-300 p-1">{entry.cardA}</td>
-                        <td className="border border-gray-300 p-1">{entry.cardB}</td>
-                        <td className="border border-gray-300 p-1 text-center">{entry.count}</td>
+                        <td className="border border-gray-300 p-1">
+                          {entry.cardA}
+                        </td>
+                        <td className="border border-gray-300 p-1">
+                          {entry.cardB}
+                        </td>
+                        <td className="border border-gray-300 p-1 text-center">
+                          {entry.count}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -275,7 +431,9 @@ export default function DeckTester() {
           {/* Simulation loading overlay */}
           {simulationLoading && (
             <div className="absolute inset-0 flex items-center justify-center bg-white/60 z-10 pointer-events-none">
-              <div className="animate-pulse text-muted-foreground">Simulating {numSimulations} games...</div>
+              <div className="animate-pulse text-muted-foreground">
+                Simulating {numSimulations} games...
+              </div>
             </div>
           )}
         </div>

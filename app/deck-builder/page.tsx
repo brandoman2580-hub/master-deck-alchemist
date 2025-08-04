@@ -80,27 +80,23 @@ import AIChatbot from "@/components/ai-chatbot";
 import { Card } from "@/types/card";
 import Image from "next/image";
 import {
+  DECK_MODES,
   FLOODGATE_CARDS,
+  MODE_COLORS,
   POWERFUL_ARCHETYPE_CARDS,
   ROGUE_ARCHETYPE_CARDS,
 } from "@/lib/constants";
 import { DeckDropZone } from "@/components/ui/deck-drop-zone";
 import { DraggableCard } from "@/components/ui/draggable-card";
 import { filterCards, openLoginModal } from "@/lib/helpers";
-import { BanStatus } from "@/types/types";
+import { BanStatus, DeckMode } from "@/types/types";
 import { InputWithClear } from "@/components/ui/input-with-clear";
 import { FilterMenu } from "@/components/ui/filter-menu";
 import { useCardStore } from "@/store/cardStore";
 import { useUserStore } from "@/store/useUserStore";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getTCGBanlist } from "@/lib/api";
-
-const DECK_MODES = ["TCG", "Master Duel"] as const;
-type DeckMode = (typeof DECK_MODES)[number];
-const MODE_COLORS: Record<DeckMode, string> = {
-  TCG: "bg-yellow-500",
-  "Master Duel": "bg-blue-600",
-};
+import { useModeStore } from "@/store/modeStore";
 
 export default function DeckBuilder() {
   const {
@@ -148,15 +144,14 @@ export default function DeckBuilder() {
     defRange: "",
     rarity: "",
   });
-  const [deckMode, setDeckMode] = useState<DeckMode>(
-    currentDeck.mode || "Master Duel"
-  );
 
   // Zustand Store -----------------------------------------
   const cardList = useCardStore((state) => state.cardList);
   const loading = useCardStore((state) => state.loading);
   const setLoading = useCardStore((state) => state.setLoading);
   const user = useUserStore((state) => state.user);
+  const deckMode = useModeStore((state) => state.deckMode);
+  const setDeckMode = useModeStore((state) => state.setDeckMode);
 
   const playstyleIcons: Record<string, React.ElementType> = {
     combo: Shuffle,
@@ -195,7 +190,7 @@ export default function DeckBuilder() {
     if (currentDeck.mode && currentDeck.mode !== deckMode) {
       setDeckMode(currentDeck.mode as DeckMode);
     }
-  }, [currentDeck.mode, deckMode]);
+  }, [currentDeck.mode, deckMode, setDeckMode]);
 
   useEffect(() => {
     let filtered = cardList;

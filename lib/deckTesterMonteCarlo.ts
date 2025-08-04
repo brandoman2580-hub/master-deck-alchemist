@@ -36,34 +36,51 @@ function shuffle<T>(array: T[]): T[] {
 
 // Simulate one game between deckA and deckB (simplified, Monte Carlo style)
 function simulateGame(deckA: Deck, deckB: Deck): {
-  win: boolean;
+  win: boolean; // true if deckA wins
   turnLength: number;
   firstHandCombo: boolean;
   comboHit: boolean;
   comboPiecesDrawn: string[];
+  opponentCombo: boolean;
 } {
+  // Shuffle both decks' main decks
   const shuffledA = shuffle(deckA.mainDeck);
+  const shuffledB = shuffle(deckB.mainDeck);
 
-  // Draw 5-card opening hand
+  // Player A draws
   const handA = shuffledA.slice(0, 5);
-  const comboPiecesInHand = handA.filter(c => c.isComboPiece);
+  const comboPiecesInHandA = handA.filter(c => c.isComboPiece);
 
-  // Simulate 3 more draws (simplified turns)
-  const nextDraws = shuffledA.slice(5, 8);
-  const comboPiecesDrawn = handA.concat(nextDraws).filter(c => c.isComboPiece);
+  const nextDrawsA = shuffledA.slice(5, 8);
+  const comboPiecesDrawnA = handA.concat(nextDrawsA).filter(c => c.isComboPiece);
 
-  // Metrics for this game
-  const firstHandCombo = comboPiecesInHand.length > 0;
-  const comboHit = comboPiecesDrawn.length > comboPiecesInHand.length;
-  const win = comboPiecesDrawn.length >= 2; // Win if 2+ combos seen by turn 3
-  const turnLength = Math.floor(Math.random() * 6) + 3; // Turn count 3-8
+  // Player B draws (simulate opening—a bit simpler)
+  const handB = shuffledB.slice(0, 5);
+  const comboPiecesInHandB = handB.filter(c => c.isComboPiece);
+
+  // For each, check combo criteria
+  const aFirstHandCombo = comboPiecesInHandA.length > 0;
+  const bFirstHandCombo = comboPiecesInHandB.length > 0;
+  const aComboHit = comboPiecesDrawnA.length >= 2;
+  const bComboHit = handB.concat(shuffledB.slice(5, 8)).filter(c => c.isComboPiece).length >= 2;
+
+  // WIN LOGIC (tweak for your true business rules!)
+  // Example: favor the player with more combos hit; randomize if tied
+  let win: boolean;
+  if (aComboHit && !bComboHit) win = true;
+  else if (!aComboHit && bComboHit) win = false;
+  else win = Math.random() > 0.5; // tie, choose randomly
+
+  // Random turn length
+  const turnLength = Math.floor(Math.random() * 6) + 3;
 
   return {
     win,
     turnLength,
-    firstHandCombo,
-    comboHit,
-    comboPiecesDrawn: comboPiecesDrawn.map(c => c.id),
+    firstHandCombo: aFirstHandCombo,
+    comboHit: aComboHit,
+    comboPiecesDrawn: comboPiecesDrawnA.map(c => c.id),
+    opponentCombo: bFirstHandCombo,
   };
 }
 

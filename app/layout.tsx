@@ -60,7 +60,9 @@ export const metadata: Metadata = {
   title: "Master Deck Alchemist",
   description: "Build and optimize your Yu-Gi-Oh! decks",
   icons: {
-    icon: "/icon.svg",
+    icon: [
+      { url: "/potion_icon.svg", type: "image/svg+xml" },
+    ],
   }
 }
 

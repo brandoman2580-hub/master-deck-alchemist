@@ -1,6 +1,8 @@
+import { DECK_MODES } from "@/lib/constants";
 import { Card } from "./card";
 
 export type AuthProvider = 'google' | 'facebook' | 'discord' | 'apple'
+export type DeckMode = (typeof DECK_MODES)[number];
 
 export interface DeckCard extends Card {
   deckInstanceId: string;
@@ -32,7 +34,7 @@ export type DeckType = {
     extraDeck: DeckCard[]
     sideDeck: DeckCard[]
     updated_at?: string
-    mode: 'TCG' | 'Master Duel'
+    mode: DeckMode
 }
 
 type DeckListByCategory = {

@@ -10,7 +10,7 @@ import {
   useRef,
 } from "react";
 import { Card } from "@/types/card";
-import { BanStatus, Deck, DeckType } from "@/types/types";
+import { BanStatus, Deck, DeckMode, DeckType } from "@/types/types";
 import { v4 as uuidv4 } from "uuid";
 import { supabase } from "@/lib/supabaseClient";
 import {
@@ -36,7 +36,7 @@ interface DeckContextType {
   exportDeck: () => string;
   importDeck: (jsonData: string) => void;
   renameDeck: (name: string) => void;
-  updateDeckMode: (mode: "TCG" | "Master Duel") => void;
+  updateDeckMode: (mode: DeckMode) => void;
   getDeckStats: () => {
     mainCount: number;
     extraCount: number;
@@ -59,7 +59,7 @@ export function DeckProvider({ children }: { children: ReactNode }) {
     mainDeck: [],
     extraDeck: [],
     sideDeck: [],
-    mode: "Master Duel",
+    mode: 'Master Duel' as DeckMode,
   });
   const [savedDecks, setSavedDecks] = useState<Deck[]>([]);
   const [banlist, setBanlist] = useState<Record<string, BanStatus>>({});
@@ -289,7 +289,7 @@ export function DeckProvider({ children }: { children: ReactNode }) {
     }));
   };
 
-  const updateDeckMode = (mode: "TCG" | "Master Duel") => {
+  const updateDeckMode = (mode: DeckMode) => {
     setCurrentDeck((prev) => ({
       ...prev,
       mode,

@@ -1,4 +1,6 @@
-import { FilterConfig } from "@/types/types";
+import { DeckMode, FilterConfig } from "@/types/types";
+
+export const DECK_MODES = ["TCG", "Master Duel"] as const;
 
 export const FLOODGATE_CARDS = [
     "Skill Drain",
@@ -859,3 +861,10 @@ export const FILTER_CONFIGS: FilterConfig[] = [
   { label: "Rarity", key: "rarity", options: CARD_RARITY_FILTERS },
   { label: "Level", key: "level", options: CARD_LEVEL_FILTERS },
 ];
+
+// -------- MODE COLORS ---------
+
+export const MODE_COLORS: Record<DeckMode, string> = {
+  TCG: "bg-yellow-500",
+  "Master Duel": "bg-blue-600",
+};

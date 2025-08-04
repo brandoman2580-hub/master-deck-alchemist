@@ -1,11 +1,12 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
 import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/types/card";
 import { BanStatus } from "@/types/types";
+import { CardPreview } from "@/components/ui/card-preview";
 import Image from "next/image";
 
 interface CardStackProps {
@@ -30,6 +31,8 @@ export function CardStack({
   // Consistent drag id per card row
   const dragInstanceId = useMemo(() => `browser-${card.id}`, [card.id]);
   const disabled = remainingCopies === 0;
+  
+  const cardRef = useRef<HTMLDivElement>(null);
 
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: dragInstanceId,
@@ -65,12 +68,14 @@ export function CardStack({
   };
 
   return (
-    <div
-      className={`p-2 border-b hover:bg-accent/10 ${
-        isBeingDragged ? "opacity-50" : ""
-      } ${!disabled ? "cursor-pointer" : ""}`}
-      onDoubleClick={handleDoubleClick}
-    >
+    <CardPreview card={card} banStatus={banStatus}>
+      <div
+        ref={cardRef}
+        className={`p-2 border-b hover:bg-accent/10 ${
+          isBeingDragged ? "opacity-50" : ""
+        } ${!disabled ? "cursor-pointer" : ""}`}
+        onDoubleClick={handleDoubleClick}
+      >
       <div className="flex gap-3">
         {/* DRAGGABLE STACK IMAGE -- IMAGES ARE HIDDEN WHILE isBeingDragged */}
         <div
@@ -167,6 +172,7 @@ export function CardStack({
           <span>left</span>
         </div>
       </div>
-    </div>
+      </div>
+    </CardPreview>
   );
 }
