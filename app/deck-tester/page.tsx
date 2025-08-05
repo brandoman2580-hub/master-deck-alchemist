@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { getUserDecks } from "@/lib/supabaseDecks";
+import { getMetaDecks, getUserDecks } from "@/lib/supabaseDecks";
 import { useUserStore } from "@/store/useUserStore";
 import { DeckType } from "@/types/types";
 
@@ -43,36 +43,13 @@ import { useDeck } from "@/context/deck-context";
 
 const COLORS = ["#8884d8", "#FF8042", "#00C49F", "#FFBB28"];
 
-const META_DECKS: DeckType[] = [
-  {
-    id: "meta1",
-    name: "Tearlaments Meta",
-    mainDeck: [],
-    extraDeck: [],
-    sideDeck: [],
-    mode: "TCG",
-    updated_at: "",
-  },
-  {
-    id: "meta2",
-    name: "Kashtira Meta",
-    mainDeck: [],
-    extraDeck: [],
-    sideDeck: [],
-    mode: "TCG",
-    updated_at: "",
-  },
-];
-
 export default function DeckTester() {
   const [decks, setDecks] = useState<DeckType[]>([]);
   const [opponentDecks, setOpponentDecks] = useState<Partial<DeckType[]>>([]);
   const [loading, setLoading] = useState(false);
 
   const [selectedDeckId, setSelectedDeckId] = useState<string | null>(null);
-  const [opponentDeckId, setOpponentDeckId] = useState<string | null>(
-    META_DECKS[0].id
-  );
+  const [opponentDeckId, setOpponentDeckId] = useState<string | null>(null);
   const [numSimulations, setNumSimulations] = useState(100);
   const [simulationLoading, setSimulationLoading] = useState(false);
   const [simulationResult, setSimulationResult] = useState<any>(null);
@@ -106,12 +83,12 @@ export default function DeckTester() {
     }, [deckMode, btnRefs]);
 
   useEffect(() => {
-    const fetchDecks = async () => {
+    const fetchUserDecks = async () => {
       if (!user) return;
       setLoading(true);
       try {
-        const supabaseDecks = await getUserDecks(user.id);
-        const decks: DeckType[] = supabaseDecks.map((deck: any) => ({
+        const supabaseUserDecks = await getUserDecks(user.id);
+        const decks: DeckType[] = supabaseUserDecks.map((deck: any) => ({
           id: deck.id,
           name: deck.name,
           mainDeck: deck.cards.main,
@@ -126,7 +103,29 @@ export default function DeckTester() {
       }
       setLoading(false);
     };
-    fetchDecks();
+    fetchUserDecks();
+
+    const fetchMetaDecks = async () => {
+      if (!user) return;
+      setLoading(true);
+      try {
+        const supabaseMetaDecks = await getMetaDecks(user.id);
+        const metaDecks: DeckType[] = supabaseMetaDecks.map((deck: any) => ({
+          id: deck.id,
+          name: deck.name,
+          mainDeck: deck.cards.main,
+          extraDeck: deck.cards.extra,
+          sideDeck: deck.cards.side,
+          updated_at: deck.updated_at,
+          mode: deck.mode || "Master Duel",
+        }));
+        setOpponentDecks(metaDecks);
+      } catch (error) {
+        console.error("Failed to fetch meta decks:", error);
+      }
+      setLoading(false);
+    };
+    fetchMetaDecks();
   }, [user]);
 
   const handleRunSimulation = async () => {
@@ -272,9 +271,9 @@ export default function DeckTester() {
                   <SelectValue placeholder="Choose opponent deck" />
                 </SelectTrigger>
                 <SelectContent>
-                  {META_DECKS.map((deck) => (
-                    <SelectItem key={deck.id} value={deck.id}>
-                      {deck.name} ({deck.mode})
+                  {opponentDecks.map((deck) => (
+                    <SelectItem key={deck?.id} value={deck?.id ?? ""}>
+                      {deck?.name} ({deck?.mode})
                     </SelectItem>
                   ))}
                   <SelectItem
