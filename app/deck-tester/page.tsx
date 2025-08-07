@@ -109,7 +109,7 @@ export default function DeckTester() {
       if (!user) return;
       setLoading(true);
       try {
-        const supabaseMetaDecks = await getMetaDecks(user.id);
+        const supabaseMetaDecks = await getMetaDecks();
         const metaDecks: DeckType[] = supabaseMetaDecks.map((deck: any) => ({
           id: deck.id,
           name: deck.name,
