@@ -63,7 +63,7 @@ export async function loadDeck(deckId: string, userId: string): Promise<DeckType
   };
 }
 
-export async function getMetaDecks(userId: string): Promise<Deck[]> {
+export async function getMetaDecks(): Promise<Deck[]> {
   const { data, error } = await supabase
     .from("meta_decks")
     .select("*")
