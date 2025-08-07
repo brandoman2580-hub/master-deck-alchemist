@@ -51,7 +51,7 @@ async function loadMasterDuelBanlist(): Promise<Record<string, string>> {
 
 // TCG - fetch from online API (adapted from your function)
 async function fetchTCGBanlist(): Promise<Record<string, string>> {
-  const url = "https://db.ygoprodeck.com/api/v7/cardinfo.php?banlist=TCG";
+  const url = "https://db.ygoprodeck.com/api/v7/cardinfo.php?banlist=tcg";
   try {
     const resp = await fetch(url);
     if (!resp.ok) throw new Error(`API error: ${resp.status}`);

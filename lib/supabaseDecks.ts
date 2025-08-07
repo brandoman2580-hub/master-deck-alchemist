@@ -67,8 +67,7 @@ export async function getMetaDecks(userId: string): Promise<Deck[]> {
   const { data, error } = await supabase
     .from("meta_decks")
     .select("*")
-    .eq("user_id", userId)
-    .order("updated_at", { ascending: false });
+    .order("created_at", { ascending: false });
 
   if (error) throw error;
   return data || [];
