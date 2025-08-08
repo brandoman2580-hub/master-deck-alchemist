@@ -1,7 +1,7 @@
 export type Card = {
   id: string;
   name: string;
-  isComboPiece?: boolean; // Mark cards critical to combos
+  isComboPiece?: boolean;
 };
 
 export type Deck = {
@@ -13,18 +13,29 @@ export type Deck = {
   mode?: string;
 };
 
-export type SimulationResult = {
+export type GameOutcome =
+  | "combo_win"
+  | "luck_win"
+  | "brick_loss"
+  | "opponent_combo_loss"
+  | "draw";
+
+export interface SimulationResult {
   gamesSimulated: number;
   wins: number;
   losses: number;
-  winRate: number; // %
+  draws: number;
+  winRate: number;
   avgTurnLength: number;
-  firstHandComboRate: number;
-  comboHitRate: number;
-  comboDrawMatrix: { [cardId: string]: { [cardId: string]: number } }; // For Heatmap/Matrices
-};
+  brickRate: number;
+  opponentBrickRate: number;
+  firstHandComboRate: number; // your deck
+  opponentFirstHandComboRate: number; // opp deck
+  outcomeCounts: Record<GameOutcome, number>;
+  topOpeners: { combo: string; count: number }[];
+  synergy: { [cardA: string]: { [cardB: string]: number } };
+}
 
-// Helper: Fisher-Yates shuffle
 function shuffle<T>(array: T[]): T[] {
   const arr = [...array];
   for (let i = arr.length - 1; i > 0; i--) {
@@ -34,101 +45,143 @@ function shuffle<T>(array: T[]): T[] {
   return arr;
 }
 
-// Simulate one game between deckA and deckB (simplified, Monte Carlo style)
+// Define what makes a hand a "brick"
+function isBrick(hand: Card[]): boolean {
+  // User: customize logic as desired!
+  // Example: has no combo pieces, or all cards are vanillas
+  return hand.filter(c => c.isComboPiece).length === 0;
+}
+
+// Simulate one duel
 function simulateGame(deckA: Deck, deckB: Deck): {
-  win: boolean; // true if deckA wins
+  win: boolean;
+  outcome: GameOutcome;
   turnLength: number;
-  firstHandCombo: boolean;
-  comboHit: boolean;
-  comboPiecesDrawn: string[];
-  opponentCombo: boolean;
+  brick: boolean;
+  opponentBrick: boolean;
+  firstHandComboA: boolean;
+  firstHandComboB: boolean;
+  synergyCards: string[];
+  openingHandSig: string;
 } {
-  // Shuffle both decks' main decks
   const shuffledA = shuffle(deckA.mainDeck);
   const shuffledB = shuffle(deckB.mainDeck);
 
-  // Player A draws
   const handA = shuffledA.slice(0, 5);
-  const comboPiecesInHandA = handA.filter(c => c.isComboPiece);
-
-  const nextDrawsA = shuffledA.slice(5, 8);
-  const comboPiecesDrawnA = handA.concat(nextDrawsA).filter(c => c.isComboPiece);
-
-  // Player B draws (simulate opening—a bit simpler)
   const handB = shuffledB.slice(0, 5);
-  const comboPiecesInHandB = handB.filter(c => c.isComboPiece);
 
-  // For each, check combo criteria
-  const aFirstHandCombo = comboPiecesInHandA.length > 0;
-  const bFirstHandCombo = comboPiecesInHandB.length > 0;
-  const aComboHit = comboPiecesDrawnA.length >= 2;
-  const bComboHit = handB.concat(shuffledB.slice(5, 8)).filter(c => c.isComboPiece).length >= 2;
+  const brickA = isBrick(handA);
+  const brickB = isBrick(handB);
 
-  // WIN LOGIC (tweak for your true business rules!)
-  // Example: favor the player with more combos hit; randomize if tied
-  let win: boolean;
-  if (aComboHit && !bComboHit) win = true;
-  else if (!aComboHit && bComboHit) win = false;
-  else win = Math.random() > 0.5; // tie, choose randomly
+  const comboA = handA.filter(c => c.isComboPiece).length >= 2;
+  const comboB = handB.filter(c => c.isComboPiece).length >= 2;
 
-  // Random turn length
+  let outcome: GameOutcome = "draw";
+  let win = false;
+
+  if (brickA && !brickB) {
+    outcome = "brick_loss";
+    win = false;
+  } else if (!brickA && brickB) {
+    outcome = "luck_win";
+    win = true;
+  } else if (comboA && !comboB) {
+    outcome = "combo_win";
+    win = true;
+  } else if (!comboA && comboB) {
+    outcome = "opponent_combo_loss";
+    win = false;
+  } else if (comboA && comboB) {
+    // Both players combo, coinflip
+    win = Math.random() > 0.5;
+    outcome = win ? "combo_win" : "opponent_combo_loss";
+  } else {
+    win = Math.random() > 0.5;
+    outcome = "draw";
+  }
+
+  const synergyCards = handA.filter(c => c.isComboPiece).map(c => c.name).sort();
+  const openingHandSig = handA.map(c => c.name).sort().join(" | ");
   const turnLength = Math.floor(Math.random() * 6) + 3;
 
   return {
     win,
+    outcome,
     turnLength,
-    firstHandCombo: aFirstHandCombo,
-    comboHit: aComboHit,
-    comboPiecesDrawn: comboPiecesDrawnA.map(c => c.id),
-    opponentCombo: bFirstHandCombo,
+    brick: brickA,
+    opponentBrick: brickB,
+    firstHandComboA: comboA,
+    firstHandComboB: comboB,
+    synergyCards,
+    openingHandSig,
   };
 }
 
-// Main Monte Carlo simulation loop
 export function runDeckSimulation(
   deckA: Deck,
   deckB: Deck,
   simulations: number = 100
 ): SimulationResult {
-  let wins = 0;
-  let totalTurnLength = 0;
-  let firstHandComboCount = 0;
-  let comboHitCount = 0;
-  const comboDrawMatrix: { [cardId: string]: { [cardId: string]: number } } = {};
+  let wins = 0, losses = 0, draws = 0, totalTurnLength = 0, bricks = 0, oppBricks = 0;
+  let firstHandCombo = 0, firstHandComboOpp = 0;
+  const outcomeCounts: Record<GameOutcome, number> = {
+    combo_win: 0,
+    luck_win: 0,
+    brick_loss: 0,
+    opponent_combo_loss: 0,
+    draw: 0
+  };
+
+  const synergy: { [a: string]: { [b: string]: number } } = {};
+  const openerCounts: Record<string, number> = {};
 
   for (let i = 0; i < simulations; i++) {
     const res = simulateGame(deckA, deckB);
-    if (res.win) wins++;
     totalTurnLength += res.turnLength;
-    if (res.firstHandCombo) firstHandComboCount++;
-    if (res.comboHit) comboHitCount++;
 
-    // Build heatmap/matrix: card pairings
-    const unique = Array.from(new Set(res.comboPiecesDrawn));
-    unique.forEach(cardA => {
-      if (!comboDrawMatrix[cardA]) comboDrawMatrix[cardA] = {};
-      unique.forEach(cardB => {
-        if (cardA !== cardB) {
-          comboDrawMatrix[cardA][cardB] = (comboDrawMatrix[cardA][cardB] || 0) + 1;
+    if (res.win) wins++; else losses++;
+    if (res.outcome === "draw") draws++;
+    if (res.brick) bricks++;
+    if (res.opponentBrick) oppBricks++;
+    if (res.firstHandComboA) firstHandCombo++;
+    if (res.firstHandComboB) firstHandComboOpp++;
+    outcomeCounts[res.outcome]++;
+
+    // Opening hand combos
+    if (res.synergyCards.length > 1) {
+      for (const a of res.synergyCards) {
+        for (const b of res.synergyCards) {
+          if (a !== b) {
+            if (!synergy[a]) synergy[a] = {};
+            synergy[a][b] = (synergy[a][b] || 0) + 1;
+          }
         }
-      });
-    });
+      }
+    }
+
+    // Top opener sigs
+    openerCounts[res.openingHandSig] = (openerCounts[res.openingHandSig] || 0) + 1;
   }
+
+  // Compute top 10 openers
+  const topOpeners = Object.entries(openerCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10)
+    .map(([combo, count]) => ({ combo, count }));
 
   return {
     gamesSimulated: simulations,
     wins,
-    losses: simulations - wins,
+    losses,
+    draws,
     winRate: (wins / simulations) * 100,
     avgTurnLength: totalTurnLength / simulations,
-    firstHandComboRate: (firstHandComboCount / simulations) * 100,
-    comboHitRate: (comboHitCount / simulations) * 100,
-    comboDrawMatrix,
+    brickRate: bricks / simulations * 100,
+    opponentBrickRate: oppBricks / simulations * 100,
+    firstHandComboRate: (firstHandCombo / simulations) * 100,
+    opponentFirstHandComboRate: (firstHandComboOpp / simulations) * 100,
+    outcomeCounts,
+    topOpeners,
+    synergy
   };
 }
-
-// Usage example:
-//
-// import { runDeckSimulation } from "./deckTesterMonteCarlo";
-// const result = runDeckSimulation(deckA, deckB, 200);
-// // result.winRate, result.avgTurnLength, result.comboDrawMatrix => Ready for charts!
