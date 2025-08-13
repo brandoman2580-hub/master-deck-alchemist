@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { X, Send, Bot, User, Plus, Loader2, Badge, Zap } from "lucide-react";
-import { Avatar, AvatarFallback, Image } from "@radix-ui/react-avatar";
+import { X, Send, Bot, User, Loader2, Zap } from "lucide-react";
+import { Avatar, AvatarFallback } from "@radix-ui/react-avatar";
 import { useDeck } from "@/context/deck-context";
 import { Card } from "@/types/card";
 import { ScrollArea } from "@radix-ui/react-scroll-area";
@@ -19,7 +19,9 @@ import { Input } from "./ui/input";
 import { supabase } from "@/lib/supabaseClient";
 import { POWERFUL_ARCHETYPE_CARDS } from "@/lib/constants";
 import { useCardStore } from "@/store/cardStore";
-import { DeckType } from "@/types/types";
+import { DeckType, BanStatus, DeckSection } from "@/types/types";
+import { Badge } from "./ui/badge";
+import { AIResponseCard } from "./ui/ai-response-card";
 
 interface Message {
   id: string;
@@ -38,6 +40,134 @@ interface AIChatbotProps {
   isOpen: boolean;
   onClose: () => void;
 }
+
+// Function to extract card names from AI response text and match to actual cards
+const extractCardsFromText = (text: string, allCards: Card[]): Card[] => {
+  const foundCards: Card[] = [];
+  const cardNameSet = new Set<string>();
+
+  // Create a map for faster card lookup
+  const cardMap = new Map<string, Card>();
+  allCards.forEach((card) => {
+    cardMap.set(card.name.toLowerCase(), card);
+  });
+
+  // Look for card names in various patterns
+  const patterns = [
+    // **Card Name** pattern
+    /\*\*([^*]+)\*\*/g,
+    // "Card Name" pattern (quoted)
+    /"([^"]+)"/g,
+    // Card names that are likely Yu-Gi-Oh cards (contain common keywords)
+    /\b([A-Z][a-zA-Z\s\-']+(?:Dragon|Monster|Spell|Trap|Blue-Eyes|Dark|Light|Magician|Warrior|Beast|Machine|Fiend|Spellcaster|Zombie|Plant|Insect|Rock|Pyro|Thunder|Aqua|Psychic|Divine|Winged|Elemental|Creator|HERO|Cyber|Blackwing|Gladiator|Six|Samurai|Archfiend|Ojama|Harpie|Amazoness|Toon|Spirit|Union|Gemini|Tuner|Synchro|Xyz|Pendulum|Link|Fusion|Ritual|Ruler|Cardcar))\b/g,
+    // Common Yu-Gi-Oh card patterns
+    /\b([A-Z][a-zA-Z\s\-']*(?:of|the|in|from|to|with|and|or)\s+[A-Z][a-zA-Z\s\-']*)\b/g,
+    // Specific patterns for cards like "Cardcar D" or "Dragon Ruler of Tempests"
+    /\b([A-Z][a-zA-Z]*(?:\s+[A-Z])?(?:\s+(?:of|the|in|from|to|with|and|or)\s+[A-Z][a-zA-Z\s]*)?)\b/g,
+  ];
+
+  patterns.forEach((pattern) => {
+    let match;
+    while ((match = pattern.exec(text)) !== null) {
+      const cardName = match[1].trim();
+      const lowerCardName = cardName.toLowerCase();
+
+      // Skip if already found, too short/generic, or common words
+      if (cardNameSet.has(lowerCardName) || cardName.length < 3) continue;
+
+      // Skip common words that aren't card names
+      const commonWords = [
+        "card",
+        "deck",
+        "effect",
+        "monster",
+        "spell",
+        "trap",
+        "summon",
+        "attack",
+        "defense",
+        "level",
+        "rank",
+        "link",
+        "fusion",
+        "synchro",
+        "xyz",
+        "pendulum",
+      ];
+      if (commonWords.includes(lowerCardName)) continue;
+
+      // Direct match
+      if (cardMap.has(lowerCardName)) {
+        foundCards.push(cardMap.get(lowerCardName)!);
+        cardNameSet.add(lowerCardName);
+        continue;
+      }
+
+      // Fuzzy matching for slight variations
+      for (const [mapCardName, card] of cardMap.entries()) {
+        // More precise fuzzy matching
+        const similarity = calculateSimilarity(lowerCardName, mapCardName);
+        if (similarity > 0.8 && !cardNameSet.has(mapCardName)) {
+          foundCards.push(card);
+          cardNameSet.add(mapCardName);
+          break;
+        }
+      }
+    }
+  });
+
+  // Additional pass: look for exact card names that might be mentioned
+  allCards.forEach((card) => {
+    const cardName = card.name.toLowerCase();
+    if (text.toLowerCase().includes(cardName) && !cardNameSet.has(cardName)) {
+      foundCards.push(card);
+      cardNameSet.add(cardName);
+    }
+  });
+
+  // Limit to reasonable number of cards
+  return foundCards.slice(0, 8);
+};
+
+// Helper function to calculate string similarity
+const calculateSimilarity = (str1: string, str2: string): number => {
+  const longer = str1.length > str2.length ? str1 : str2;
+  const shorter = str1.length > str2.length ? str2 : str1;
+
+  if (longer.length === 0) return 1.0;
+
+  const editDistance = levenshteinDistance(longer, shorter);
+  return (longer.length - editDistance) / longer.length;
+};
+
+// Helper function to calculate Levenshtein distance
+const levenshteinDistance = (str1: string, str2: string): number => {
+  const matrix: number[][] = [];
+
+  for (let i = 0; i <= str2.length; i++) {
+    matrix[i] = [i];
+  }
+
+  for (let j = 0; j <= str1.length; j++) {
+    matrix[0][j] = j;
+  }
+
+  for (let i = 1; i <= str2.length; i++) {
+    for (let j = 1; j <= str1.length; j++) {
+      if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
+        matrix[i][j] = matrix[i - 1][j - 1];
+      } else {
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j - 1] + 1,
+          matrix[i][j - 1] + 1,
+          matrix[i - 1][j] + 1
+        );
+      }
+    }
+  }
+
+  return matrix[str2.length][str1.length];
+};
 
 const generateAIResponse = async (
   userMessage: string,
@@ -98,8 +228,14 @@ const generateAIResponse = async (
       return { message };
     }
 
-    // Expect quota data in response: { answer, requests_left, max_requests }
+    // Expect quota data in response: { answer, requests_left, max_requests, suggested_cards }
     message.content = result.answer || "AI did not return an answer.";
+
+    // Parse suggested cards from the response text and match to actual cards
+    const extractedCards = extractCardsFromText(result.answer || "", allCards);
+    if (extractedCards.length > 0) {
+      message.suggestedCards = extractedCards;
+    }
 
     const quota: Quota | undefined =
       result.requests_left != null && result.max_requests != null
@@ -117,7 +253,7 @@ const generateAIResponse = async (
 };
 
 export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
-  const { currentDeck, addCardToDeck } = useDeck();
+  const { currentDeck, addCardToDeck, getDeckStats } = useDeck();
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "welcome",
@@ -130,8 +266,9 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  //@TODO: Add way to add cards to deck from AI response from chatbot message
+  const [banlist, setBanlist] = useState<Record<string, BanStatus>>({});
+  const [addingCardId, setAddingCardId] = useState<string | null>(null);
+  const [addedCards, setAddedCards] = useState<Set<string>>(new Set());
 
   // Quota (requests left for user), default to unknown ("-")
   const [quota, setQuota] = useState<Quota>({
@@ -141,10 +278,18 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
 
   const allCards = useCardStore((state) => state.cardList);
 
-  // --------- Utility/Helper Functions (unchanged) ---------
+  // Load banlist on mount
+  useEffect(() => {
+    fetch("/data/master-duel-banlist.json")
+      .then((res) => res.json())
+      .then(setBanlist)
+      .catch(() => setBanlist({}));
+  }, []);
 
-  const getDeckStats = (currentDeck: DeckType) => {
-    const { mainDeck } = currentDeck;
+  // --------- Utility/Helper Functions ---------
+
+  const getLocalDeckStats = (deck: DeckType) => {
+    const { mainDeck } = deck;
     const monsterCount = mainDeck.filter((card) =>
       card.type.includes("Monster")
     ).length;
@@ -162,9 +307,9 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
     };
   };
 
-  const determinePlayStyle = (currentDeck: DeckType) => {
-    const { mainDeck } = currentDeck;
-    const stats = getDeckStats(currentDeck);
+  const determinePlayStyle = (deck: DeckType) => {
+    const { mainDeck } = deck;
+    const stats = getLocalDeckStats(deck);
     const playStyles: string[] = [];
     if (stats.monsterCount > 25 && stats.monsterCount / stats.mainCount > 0.6) {
       playStyles.push("Aggro");
@@ -203,9 +348,9 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
     return playStyles;
   };
 
-  const evaluateDeckTier = (currentDeck: DeckType) => {
-    const { mainDeck } = currentDeck;
-    const stats = getDeckStats(currentDeck);
+  const evaluateDeckTier = (deck: DeckType) => {
+    const { mainDeck } = deck;
+    const stats = getLocalDeckStats(deck);
     if (stats.mainCount < 30) {
       return 4; // Casual - not enough cards
     }
@@ -284,13 +429,66 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
     })();
   };
 
-  const handleAddCardToDeck = (card: Card) => {
-    const isExtraDeckCard =
+  // Enhanced card handling functions
+  const canAddCardToDeck = (card: Card, deckType: DeckSection): boolean => {
+    const banStatus = banlist[card.name] || "Unlimited";
+    if (banStatus === "Forbidden") return false;
+
+    let maxCopies = 3;
+    if (banStatus === "Limited") maxCopies = 1;
+    if (banStatus === "Semi-Limited") maxCopies = 2;
+
+    const currentSection = currentDeck[deckType] || [];
+    const currentCount = currentSection.filter((c) => c.id === card.id).length;
+
+    if (currentCount >= maxCopies) return false;
+
+    // Check deck limits
+    const deckStats = getDeckStats();
+    if (deckType === "mainDeck" && deckStats.mainCount >= 60) return false;
+    if (deckType === "extraDeck" && deckStats.extraCount >= 15) return false;
+    if (deckType === "sideDeck" && deckStats.sideCount >= 15) return false;
+
+    return true;
+  };
+
+  const getOptimalDeckType = (card: Card): DeckSection => {
+    if (
       card.type.includes("Fusion") ||
       card.type.includes("Synchro") ||
       card.type.includes("Xyz") ||
-      card.type.includes("Link");
-    addCardToDeck(card, isExtraDeckCard ? "extraDeck" : "mainDeck");
+      card.type.includes("Link")
+    ) {
+      return "extraDeck";
+    }
+    return "mainDeck";
+  };
+
+  const handleAddCardToDeck = async (
+    card: Card,
+    selectedDeckType?: DeckSection
+  ) => {
+    const deckType = selectedDeckType || getOptimalDeckType(card);
+
+    if (!canAddCardToDeck(card, deckType)) return;
+
+    setAddingCardId(card.id.toString());
+
+    // Simulate loading
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
+    addCardToDeck(card, deckType);
+    setAddedCards((prev) => new Set([...prev, card.id.toString()]));
+    setAddingCardId(null);
+
+    // Remove from added cards after 2 seconds
+    setTimeout(() => {
+      setAddedCards((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(card.id.toString());
+        return newSet;
+      });
+    }, 2000);
   };
 
   if (!isOpen) return null;
@@ -316,53 +514,136 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
               <X className="h-5 w-5" />
             </Button>
           </div>
-          <CardDescription className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-0 min-h-[3.5rem]">
-            {/* Instructions / tagline */}
-            <span className="text-sm sm:text-base font-medium text-muted-foreground tracking-tight">
-              Ask about{" "}
-              <span className="font-semibold text-primary">
-                synergies&nbsp;·&nbsp;upgrades&nbsp;·&nbsp;meta&nbsp;·&nbsp;side
-                options
-              </span>
-            </span>
-
-            {/* Modern quota display */}
-            <div className="flex items-center gap-2 min-w-[160px] sm:justify-end">
-              {/* Zap/bolt icon in colored circle */}
-              <span className="h-6 w-6 rounded-full bg-yellow-200 flex items-center justify-center shadow-sm ring-1 ring-yellow-300">
-                <Zap className="w-4 h-4 text-yellow-500" />
-              </span>
-              {/* Quota numbers and pill */}
-              <div className="flex flex-col items-end">
-                <span className="text-xs font-semibold text-gray-500 select-none">
-                  AI Requests
-                  <span className="ml-2 text-base text-primary font-bold tabular-nums">
-                    {quota.requests_left !== -1 ? quota.requests_left : "-"}
-                  </span>
-                  <span className="mx-0.5 text-muted-foreground text-[13px]">
-                    /
-                  </span>
-                  <span className="text-base">
-                    {quota.max_requests !== -1 ? quota.max_requests : "-"}
-                  </span>
+          <CardDescription className="space-y-3 p-0">
+            {/* Instructions / tagline and quota display */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 min-h-[3.5rem]">
+              <span className="text-sm sm:text-base font-medium text-muted-foreground tracking-tight">
+                Ask about{" "}
+                <span className="font-semibold text-primary">
+                  synergies&nbsp;·&nbsp;upgrades&nbsp;·&nbsp;meta&nbsp;·&nbsp;side
+                  options
                 </span>
-                {/* Progress bar as a thin pill */}
-                {quota.max_requests > 0 && (
-                  <div className="relative mt-1 w-28 h-2 rounded-full bg-muted-foreground/10 border overflow-hidden">
+              </span>
+
+              {/* Modern quota display */}
+              <div className="flex items-center gap-2 min-w-[160px] sm:justify-end">
+                {/* Zap/bolt icon in colored circle */}
+                <span className="h-6 w-6 rounded-full bg-yellow-200 flex items-center justify-center shadow-sm ring-1 ring-yellow-300">
+                  <Zap className="w-4 h-4 text-yellow-500" />
+                </span>
+                {/* Quota numbers and pill */}
+                <div className="flex flex-col items-end">
+                  <span className="text-xs font-semibold text-gray-500 select-none">
+                    AI Requests
+                    <span className="ml-2 text-base text-primary font-bold tabular-nums">
+                      {quota.requests_left !== -1 ? quota.requests_left : "-"}
+                    </span>
+                    <span className="mx-0.5 text-muted-foreground text-[13px]">
+                      /
+                    </span>
+                    <span className="text-base">
+                      {quota.max_requests !== -1 ? quota.max_requests : "-"}
+                    </span>
+                  </span>
+                  {/* Progress bar as a thin pill */}
+                  {quota.max_requests > 0 && (
+                    <div className="relative mt-1 w-28 h-2 rounded-full bg-muted-foreground/10 border overflow-hidden">
+                      <div
+                        className={`absolute inset-y-0 left-0 rounded-full transition-all duration-700 ease-out`}
+                        style={{
+                          width: `${quotaValue * 100}%`,
+                          backgroundColor:
+                            quotaValue < 0.25
+                              ? "#ef4444" // red-500
+                              : quotaValue < 0.5
+                              ? "#facc15" // yellow-400
+                              : "#22c55e", // green-500
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Current Deck Display */}
+            <div className="bg-muted/30 rounded-lg p-3 border border-border/50">
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="text-sm font-semibold text-card-foreground">
+                  Current Deck: {currentDeck.name}
+                </h4>
+                <Badge variant="outline" className="text-xs">
+                  {currentDeck.mode}
+                </Badge>
+              </div>
+              <div
+                className={`grid gap-3 text-xs ${
+                  currentDeck.mode === "Master Duel"
+                    ? "grid-cols-2"
+                    : "grid-cols-3"
+                }`}
+              >
+                <div className="text-center">
+                  <div className="font-medium text-card-foreground">Main</div>
+                  <div
+                    className={`text-sm ${
+                      getDeckStats().mainCount < 40
+                        ? "text-red-500"
+                        : getDeckStats().mainCount > 60
+                        ? "text-orange-500"
+                        : "text-green-600"
+                    }`}
+                  >
+                    {getDeckStats().mainCount}/60
+                  </div>
+                </div>
+                <div className="text-center">
+                  <div className="font-medium text-card-foreground">Extra</div>
+                  <div
+                    className={`text-sm ${
+                      getDeckStats().extraCount > 15
+                        ? "text-orange-500"
+                        : "text-muted-foreground"
+                    }`}
+                  >
+                    {getDeckStats().extraCount}/15
+                  </div>
+                </div>
+                {currentDeck.mode === "TCG" && (
+                  <div className="text-center">
+                    <div className="font-medium text-card-foreground">Side</div>
                     <div
-                      className={`absolute inset-y-0 left-0 rounded-full transition-all duration-700 ease-out`}
-                      style={{
-                        width: `${quotaValue * 100}%`,
-                        backgroundColor:
-                          quotaValue < 0.25
-                            ? "#ef4444" // red-500
-                            : quotaValue < 0.5
-                            ? "#facc15" // yellow-400
-                            : "#22c55e", // green-500
-                      }}
-                    />
+                      className={`text-sm ${
+                        getDeckStats().sideCount > 15
+                          ? "text-orange-500"
+                          : "text-muted-foreground"
+                      }`}
+                    >
+                      {getDeckStats().sideCount}/15
+                    </div>
                   </div>
                 )}
+              </div>
+              {/* Deck composition breakdown */}
+              <div className="flex justify-center gap-4 mt-2 pt-2 border-t border-border/30">
+                <span className="text-xs text-muted-foreground">
+                  <span className="font-medium text-blue-600">
+                    {getLocalDeckStats(currentDeck).monsterCount}
+                  </span>{" "}
+                  Monsters
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  <span className="font-medium text-green-600">
+                    {getLocalDeckStats(currentDeck).spellCount}
+                  </span>{" "}
+                  Spells
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  <span className="font-medium text-purple-600">
+                    {getLocalDeckStats(currentDeck).trapCount}
+                  </span>{" "}
+                  Traps
+                </span>
               </div>
             </div>
           </CardDescription>
@@ -413,49 +694,18 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
                               : {}),
                           }}
                         >
-                          <span className="whitespace-pre-line text-base">
-                            {message.content}
-                          </span>
+                          <AIResponseCard 
+                            content={message.content}
+                            suggestedCards={message.suggestedCards || []}
+                            banlist={banlist}
+                            currentDeckMode={currentDeck.mode}
+                            addingCardId={addingCardId}
+                            addedCards={addedCards}
+                            canAddCardToDeck={canAddCardToDeck}
+                            getOptimalDeckType={getOptimalDeckType}
+                            handleAddCardToDeck={handleAddCardToDeck}
+                          />
                         </div>
-                        {/* Suggested cards panel (unchanged) */}
-                        {Array.isArray(message.suggestedCards) &&
-                          message.suggestedCards.length > 0 && (
-                            <div className="mt-2 grid grid-cols-2 gap-2">
-                              {message.suggestedCards.map((card) => (
-                                <div
-                                  key={card.id}
-                                  className="flex items-center gap-2 p-2 rounded-xl bg-card border border-accent shadow"
-                                >
-                                  <Image
-                                    width={80}
-                                    height={120}
-                                    src={
-                                      card.card_images[0].image_url_small ||
-                                      "/placeholder.svg"
-                                    }
-                                    alt={card.name}
-                                    className="w-10 h-auto object-contain rounded-md"
-                                  />
-                                  <div className="flex-1 min-w-0">
-                                    <p className="text-xs font-medium truncate">
-                                      {card.name}
-                                    </p>
-                                    <Badge className="text-[10px] mt-1">
-                                      {card.type}
-                                    </Badge>
-                                  </div>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-7 w-7 p-0"
-                                    onClick={() => handleAddCardToDeck(card)}
-                                  >
-                                    <Plus className="h-3 w-3" />
-                                  </Button>
-                                </div>
-                              ))}
-                            </div>
-                          )}
                         <div className="text-xs text-muted-foreground mt-1 text-right">
                           {message.timestamp.toLocaleTimeString([], {
                             hour: "2-digit",

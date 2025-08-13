@@ -27,6 +27,7 @@ for i in range(0, len(data), BATCH_SIZE):
     batch = data[i : i + BATCH_SIZE]
     records = []
     for card in batch:
+        banlist = card.get("banlist_info", {}) or {}
         card_row = {
             "id": card["id"],
             "name": card.get("name"),
@@ -38,6 +39,7 @@ for i in range(0, len(data), BATCH_SIZE):
             "def": card.get("def"),
             "desc": card.get("desc"),
             "archetype": card.get("archetype"),
+            "ban_tcg": banlist.get("ban_tcg"),
         }
         records.append(card_row)
 
@@ -51,4 +53,3 @@ for i in range(0, len(data), BATCH_SIZE):
         print(f"Exception while upserting cards {i+1} to {i+len(records)}: {e}")
 
 print("✅ Card pool sync complete!")
-
