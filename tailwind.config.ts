@@ -20,12 +20,8 @@ const config = {
     },
     extend: {
       fontFamily: {
-        audiowide: ["var(--font-audiowide)"],
-        geist: ["var(--font-geist)"],
-        "geist-mono": ["var(--font-geist-mono)"],
-        cinzel: ["var(--font-cinzel)"],
-        orbitron: ["var(--font-orbitron)"],
-        rowdies: ["var(--font-rowdies)"],
+        japanese: ["var(--font-japanese)", "sans-serif"],
+        cinzel: ["var(--font-cinzel)", "serif", "Times New Roman", "Times", "serif"]
       },
       colors: {
         border: "hsl(var(--border))",

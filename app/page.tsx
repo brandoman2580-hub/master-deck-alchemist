@@ -1,85 +1,92 @@
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ChevronRight, Hammer, Swords, FlaskConical } from "lucide-react";
-import DragonLogo from "@/public/images/mda_insanity_logo.svg";
-import BodyBackground from "@/public/images/mda_cards_bg2.svg";
+import DragonLogo from "@/public/images/mda_dragon.svg";
+import BodyBackground from "@/public/images/landing_page_bg.svg";
 
 export default function Home() {
   return (
     <>
       {/* Background Image */}
-      <BodyBackground
-        className="fixed top-0 left-0 w-full h-auto z-0 pointer-events-none"
-        style={{
-          maxHeight: "100vh",
-          minWidth: "100vw",
-          objectFit: "cover",
-          opacity: 0.8,
-          maskImage:
-            "radial-gradient(circle at 50% 40%, white 20%, transparent 70%)",
-          WebkitMaskImage:
-            "radial-gradient(circle at 50% 40%, white 20%, transparent 70%)",
-        }}
-      />
-      {/* Vignette Overlay */}
-      <div
-        className="fixed inset-0 z-10 pointer-events-none"
-        style={{
-          background:
-            "radial-gradient(circle at center, transparent 20%, black 60%, black 100%)",
-          mixBlendMode: "multiply",
-        }}
-      />
-      <div className="flex flex-col pt-20">
-        <div className="container px-4 flex-1 flex flex-col justify-center">
-          <div className="relative z-10 flex flex-col space-y-4">
-            
+      <div className="fixed inset-0 w-screen h-screen -z-10 overflow-hidden">
+        <BodyBackground className="w-full h-full object-fill" />
+      </div>
+
+      {/* Body Content */}
+      <div className="fixed inset-0 z-10 pointer-events-none" />
+      <div className="flex flex-col min-h-screen">
+        <div className="container px-4 flex-1 flex flex-col justify-start pt-4">
+          <div className="relative z-10 flex flex-col">
             {/* Logo and Title Section */}
-            <div className="flex items-center justify-center">
-              <DragonLogo className="h-[120] w-[120] flex-shrink-0" />
-              <h1 className="flex flex-col text-4xl md:text-5xl lg:text-6xl font-bold tracking-tighter font-rowdies pt-32">
-                <span>MASTER DECK</span> 
-                <span className="text-red-600 text-9xl">ALCHEMIST</span>
+            <div style={{ lineHeight: 1 }} className="flex flex-col items-center justify-start px-4 gap-2">
+              <DragonLogo
+                className="block"
+                style={{
+                  height: "50vh",
+                  width: "auto",
+                  margin: 0,
+                  padding: 0,
+                  display: "block",
+                }}
+              />
+
+              <h1
+                className="flex flex-col items-center text-center font-bold tracking-tighter font-cinzel pointer-events-auto"
+                style={{
+                  fontSize: "clamp(1.5rem, 6vh, 4.5rem)",
+                  lineHeight: 1.1,
+                }}
+              >
+                <span>
+                  MASTER DECK
+                  <span
+                    className="text-red-600 pl-3"
+                    style={{ fontSize: "clamp(1.5rem, 6vh, 4.5rem)" }}
+                  >
+                    ALCHEMIST
+                  </span>
+                </span>
               </h1>
             </div>
 
             {/* Cards Section */}
             <div className="flex justify-center">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl w-full">
-                
                 {/* Build Card */}
-                <div className="bg-black/60 backdrop-blur-sm rounded-lg p-6 text-center transition-colors">
+                <div className="p-6 text-center transition-colors">
                   <div className="flex justify-center mb-4">
                     <Hammer className="h-12 w-12 text-blue-400" />
                   </div>
-                  <h3 className="text-4xl font-bold mb-2 font-rowdies">BUILD</h3>
+                  <h3 className="text-4xl font-bold mb-2 font-cinzel">BUILD</h3>
                   <p className="text-sm text-muted-foreground">
-                    Construct powerful decks with our advanced deck builder and optimization tools
+                    Construct powerful decks with our advanced deck builder and
+                    optimization tools
                   </p>
                 </div>
 
                 {/* Test Card */}
-                <div className="bg-black/60 backdrop-blur-sm rounded-lg p-6 text-center transition-colors">
+                <div className="p-6 text-center transition-colors">
                   <div className="flex justify-center mb-4">
-                    <FlaskConical className="h-12 w-12 text-green-400" />
+                    <FlaskConical className="h-12 w-12 text-blue-400" />
                   </div>
-                  <h3 className="text-4xl font-bold mb-2 font-rowdies">TEST</h3>
+                  <h3 className="text-4xl font-bold mb-2 font-cinzel">TEST</h3>
                   <p className="text-sm text-muted-foreground">
-                    Analyze deck performance and test strategies with AI-powered simulations
+                    Analyze deck performance and test strategies with AI-powered
+                    simulations
                   </p>
                 </div>
 
                 {/* Duel Card */}
-                <div className="bg-black/60 backdrop-blur-sm rounded-lg p-6 text-center transition-colors">
+                <div className="p-6 text-center transition-colors">
                   <div className="flex justify-center mb-4">
-                    <Swords className="h-12 w-12 text-red-400" />
+                    <Swords className="h-12 w-12 text-blue-400" />
                   </div>
-                  <h3 className="text-4xl font-bold mb-2 font-rowdies">DUEL</h3>
+                  <h3 className="text-4xl font-bold mb-2 font-cinzel">DUEL</h3>
                   <p className="text-sm text-muted-foreground">
-                    Master your gameplay and dominate the competition with refined strategies
+                    Master your gameplay and dominate the competition with
+                    refined strategies
                   </p>
                 </div>
-
               </div>
             </div>
 
@@ -100,7 +107,6 @@ export default function Home() {
                 </Button>
               </div>
             </div>
-
           </div>
         </div>
       </div>

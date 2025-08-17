@@ -34,10 +34,10 @@ export default function Navbar() {
   ];
 
   return (
-    <header className="sticky top-0 z-50 w-full bg-black/40 backdrop-blur supports-[backdrop-filter]:bg-transparent">
+    <header className="sticky top-0 z-50 w-full bg-black/80">
       <div className="container flex h-14 items-center">
         <Link href="/" className="mr-6 flex items-center space-x-0">
-          <span className="hidden font-bold sm:flex sm:items-center font-rowdies text-3xl">
+          <span className="hidden font-bold sm:flex sm:items-center font-cinzel text-3xl">
             <PotionLogo className="w-14 h-14" />
             MASTER DECK <span className="text-red-600 pl-2">ALCHEMIST</span>
           </span>
