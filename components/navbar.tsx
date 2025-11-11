@@ -9,7 +9,7 @@ import { Layers, Save, FlaskConical } from "lucide-react";
 import { openLoginModal } from "@/lib/helpers";
 import { useUserStore } from "@/store/useUserStore";
 import { UserMenu } from "./ui/user-menu";
-import PotionLogo from "@/public/images/potion_icon.svg"
+import PotionIcon from "@/public/images/mda_potion_icon.svg";
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -30,17 +30,22 @@ export default function Navbar() {
       name: "Deck Tester",
       href: "/deck-tester",
       icon: <FlaskConical className="h-4 w-4 mr-2" />,
-    }
+    },
   ];
 
   return (
     <header className="sticky top-0 z-50 w-full bg-black/80">
       <div className="container flex h-14 items-center">
         <Link href="/" className="mr-6 flex items-center space-x-0">
-          <span className="hidden font-bold sm:flex sm:items-center font-cinzel text-3xl">
-            <PotionLogo className="w-14 h-14" />
-            MASTER DECK <span className="text-red-600 pl-2">ALCHEMIST</span>
-          </span>
+          <div className="flex items-center gap-3">
+            <PotionIcon className="w-14 h-14" />
+            <span
+              className="tracking-wider uppercase text-white"
+              style={{ fontFamily: "var(--font-heading)" }}
+            >
+              Master Deck Alchemist
+            </span>
+          </div>
         </Link>
         <nav className="flex items-center space-x-2 md:space-x-4 mx-6">
           {navItems.map((item) => (
@@ -65,11 +70,7 @@ export default function Navbar() {
         </nav>
         <div className="ml-auto flex items-center space-x-4">
           {!user ? (
-            <Button
-              variant="outline"
-              size="md"
-              onClick={openLoginModal}
-            >
+            <Button variant="outline" size="md" onClick={openLoginModal}>
               Login
             </Button>
           ) : (
