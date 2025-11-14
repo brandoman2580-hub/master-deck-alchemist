@@ -5,7 +5,7 @@ const supabase = createClient(
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
 );
 
-function parseYGOPRODeckText(rawText) {
+function parseYGOPRODeckText(rawText: string) {
   const lines = rawText
     .split("\n")
     .map((line) => line.trim())

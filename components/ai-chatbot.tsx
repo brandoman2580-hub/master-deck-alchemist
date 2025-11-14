@@ -278,12 +278,19 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
 
   const allCards = useCardStore((state) => state.cardList);
 
-  // Load banlist on mount
+  // Load banlist on mount from Supabase
   useEffect(() => {
-    fetch("/data/master-duel-banlist.json")
-      .then((res) => res.json())
-      .then(setBanlist)
-      .catch(() => setBanlist({}));
+    const loadBanlist = async () => {
+      try {
+        const { getMasterDuelBanlist } = await import("@/lib/api");
+        const banlistData = await getMasterDuelBanlist();
+        setBanlist(banlistData);
+      } catch (error) {
+        console.error("Error loading banlist:", error);
+        setBanlist({});
+      }
+    };
+    loadBanlist();
   }, []);
 
   // --------- Utility/Helper Functions ---------

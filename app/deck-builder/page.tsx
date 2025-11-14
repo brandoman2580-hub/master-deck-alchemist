@@ -95,7 +95,7 @@ import { FilterMenu } from "@/components/ui/filter-menu";
 import { useCardStore } from "@/store/cardStore";
 import { useUserStore } from "@/store/useUserStore";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getTCGBanlist } from "@/lib/api";
+import { getTCGBanlist, getMasterDuelBanlist } from "@/lib/api";
 import { useModeStore } from "@/store/modeStore";
 
 export default function DeckBuilder() {
@@ -215,11 +215,8 @@ export default function DeckBuilder() {
           const tcgBanlist = await getTCGBanlist();
           setBanlist(tcgBanlist);
         } else {
-          // Load Master Duel banlist from JSON file
-          const response = await fetch("/data/master-duel-banlist.json");
-          if (!response.ok)
-            throw new Error("Failed to load Master Duel banlist");
-          const masterDuelBanlist = await response.json();
+          // Load Master Duel banlist from Supabase
+          const masterDuelBanlist = await getMasterDuelBanlist();
           setBanlist(masterDuelBanlist);
         }
       } catch (err) {

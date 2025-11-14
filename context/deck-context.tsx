@@ -67,12 +67,19 @@ export function DeckProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const saveTimeout = useRef<NodeJS.Timeout | null>(null);
 
-  // Fetch banlist on mount
+  // Fetch banlist on mount from Supabase
   useEffect(() => {
-    fetch("/data/master-duel-banlist.json")
-      .then((res) => res.json())
-      .then(setBanlist)
-      .catch(() => setBanlist({}));
+    const loadBanlist = async () => {
+      try {
+        const { getMasterDuelBanlist } = await import("@/lib/api");
+        const banlistData = await getMasterDuelBanlist();
+        setBanlist(banlistData);
+      } catch (error) {
+        console.error("Error loading banlist:", error);
+        setBanlist({});
+      }
+    };
+    loadBanlist();
   }, []);
 
   // --- Deck Operations ---

@@ -1,6 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
 import { corsHeaders } from "../_shared/cors.ts";
-import { join } from "https://deno.land/std@0.198.0/path/mod.ts";
 
 type Card = {
   id: number;
@@ -29,20 +28,35 @@ function onlyUniqueByName(arr: Card[]): Card[] {
 
 // --- Banlist Helpers ---
 
-// Master Duel - load local JSON
-async function loadMasterDuelBanlist(): Promise<Record<string, string>> {
+interface MasterDuelBanlistEntry {
+  card_name: string;
+  ban_status: string;
+}
+
+// Master Duel - fetch from Supabase master_duel_banlist table
+async function loadMasterDuelBanlist(supabaseClient: any): Promise<Record<string, string>> {
   try {
-    const path = join(Deno.cwd(), "public/data/master-duel-banlist.json");
-    const fileContent = await Deno.readTextFile(path);
-    // Format: [{ name, ban_status }, ...] or { "Card Name": "Forbidden", ... }
-    const data = JSON.parse(fileContent);
-    // If array, convert to map:
-    if (Array.isArray(data)) {
-      const out: Record<string, string> = {};
-      for (const entry of data) out[entry.name] = entry.ban_status;
-      return out;
+    const { data, error } = await supabaseClient
+      .from("master_duel_banlist")
+      .select("card_name, ban_status");
+
+    if (error) {
+      console.error("Error loading Master Duel banlist from Supabase:", error);
+      return {};
     }
-    return data;
+
+    if (!data || data.length === 0) {
+      console.warn("No Master Duel banlist data found in Supabase");
+      return {};
+    }
+
+    const banlist: Record<string, string> = {};
+    for (const entry of data as MasterDuelBanlistEntry[]) {
+      if (entry.card_name && entry.ban_status) {
+        banlist[entry.card_name] = entry.ban_status;
+      }
+    }
+    return banlist;
   } catch (err) {
     console.error("Error loading Master Duel banlist:", err);
     return {};
@@ -110,7 +124,7 @@ Deno.serve(async (req) => {
     // --- Load banlist ---
     let banlist: Record<string, string> = {};
     if (banlist_format === "MASTER_DUEL") {
-      banlist = await loadMasterDuelBanlist();
+      banlist = await loadMasterDuelBanlist(supabase);
     } else if (banlist_format === "TCG") {
       banlist = await fetchTCGBanlist();
       // Consider caching this in Supabase or memory to prevent rate limiting
@@ -307,7 +321,7 @@ Final advice: suggest only legal cards for this format and explain any forbidden
         status: 200,
       }
     );
-  } catch (error) {
+  } catch (error: any) {
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

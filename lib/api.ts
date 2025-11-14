@@ -182,7 +182,46 @@ export interface BanlistEntry {
   banStatus: BanStatus;
 }
 
-// 3. Banlist fetch—for TCG, you should also use your Supabase cards table if you store ban info
+/**
+ * Master Duel banlist entry from Supabase
+ */
+export interface MasterDuelBanlistEntry {
+  id: number;
+  card_name: string;
+  ban_status: string;
+}
+
+// 3. Banlist fetch—Master Duel from Supabase master_duel_banlist table
+export async function getMasterDuelBanlist(): Promise<Record<string, BanStatus>> {
+  try {
+    const { data, error } = await supabase
+      .from("master_duel_banlist")
+      .select("card_name, ban_status");
+
+    if (error) {
+      console.warn("Error fetching Master Duel banlist from Supabase:", error.message);
+      return {};
+    }
+
+    if (!data || data.length === 0) {
+      console.warn("No Master Duel banlist data found in Supabase");
+      return {};
+    }
+
+    const banlist: Record<string, BanStatus> = {};
+    for (const entry of data) {
+      if (entry.card_name && entry.ban_status) {
+        banlist[entry.card_name] = entry.ban_status as BanStatus;
+      }
+    }
+    return banlist;
+  } catch (error) {
+    console.warn("Error fetching Master Duel banlist, using empty banlist:", error);
+    return {};
+  }
+}
+
+// 4. Banlist fetch—for TCG, you should also use your Supabase cards table if you store ban info
 export async function getTCGBanlist(): Promise<Record<string, BanStatus>> {
   // For now, return an empty banlist since the TCG ban status is not stored in the cards table
   // This can be updated later when TCG ban status data is available
