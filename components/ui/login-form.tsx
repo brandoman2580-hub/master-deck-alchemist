@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import type { FormEvent } from "react";
 import {
   signInWithGoogle,
   signInWithFacebook,
@@ -23,7 +24,7 @@ export function LoginForm({ onSignupClick }: LoginFormProps) {
   const [submitting, setSubmitting] = useState(false);
   const { closeLoginModal } = useLoginModalStore();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
   e.preventDefault()
   setSubmitting(true)
   const formData = new FormData()

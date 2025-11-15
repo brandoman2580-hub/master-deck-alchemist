@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import type { ReactNode } from "react";
 import { ThemeProvider } from "next-themes";
 import { DeckProvider } from "@/context/deck-context";
 import Navbar from "@/components/navbar";
@@ -8,7 +9,7 @@ import { useCardStore } from "@/store/cardStore";
 import { getCardData } from "@/lib/api";
 import { useSupabaseUserSync } from "@/hooks/useSupabaseUserSync";
 
-export function Providers({ children }: { children: React.ReactNode }) {
+export function Providers({ children }: { children: ReactNode }) {
   const setCardList = useCardStore((state) => state.setCardList);
   const setLoading = useCardStore((state) => state.setLoading);
   useSupabaseUserSync();

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef } from "react";
 import fuzzysort from "fuzzysort";
 import { Input } from "@/components/ui/input";
 import { X } from "lucide-react";
