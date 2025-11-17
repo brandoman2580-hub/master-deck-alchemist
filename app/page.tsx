@@ -1,5 +1,5 @@
 import { Brain, TrendingUp, Target, Cpu } from "lucide-react";
-import PotionIcon from "@/public/images/mda_potion_icon.svg";
+import MDAIcon from "@/public/images/MDA_Logo_One.svg";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
@@ -82,14 +82,14 @@ function Hero() {
 
           {/* CTAs */}
           <div className="flex flex-col sm:flex-row gap-4">
-            <Button asChild size="lg" className="h-15 px-8 py-4 bg-cyan-500 hover:bg-cyan-400 text-slate-950 rounded-xl uppercase tracking-wider transition-all duration-200 shadow-[0_0_40px_rgba(56,189,248,0.25)] hover:shadow-[0_0_60px_rgba(56,189,248,0.4)]">
+            <Button asChild size="lg" className="h-15 px-8 py-4 bg-cyan-500 hover:bg-cyan-400 text-slate-950 uppercase tracking-wider transition-all duration-200 shadow-[0_0_40px_rgba(56,189,248,0.25)] hover:shadow-[0_0_60px_rgba(56,189,248,0.4)]">
               <Link href="/deck-builder">
                 Launch Deck Builder
               </Link>
             </Button>
-            <button className="px-8 py-4 bg-transparent border border-cyan-500/50 hover:border-cyan-400 text-cyan-400 rounded-xl uppercase tracking-wider transition-all duration-200 backdrop-blur-sm">
-              View Saved Decks
-            </button>
+            <Button asChild size="lg" className="h-15 px-8 py-4 bg-transparent border border-cyan-500/50 hover:border-cyan-400 text-cyan-400 uppercase tracking-wider transition-all duration-200 backdrop-blur-sm">
+              <Link href="/saved-decks">View Saved Decks</Link>
+            </Button>
           </div>
 
           {/* HUD Flourishes */}
@@ -305,7 +305,7 @@ function Footer() {
         <div className="flex flex-col md:flex-row items-center justify-between gap-6">
           {/* Logo */}
           <div className="flex items-center gap-3">
-            <PotionIcon className="w-24 h-24" />
+            <MDAIcon className="w-24 h-24" />
             <div>
               <div
                 className="tracking-wider uppercase text-sm"

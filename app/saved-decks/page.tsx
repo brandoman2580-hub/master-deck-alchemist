@@ -93,67 +93,68 @@ export default function SavedDecks() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex flex-col space-y-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold">Saved Decks</h1>
-          <Button asChild>
-            <Link href="/deck-builder">Create New Deck</Link>
-          </Button>
-        </div>
-        {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">{error}</div>
-        )}
-        {loading ? (
-          <p>Loading decks...</p>
-        ) : decks.length === 0 ? (
-          <Card className="p-8 text-center">
-            <CardContent className="pt-6">
-              <p className="text-muted-foreground">No saved decks found</p>
-              <p className="text-sm text-muted-foreground mt-2">
-                Start building a deck and save it to see it here
-              </p>
-              <Button className="mt-4" asChild>
-                <Link href="/deck-builder">Create Your First Deck</Link>
-              </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {decks.map((deck) => (
-              <Card key={deck.id}>
+    <div className="min-h-screen bg-slate-950 px-8 pt-8 pb-10">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex flex-col space-y-6">
+          <div className="flex items-center justify-between">
+            <h1 className="text-3xl font-bold text-slate-50" style={{ fontFamily: "var(--font-heading)" }}>Saved Decks</h1>
+            <Button asChild>
+              <Link href="/deck-builder">Create New Deck</Link>
+            </Button>
+          </div>
+          {error && (
+            <div className="bg-red-500/20 border border-red-500/50 text-red-300 px-4 py-3 rounded-lg backdrop-blur-sm">{error}</div>
+          )}
+          {loading ? (
+            <p className="text-slate-300">Loading decks...</p>
+          ) : decks.length === 0 ? (
+            <Card className="p-8 text-center bg-gradient-to-b from-cyan-400/20 via-cyan-500/15 to-cyan-600/5 backdrop-blur-md border border-cyan-500/30 rounded-2xl">
+              <CardContent className="pt-6">
+                <p className="text-slate-300">No saved decks found</p>
+                <p className="text-sm text-slate-400 mt-2">
+                  Start building a deck and save it to see it here
+                </p>
+                <Button className="mt-4" asChild>
+                  <Link href="/deck-builder">Create Your First Deck</Link>
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {decks.map((deck) => (
+                <Card key={deck.id} className="bg-gradient-to-b from-cyan-400/20 via-cyan-500/15 to-cyan-600/5 backdrop-blur-md border border-cyan-500/30 rounded-2xl">
                 <CardHeader>
                   <div className="flex items-center gap-2">
-                    <CardTitle>{deck.name}</CardTitle>
+                    <CardTitle className="text-slate-50" style={{ fontFamily: "var(--font-heading)" }}>{deck.name}</CardTitle>
                     <Badge 
                       variant="secondary" 
-                      className={`text-xs font-medium pointer-events-none ${
+                      className={`text-xs font-medium pointer-events-none border ${
                         deck.mode === "TCG" 
-                          ? "bg-blue-100 text-blue-800 border-blue-200" 
-                          : "bg-yellow-100 text-yellow-800 border-yellow-200"
+                          ? "bg-cyan-500/40 border-cyan-400/60 text-cyan-100" 
+                          : "bg-cyan-500/40 border-cyan-400/60 text-cyan-100"
                       }`}
                     >
                       {deck.mode}
                     </Badge>
                   </div>
-                  <CardDescription className="flex items-center">
-                    <Clock className="h-3 w-3 mr-1" />
+                  <CardDescription className="flex items-center text-slate-300">
+                    <Clock className="h-3 w-3 mr-1 text-cyan-400" />
                     Last updated: {deck.updated_at ? formatDate(deck.updated_at) : "Unknown"}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-3 gap-2 text-sm">
-                    <div className="bg-muted p-2 rounded-md text-center">
-                      <p className="text-xs">Main</p>
-                      <p className="font-bold">{deck.mainDeck.length}</p>
+                    <div className="bg-slate-950/60 border border-cyan-500/30 p-2 rounded-md text-center">
+                      <p className="text-xs text-slate-300">Main</p>
+                      <p className="font-bold text-cyan-300">{deck.mainDeck.length}</p>
                     </div>
-                    <div className="bg-muted p-2 rounded-md text-center">
-                      <p className="text-xs">Extra</p>
-                      <p className="font-bold">{deck.extraDeck.length}</p>
+                    <div className="bg-slate-950/60 border border-cyan-500/30 p-2 rounded-md text-center">
+                      <p className="text-xs text-slate-300">Extra</p>
+                      <p className="font-bold text-cyan-300">{deck.extraDeck.length}</p>
                     </div>
-                    <div className="bg-muted p-2 rounded-md text-center">
-                      <p className="text-xs">Side</p>
-                      <p className="font-bold">{deck.sideDeck.length}</p>
+                    <div className="bg-slate-950/60 border border-cyan-500/30 p-2 rounded-md text-center">
+                      <p className="text-xs text-slate-300">Side</p>
+                      <p className="font-bold text-cyan-300">{deck.sideDeck.length}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -182,10 +183,10 @@ export default function SavedDecks() {
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </AlertDialogTrigger>
-                      <AlertDialogContent>
+                      <AlertDialogContent className="bg-gradient-to-b from-cyan-400/20 via-cyan-500/15 to-cyan-600/5 backdrop-blur-md border border-cyan-500/30">
                         <AlertDialogHeader>
-                          <AlertDialogTitle>Delete Deck</AlertDialogTitle>
-                          <AlertDialogDescription>
+                          <AlertDialogTitle className="text-slate-50" style={{ fontFamily: "var(--font-heading)" }}>Delete Deck</AlertDialogTitle>
+                          <AlertDialogDescription className="text-slate-300">
                             Are you sure you want to delete {`${deck.name}`}? This action cannot be undone.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
@@ -207,6 +208,7 @@ export default function SavedDecks() {
           </div>
         )}
 
+        </div>
       </div>
     </div>
   );

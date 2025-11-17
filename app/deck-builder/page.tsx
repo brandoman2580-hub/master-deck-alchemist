@@ -57,6 +57,8 @@ import {
   Sword,
   Layers,
   Edit,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 import {
   Dialog,
@@ -82,7 +84,6 @@ import Image from "next/image";
 import {
   DECK_MODES,
   FLOODGATE_CARDS,
-  MODE_COLORS,
   POWERFUL_ARCHETYPE_CARDS,
   ROGUE_ARCHETYPE_CARDS,
 } from "@/lib/constants";
@@ -204,6 +205,41 @@ export default function DeckBuilder() {
       );
     }
     filtered = filterCards(filtered, searchParams);
+    
+    // Apply sorting
+    const sortKey = searchParams.sort;
+    const sortDirection = searchParams.sortDirection;
+    
+    filtered.sort((a, b) => {
+      let aValue: string | number | undefined;
+      let bValue: string | number | undefined;
+      
+      switch (sortKey) {
+        case "name":
+          aValue = a.name.toLowerCase();
+          bValue = b.name.toLowerCase();
+          break;
+        case "atk":
+          aValue = typeof a.atk === "number" ? a.atk : a.atk === "?" ? -1 : 0;
+          bValue = typeof b.atk === "number" ? b.atk : b.atk === "?" ? -1 : 0;
+          break;
+        case "def":
+          aValue = typeof a.def === "number" ? a.def : a.def === "?" ? -1 : 0;
+          bValue = typeof b.def === "number" ? b.def : b.def === "?" ? -1 : 0;
+          break;
+        case "level":
+          aValue = a.level ?? 0;
+          bValue = b.level ?? 0;
+          break;
+        default:
+          return 0;
+      }
+      
+      if (aValue < bValue) return sortDirection === "asc" ? -1 : 1;
+      if (aValue > bValue) return sortDirection === "asc" ? 1 : -1;
+      return 0;
+    });
+    
     setFilteredCards(filtered);
   }, [searchQuery, cardList, searchParams]);
 
@@ -668,11 +704,13 @@ export default function DeckBuilder() {
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex flex-col space-y-6">
+      {/* HUD-styled deck builder layout: maintains multi-file uploader mental model (left = drop zone, right = library). */}
+      <div className="min-h-screen bg-slate-950 px-8 pt-8 pb-10">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col space-y-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold">Deck Builder</h1>
+              <h1 className="text-3xl font-bold text-slate-50" style={{ fontFamily: "var(--font-heading)" }}>Deck Builder</h1>
               <div className="flex flex-wrap gap-2 mt-2">
                 {deckPlayStyle.map((style, index) => {
                   const Icon = getPlaystyleIcon(style);
@@ -709,13 +747,13 @@ export default function DeckBuilder() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-6">
-            {/* Left side - Deck Building Area */}
+            {/* Left side - Deck Building Area (Primary Drop/Upload Panel) */}
             <div className="space-y-6">
-              <CardUI>
+              <CardUI className="bg-gradient-to-b from-cyan-400/20 via-cyan-500/15 to-cyan-600/5 backdrop-blur-md border border-cyan-500/30 rounded-2xl">
                 <CardHeader className="pb-2">
                   <div className="flex items-center justify-between w-full">
                     <div className="flex items-center gap-2">
-                      <span className="text-xl font-bold">
+                      <span className="text-xl font-bold text-slate-50" style={{ fontFamily: "var(--font-heading)" }}>
                         {currentDeck.name || "New Deck"}
                       </span>
                       <Dialog
@@ -776,12 +814,12 @@ export default function DeckBuilder() {
                       </Dialog>
                       <div className="flex items-center gap-2">
                         <div
-                          className="relative flex w-fit rounded-full bg-zinc-100 shadow-inner"
+                          className="relative flex w-fit rounded-full bg-slate-900/60 border border-cyan-500/30 backdrop-blur-sm"
                           ref={containerRef}
                         >
                           {/* Animated background: matches active button */}
                           <span
-                            className={`absolute top-0 bottom-0 rounded-full transition-all duration-200 ${MODE_COLORS[deckMode]}`}
+                            className="absolute top-0 bottom-0 rounded-full transition-all duration-200 bg-cyan-500/40"
                             style={{
                               ...sliderStyle,
                               zIndex: 0,
@@ -796,8 +834,8 @@ export default function DeckBuilder() {
                                 setDeckMode(mode);
                                 updateDeckMode(mode);
                               }}
-                              className={`relative z-10 px-4 py-1 font-semibold rounded-full transition-colors duration-200 focus:outline-none
-            ${deckMode === mode ? "text-white" : "text-gray-700"}
+                              className={`relative z-10 px-4 py-1 font-semibold rounded-full transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60
+            ${deckMode === mode ? "text-cyan-100" : "text-slate-300"}
           `}
                               aria-pressed={deckMode === mode}
                               style={{
@@ -920,7 +958,7 @@ export default function DeckBuilder() {
                       </div>
                     </TooltipProvider>
                   </div>
-                  <CardDescription>
+                  <CardDescription className="text-slate-300">
                     Drag cards from the right panel to add them to your deck, or
                     drag cards back to the browser to remove them
                   </CardDescription>
@@ -933,20 +971,29 @@ export default function DeckBuilder() {
                   >
                     <div className="px-6">
                       <TabsList
-                        className={`grid w-full ${
+                        className={`grid w-full bg-slate-900/60 border border-cyan-500/30 rounded-lg p-1 ${
                           deckMode === "Master Duel"
                             ? "grid-cols-2"
                             : "grid-cols-3"
                         }`}
                       >
-                        <TabsTrigger value="main">
+                        <TabsTrigger 
+                          value="main"
+                          className="data-[state=active]:bg-cyan-500/40 data-[state=active]:text-cyan-100 data-[state=inactive]:text-slate-300 data-[state=inactive]:hover:text-cyan-300 transition-colors"
+                        >
                           Main Deck ({stats.mainCount})
                         </TabsTrigger>
-                        <TabsTrigger value="extra">
+                        <TabsTrigger 
+                          value="extra"
+                          className="data-[state=active]:bg-cyan-500/40 data-[state=active]:text-cyan-100 data-[state=inactive]:text-slate-300 data-[state=inactive]:hover:text-cyan-300 transition-colors"
+                        >
                           Extra Deck ({stats.extraCount})
                         </TabsTrigger>
                         {deckMode === "TCG" && (
-                          <TabsTrigger value="side">
+                          <TabsTrigger 
+                            value="side"
+                            className="data-[state=active]:bg-cyan-500/40 data-[state=active]:text-cyan-100 data-[state=inactive]:text-slate-300 data-[state=inactive]:hover:text-cyan-300 transition-colors"
+                          >
                             Side Deck ({stats.sideCount})
                           </TabsTrigger>
                         )}
@@ -956,10 +1003,10 @@ export default function DeckBuilder() {
                     <TabsContent value="main" className="pt-4 px-6 pb-6">
                       <div className="space-y-4">
                         <div className="flex items-center justify-between">
-                          <h3 className="text-lg font-medium">
+                          <h3 className="text-lg font-semibold text-slate-50">
                             Main Deck ({stats.mainCount}/60)
                           </h3>
-                          <div className="text-sm text-muted-foreground">
+                          <div className="text-sm text-slate-300">
                             Min: 40 cards
                           </div>
                         </div>
@@ -973,9 +1020,9 @@ export default function DeckBuilder() {
                           id="main-deck"
                           className={`
                             w-full
-                            border-2 border-dashed
                             rounded-lg
-                            p-4
+                            bg-slate-950/60
+                            transition-transform duration-150 hover:scale-[1.01]
                           `}
                         >
                           <DeckDropZone
@@ -983,9 +1030,9 @@ export default function DeckBuilder() {
                             isEmpty={currentDeck.mainDeck.length === 0}
                           >
                             {currentDeck.mainDeck.length === 0 ? (
-                              <div className="flex flex-col items-center text-muted-foreground py-8">
-                                <AlertCircle className="h-8 w-8 mb-2" />
-                                <span className="text-sm font-medium">
+                              <div className="flex flex-col items-center text-slate-300 py-8">
+                                <AlertCircle className="h-8 w-8 mb-2 text-cyan-400" />
+                                <span className="text-sm font-medium text-slate-300">
                                   Drag and drop cards here to build your Main
                                   Deck
                                 </span>
@@ -1026,10 +1073,10 @@ export default function DeckBuilder() {
                     <TabsContent value="extra" className="pt-4 px-6 pb-6">
                       <div className="space-y-4">
                         <div className="flex items-center justify-between">
-                          <h3 className="text-lg font-medium">
+                          <h3 className="text-lg font-semibold text-slate-50">
                             Extra Deck ({stats.extraCount}/15)
                           </h3>
-                          <div className="text-sm text-muted-foreground">
+                          <div className="text-sm text-slate-300">
                             Max: 15 cards
                           </div>
                         </div>
@@ -1043,9 +1090,9 @@ export default function DeckBuilder() {
                           id="extra-deck"
                           className={`
                             w-full
-                            border-2 border-dashed
                             rounded-lg
-                            p-4
+                            bg-slate-950/60
+                            transition-transform duration-150 hover:scale-[1.01]
                           `}
                         >
                           <DeckDropZone
@@ -1053,9 +1100,9 @@ export default function DeckBuilder() {
                             isEmpty={currentDeck.extraDeck.length === 0}
                           >
                             {currentDeck.extraDeck.length === 0 ? (
-                              <div className="flex flex-col items-center text-muted-foreground py-8">
-                                <AlertCircle className="h-8 w-8 mb-2" />
-                                <span className="text-sm font-medium">
+                              <div className="flex flex-col items-center text-slate-300 py-8">
+                                <AlertCircle className="h-8 w-8 mb-2 text-cyan-400" />
+                                <span className="text-sm font-medium text-slate-300">
                                   Drag and drop cards here to build your Extra
                                   Deck
                                 </span>
@@ -1096,10 +1143,10 @@ export default function DeckBuilder() {
                     <TabsContent value="side" className="pt-4 px-6 pb-6">
                       <div className="space-y-4">
                         <div className="flex items-center justify-between">
-                          <h3 className="text-lg font-medium">
+                          <h3 className="text-lg font-semibold text-slate-50">
                             Side Deck ({stats.sideCount}/15)
                           </h3>
-                          <div className="text-sm text-muted-foreground">
+                          <div className="text-sm text-slate-300">
                             Max: 15 cards
                           </div>
                         </div>
@@ -1115,10 +1162,9 @@ export default function DeckBuilder() {
                             w-full
                             h-full
                             min-h-[300px]
-                            border-2
-                            border-dashed
                             rounded-lg
-                            p-4
+                            bg-slate-950/60
+                            transition-transform duration-150 hover:scale-[1.01]
                           `}
                         >
                           <DeckDropZone
@@ -1126,9 +1172,9 @@ export default function DeckBuilder() {
                             isEmpty={currentDeck.sideDeck.length === 0}
                           >
                             {currentDeck.sideDeck.length === 0 ? (
-                              <div className="flex flex-col items-center text-muted-foreground py-8">
-                                <AlertCircle className="h-8 w-8 mb-2" />
-                                <span className="text-sm font-medium">
+                              <div className="flex flex-col items-center text-slate-300 py-8">
+                                <AlertCircle className="h-8 w-8 mb-2 text-cyan-400" />
+                                <span className="text-sm font-medium text-slate-300">
                                   Drag and drop cards here to build your Side
                                   Deck
                                 </span>
@@ -1170,23 +1216,23 @@ export default function DeckBuilder() {
               </CardUI>
 
               {tips.length > 0 && (
-                <CardUI>
+                <CardUI className="bg-gradient-to-b from-cyan-400/20 via-cyan-500/15 to-cyan-600/5 backdrop-blur-md border border-cyan-500/30 rounded-2xl">
                   <CardHeader>
-                    <CardTitle className="flex items-center">
-                      <Lightbulb className="h-5 w-5 mr-2 text-yellow-500" />
+                    <CardTitle className="flex items-center text-slate-50">
+                      <Lightbulb className="h-5 w-5 mr-2 text-cyan-400" />
                       Synergy Tips
                     </CardTitle>
-                    <CardDescription>
+                    <CardDescription className="text-slate-300">
                       Suggestions to improve your deck
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-2">
                       {tips.map((tip, index) => (
-                        <Alert key={index}>
-                          <AlertCircle className="h-4 w-4" />
-                          <AlertTitle>Tip {index + 1}</AlertTitle>
-                          <AlertDescription>{tip}</AlertDescription>
+                        <Alert key={index} className="bg-slate-950/60 border-cyan-500/30">
+                          <AlertCircle className="h-4 w-4 text-cyan-400" />
+                          <AlertTitle className="text-slate-50">Tip {index + 1}</AlertTitle>
+                          <AlertDescription className="text-slate-300">{tip}</AlertDescription>
                         </Alert>
                       ))}
                     </div>
@@ -1195,12 +1241,12 @@ export default function DeckBuilder() {
               )}
             </div>
 
-            {/* Right side - Card Browser */}
+            {/* Right side - Card Browser (File List / Library) */}
             <div className="space-y-4">
-              <CardUI>
+              <CardUI className="bg-gradient-to-b from-cyan-400/20 via-cyan-500/15 to-cyan-600/5 backdrop-blur-md border border-cyan-500/30 rounded-2xl">
                 <CardHeader className="pb-2">
-                  <CardTitle>Card Browser</CardTitle>
-                  <CardDescription>
+                  <CardTitle className="text-xl text-slate-50" style={{ fontFamily: "var(--font-heading)" }}>Card Browser</CardTitle>
+                  <CardDescription className="text-slate-300">
                     Search, filter, and drag cards to add to your deck
                   </CardDescription>
                 </CardHeader>
@@ -1213,7 +1259,7 @@ export default function DeckBuilder() {
                           value={searchQuery}
                           onChange={(e) => setSearchQuery(e.target.value)}
                           onClear={() => setSearchQuery("")}
-                          className="w-full"
+                          className="w-full bg-slate-950/60 border-cyan-500/50 text-slate-50 placeholder:text-slate-400 focus-visible:border-cyan-400 focus-visible:ring-cyan-400/60"
                         />
                       </div>
                       <FilterMenu
@@ -1232,7 +1278,7 @@ export default function DeckBuilder() {
                           <Skeleton className="h-4 w-12" />
                         </div>
                       ) : (
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-sm text-slate-300">
                           Found {filteredCards.length} cards
                         </p>
                       )}
@@ -1242,15 +1288,16 @@ export default function DeckBuilder() {
                           onValueChange={(value: string) =>
                             handleSelectChange("sort", value)
                           }
+                          disabled
                         >
-                          <SelectTrigger className="w-[120px]">
+                          <SelectTrigger className="w-[120px] bg-slate-950/60 border-cyan-500/50 text-slate-50 focus:ring-cyan-400/60 opacity-50 cursor-not-allowed">
                             <SelectValue placeholder="Sort by" />
                           </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="name">Name</SelectItem>
-                            <SelectItem value="atk">ATK</SelectItem>
-                            <SelectItem value="def">DEF</SelectItem>
-                            <SelectItem value="level">Level</SelectItem>
+                          <SelectContent className="bg-gradient-to-b from-cyan-400/20 via-cyan-500/15 to-cyan-600/5 backdrop-blur-md border border-cyan-500/30">
+                            <SelectItem value="name" className="text-slate-50 focus:bg-cyan-500/40 focus:text-cyan-100">Name</SelectItem>
+                            <SelectItem value="atk" className="text-slate-50 focus:bg-cyan-500/40 focus:text-cyan-100">ATK</SelectItem>
+                            <SelectItem value="def" className="text-slate-50 focus:bg-cyan-500/40 focus:text-cyan-100">DEF</SelectItem>
+                            <SelectItem value="level" className="text-slate-50 focus:bg-cyan-500/40 focus:text-cyan-100">Level</SelectItem>
                           </SelectContent>
                         </Select>
                         <Button
@@ -1263,28 +1310,35 @@ export default function DeckBuilder() {
                                 prev.sortDirection === "asc" ? "desc" : "asc",
                             }))
                           }
+                          className="h-9 w-9 p-0 opacity-50 cursor-not-allowed"
+                          aria-label={`Sort ${searchParams.sortDirection === "asc" ? "descending" : "ascending"}`}
+                          disabled
                         >
-                          {searchParams.sortDirection === "asc" ? "↑" : "↓"}
+                          {searchParams.sortDirection === "asc" ? (
+                            <ArrowUp className="h-5 w-5 text-cyan-400" />
+                          ) : (
+                            <ArrowDown className="h-5 w-5 text-cyan-400" />
+                          )}
                         </Button>
                       </div>
                     </div>
                   </div>
 
-                  <div className="h-[500px] border-t">
+                  <div className="h-[500px] border-t border-cyan-500/30">
                     <DeckDropZone id="card-browser" isEmpty={false}>
                       {loading ? (
                         <div className="flex flex-col items-center justify-center h-full">
-                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-4"></div>
-                          <p className="text-muted-foreground">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-400 mb-4"></div>
+                          <p className="text-slate-300">
                             Loading cards...
                           </p>
                         </div>
                       ) : filteredCards.length === 0 ? (
                         <div className="flex flex-col items-center justify-center h-full">
-                          <p className="text-muted-foreground">
+                          <p className="text-slate-300">
                             No cards found
                           </p>
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-sm text-slate-400">
                             Try adjusting your search filters
                           </p>
                         </div>
@@ -1301,19 +1355,21 @@ export default function DeckBuilder() {
                             if (banStatus === "Forbidden") maxCopies = 0;
 
                             return (
-                              <CardStack
-                                key={card.id}
-                                card={card}
-                                remainingCopies={getRemainingCopies(card)}
-                                maxCopies={maxCopies}
-                                banStatus={banStatus}
-                                isBeingDragged={
-                                  activeDragId === `browser-${card.id}`
-                                }
-                                onDoubleClick={() =>
-                                  handleCardDoubleClick(card)
-                                }
-                              />
+                              <div className="hover:bg-slate-900/40 border border-transparent hover:border-cyan-500/40 transition-colors">
+                                <CardStack
+                                  key={card.id}
+                                  card={card}
+                                  remainingCopies={getRemainingCopies(card)}
+                                  maxCopies={maxCopies}
+                                  banStatus={banStatus}
+                                  isBeingDragged={
+                                    activeDragId === `browser-${card.id}`
+                                  }
+                                  onDoubleClick={() =>
+                                    handleCardDoubleClick(card)
+                                  }
+                                />
+                              </div>
                             );
                           }}
                         />
@@ -1327,19 +1383,20 @@ export default function DeckBuilder() {
                             if (banStatus === "Forbidden") maxCopies = 0;
 
                             return (
-                              <CardStack
-                                key={card.id}
-                                card={card}
-                                remainingCopies={getRemainingCopies(card)}
-                                maxCopies={maxCopies}
-                                banStatus={banStatus}
-                                isBeingDragged={
-                                  activeDragId === `browser-${card.id}`
-                                }
-                                onDoubleClick={() =>
-                                  handleCardDoubleClick(card)
-                                }
-                              />
+                              <div key={card.id} className="hover:bg-slate-900/40 border border-transparent hover:border-cyan-500/40 transition-colors">
+                                <CardStack
+                                  card={card}
+                                  remainingCopies={getRemainingCopies(card)}
+                                  maxCopies={maxCopies}
+                                  banStatus={banStatus}
+                                  isBeingDragged={
+                                    activeDragId === `browser-${card.id}`
+                                  }
+                                  onDoubleClick={() =>
+                                    handleCardDoubleClick(card)
+                                  }
+                                />
+                              </div>
                             );
                           })}
                         </div>
@@ -1349,6 +1406,7 @@ export default function DeckBuilder() {
                 </CardContent>
               </CardUI>
             </div>
+          </div>
           </div>
         </div>
       </div>

@@ -81,10 +81,10 @@ export function FilterMenu({
           Filters
         </Button>
       </SheetTrigger>
-      <SheetContent side="right">
+      <SheetContent side="right" className="bg-gradient-to-b from-cyan-400/20 via-cyan-500/15 to-cyan-600/5 backdrop-blur-md border-l border-cyan-500/30 [&>button]:text-cyan-400 [&>button]:hover:text-cyan-300 [&>button]:hover:bg-cyan-500/10">
         <SheetHeader>
-          <SheetTitle>Filter Cards</SheetTitle>
-          <SheetDescription>Refine your card search</SheetDescription>
+          <SheetTitle className="text-slate-50" style={{ fontFamily: "var(--font-heading)" }}>Filter Cards</SheetTitle>
+          <SheetDescription className="text-slate-300">Refine your card search</SheetDescription>
         </SheetHeader>
         <div className="grid gap-4 py-4">
           {/* Render all filter sections */}
@@ -123,13 +123,14 @@ export function FilterMenu({
 
           {/* Effect Text as Input */}
           <div className="space-y-2">
-            <Label htmlFor="effect">Effect Text</Label>
+            <Label htmlFor="effect" className="text-cyan-300 font-medium">Effect Text</Label>
             <Input
               id="effect"
               name="effect"
               placeholder="Search card effects..."
               value={searchParams.effect}
               onChange={handleInputChange}
+              className="bg-slate-950/60 border-cyan-500/50 text-slate-50 placeholder:text-slate-400 focus-visible:border-cyan-400 focus-visible:ring-cyan-400/60"
             />
           </div>
 

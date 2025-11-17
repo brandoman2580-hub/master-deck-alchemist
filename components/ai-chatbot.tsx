@@ -259,7 +259,7 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
       id: "welcome",
       role: "assistant",
       content:
-        "👋 Welcome! I'm your Yu-Gi-Oh! deck AI. Ask me about synergies, upgrades, side options, or meta matchups.",
+        "👋 Welcome! I'm your Master Deck Alchemist AI Assistant. Ask me about synergies, upgrades, side options, or meta matchups.",
       timestamp: new Date(),
     },
   ]);
@@ -506,55 +506,64 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
       ? Math.min(quota.requests_left / quota.max_requests, 1)
       : 0;
 
+  // HUD-styled AI assistant: matches Deck Builder / navbar HUD theme with a futuristic, professional console look.
   return (
-    <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
-      <CardUI className="w-full max-w-2xl h-[88vh] flex flex-col shadow-2xl border-accent border-2 rounded-2xl">
-        <CardHeader className="pb-2 relative">
+    <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <CardUI className="w-full max-w-2xl h-[88vh] flex flex-col bg-gradient-to-b from-cyan-400/20 via-cyan-500/15 to-cyan-600/5 backdrop-blur-md border border-cyan-500/30 rounded-2xl shadow-[0_0_20px_rgba(56,189,248,0.15)]">
+        <CardHeader className="pb-2 relative bg-slate-950/60 border-b border-cyan-500/30 rounded-t-2xl">
           <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <Bot className="h-5 w-5 mr-2 text-primary" />
-              <CardTitle className="font-bold tracking-tight">
-                Yu-Gi-Oh! AI Assistant
+            <div className="flex items-center gap-2">
+              <Bot className="h-5 w-5 text-cyan-400" />
+              <CardTitle className="font-bold tracking-tight text-slate-50" style={{ fontFamily: "var(--font-heading)" }}>
+                <span className="border-b-2 border-cyan-400/60 pb-0.5">AI Assistant</span>
               </CardTitle>
             </div>
-            <Button variant="ghost" size="icon" onClick={onClose}>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={onClose}
+              className="text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10 border border-cyan-500/30 hover:border-cyan-400/50 hover:shadow-[0_0_15px_rgba(56,189,248,0.2)]"
+            >
               <X className="h-5 w-5" />
             </Button>
           </div>
-          <CardDescription className="space-y-3 p-0">
+          {/* HUD-styled CardDescription: modern, user-centric layout for AI chatbot card explanations. */}
+          <CardDescription className="space-y-4 p-0 mt-3">
             {/* Instructions / tagline and quota display */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 min-h-[3.5rem]">
-              <span className="text-sm sm:text-base font-medium text-muted-foreground tracking-tight">
-                Ask about{" "}
-                <span className="font-semibold text-primary">
-                  synergies&nbsp;·&nbsp;upgrades&nbsp;·&nbsp;meta&nbsp;·&nbsp;side
-                  options
-                </span>
-              </span>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex-1">
+                <p className="text-sm sm:text-base font-medium text-slate-300 tracking-tight leading-relaxed">
+                  Ask about{" "}
+                  <span className="font-semibold text-cyan-400">
+                    synergies&nbsp;·&nbsp;upgrades&nbsp;·&nbsp;meta&nbsp;·&nbsp;side
+                    options
+                  </span>
+                </p>
+              </div>
 
-              {/* Modern quota display */}
-              <div className="flex items-center gap-2 min-w-[160px] sm:justify-end">
+              {/* Modern quota display - HUD styled */}
+              <div className="flex items-center gap-3 min-w-[180px] sm:justify-end">
                 {/* Zap/bolt icon in colored circle */}
-                <span className="h-6 w-6 rounded-full bg-yellow-200 flex items-center justify-center shadow-sm ring-1 ring-yellow-300">
-                  <Zap className="w-4 h-4 text-yellow-500" />
-                </span>
+                <div className="h-7 w-7 rounded-full bg-gradient-to-b from-cyan-400/30 to-cyan-500/20 flex items-center justify-center shadow-sm border border-cyan-400/40 flex-shrink-0">
+                  <Zap className="w-4 h-4 text-cyan-300" />
+                </div>
                 {/* Quota numbers and pill */}
-                <div className="flex flex-col items-end">
-                  <span className="text-xs font-semibold text-gray-500 select-none">
-                    AI Requests
-                    <span className="ml-2 text-base text-primary font-bold tabular-nums">
+                <div className="flex flex-col items-end min-w-0">
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider select-none">
+                      Requests
+                    </span>
+                    <span className="text-base text-cyan-400 font-bold tabular-nums">
                       {quota.requests_left !== -1 ? quota.requests_left : "-"}
                     </span>
-                    <span className="mx-0.5 text-muted-foreground text-[13px]">
-                      /
-                    </span>
-                    <span className="text-base">
+                    <span className="text-xs text-slate-500">/</span>
+                    <span className="text-base text-slate-300 font-medium tabular-nums">
                       {quota.max_requests !== -1 ? quota.max_requests : "-"}
                     </span>
-                  </span>
+                  </div>
                   {/* Progress bar as a thin pill */}
                   {quota.max_requests > 0 && (
-                    <div className="relative mt-1 w-28 h-2 rounded-full bg-muted-foreground/10 border overflow-hidden">
+                    <div className="relative mt-1.5 w-full max-w-[140px] h-1.5 rounded-full bg-slate-800/60 border border-cyan-500/20 overflow-hidden">
                       <div
                         className={`absolute inset-y-0 left-0 rounded-full transition-all duration-700 ease-out`}
                         style={{
@@ -573,84 +582,111 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
               </div>
             </div>
 
-            {/* Current Deck Display */}
-            <div className="bg-muted/30 rounded-lg p-3 border border-border/50">
-              <div className="flex items-center justify-between mb-2">
-                <h4 className="text-sm font-semibold text-card-foreground">
-                  Current Deck: {currentDeck.name}
-                </h4>
-                <Badge variant="outline" className="text-xs">
+            {/* Current Deck Display - HUD styled panel */}
+            <div className="bg-slate-950/80 rounded-2xl px-4 py-4 border border-cyan-500/30 backdrop-blur-sm shadow-[0_0_24px_rgba(56,189,248,0.15)]">
+              {/* Header */}
+              <div className="flex items-center justify-between mb-4 pb-3 border-b border-cyan-500/20">
+                <div className="flex items-center gap-2">
+                  <h4 className="text-sm font-semibold text-slate-50 tracking-tight">
+                    Current Deck
+                  </h4>
+                  <span className="text-xs text-slate-400 font-medium truncate max-w-[200px]">
+                    {currentDeck.name}
+                  </span>
+                </div>
+                <Badge 
+                  variant="outline" 
+                  className="text-[11px] border-cyan-400/40 bg-cyan-500/10 text-cyan-100 uppercase tracking-wide px-2 py-0.5"
+                >
                   {currentDeck.mode}
                 </Badge>
               </div>
+
+              {/* Deck Stats Grid */}
               <div
-                className={`grid gap-3 text-xs ${
+                className={`grid gap-3 mb-4 ${
                   currentDeck.mode === "Master Duel"
                     ? "grid-cols-2"
                     : "grid-cols-3"
                 }`}
               >
-                <div className="text-center">
-                  <div className="font-medium text-card-foreground">Main</div>
+                <div className="bg-slate-900/40 rounded-lg p-2.5 border border-cyan-500/20 text-center">
+                  <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
+                    Main
+                  </div>
                   <div
-                    className={`text-sm ${
+                    className={`text-base font-bold tabular-nums ${
                       getDeckStats().mainCount < 40
-                        ? "text-red-500"
+                        ? "text-red-400"
                         : getDeckStats().mainCount > 60
-                        ? "text-orange-500"
-                        : "text-green-600"
+                        ? "text-orange-400"
+                        : "text-cyan-400"
                     }`}
                   >
-                    {getDeckStats().mainCount}/60
+                    {getDeckStats().mainCount}
+                    <span className="text-xs text-slate-500 font-normal ml-1">/ 60</span>
                   </div>
                 </div>
-                <div className="text-center">
-                  <div className="font-medium text-card-foreground">Extra</div>
+                <div className="bg-slate-900/40 rounded-lg p-2.5 border border-cyan-500/20 text-center">
+                  <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
+                    Extra
+                  </div>
                   <div
-                    className={`text-sm ${
+                    className={`text-base font-bold tabular-nums ${
                       getDeckStats().extraCount > 15
-                        ? "text-orange-500"
-                        : "text-muted-foreground"
+                        ? "text-orange-400"
+                        : "text-cyan-400"
                     }`}
                   >
-                    {getDeckStats().extraCount}/15
+                    {getDeckStats().extraCount}
+                    <span className="text-xs text-slate-500 font-normal ml-1">/ 15</span>
                   </div>
                 </div>
                 {currentDeck.mode === "TCG" && (
-                  <div className="text-center">
-                    <div className="font-medium text-card-foreground">Side</div>
+                  <div className="bg-slate-900/40 rounded-lg p-2.5 border border-cyan-500/20 text-center">
+                    <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
+                      Side
+                    </div>
                     <div
-                      className={`text-sm ${
+                      className={`text-base font-bold tabular-nums ${
                         getDeckStats().sideCount > 15
-                          ? "text-orange-500"
-                          : "text-muted-foreground"
+                          ? "text-orange-400"
+                          : "text-cyan-400"
                       }`}
                     >
-                      {getDeckStats().sideCount}/15
+                      {getDeckStats().sideCount}
+                      <span className="text-xs text-slate-500 font-normal ml-1">/ 15</span>
                     </div>
                   </div>
                 )}
               </div>
+
               {/* Deck composition breakdown */}
-              <div className="flex justify-center gap-4 mt-2 pt-2 border-t border-border/30">
-                <span className="text-xs text-muted-foreground">
-                  <span className="font-medium text-blue-600">
+              <div className="flex justify-center gap-4 pt-3 border-t border-cyan-500/20">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-semibold text-cyan-400 tabular-nums">
                     {getLocalDeckStats(currentDeck).monsterCount}
-                  </span>{" "}
-                  Monsters
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  <span className="font-medium text-green-600">
+                  </span>
+                  <span className="text-[11px] text-slate-400 uppercase tracking-wide">
+                    Monsters
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-semibold text-cyan-400 tabular-nums">
                     {getLocalDeckStats(currentDeck).spellCount}
-                  </span>{" "}
-                  Spells
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  <span className="font-medium text-purple-600">
+                  </span>
+                  <span className="text-[11px] text-slate-400 uppercase tracking-wide">
+                    Spells
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-semibold text-cyan-400 tabular-nums">
                     {getLocalDeckStats(currentDeck).trapCount}
-                  </span>{" "}
-                  Traps
-                </span>
+                  </span>
+                  <span className="text-[11px] text-slate-400 uppercase tracking-wide">
+                    Traps
+                  </span>
+                </div>
               </div>
             </div>
           </CardDescription>
@@ -659,8 +695,8 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
         <CardContent className="flex-1 overflow-hidden px-0">
           {/* Modern scrollable area */}
           <div className="h-full flex-1 min-h-0 flex flex-col">
-            <ScrollArea className="flex-1 h-full min-h-0 overflow-y-auto px-4">
-              <div className="flex flex-col space-y-4 py-4">
+            <ScrollArea className="flex-1 h-full min-h-0 overflow-y-auto px-4 pr-2">
+              <div className="flex flex-col space-y-3 py-4">
                 {messages.map((message) => (
                   <div
                     key={message.id}
@@ -677,29 +713,20 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
                       <Avatar className="bg-transparent shadow-none">
                         <AvatarFallback className="bg-transparent">
                           {message.role === "user" ? (
-                            <User className="h-6 w-6 text-primary" />
+                            <User className="h-6 w-6 text-cyan-400" />
                           ) : (
-                            <Bot className="h-6 w-6 text-gray-500" />
+                            <Bot className="h-6 w-6 text-cyan-400/70" />
                           )}
                         </AvatarFallback>
                       </Avatar>
                       {/* Bubble */}
                       <div>
                         <div
-                          className={`px-5 py-3 rounded-2xl shadow-sm ${
+                          className={`px-5 py-3 rounded-2xl ${
                             message.role === "user"
-                              ? "bg-primary text-primary-foreground"
-                              : "bg-card/90 text-card-foreground border border-border"
+                              ? "bg-cyan-500/15 border border-cyan-400/60 text-slate-50 rounded-tr-sm"
+                              : "bg-slate-900/70 border border-cyan-500/30 text-slate-50 backdrop-blur-sm shadow-[0_2px_12px_rgba(0,0,0,0.2)]"
                           }`}
-                          style={{
-                            // optional glassmorphism & drop-shadow for assistant
-                            ...(message.role === "assistant"
-                              ? {
-                                  backdropFilter: "blur(4px)",
-                                  boxShadow: "0 2px 12px 0 rgba(0,0,0,0.04)",
-                                }
-                              : {}),
-                          }}
                         >
                           <AIResponseCard 
                             content={message.content}
@@ -713,7 +740,7 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
                             handleAddCardToDeck={handleAddCardToDeck}
                           />
                         </div>
-                        <div className="text-xs text-muted-foreground mt-1 text-right">
+                        <div className={`text-xs text-slate-500 mt-1 ${message.role === "user" ? "text-right" : "text-left"}`}>
                           {message.timestamp.toLocaleTimeString([], {
                             hour: "2-digit",
                             minute: "2-digit",
@@ -728,12 +755,12 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
                     <div className="flex gap-2 max-w-[80%]">
                       <Avatar className="bg-transparent shadow-none">
                         <AvatarFallback>
-                          <Bot className="h-6 w-6 text-gray-500" />
+                          <Bot className="h-6 w-6 text-cyan-400/70" />
                         </AvatarFallback>
                       </Avatar>
                       <div>
-                        <div className="px-5 py-3 rounded-2xl bg-card/80 text-card-foreground border border-border flex items-center">
-                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        <div className="px-5 py-3 rounded-2xl bg-slate-900/70 border border-cyan-500/30 text-slate-50 backdrop-blur-sm flex items-center shadow-[0_2px_12px_rgba(0,0,0,0.2)]">
+                          <Loader2 className="h-4 w-4 animate-spin mr-2 text-cyan-400" />
                           <span className="text-xs">AI thinking…</span>
                         </div>
                       </div>
@@ -746,7 +773,7 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
           </div>
         </CardContent>
 
-        <CardFooter className="pt-4 border-t border-accent">
+        <CardFooter className="pt-4 border-t border-cyan-500/30 mt-3">
           <form
             className="flex w-full gap-2"
             onSubmit={(e) => {
@@ -759,11 +786,11 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
               value={input}
               autoFocus
               onChange={(e) => setInput(e.target.value)}
-              className="flex-1 rounded-full shadow"
+              className="flex-1 bg-slate-950/80 border border-cyan-500/30 rounded-xl px-4 py-2 text-slate-50 placeholder:text-slate-500 focus:border-cyan-400 focus:shadow-[0_0_24px_rgba(56,189,248,0.35)] focus-visible:ring-2 focus-visible:ring-cyan-400/60 transition-all"
             />
             <Button
               type="submit"
-              className="rounded-full px-4 py-2"
+              variant="default"
               disabled={isLoading || input.trim() === ""}
             >
               <Send className="h-5 w-5" />
@@ -775,3 +802,4 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
     </div>
   );
 }
+

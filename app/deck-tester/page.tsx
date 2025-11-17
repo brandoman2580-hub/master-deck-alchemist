@@ -43,7 +43,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-import { DECK_MODES, MODE_COLORS } from "@/lib/constants";
+import { DECK_MODES } from "@/lib/constants";
 import { useModeStore } from "@/store/modeStore";
 import { useDeck } from "@/context/deck-context";
 
@@ -268,25 +268,26 @@ export default function DeckTester() {
   const chartData = getChartData(simulationResult);
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex flex-col md:flex-row gap-8">
-        {/* ==== Filter Panel ==== */}
-        <Card className="w-full md:w-80 shrink-0">
-          <CardHeader>
-            <CardTitle>Testing Setup</CardTitle>
-            <CardDescription>
-              Pick format, decks and simulation settings.
-            </CardDescription>
-          </CardHeader>
+    <div className="min-h-screen bg-slate-950 px-8 pt-8 pb-10">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex flex-col md:flex-row gap-8">
+          {/* ==== Filter Panel ==== */}
+          <Card className="w-full md:w-80 shrink-0 bg-gradient-to-b from-cyan-400/20 via-cyan-500/15 to-cyan-600/5 backdrop-blur-md border border-cyan-500/30 rounded-2xl">
+            <CardHeader>
+              <CardTitle className="text-slate-50" style={{ fontFamily: "var(--font-heading)" }}>Testing Setup</CardTitle>
+              <CardDescription className="text-slate-300">
+                Pick format, decks and simulation settings.
+              </CardDescription>
+            </CardHeader>
           <CardContent className="space-y-4">
             {/* Mode Buttons */}
             <div className="flex items-center gap-2">
               <div
                 ref={containerRef}
-                className="relative flex w-fit rounded-full bg-zinc-100 shadow-inner"
+                className="relative flex w-fit rounded-full bg-slate-900/60 border border-cyan-500/30 backdrop-blur-sm"
               >
                 <span
-                  className={`absolute top-0 bottom-0 rounded-full transition-all ${MODE_COLORS[deckMode]}`}
+                  className="absolute top-0 bottom-0 rounded-full transition-all duration-200 bg-cyan-500/40"
                   style={{ ...sliderStyle, zIndex: 0 }}
                 />
                 {DECK_MODES.map((mode) => (
@@ -301,8 +302,8 @@ export default function DeckTester() {
                       setOpponentDeckId(null);
                       setSimulationResult(null);
                     }}
-                    className={`relative z-10 px-4 py-1 font-semibold rounded-full transition-colors duration-200 focus:outline-none
-                    ${deckMode === mode ? "text-white" : "text-gray-700"}`}
+                    className={`relative z-10 px-4 py-1 font-semibold rounded-full transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60
+                    ${deckMode === mode ? "text-cyan-100" : "text-slate-300"}`}
                     aria-pressed={deckMode === mode}
                     style={{ background: "transparent", position: "relative" }}
                   >
@@ -313,21 +314,21 @@ export default function DeckTester() {
             </div>
             {/* User Deck */}
             <div>
-              <label className="block mb-2 font-medium">Your Deck</label>
+              <label className="block mb-2 font-medium text-cyan-300">Your Deck</label>
               <Select
                 value={selectedDeckId || ""}
                 onValueChange={setSelectedDeckId}
               >
-                <SelectTrigger>
+                <SelectTrigger className="bg-slate-950/60 border-cyan-500/50 text-slate-50 focus:ring-cyan-400/60">
                   <SelectValue
                     placeholder={
                       decks.length === 0 ? "No decks" : "Choose your deck"
                     }
                   />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-gradient-to-b from-cyan-400/20 via-cyan-500/15 to-cyan-600/5 backdrop-blur-md border border-cyan-500/30">
                   {decks.map((deck) => (
-                    <SelectItem key={deck.id} value={deck.id}>
+                    <SelectItem key={deck.id} value={deck.id} className="text-slate-50 focus:bg-cyan-500/40 focus:text-cyan-100">
                       {deck.name}
                     </SelectItem>
                   ))}
@@ -336,12 +337,12 @@ export default function DeckTester() {
             </div>
             {/* Opponent Deck */}
             <div>
-              <label className="block mb-2 font-medium">Opponent Deck</label>
+              <label className="block mb-2 font-medium text-cyan-300">Opponent Deck</label>
               <Select
                 value={opponentDeckId || ""}
                 onValueChange={setOpponentDeckId}
               >
-                <SelectTrigger>
+                <SelectTrigger className="bg-slate-950/60 border-cyan-500/50 text-slate-50 focus:ring-cyan-400/60">
                   <SelectValue
                     placeholder={
                       opponentDecks.length === 0
@@ -350,19 +351,19 @@ export default function DeckTester() {
                     }
                   />
                 </SelectTrigger>
-                <SelectContent>
-                  <div className="font-bold px-2 py-1">Meta Decks</div>
+                <SelectContent className="bg-gradient-to-b from-cyan-400/20 via-cyan-500/15 to-cyan-600/5 backdrop-blur-md border border-cyan-500/30">
+                  <div className="font-bold px-2 py-1 text-cyan-300">Meta Decks</div>
                   {opponentDecks.map((deck) => (
-                    <SelectItem key={deck.id} value={deck.id}>
+                    <SelectItem key={deck.id} value={deck.id} className="text-slate-50 focus:bg-cyan-500/40 focus:text-cyan-100">
                       {deck.name}
                     </SelectItem>
                   ))}
-                  <SelectItem disabled value="divider">
+                  <SelectItem disabled value="divider" className="text-slate-400">
                     ----
                   </SelectItem>
-                  <div className="font-bold px-2 py-1">Your Decks</div>
+                  <div className="font-bold px-2 py-1 text-cyan-300">Your Decks</div>
                   {decks.map((deck) => (
-                    <SelectItem key={deck.id + "-op"} value={deck.id}>
+                    <SelectItem key={deck.id + "-op"} value={deck.id} className="text-slate-50 focus:bg-cyan-500/40 focus:text-cyan-100">
                       Your: {deck.name}
                     </SelectItem>
                   ))}
@@ -371,7 +372,7 @@ export default function DeckTester() {
             </div>
             {/* Simulation Config */}
             <div>
-              <label className="block mb-2 font-medium">
+              <label className="block mb-2 font-medium text-cyan-300">
                 Number of Simulations
               </label>
               <Input
@@ -380,7 +381,7 @@ export default function DeckTester() {
                 max={1000}
                 value={numSimulations}
                 onChange={(e) => setNumSimulations(Number(e.target.value))}
-                className="w-32"
+                className="w-32 bg-slate-950/60 border-cyan-500/50 text-slate-50 placeholder:text-slate-400 focus-visible:border-cyan-400 focus-visible:ring-cyan-400/60"
                 disabled={simulationLoading}
               />
             </div>
@@ -403,10 +404,10 @@ export default function DeckTester() {
         <div className="grow flex flex-col">
           <div className="grid grid-cols-1 md:grid-cols-2 grid-rows-2 gap-6 h-full">
             {/* Pie Chart */}
-            <Card>
+            <Card className="bg-gradient-to-b from-cyan-400/20 via-cyan-500/15 to-cyan-600/5 backdrop-blur-md border border-cyan-500/30 rounded-2xl">
               <CardHeader>
-                <CardTitle>Win Rate</CardTitle>
-                <CardDescription>
+                <CardTitle className="text-slate-50" style={{ fontFamily: "var(--font-heading)" }}>Win Rate</CardTitle>
+                <CardDescription className="text-slate-300">
                   Shows win/loss/draw breakdown for your deck in{" "}
                   {numSimulations} duels.
                 </CardDescription>
@@ -459,10 +460,10 @@ export default function DeckTester() {
               </CardContent>
             </Card>
             {/* Bar Chart */}
-            <Card>
+            <Card className="bg-gradient-to-b from-cyan-400/20 via-cyan-500/15 to-cyan-600/5 backdrop-blur-md border border-cyan-500/30 rounded-2xl">
               <CardHeader>
-                <CardTitle>Key Rates</CardTitle>
-                <CardDescription>
+                <CardTitle className="text-slate-50" style={{ fontFamily: "var(--font-heading)" }}>Key Rates</CardTitle>
+                <CardDescription className="text-slate-300">
                   Combo rates, brick rates, and turn stats.
                 </CardDescription>
               </CardHeader>
@@ -489,14 +490,14 @@ export default function DeckTester() {
                   {chartData.bar.map((entry, idx) => (
                     <span
                       key={idx}
-                      className="flex items-center gap-2 whitespace-nowrap"
+                      className="flex items-center gap-2 whitespace-nowrap text-slate-300"
                     >
                       <span
                         className="inline-block w-3 h-3 rounded-sm"
                         style={{ background: entry.color }}
                       />
                       <span>{entry.metric}:</span>
-                      <span className="ml-1 text-primary-400">
+                      <span className="ml-1 text-cyan-300">
                         {entry.metric.toLowerCase().includes("turn")
                           ? entry.value.toFixed(1)
                           : entry.value.toFixed(1) + "%"}
@@ -507,10 +508,10 @@ export default function DeckTester() {
               </CardContent>
             </Card>
             {/* Line Chart */}
-            <Card>
+            <Card className="bg-gradient-to-b from-cyan-400/20 via-cyan-500/15 to-cyan-600/5 backdrop-blur-md border border-cyan-500/30 rounded-2xl">
               <CardHeader>
-                <CardTitle>Top Opening Hands</CardTitle>
-                <CardDescription>
+                <CardTitle className="text-slate-50" style={{ fontFamily: "var(--font-heading)" }}>Top Opening Hands</CardTitle>
+                <CardDescription className="text-slate-300">
                   Most frequent 5-card combinations drawn across simulations.
                   <br />
                   Useful for seeing which combos/lines start your duels.
@@ -575,17 +576,17 @@ export default function DeckTester() {
                     />
                   </BarChart>
                 </ResponsiveContainer>
-                <div className="mt-2 text-xs text-zinc-400">
+                <div className="mt-2 text-xs text-slate-400">
                   Bars show the 10 most common unique opening hands.
                 </div>
               </CardContent>
             </Card>
 
             {/* Synergy Heatmap Table */}
-            <Card>
+            <Card className="bg-gradient-to-b from-cyan-400/20 via-cyan-500/15 to-cyan-600/5 backdrop-blur-md border border-cyan-500/30 rounded-2xl">
               <CardHeader>
-                <CardTitle>Combo Synergy</CardTitle>
-                <CardDescription>
+                <CardTitle className="text-slate-50" style={{ fontFamily: "var(--font-heading)" }}>Combo Synergy</CardTitle>
+                <CardDescription className="text-slate-300">
                   Most common pairs of combo cards found together in openers.
                 </CardDescription>
               </CardHeader>
@@ -594,24 +595,24 @@ export default function DeckTester() {
                   <table className="w-full text-xs">
                     <thead>
                       <tr>
-                        <th className="p-1">Card A</th>
-                        <th className="p-1">Card B</th>
-                        <th className="p-1 text-right"># Together</th>
+                        <th className="p-1 text-slate-300">Card A</th>
+                        <th className="p-1 text-slate-300">Card B</th>
+                        <th className="p-1 text-right text-slate-300"># Together</th>
                       </tr>
                     </thead>
                     <tbody>
                       {chartData.heatmap.map((row, i) => (
-                        <tr key={i}>
-                          <td className="p-1">{row.cardA}</td>
-                          <td className="p-1">{row.cardB}</td>
+                        <tr key={i} className="border-b border-cyan-500/20">
+                          <td className="p-1 text-slate-200">{row.cardA}</td>
+                          <td className="p-1 text-slate-200">{row.cardB}</td>
                           <td className="p-1 text-right">
                             <span
                               className={`px-2 py-0.5 rounded font-bold text-white ${
                                 row.count > 10
-                                  ? "bg-green-700"
+                                  ? "bg-green-600/80"
                                   : row.count > 5
-                                  ? "bg-yellow-700"
-                                  : "bg-zinc-700"
+                                  ? "bg-yellow-600/80"
+                                  : "bg-slate-700/80"
                               }`}
                             >
                               {row.count}
@@ -622,11 +623,11 @@ export default function DeckTester() {
                     </tbody>
                   </table>
                 ) : (
-                  <div className="text-sm text-gray-300 text-center mt-8">
+                  <div className="text-sm text-slate-300 text-center mt-8">
                     No combos detected.
                   </div>
                 )}
-                <div className="mt-1 text-xs text-gray-500">
+                <div className="mt-1 text-xs text-slate-400">
                   Pairs = both combo pieces in same opener.
                 </div>
               </CardContent>
@@ -634,13 +635,14 @@ export default function DeckTester() {
           </div>
           {/* Simulation loading overlay */}
           {simulationLoading && (
-            <div className="absolute inset-0 flex items-center justify-center bg-white/60 z-10 pointer-events-none">
-              <div className="animate-pulse text-muted-foreground">
+            <div className="absolute inset-0 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm z-10 pointer-events-none">
+              <div className="animate-pulse text-cyan-300">
                 Simulating {numSimulations} games...
               </div>
             </div>
           )}
         </div>
+      </div>
       </div>
     </div>
   );

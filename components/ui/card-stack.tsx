@@ -71,12 +71,12 @@ export function CardStack({
     <CardPreview card={card} banStatus={banStatus}>
       <div
         ref={cardRef}
-        className={`p-2 border-b hover:bg-accent/10 ${
+        className={`p-3 border-b border-cyan-500/20 hover:bg-slate-900/40 ${
           isBeingDragged ? "opacity-50" : ""
         } ${!disabled ? "cursor-pointer" : ""}`}
         onDoubleClick={handleDoubleClick}
       >
-      <div className="flex gap-3">
+      <div className="flex gap-3 items-center">
         {/* DRAGGABLE STACK IMAGE -- IMAGES ARE HIDDEN WHILE isBeingDragged */}
         <div
           ref={setNodeRef}
@@ -87,7 +87,7 @@ export function CardStack({
           }}
           {...listeners}
           {...attributes}
-          className={`relative w-12 h-18 flex-shrink-0 transition-all
+          className={`relative w-12 h-[72px] flex-shrink-0 flex items-center justify-center transition-all
     ${
       disabled
         ? "cursor-not-allowed opacity-60"
@@ -132,10 +132,10 @@ export function CardStack({
             <div className="absolute -top-1 -right-1 z-10">
               <Badge
                 variant="secondary"
-                className={`text-xs px-1 py-0 min-w-[20px] h-5 flex items-center justify-center ${
+                className={`text-xs px-1.5 py-0.5 min-w-[20px] h-5 flex items-center justify-center border font-semibold ${
                   remainingCopies === 0
-                    ? "bg-gray-400"
-                    : "bg-blue-500 text-white"
+                    ? "bg-slate-800/90 border-slate-500/60 text-slate-300"
+                    : "bg-cyan-700/90 border-cyan-400/70 text-cyan-50"
                 }`}
               >
                 {remainingCopies}
@@ -146,13 +146,13 @@ export function CardStack({
 
         {/* Card Info */}
         <div className="flex-1 min-w-0">
-          <h4 className="font-medium text-sm truncate">{card.name}</h4>
-          <div className="flex flex-wrap gap-1 mt-1">
-            <Badge variant="outline" className="text-xs">
+          <h4 className="font-medium text-sm truncate text-slate-50">{card.name}</h4>
+          <div className="flex flex-wrap gap-1 mt-1.5">
+            <Badge variant="outline" className="text-xs border-cyan-500/50 text-cyan-300">
               {card.type}
             </Badge>
             {card.attribute && (
-              <Badge variant="outline" className="text-xs">
+              <Badge variant="outline" className="text-xs border-cyan-500/50 text-cyan-300">
                 {card.attribute}
               </Badge>
             )}
@@ -160,16 +160,9 @@ export function CardStack({
               {banStatus}
             </Badge>
           </div>
-          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+          <p className="text-xs text-slate-400 mt-1.5 line-clamp-2">
             {card.desc}
           </p>
-        </div>
-        {/* Stack Info */}
-        <div className="flex flex-col items-end justify-center text-xs text-muted-foreground">
-          <span>
-            {remainingCopies}/{maxCopies}
-          </span>
-          <span>left</span>
         </div>
       </div>
       </div>

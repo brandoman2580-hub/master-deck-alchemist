@@ -13,7 +13,7 @@ type Card = {
 };
 
 const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
-const MODEL_NAME = "llama3-70b-8192";
+const MODEL_NAME = "llama-3.3-70b-versatile";
 
 // Helper: dedup by name
 function onlyUniqueByName(arr: Card[]): Card[] {

@@ -8,12 +8,12 @@ type ArchetypeOption = { value: string; label: string };
 
 function Chip({ label, onRemove }: { label: string; onRemove: () => void }) {
   return (
-    <span className="inline-flex items-center bg-gray-200 text-black rounded px-2 py-1 mr-1 mb-1">
+    <span className="inline-flex items-center bg-cyan-500/40 border border-cyan-400/60 text-cyan-100 rounded px-2 py-1 mr-1 mb-1">
       {label}
       <button
         type="button"
         onClick={onRemove}
-        className="ml-1 text-gray-600 hover:text-red-600"
+        className="ml-1 text-cyan-200 hover:text-red-400 transition-colors"
         aria-label={`Remove ${label}`}
         tabIndex={-1}
       >
@@ -78,7 +78,7 @@ export function ArchetypeAutocomplete({
 
   return (
     <div className="relative">
-      <label className="block text-sm font-medium mb-1">Archetype</label>
+      <label className="block text-sm font-medium mb-1 text-cyan-300">Archetype</label>
       <div className="flex flex-wrap items-center gap-1 mb-1">
         {values.map((archetype) => (
           <Chip
@@ -99,15 +99,14 @@ export function ArchetypeAutocomplete({
           }}
           onFocus={() => setOpen(true)}
           onBlur={() => setTimeout(() => setOpen(false), 200)}
-          className="pr-8 text-white bg-transparent"
-          style={{ color: "white" }}
+          className="pr-8 bg-slate-950/60 border-cyan-500/50 text-slate-50 placeholder:text-slate-400 focus-visible:border-cyan-400 focus-visible:ring-cyan-400/60"
         />
         {/* X/Clear button */}
         {(search || values.length > 0) && (
           <button
             type="button"
             onClick={handleClear}
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-red-600"
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-cyan-400 hover:text-red-400 transition-colors"
             tabIndex={-1}
             aria-label="Clear"
           >
@@ -116,11 +115,11 @@ export function ArchetypeAutocomplete({
         )}
         {/* Dropdown */}
         {open && filtered.length > 0 && (
-          <div className="absolute z-10 bg-white border border-gray-200 rounded shadow w-full max-h-60 overflow-y-auto mt-1">
+          <div className="absolute z-10 bg-gradient-to-b from-cyan-400/20 via-cyan-500/15 to-cyan-600/5 backdrop-blur-md border border-cyan-500/30 rounded-lg shadow-xl w-full max-h-60 overflow-y-auto mt-1">
             {filtered.map((archetype) => (
               <div
                 key={archetype.value}
-                className="px-3 py-2 cursor-pointer hover:bg-gray-100 text-black"
+                className="px-3 py-2 cursor-pointer hover:bg-cyan-500/20 text-slate-50 transition-colors"
                 onMouseDown={() => handleSelect(archetype)}
               >
                 {archetype.label}
@@ -129,8 +128,8 @@ export function ArchetypeAutocomplete({
           </div>
         )}
         {open && search && filtered.length === 0 && (
-          <div className="absolute z-10 bg-white border border-gray-200 rounded shadow w-full max-h-60 overflow-y-auto mt-1">
-            <div className="px-3 py-2 text-gray-500">No results</div>
+          <div className="absolute z-10 bg-gradient-to-b from-cyan-400/20 via-cyan-500/15 to-cyan-600/5 backdrop-blur-md border border-cyan-500/30 rounded-lg shadow-xl w-full max-h-60 overflow-y-auto mt-1">
+            <div className="px-3 py-2 text-slate-400">No results</div>
           </div>
         )}
       </div>

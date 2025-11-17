@@ -21,7 +21,7 @@ export function ToggleFilter({
 }: ToggleFilterProps) {
   return (
     <div className="space-y-2">
-      <Label>{label}</Label>
+      <Label className="text-cyan-300 font-medium">{label}</Label>
       <ToggleGroup
         type="multiple"
         value={value}
@@ -33,7 +33,7 @@ export function ToggleFilter({
             key={option.value}
             value={option.value}
             type="button"
-            className="px-3 py-1 text-sm border rounded-md data-[state=on]:bg-primary data-[state=on]:text-white"
+            className="px-3 py-1 text-sm border border-cyan-500/50 rounded-md bg-slate-950/60 text-slate-300 hover:text-cyan-300 hover:border-cyan-400/70 data-[state=on]:bg-cyan-500/40 data-[state=on]:text-cyan-100 data-[state=on]:border-cyan-400/70 transition-colors"
           >
             {option.label}
           </ToggleGroupItem>
