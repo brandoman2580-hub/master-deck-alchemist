@@ -12,6 +12,43 @@ type Card = {
   archetype?: string;
 };
 
+type CardWithCounts = Card & {
+  main: number;
+  side: number;
+  extra: number;
+  totalCount: number;
+};
+
+type IdCounts = {
+  [cardId: number]: {
+    main: number;
+    side: number;
+    extra: number;
+  };
+};
+
+type DeckStats = {
+  mainCount: number;
+  extraCount: number;
+  sideCount: number;
+  monsterCount: number;
+  spellCount: number;
+  trapCount: number;
+  averageLevel?: number;
+  archetypeCounts: Record<string, number>;
+  typeCounts: Record<string, number>;
+  attributeCounts: Record<string, number>;
+};
+
+type AnalysisType =
+  | "summary"
+  | "power_level"
+  | "consistency"
+  | "resilience"
+  | "matchup"
+  | "complexity"
+  | "card_suggestions";
+
 const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
 const MODEL_NAME = "llama-3.3-70b-versatile";
 
@@ -24,6 +61,71 @@ function onlyUniqueByName(arr: Card[]): Card[] {
     seen.add(name);
     return true;
   });
+}
+
+// Compute deck statistics
+function computeDeckStats(cards: CardWithCounts[]): DeckStats {
+  let mainCount = 0;
+  let extraCount = 0;
+  let sideCount = 0;
+  let monsterCount = 0;
+  let spellCount = 0;
+  let trapCount = 0;
+  let totalLevel = 0;
+  let levelCount = 0;
+  const archetypeCounts: Record<string, number> = {};
+  const typeCounts: Record<string, number> = {};
+  const attributeCounts: Record<string, number> = {};
+
+  for (const card of cards) {
+    mainCount += card.main;
+    extraCount += card.extra;
+    sideCount += card.side;
+
+    // Count by card type
+    const cardType = card.type?.toLowerCase() || "";
+    if (cardType.includes("monster")) {
+      monsterCount += card.totalCount;
+    } else if (cardType.includes("spell")) {
+      spellCount += card.totalCount;
+    } else if (cardType.includes("trap")) {
+      trapCount += card.totalCount;
+    }
+
+    // Average level calculation (only for monsters with levels)
+    if (card.level !== undefined && card.level !== null && cardType.includes("monster")) {
+      totalLevel += card.level * card.totalCount;
+      levelCount += card.totalCount;
+    }
+
+    // Archetype counts
+    if (card.archetype) {
+      archetypeCounts[card.archetype] = (archetypeCounts[card.archetype] || 0) + card.totalCount;
+    }
+
+    // Type counts (race)
+    if (card.race) {
+      typeCounts[card.race] = (typeCounts[card.race] || 0) + card.totalCount;
+    }
+
+    // Attribute counts
+    if (card.attribute) {
+      attributeCounts[card.attribute] = (attributeCounts[card.attribute] || 0) + card.totalCount;
+    }
+  }
+
+  return {
+    mainCount,
+    extraCount,
+    sideCount,
+    monsterCount,
+    spellCount,
+    trapCount,
+    averageLevel: levelCount > 0 ? totalLevel / levelCount : undefined,
+    archetypeCounts,
+    typeCounts,
+    attributeCounts,
+  };
 }
 
 // --- Banlist Helpers ---
@@ -112,8 +214,34 @@ Deno.serve(async (req) => {
       );
     }
 
-    // --- Parse request (add format param) ---
-    const { question, deck_id, banlist_format = "TCG" } = await req.json();
+    // --- Parse request (add format param and analysis_type) ---
+    const {
+      question,
+      deck_id,
+      banlist_format = "TCG",
+      analysis_type = "summary",
+    } = await req.json();
+
+    // Validate analysis_type
+    const validAnalysisTypes: AnalysisType[] = [
+      "summary",
+      "power_level",
+      "consistency",
+      "resilience",
+      "matchup",
+      "complexity",
+      "card_suggestions",
+    ];
+    if (!validAnalysisTypes.includes(analysis_type as AnalysisType)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid analysis_type." }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
     if (!deck_id) {
       return new Response(JSON.stringify({ error: "Missing deck ID." }), {
         status: 400,
@@ -154,15 +282,47 @@ Deno.serve(async (req) => {
     }
 
     const deckCardsBySection = deckData.cards as {
-      main: number[];
-      side: number[];
-      extra: number[];
+      main: (number | { id: number })[] | number[];
+      side: (number | { id: number })[] | number[];
+      extra: (number | { id: number })[] | number[];
     };
+
+    // Helper function to extract card ID (handles both number and object formats)
+    const getCardId = (item: number | { id: number }): number => {
+      return typeof item === "number" ? item : item.id;
+    };
+
+    // Extract card IDs from all sections (handles both formats)
+    const mainCardIds = (deckCardsBySection.main || []).map(getCardId);
+    const sideCardIds = (deckCardsBySection.side || []).map(getCardId);
+    const extraCardIds = (deckCardsBySection.extra || []).map(getCardId);
+    
     const allDeckCardIds = [
-      ...(deckCardsBySection.main || []),
-      ...(deckCardsBySection.side || []),
-      ...(deckCardsBySection.extra || []),
+      ...mainCardIds,
+      ...sideCardIds,
+      ...extraCardIds,
     ];
+
+    // --- Build idCounts map (card-copy tracking) ---
+    const idCounts: IdCounts = {};
+    for (const cardId of mainCardIds) {
+      if (!idCounts[cardId]) {
+        idCounts[cardId] = { main: 0, side: 0, extra: 0 };
+      }
+      idCounts[cardId].main++;
+    }
+    for (const cardId of sideCardIds) {
+      if (!idCounts[cardId]) {
+        idCounts[cardId] = { main: 0, side: 0, extra: 0 };
+      }
+      idCounts[cardId].side++;
+    }
+    for (const cardId of extraCardIds) {
+      if (!idCounts[cardId]) {
+        idCounts[cardId] = { main: 0, side: 0, extra: 0 };
+      }
+      idCounts[cardId].extra++;
+    }
 
     // --- Fetch deck card details ---
     const { data: deckCardDetails } = await supabase
@@ -171,9 +331,21 @@ Deno.serve(async (req) => {
       .in("id", allDeckCardIds);
 
     // Remove forbidden cards from deck (optional: or just warn user in prompt)
-    const safeDeckCards = (deckCardDetails ?? []).filter(
+    const deckCardsFiltered = (deckCardDetails ?? []).filter(
       (card) => banlist[card.name] !== "Forbidden"
     );
+
+    // --- Enrich cards with counts ---
+    const safeDeckCards: CardWithCounts[] = deckCardsFiltered.map((card) => {
+      const counts = idCounts[card.id] || { main: 0, side: 0, extra: 0 };
+      return {
+        ...card,
+        main: counts.main,
+        side: counts.side,
+        extra: counts.extra,
+        totalCount: counts.main + counts.side + counts.extra,
+      };
+    });
 
     // --- Context builder: archetypes/types/attributes for pool filtering ---
     const deckArchetypes = new Set(
@@ -214,13 +386,58 @@ Deno.serve(async (req) => {
     // Dedupe by name and limit
     const relevantCards = onlyUniqueByName(relevantPoolCards).slice(0, 50);
 
+    // --- Compute deck statistics ---
+    const deckStats = computeDeckStats(safeDeckCards);
+
+    // --- Compute free slots for suggestions ---
+    const mainFreeSlots = Math.max(0, 60 - deckStats.mainCount);
+    const extraFreeSlots = Math.max(0, 15 - deckStats.extraCount);
+    const suggestionConstraints = `
+Deck capacity:
+- Main deck count: ${deckStats.mainCount} (free slots until 60: ${mainFreeSlots})
+- Extra deck count: ${deckStats.extraCount} (free slots until 15: ${extraFreeSlots})
+`;
+
+    // --- Build structured deck-stats summary ---
+    const topArchetypes = Object.entries(deckStats.archetypeCounts)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 5)
+      .map(([name, count]) => `${name} (${count})`)
+      .join(", ");
+
+    const topTypes = Object.entries(deckStats.typeCounts)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 5)
+      .map(([name, count]) => `${name} (${count})`)
+      .join(", ");
+
+    const topAttributes = Object.entries(deckStats.attributeCounts)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 5)
+      .map(([name, count]) => `${name} (${count})`)
+      .join(", ");
+
+    const featureSummary = `
+Deck stats:
+- Main Deck: ${deckStats.mainCount}
+  - Monsters: ${deckStats.monsterCount}
+  - Spells: ${deckStats.spellCount}
+  - Traps: ${deckStats.trapCount}
+- Extra Deck: ${deckStats.extraCount}
+- Side Deck: ${deckStats.sideCount}
+- Average Level: ${deckStats.averageLevel?.toFixed(2) ?? "N/A"}
+- Top Archetypes: ${topArchetypes || "None"}
+- Top Types: ${topTypes || "None"}
+- Top Attributes: ${topAttributes || "None"}
+`;
+
     // --- Prompt context assembly ---
     const deckSummary = `
 Format: ${banlist_format}
 Deck Name: ${deckData.name}
 Key cards: ${safeDeckCards
       .slice(0, 12)
-      .map((c) => c.name)
+      .map((c) => `${c.name} (x${c.totalCount})`)
       .join(", ")}
 Archetypes: ${[...deckArchetypes].join(", ")}
 Types: ${[...deckTypes].join(", ")}
@@ -231,7 +448,7 @@ Attributes: ${[...deckAttributes].join(", ")}
       .slice(0, 10)
       .map(
         (card) =>
-          `${card.name} (${card.type}${
+          `${card.name} (x${card.totalCount}) [Main: ${card.main}, Side: ${card.side}, Extra: ${card.extra}] (${card.type}${
             card.archetype ? ", " + card.archetype : ""
           }): ${card.desc}`
       )
@@ -246,6 +463,116 @@ Attributes: ${[...deckAttributes].join(", ")}
       )
       .join("\n\n");
 
+    // --- Mode-aware analysis instructions ---
+    const analysisInstructions = `
+You must adapt your output based on the requested analysis_type: "${analysis_type}".
+
+1) If analysis_type === "summary":
+   - Return the full multi-dimensional analysis as BEFORE, with this JSON schema:
+
+   {
+     "overview": string,
+     "strategic_identity": { "playstyle": string, "description": string },
+     "power_level": { "score": number, "explanation": string, "suggestions": string[] },
+     "consistency": { "score": number, "explanation": string, "suggestions": string[] },
+     "resilience_and_grind": { "score": number, "explanation": string, "suggestions": string[] },
+     "matchup_profile": { "score": number, "explanation": string, "suggestions": string[] },
+     "complexity_and_skill": {
+       "score": number,
+       "explanation": string,
+       "skill_floor": string,
+       "skill_ceiling": string
+     },
+     "illegal_cards": { "forbidden": string[], "notes": string }
+   }
+
+2) If analysis_type === "power_level":
+   - Focus ONLY on power-level-related content.
+   - Minimal JSON schema:
+
+   {
+     "power_level": {
+       "score": number,
+       "explanation": string,
+       "suggestions": string[]
+     }
+   }
+
+3) If analysis_type === "consistency":
+   - Focus ONLY on consistency-related content.
+   - JSON schema:
+
+   {
+     "consistency": {
+       "score": number,
+       "explanation": string,
+       "suggestions": string[]
+     }
+   }
+
+4) If analysis_type === "resilience":
+   - Focus ONLY on resilience/grind-game content.
+   - JSON schema:
+
+   {
+     "resilience_and_grind": {
+       "score": number,
+       "explanation": string,
+       "suggestions": string[]
+     }
+   }
+
+5) If analysis_type === "matchup":
+   - Focus ONLY on matchup-related content.
+   - JSON schema:
+
+   {
+     "matchup_profile": {
+       "score": number,
+       "explanation": string,
+       "suggestions": string[]
+     }
+   }
+
+6) If analysis_type === "complexity":
+   - Focus ONLY on complexity/skill content.
+   - JSON schema:
+
+   {
+     "complexity_and_skill": {
+       "score": number,
+       "explanation": string,
+       "skill_floor": string,
+       "skill_ceiling": string
+     }
+   }
+
+7) If analysis_type === "card_suggestions":
+   - Your job is to use ONLY the provided legal card pool and the deck context to suggest cards that can be added to the current deck.
+   - Respect the deck capacity (do not suggest more cards than there are free slots).
+   - Suggested cards MUST be drawn only from:
+     - "Relevant legal pool cards" (the non-deck pool context)
+   - You MUST return JSON with this schema:
+
+   {
+     "suggested_cards": [
+       {
+         "card_name": string,
+         "section": "main" | "side" | "extra",
+         "reason": string
+       }
+     ],
+     "notes": string
+   }
+
+   - Prefer adding cards to the "main" section unless the user question clearly indicates side or extra deck.
+   - Focus only on cards that improve the requested feature(s) described in the user question (power, consistency, resilience, etc.), and explain WHY each card helps.
+
+For ALL analysis_type values:
+- Respond with strict JSON only. No markdown.
+- Do NOT include any fields outside the specified schema for the given analysis_type.
+`;
+
     const prompt = `
 You are an expert Yu-Gi-Oh! ${
       banlist_format === "MASTER_DUEL" ? "Master Duel" : "TCG"
@@ -254,7 +581,13 @@ You are an expert Yu-Gi-Oh! ${
 Deck summary:
 ${deckSummary}
 
-Key deck cards (with effects):
+Computed stats:
+${featureSummary}
+
+Deck capacity:
+${suggestionConstraints}
+
+Key deck cards (with copies and effects):
 ${deckDetailContext}
 
 Relevant legal pool cards ('not in deck', matching deck archetype/type/attribute):
@@ -263,7 +596,9 @@ ${relevantCardsContext}
 User question:
 ${question}
 
-Final advice: suggest only legal cards for this format and explain any forbidden/illegal cards the user currently runs.
+Requested analysis_type: "${analysis_type}"
+
+${analysisInstructions}
 `;
 
     // --- LLM call ---
@@ -279,7 +614,7 @@ Final advice: suggest only legal cards for this format and explain any forbidden
           model: MODEL_NAME,
           messages: [{ role: "user", content: prompt }],
           temperature: 0.5,
-          max_tokens: 1024,
+          max_tokens: 2048,
         }),
       }
     );
@@ -302,10 +637,31 @@ Final advice: suggest only legal cards for this format and explain any forbidden
       groqResponse.headers.get("x-ratelimit-limit-requests")
     );
 
+    // --- Parse JSON from LLM response ---
+    let parsedAnalysis = null;
+    try {
+      // Try to extract JSON from the response (handle markdown code blocks)
+      let jsonContent = aiContent.trim();
+      // Remove markdown code blocks if present
+      if (jsonContent.startsWith("```")) {
+        const lines = jsonContent.split("\n");
+        lines.shift(); // Remove first line (```json or ```)
+        if (lines[lines.length - 1].trim() === "```") {
+          lines.pop(); // Remove last line (```)
+        }
+        jsonContent = lines.join("\n");
+      }
+      parsedAnalysis = JSON.parse(jsonContent);
+    } catch {
+      parsedAnalysis = null;
+    }
+
     return new Response(
       JSON.stringify({
         user,
-        answer: aiContent,
+        analysis_type,
+        raw_answer: aiContent,
+        structured_analysis: parsedAnalysis,
         deck_cards: safeDeckCards,
         relevant_card_pool: relevantCards,
         banned_in_deck:
@@ -313,6 +669,7 @@ Final advice: suggest only legal cards for this format and explain any forbidden
           deckCardDetails
             .filter((card) => banlist[card.name] === "Forbidden")
             .map((card) => card.name),
+        deck_stats: deckStats,
         requests_left: requestsLeft,
         max_requests: maxRequests,
       }),
