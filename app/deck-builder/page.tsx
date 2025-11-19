@@ -753,9 +753,36 @@ export default function DeckBuilder() {
                 <CardHeader className="pb-2">
                   <div className="flex items-center justify-between w-full">
                     <div className="flex items-center gap-2">
-                      <span className="text-xl font-bold text-slate-50" style={{ fontFamily: "var(--font-heading)" }}>
-                        {currentDeck.name || "New Deck"}
-                      </span>
+                      {(() => {
+                        const deckName = currentDeck.name || "New Deck";
+                        const shouldTruncate = deckName.length > 8;
+                        const displayName = shouldTruncate ? `${deckName.slice(0, 8)}...` : deckName;
+                        
+                        return shouldTruncate ? (
+                          <TooltipProvider delayDuration={200}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span 
+                                  className="text-xl font-bold text-slate-50 truncate cursor-help" 
+                                  style={{ fontFamily: "var(--font-heading)" }}
+                                >
+                                  {displayName}
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent
+                                className="bg-gradient-to-b from-cyan-400/20 via-cyan-500/15 to-cyan-600/5 backdrop-blur-md border border-cyan-500/30 text-slate-50 shadow-[0_0_20px_rgba(56,189,248,0.25)] max-w-xs"
+                                side="top"
+                              >
+                                <p className="font-medium">{deckName}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        ) : (
+                          <span className="text-xl font-bold text-slate-50" style={{ fontFamily: "var(--font-heading)" }}>
+                            {displayName}
+                          </span>
+                        );
+                      })()}
                       <Dialog
                         open={isRenameOpen}
                         onOpenChange={setIsRenameOpen}

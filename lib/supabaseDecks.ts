@@ -15,6 +15,7 @@ export async function saveDeck(deck: DeckType, userId: string) {
       },
       updated_at: new Date().toISOString(),
       mode: deck.mode,
+      is_pinned: deck.isPinned ?? false,
     })
     .select()
     .single();
@@ -44,6 +45,16 @@ export async function getUserDecks(userId: string): Promise<Deck[]> {
   return data || [];
 }
 
+export async function toggleDeckPin(deckId: string, userId: string, isPinned: boolean): Promise<void> {
+  const { error } = await supabase
+    .from("decks")
+    .update({ is_pinned: isPinned })
+    .eq("id", deckId)
+    .eq("user_id", userId);
+
+  if (error) throw error;
+}
+
 export async function loadDeck(deckId: string, userId: string): Promise<DeckType> {
   const { data, error } = await supabase
     .from("decks")
@@ -60,6 +71,8 @@ export async function loadDeck(deckId: string, userId: string): Promise<DeckType
     extraDeck: data.cards.extra,
     sideDeck: data.cards.side,
     mode: data.mode,
+    updated_at: data.updated_at,
+    isPinned: data.is_pinned ?? false,
   };
 }
 

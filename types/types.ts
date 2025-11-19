@@ -17,6 +17,7 @@ export type Deck = {
   sideDeck: Card[];
   created_at: string;
   updated_at: string;
+  is_pinned?: boolean;
 };
 
 export type NormalizedDeck = {
@@ -35,6 +36,7 @@ export type DeckType = {
     sideDeck: DeckCard[]
     updated_at?: string
     mode: DeckMode
+    isPinned?: boolean
 }
 
 type DeckListByCategory = {
