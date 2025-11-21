@@ -50,7 +50,7 @@ type AnalysisType =
   | "card_suggestions";
 
 const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
-const MODEL_NAME = "llama-3.3-70b-versatile";
+const MODEL_NAME = Deno.env.get("MODEL_NAME");
 
 // Helper: dedup by name
 function onlyUniqueByName(arr: Card[]): Card[] {
@@ -61,6 +61,60 @@ function onlyUniqueByName(arr: Card[]): Card[] {
     seen.add(name);
     return true;
   });
+}
+
+// Helper: extract meaningful search terms from text
+function extractSearchTerms(text: string): string[] {
+  if (!text) return [];
+
+  const STOP_WORDS = new Set([
+    "the", "a", "an", "and", "or", "of", "for", "with", "to", "in", "on", "this", "that", "it",
+    "my", "your", "their", "our", "is", "are", "be", "can", "could", "would", "should",
+    "deck", "cards", "card", "build", "add", "run", "good", "better", "more", "less",
+    "help", "support", "engine", "please", "need", "want", "like"
+  ]);
+
+  const cleaned = text.toLowerCase().replace(/[^a-z0-9\s]/g, " ");
+  const tokens = cleaned
+    .split(/\s+/)
+    .filter((t) => t.length >= 3 && !STOP_WORDS.has(t));
+
+  const unique: string[] = [];
+  for (const t of tokens) {
+    if (!unique.includes(t)) unique.push(t);
+    if (unique.length >= 8) break; // cap terms
+  }
+  return unique;
+}
+
+// Helper: build search query string from question and deck metadata
+function buildCardSearchQuery(params: {
+  question: string;
+  deckArchetypes: Set<string>;
+  deckTypes: Set<string>;
+  deckAttributes: Set<string>;
+}): string {
+  const { question, deckArchetypes, deckTypes, deckAttributes } = params;
+
+  const coreTerms = extractSearchTerms(question);
+  const archetypes = [...deckArchetypes].map((s) => s.toLowerCase());
+  const types = [...deckTypes].map((s) => s.toLowerCase());
+  const attrs = [...deckAttributes].map((s) => s.toLowerCase());
+
+  const allTerms = [...coreTerms, ...archetypes, ...types, ...attrs];
+
+  if (!allTerms.length) {
+    return question || ""; // fallback; plainto_tsquery will handle this
+  }
+
+  // Join into a plain-text query; plainto_tsquery will tokenize it
+  return allTerms.join(" ");
+}
+
+// Helper: truncate card descriptions to keep prompts small
+function truncateDesc(desc: string, maxLen = 220): string {
+  if (!desc) return "";
+  return desc.length > maxLen ? desc.slice(0, maxLen) + "..." : desc;
 }
 
 // Compute deck statistics
@@ -349,42 +403,92 @@ Deno.serve(async (req) => {
 
     // --- Context builder: archetypes/types/attributes for pool filtering ---
     const deckArchetypes = new Set(
-      safeDeckCards.map((c) => c.archetype).filter(Boolean)
+      safeDeckCards.map((c) => c.archetype).filter((a): a is string => Boolean(a))
     );
-    const deckTypes = new Set(safeDeckCards.map((c) => c.type).filter(Boolean));
+    const deckTypes = new Set(
+      safeDeckCards.map((c) => c.type).filter((t): t is string => Boolean(t))
+    );
     const deckAttributes = new Set(
-      safeDeckCards.map((c) => c.attribute).filter(Boolean)
+      safeDeckCards.map((c) => c.attribute).filter((a): a is string => Boolean(a))
     );
 
-    // --- Unified card pool filtering using match and banlist ---
-    // Build 'or' filter string:
-    const filterParts = [
-      deckArchetypes.size
-        ? `archetype.in.(${[...deckArchetypes].map((s) => `"${s}"`).join(",")})`
-        : undefined,
-      deckTypes.size
-        ? `type.in.(${[...deckTypes].map((s) => `"${s}"`).join(",")})`
-        : undefined,
-      deckAttributes.size
-        ? `attribute.in.(${[...deckAttributes].map((s) => `"${s}"`).join(",")})`
-        : undefined,
-    ].filter(Boolean);
+    // --- Card pool selection: FTS for card_suggestions, filters for others ---
+    let relevantCards: Card[] = [];
 
-    let { data: relevantPoolCards } = await supabase
-      .from("cards")
-      .select("id, name, type, desc, level, race, attribute, archetype")
-      .or(filterParts.join(","))
-      .not("id", "in", `(${allDeckCardIds.join(",")})`)
-      .order("name", { ascending: true })
-      .limit(60);
+    if (analysis_type === "card_suggestions") {
+      // Build search query string for full-text search
+      const searchQuery = buildCardSearchQuery({
+        question: question ?? "",
+        deckArchetypes,
+        deckTypes,
+        deckAttributes,
+      });
 
-    // Exclude forbidden cards
-    relevantPoolCards = (relevantPoolCards ?? []).filter(
-      (card) => banlist[card.name] !== "Forbidden"
-    );
+      const matchCount = 80;
+      const excludedIds = allDeckCardIds.length ? allDeckCardIds : [0];
 
-    // Dedupe by name and limit
-    const relevantCards = onlyUniqueByName(relevantPoolCards).slice(0, 50);
+      const { data: matches, error: matchError } = await supabase.rpc(
+        "match_cards_by_text",
+        {
+          query: searchQuery,
+          match_count: matchCount,
+          excluded_ids: excludedIds,
+          banlist_format,
+        }
+      );
+
+      if (matchError) {
+        console.error("Error in match_cards_by_text:", matchError);
+      }
+
+      const pool = (matches ?? []).map((m: any) => ({
+        id: m.card_id,
+        name: m.name,
+        type: m.type,
+        desc: m.desc,
+        level: undefined,
+        race: m.race,
+        attribute: m.attribute,
+        archetype: m.archetype,
+      }));
+
+      // Additional safety filter using the existing banlist map
+      const filtered = pool.filter((card: Card) => banlist[card.name] !== "Forbidden");
+
+      relevantCards = onlyUniqueByName(filtered).slice(0, 50);
+    } else {
+      // Existing logic for summary/power_level/etc.
+      const filterParts = [
+        deckArchetypes.size
+          ? `archetype.in.(${[...deckArchetypes].map((s) => `"${s}"`).join(",")})`
+          : undefined,
+        deckTypes.size
+          ? `type.in.(${[...deckTypes].map((s) => `"${s}"`).join(",")})`
+          : undefined,
+        deckAttributes.size
+          ? `attribute.in.(${[...deckAttributes].map((s) => `"${s}"`).join(",")})`
+          : undefined,
+      ].filter(Boolean);
+
+      let query = supabase
+        .from("cards")
+        .select("id, name, type, desc, level, race, attribute, archetype")
+        .not("id", "in", `(${allDeckCardIds.join(",")})`);
+
+      if (filterParts.length) {
+        query = query.or(filterParts.join(","));
+      }
+
+      let { data: relevantPoolCards } = await query
+        .order("name", { ascending: true })
+        .limit(60);
+
+      relevantPoolCards = (relevantPoolCards ?? []).filter(
+        (card) => banlist[card.name] !== "Forbidden"
+      );
+
+      relevantCards = onlyUniqueByName(relevantPoolCards).slice(0, 50);
+    }
 
     // --- Compute deck statistics ---
     const deckStats = computeDeckStats(safeDeckCards);
@@ -459,7 +563,7 @@ Attributes: ${[...deckAttributes].join(", ")}
         (card: Card) =>
           `${card.name} (${card.type}${
             card.archetype ? ", " + card.archetype : ""
-          }): ${card.desc}`
+          }): ${truncateDesc(card.desc)}`
       )
       .join("\n\n");
 
