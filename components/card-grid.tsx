@@ -18,6 +18,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Card as CardType } from "@/types/card"
 import Image from "next/image"
+import { getArchetypeName } from "@/lib/helpers"
 
 export default function CardGrid({ cards }: { cards: CardType[] }) {
   const { addCardToDeck } = useDeck()
@@ -102,11 +103,14 @@ export default function CardGrid({ cards }: { cards: CardType[] }) {
                                       <span className="font-medium">Level:</span> {selectedCard.level}
                                     </p>
                                   )}
-                                  {selectedCard.archetype && (
-                                    <p className="text-sm">
-                                      <span className="font-medium">Archetype:</span> {selectedCard.archetype}
-                                    </p>
-                                  )}
+                                  {(() => {
+                                    const archetypeName = getArchetypeName(selectedCard);
+                                    return archetypeName ? (
+                                      <p className="text-sm">
+                                        <span className="font-medium">Archetype:</span> {archetypeName}
+                                      </p>
+                                    ) : null;
+                                  })()}
                                 </div>
                               </div>
                               <div className="flex justify-end gap-2 mt-4">

@@ -13,6 +13,7 @@ import { Card } from "@/types/card";
 import { BanStatus, Deck, DeckMode, DeckType } from "@/types/types";
 import { v4 as uuidv4 } from "uuid";
 import { supabase } from "@/lib/supabaseClient";
+import { getArchetypeName } from "@/lib/helpers";
 import {
   saveDeck as saveDeckToSupabase,
   deleteDeck as deleteDeckFromSupabase,
@@ -346,10 +347,11 @@ export function DeckProvider({ children }: { children: ReactNode }) {
     }
     const archetypes = new Map<string, number>();
     currentDeck.mainDeck.forEach((card) => {
-      if (card.archetype) {
+      const archetypeName = getArchetypeName(card);
+      if (archetypeName) {
         archetypes.set(
-          card.archetype,
-          (archetypes.get(card.archetype) || 0) + 1
+          archetypeName,
+          (archetypes.get(archetypeName) || 0) + 1
         );
       }
     });

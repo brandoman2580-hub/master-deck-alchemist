@@ -44,7 +44,6 @@ import {
   Download,
   Trash2,
   Upload,
-  Lightbulb,
   MessageSquare,
   Trophy,
   Tag,
@@ -69,7 +68,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Tooltip,
   TooltipContent,
@@ -89,7 +87,7 @@ import {
 } from "@/lib/constants";
 import { DeckDropZone } from "@/components/ui/deck-drop-zone";
 import { DraggableCard } from "@/components/ui/draggable-card";
-import { filterCards, openLoginModal } from "@/lib/helpers";
+import { filterCards, openLoginModal, getArchetypeName } from "@/lib/helpers";
 import { BanStatus, DeckMode } from "@/types/types";
 import { InputWithClear } from "@/components/ui/input-with-clear";
 import { FilterMenu } from "@/components/ui/filter-menu";
@@ -98,6 +96,7 @@ import { useUserStore } from "@/store/useUserStore";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getTCGBanlist, getMasterDuelBanlist } from "@/lib/api";
 import { useModeStore } from "@/store/modeStore";
+import DeckBuilderTips from "@/components/deck-builder-tips";
 
 export default function DeckBuilder() {
   const {
@@ -108,7 +107,6 @@ export default function DeckBuilder() {
     importDeck,
     renameDeck,
     getDeckStats,
-    getSynergyTips,
     addCardToDeck,
     updateDeckMode,
   } = useDeck();
@@ -198,10 +196,14 @@ export default function DeckBuilder() {
     if (searchQuery.trim() !== "") {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(
-        (card) =>
-          card.name.toLowerCase().includes(query) ||
-          card.desc.toLowerCase().includes(query) ||
-          (card.archetype && card.archetype.toLowerCase().includes(query))
+        (card) => {
+          const archetypeName = getArchetypeName(card);
+          return (
+            card.name.toLowerCase().includes(query) ||
+            card.desc.toLowerCase().includes(query) ||
+            (archetypeName && archetypeName.toLowerCase().includes(query))
+          );
+        }
       );
     }
     filtered = filterCards(filtered, searchParams);
@@ -294,10 +296,11 @@ export default function DeckBuilder() {
     // Archetype detection (for combo, rogue/gimmicky)
     const archetypes = new Map<string, number>();
     currentDeck.mainDeck.forEach((card) => {
-      if (card.archetype) {
+      const archetypeName = getArchetypeName(card);
+      if (archetypeName) {
         archetypes.set(
-          card.archetype,
-          (archetypes.get(card.archetype) || 0) + 1
+          archetypeName,
+          (archetypes.get(archetypeName) || 0) + 1
         );
       }
     });
@@ -389,26 +392,18 @@ export default function DeckBuilder() {
         stats.spellCount >= 10 &&
         stats.trapCount >= 5;
 
-      // Check for synergy (simplified)
-      const tips = getSynergyTips();
-      const hasSynergy = tips.length < 3; // Fewer tips means better synergy
-
-      if (hasPowerfulArchetype && hasBalancedComposition && hasSynergy) {
+      // Tier calculation based on archetype and composition
+      if (hasPowerfulArchetype && hasBalancedComposition) {
         tier = 1; // Top tier
-      } else if (
-        (hasPowerfulArchetype || hasBalancedComposition) &&
-        hasSynergy
-      ) {
+      } else if (hasPowerfulArchetype || hasBalancedComposition) {
         tier = 2; // Competitive
-      } else if (hasPowerfulArchetype || hasBalancedComposition || hasSynergy) {
-        tier = 3; // Playable
       } else {
-        tier = 4; // Casual
+        tier = 3; // Playable
       }
     }
 
     setDeckTier(tier);
-  }, [currentDeck.mainDeck, getDeckStats, getSynergyTips]);
+  }, [currentDeck.mainDeck, getDeckStats]);
 
   useEffect(() => {
     // Analyze deck and set tier and play style
@@ -423,10 +418,14 @@ export default function DeckBuilder() {
       if (searchQuery.trim() !== "") {
         const query = searchQuery.toLowerCase();
         filtered = filtered.filter(
-          (card) =>
-            card.name.toLowerCase().includes(query) ||
-            card.desc.toLowerCase().includes(query) ||
-            (card.archetype && card.archetype.toLowerCase().includes(query))
+          (card) => {
+            const archetypeName = getArchetypeName(card);
+            return (
+              card.name.toLowerCase().includes(query) ||
+              card.desc.toLowerCase().includes(query) ||
+              (archetypeName && archetypeName.toLowerCase().includes(query))
+            );
+          }
         );
       }
       filtered = filterCards(filtered, searchParams);
@@ -696,7 +695,6 @@ export default function DeckBuilder() {
   };
 
   const stats = getDeckStats();
-  const tips = getSynergyTips();
 
   return (
     <DndContext
@@ -729,7 +727,8 @@ export default function DeckBuilder() {
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 items-center">
+              <DeckBuilderTips />
               <Button
                 variant="default"
                 onClick={() => {
@@ -741,7 +740,7 @@ export default function DeckBuilder() {
                 }}
               >
                 <MessageSquare className="h-4 w-4 mr-2" />
-                AI Assistant
+                Ask AI Assistant
               </Button>
             </div>
           </div>
@@ -1241,31 +1240,6 @@ export default function DeckBuilder() {
                   </Tabs>
                 </CardContent>
               </CardUI>
-
-              {tips.length > 0 && (
-                <CardUI className="bg-gradient-to-b from-cyan-400/20 via-cyan-500/15 to-cyan-600/5 backdrop-blur-md border border-cyan-500/30 rounded-2xl">
-                  <CardHeader>
-                    <CardTitle className="flex items-center text-slate-50">
-                      <Lightbulb className="h-5 w-5 mr-2 text-cyan-400" />
-                      Synergy Tips
-                    </CardTitle>
-                    <CardDescription className="text-slate-300">
-                      Suggestions to improve your deck
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      {tips.map((tip, index) => (
-                        <Alert key={index} className="bg-slate-950/60 border-cyan-500/30">
-                          <AlertCircle className="h-4 w-4 text-cyan-400" />
-                          <AlertTitle className="text-slate-50">Tip {index + 1}</AlertTitle>
-                          <AlertDescription className="text-slate-300">{tip}</AlertDescription>
-                        </Alert>
-                      ))}
-                    </div>
-                  </CardContent>
-                </CardUI>
-              )}
             </div>
 
             {/* Right side - Card Browser (File List / Library) */}
@@ -1274,7 +1248,7 @@ export default function DeckBuilder() {
                 <CardHeader className="pb-2">
                   <CardTitle className="text-xl text-slate-50" style={{ fontFamily: "var(--font-heading)" }}>Card Browser</CardTitle>
                   <CardDescription className="text-slate-300">
-                    Search, filter, and drag cards to add to your deck
+                    Search, filter, and drag/double click cards to add to your deck
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="p-0">

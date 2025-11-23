@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Card } from "@/types/card";
 import Image from "next/image";
+import { getArchetypeName } from "@/lib/helpers";
 
 interface CardItemProps {
   isBeingDragged: boolean;
@@ -173,12 +174,15 @@ export default function CardItem({
                   <span className="font-medium">Level:</span> {card.level}
                 </p>
               )}
-              {card.archetype && (
-                <p className="text-sm">
-                  <span className="font-medium">Archetype:</span>{" "}
-                  {card.archetype}
-                </p>
-              )}
+              {(() => {
+                const archetypeName = getArchetypeName(card);
+                return archetypeName ? (
+                  <p className="text-sm">
+                    <span className="font-medium">Archetype:</span>{" "}
+                    {archetypeName}
+                  </p>
+                ) : null;
+              })()}
             </div>
           </div>
           <div className="flex justify-end gap-2 mt-4">

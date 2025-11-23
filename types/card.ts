@@ -9,7 +9,7 @@ export interface Card {
   level?: number
   race: string
   attribute?: string
-  archetype?: string
+  archetype?: string | null
   misc_info: [
     {
       md_rarity: string

@@ -201,7 +201,8 @@ export function filterCards(cards: Card[], params: SearchParams): Card[] {
         .split(",")
         .map((a) => a.trim())
         .filter(Boolean);
-      if (!card.archetype || !archetypes.includes(card.archetype)) {
+      const cardArchetype = getArchetypeName(card);
+      if (!cardArchetype || !archetypes.includes(cardArchetype)) {
         return false;
       }
     }
@@ -219,4 +220,59 @@ export function filterCards(cards: Card[], params: SearchParams): Card[] {
 export function openLoginModal() {
   // Directly set the Zustand state
   useLoginModalStore.getState().openLoginModal()
+}
+
+/**
+ * Safely normalize archetype from a Card or raw value into a clean string.
+ * This MUST NEVER return "[object Object]".
+ */
+export function getArchetypeName(cardOrRaw: { archetype?: any } | Card | any): string {
+  const raw = (cardOrRaw as any)?.archetype ?? cardOrRaw;
+
+  if (!raw) return "";
+
+  if (typeof raw === "string") {
+    const trimmed = raw.trim();
+    if (trimmed === "[object Object]") return "";
+    return trimmed;
+  }
+
+  if (typeof raw === "object" && raw !== null) {
+    const name = (raw as any).name;
+    if (typeof name === "string") {
+      const trimmed = name.trim();
+      if (trimmed === "[object Object]") return "";
+      return trimmed;
+    }
+  }
+
+  // Any other weird case: never surface it
+  return "";
+}
+
+/**
+ * Sanitize AI text so that:
+ * - Any "[object Object]" is replaced with "this archetype".
+ * - Any card-like name not in allowedCardNames is replaced with "this card".
+ */
+export function sanitizeAiText(content: string, allowedCardNames: string[]): string {
+  if (!content) return "";
+  let cleaned = content.replace(/\[object Object\]/g, "this archetype");
+
+  if (!allowedCardNames || allowedCardNames.length === 0) {
+    return cleaned;
+  }
+
+  const allowed = new Set(allowedCardNames.map((n) => n.toLowerCase()));
+
+  // Capitalized multi-word phrases that look like card names
+  const cardLikeRegex = /\b([A-Z][A-Za-z0-9'&]+)(?:\s+[A-Z][A-Za-z0-9'&]+)+\b/g;
+
+  cleaned = cleaned.replace(cardLikeRegex, (match) => {
+    const normalized = match.trim().toLowerCase();
+    if (allowed.has(normalized)) return match;
+    return "this card";
+  });
+
+  return cleaned;
 }
