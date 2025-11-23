@@ -71,43 +71,8 @@ export default function DeckBuilderAgent() {
     return "refining";
   }, [getDeckStats]);
 
-  // Check if we should auto-suggest at milestone
-  useEffect(() => {
-    const stats = getDeckStats();
-    const currentCount = stats.mainCount;
-    
-    // Check if we've crossed a milestone
-    const crossedMilestone = MILESTONE_CARD_COUNTS.find(
-      (milestone) => currentCount >= milestone && lastMilestone < milestone
-    );
-    
-    if (crossedMilestone) {
-      setLastMilestone(crossedMilestone);
-      // Auto-trigger analysis
-      handleAnalyzeDeck("milestone");
-    }
-  }, [currentDeck.mainDeck.length, lastMilestone, getDeckStats]);
-
-  // Debounced analysis function
-  const handleAnalyzeDeck = useCallback(async (trigger: "manual" | "auto" | "milestone" = "auto") => {
-    // Clear existing timer
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current);
-    }
-
-    // For manual triggers, execute immediately
-    if (trigger === "manual") {
-      await performAnalysis();
-      return;
-    }
-
-    // For auto/milestone, debounce
-    debounceTimerRef.current = setTimeout(async () => {
-      await performAnalysis();
-    }, 2000);
-  }, [currentDeck, deckMode]);
-
-  const performAnalysis = async () => {
+  // Perform analysis function
+  const performAnalysis = useCallback(async () => {
     const deckId = currentDeck.id;
     if (!deckId) return;
 
@@ -153,7 +118,9 @@ export default function DeckBuilderAgent() {
       // Limit cache size
       if (analysisCacheRef.current.size > 10) {
         const firstKey = analysisCacheRef.current.keys().next().value;
-        analysisCacheRef.current.delete(firstKey);
+        if (firstKey) {
+          analysisCacheRef.current.delete(firstKey);
+        }
       }
     } catch (error: any) {
       console.error("Error analyzing deck:", error);
@@ -164,7 +131,43 @@ export default function DeckBuilderAgent() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [currentDeck, deckMode, getDeckContext]);
+
+  // Debounced analysis function
+  const handleAnalyzeDeck = useCallback(async (trigger: "manual" | "auto" | "milestone" = "auto") => {
+    // Clear existing timer
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+
+    // For manual triggers, execute immediately
+    if (trigger === "manual") {
+      await performAnalysis();
+      return;
+    }
+
+    // For auto/milestone, debounce
+    debounceTimerRef.current = setTimeout(async () => {
+      await performAnalysis();
+    }, 2000);
+  }, [performAnalysis]);
+
+  // Check if we should auto-suggest at milestone
+  useEffect(() => {
+    const stats = getDeckStats();
+    const currentCount = stats.mainCount;
+    
+    // Check if we've crossed a milestone
+    const crossedMilestone = MILESTONE_CARD_COUNTS.find(
+      (milestone) => currentCount >= milestone && lastMilestone < milestone
+    );
+    
+    if (crossedMilestone) {
+      setLastMilestone(crossedMilestone);
+      // Auto-trigger analysis
+      handleAnalyzeDeck("milestone");
+    }
+  }, [currentDeck.mainDeck.length, lastMilestone, getDeckStats, handleAnalyzeDeck]);
 
   // Auto-analyze when deck changes (debounced)
   useEffect(() => {
@@ -172,7 +175,7 @@ export default function DeckBuilderAgent() {
     if (deckId && deckId !== lastAnalyzedDeckId) {
       handleAnalyzeDeck("auto");
     }
-  }, [currentDeck.mainDeck.length, currentDeck.extraDeck.length, lastAnalyzedDeckId, handleAnalyzeDeck]);
+  }, [currentDeck.id, currentDeck.mainDeck.length, currentDeck.extraDeck.length, lastAnalyzedDeckId, handleAnalyzeDeck]);
 
   // Cleanup debounce timer
   useEffect(() => {
@@ -251,8 +254,6 @@ export default function DeckBuilderAgent() {
         return "bg-blue-500/20 border-blue-500/50 text-blue-300";
     }
   };
-
-  const stats = getDeckStats();
   
   // Calculate token usage percentage (using 100k tokens as a reference max)
   const MAX_TOKENS_REFERENCE = 100000;
