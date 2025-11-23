@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { X, Send, Bot, User, Loader2, Zap, Sparkles } from "lucide-react";
+import { X, Send, Bot, User, Loader2, Sparkles } from "lucide-react";
 import { Avatar, AvatarFallback } from "@radix-ui/react-avatar";
 import { useDeck } from "@/context/deck-context";
 import { Card } from "@/types/card";
@@ -19,12 +19,10 @@ import {
 import { Input } from "./ui/input";
 import { supabase } from "@/lib/supabaseClient";
 import { useCardStore } from "@/store/cardStore";
-import { DeckType, BanStatus, DeckSection } from "@/types/types";
-import { Badge } from "./ui/badge";
+import { BanStatus, DeckSection } from "@/types/types";
 import { AIResponseCard } from "./ui/ai-response-card";
 import { CardPreview } from "./ui/card-preview";
 import { getRecommendations } from "@/lib/api/recommendationAgent";
-import { useModeStore } from "@/store/modeStore";
 
 type DeckAnalysisStructured = {
   overview: string;
@@ -893,12 +891,6 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
   const [addingCardId, setAddingCardId] = useState<string | null>(null);
   const [addedCards, setAddedCards] = useState<Set<string>>(new Set());
 
-  // Quota (requests left for user), default to unknown ("-")
-  const [quota, setQuota] = useState<Quota>({
-    requests_left: -1,
-    max_requests: -1,
-  });
-
   const allCards = useCardStore((state) => state.cardList);
 
   // Load banlist on mount from Supabase
@@ -916,40 +908,12 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
     loadBanlist();
   }, []);
 
-  // --------- Utility/Helper Functions ---------
-
-  const getLocalDeckStats = (deck: DeckType) => {
-    const { mainDeck } = deck;
-    const monsterCount = mainDeck.filter((card) =>
-      card.type.includes("Monster")
-    ).length;
-    const spellCount = mainDeck.filter((card) =>
-      card.type.includes("Spell")
-    ).length;
-    const trapCount = mainDeck.filter((card) =>
-      card.type.includes("Trap")
-    ).length;
-    return {
-      mainCount: mainDeck.length,
-      monsterCount,
-      spellCount,
-      trapCount,
-    };
-  };
-
-  // ---------------------------------------------------------
-
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
-  // Map deck mode to banlist_format for edge function
-  const getBanlistFormat = (mode: string): string => {
-    return mode === "Master Duel" ? "MASTER_DUEL" : "TCG";
   };
 
   // Handler for quick prompt clicks (recommendations only)
@@ -978,13 +942,12 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
       setMessages((prev) => [...prev, userMessage]);
 
       // Use recommendation agent for recommendation prompts
-      const { message, quota: quotaFromAI } = await generateAIResponse(
+      const { message } = await generateAIResponse(
         prompt.question,
         currentDeck,
         allCards
       );
       setMessages((prev) => [...prev, message]);
-      if (quotaFromAI) setQuota(quotaFromAI);
     } catch (error: any) {
       console.error("Error in quick prompt:", error);
       const errorMessage: Message = {
@@ -1024,13 +987,12 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
         // Continue anyway - the deck might already be saved
       }
 
-      const { message, quota: quotaFromAI } = await generateAIResponse(
+      const { message } = await generateAIResponse(
         userMessage.content,
         currentDeck,
         allCards
       );
       setMessages((prev) => [...prev, message]);
-      if (quotaFromAI) setQuota(quotaFromAI);
     } catch (error) {
       console.error("Error in handleSendMessage:", error);
       const errorMessage: Message = {
@@ -1109,12 +1071,6 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
   };
 
   if (!isOpen) return null;
-
-  // Progress for the quota (0..1)
-  const quotaValue =
-    quota.max_requests > 0 && quota.requests_left >= 0
-      ? Math.min(quota.requests_left / quota.max_requests, 1)
-      : 0;
 
   // Modern, clean AI assistant UI inspired by the image
   return (
