@@ -38,7 +38,9 @@ function setCachedResponse(key: string, response: DeckTesterAgentResponse): void
   // Limit cache size to 50 entries
   if (cache.size >= 50) {
     const firstKey = cache.keys().next().value;
-    cache.delete(firstKey);
+    if (firstKey) {
+      cache.delete(firstKey);
+    }
   }
   
   cache.set(key, {

@@ -19,15 +19,6 @@ type Card = {
   }>;
 };
 
-type DeckType = {
-  id: string;
-  name: string;
-  mainDeck: Card[];
-  extraDeck: Card[];
-  sideDeck: Card[];
-  mode?: "Master Duel" | "TCG";
-};
-
 interface MasterDuelBanlistEntry {
   card_name: string;
   ban_status: string;

@@ -28,12 +28,6 @@ const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
 const MODEL_NAME = Deno.env.get("MODEL_NAME") || "llama3-70b-8192";
 const MAX_SIMULATIONS = 20;
 
-// Helper: truncate card descriptions
-function truncateDesc(desc: string, maxLen = 200): string {
-  if (!desc) return "";
-  return desc.length > maxLen ? desc.slice(0, maxLen) + "..." : desc;
-}
-
 // Helper: safely extract archetype as string
 function getArchetypeNameServer(card: { archetype?: any }): string {
   const raw = card?.archetype;
@@ -49,80 +43,6 @@ function getArchetypeNameServer(card: { archetype?: any }): string {
     return name;
   }
   return "";
-}
-
-// Helper: sanitize AI text - preserve actual card names, only replace clearly invalid references
-function sanitizeAiCardText(content: string, allowedCardNames: string[]): string {
-  let cleaned = content.replace(/\[object Object\]/g, "this archetype");
-  if (!allowedCardNames || allowedCardNames.length === 0) {
-    return cleaned;
-  }
-  
-  // Create a comprehensive set of valid card names (normalized)
-  const allowedNormalized = new Set(allowedCardNames.map((n) => n.toLowerCase().trim()));
-  
-  // Create a map for fuzzy matching (handles variations in punctuation/spacing)
-  const normalizedMap = new Map<string, string>();
-  allowedCardNames.forEach(name => {
-    const normalized = name.toLowerCase().trim();
-    normalizedMap.set(normalized, name);
-    // Add variations without special characters
-    const noSpecial = normalized.replace(/['&-]/g, "");
-    if (noSpecial !== normalized && noSpecial.length > 0) {
-      normalizedMap.set(noSpecial, name);
-    }
-    // Add variation with spaces normalized
-    const noSpaces = normalized.replace(/\s+/g, " ");
-    if (noSpaces !== normalized) {
-      normalizedMap.set(noSpaces, name);
-    }
-  });
-  
-  // Match potential card names (2+ capitalized words)
-  const cardLikeRegex = /\b([A-Z][A-Za-z0-9'&-]+(?:\s+[A-Z][A-Za-z0-9'&-]+)+)\b/g;
-  
-  cleaned = cleaned.replace(cardLikeRegex, (match) => {
-    const trimmed = match.trim();
-    const normalized = trimmed.toLowerCase();
-    const noSpecial = normalized.replace(/['&-]/g, "");
-    const normalizedSpaces = normalized.replace(/\s+/g, " ");
-    
-    // Check exact match (case-insensitive)
-    if (allowedNormalized.has(normalized)) {
-      return trimmed; // Preserve original casing
-    }
-    
-    // Check fuzzy matches
-    if (normalizedMap.has(normalized) || normalizedMap.has(noSpecial) || normalizedMap.has(normalizedSpaces)) {
-      return trimmed; // Preserve original casing
-    }
-    
-    // Check for substring matches (e.g., "Dark Magician" in "Dark Magician Girl")
-    for (const allowedName of allowedCardNames) {
-      const allowedLower = allowedName.toLowerCase();
-      // If the match contains the allowed name or vice versa (and they're similar length)
-      if ((normalized.includes(allowedLower) && normalized.length <= allowedLower.length + 5) ||
-          (allowedLower.includes(normalized) && allowedLower.length <= normalized.length + 5)) {
-        return trimmed; // Preserve it - likely a valid card name
-      }
-    }
-    
-    // Don't replace common game terms that match the pattern
-    const commonTerms = [
-      "deck", "card", "hand", "field", "graveyard", "banish", "summon", "tribute",
-      "monster", "spell", "trap", "extra deck", "main deck", "side deck",
-      "going first", "going second", "turn", "phase", "battle", "damage", "life points"
-    ];
-    if (commonTerms.some(term => normalized.includes(term) || term.includes(normalized))) {
-      return trimmed;
-    }
-    
-    // Don't replace - preserve card names even if not in our list
-    // The AI might mention valid cards that aren't in the decks
-    return trimmed;
-  });
-  
-  return cleaned;
 }
 
 // Load Master Duel banlist from Supabase
@@ -159,7 +79,7 @@ async function fetchTCGBanlist(): Promise<Record<string, string>> {
   try {
     const response = await fetch("https://www.yugioh-card.com/en/limited/");
     if (!response.ok) return {};
-    const text = await response.text();
+    await response.text(); // Fetch the text but don't use it yet (placeholder for future parsing)
     // Simple parsing - in production, use proper HTML parsing
     const banlist: Record<string, string> = {};
     // This is a placeholder - implement proper TCG banlist parsing
