@@ -9,6 +9,8 @@
  * 5. Calls LLM (Groq) to generate structured recommendations
  */
 
+import type { SupabaseClient } from '@supabase/supabase-js';
+import type { CardCandidate } from '@/lib/schemas';
 import { createClient } from '@supabase/supabase-js';
 import { CardCandidateSchema, LlmResponseSchema } from '@/lib/schemas';
 import { toTOON } from '@/lib/toon';
@@ -63,22 +65,32 @@ async function getEmbedding(
  * Fetch candidate cards using vector similarity search
  * Falls back to text search if vector RPC doesn't exist
  */
+interface CandidateRow {
+  id: number;
+  name: string;
+  archetype?: string | null;
+  type?: string | null;
+  desc?: string | null;
+  effecttext?: string | null;
+  card_id?: number;
+}
+
 async function fetchCandidates(
-  supabase: any,
+  supabase: SupabaseClient,
   queryEmb: number[],
   excludeArchetypes: string[],
   excludeIds: number[],
   candidatePool = 200,
   deckContextText?: string
-): Promise<any[]> {
+): Promise<CandidateRow[]> {
   // Try vector search RPC first
   try {
     const { data, error } = await supabase.rpc('match_cards_with_exclusions', {
-      query_embedding: queryEmb,
+      query_embedding: queryEmb as unknown as string, // Vector type needs to be passed as string/JSON
       exclude_archetypes: excludeArchetypes,
       exclude_ids: excludeIds,
       match_count: candidatePool,
-    });
+    }) as { data: CandidateRow[] | null; error: unknown };
     
     if (!error && data) {
       return data;
@@ -102,11 +114,11 @@ async function fetchCandidates(
         match_count: candidatePool,
         excluded_ids: excludeIds.length > 0 ? excludeIds : [0],
         banlist_format: 'MASTER_DUEL',
-      });
+      }) as { data: CandidateRow[] | null; error: unknown };
       
       if (!error && data) {
         // Transform to match expected format
-        return data.map((row: any) => ({
+        return data.map((row: CandidateRow) => ({
           id: row.card_id || row.id,
           name: row.name,
           archetype: row.archetype,
@@ -138,7 +150,7 @@ async function fetchCandidates(
     
     const { data, error } = await query;
     if (!error && data) {
-      return data;
+      return data as CandidateRow[];
     }
   } catch (err) {
     console.error('Final fallback query failed:', err);
@@ -151,12 +163,19 @@ async function fetchCandidates(
  * MMR (Maximal Marginal Relevance) reranker
  * Balances relevance to query with diversity among results
  */
+interface MMRCandidate {
+  id: number;
+  embedding: number[] | null;
+  sim: number;
+  row: CardCandidate;
+}
+
 function mmrSelect(
-  candidates: { id: number; embedding: number[] | null; sim: number; row: any }[],
+  candidates: MMRCandidate[],
   qEmb: number[],
   k: number,
   lambda = 0.65
-): { id: number; embedding: number[] | null; sim: number; row: any }[] {
+): MMRCandidate[] {
   // Compute similarity to query for all candidates
   candidates.forEach(c => {
     if (c.embedding && c.sim === 0) {
@@ -298,15 +317,16 @@ export async function recommendNonArchetypeCards({
   );
 
   // 3) validate + transform rows using Zod
-  const validated: { id: number; name: string; archetype?: string; type?: string; desc?: string }[] = [];
+  const validated: CardCandidate[] = [];
   for (const r of rows) {
     // transform: some RPCs return "desc" field name `desc`; ensure it exists
+    // Convert null to undefined for schema compatibility
     const item = {
       id: Number(r.id),
       name: String(r.name),
-      archetype: r.archetype ?? null,
-      type: r.type ?? null,
-      desc: (r.desc ?? r.effecttext ?? '') as string,
+      archetype: r.archetype ?? undefined,
+      type: r.type ?? undefined,
+      desc: (r.desc ?? r.effecttext ?? '') || undefined,
     };
     const parsed = CardCandidateSchema.safeParse(item);
     if (parsed.success) validated.push(parsed.data);
@@ -401,14 +421,14 @@ Task: Analyze the deck context and candidate cards. Return the top ${picks} card
   const llmText = llmRaw?.text?.trim?.() ?? String(llmRaw);
 
   // 9) Try to parse as JSON
-  let parsedJson: any = null;
+  let parsedJson: unknown = null;
   try {
     parsedJson = JSON.parse(llmText);
-  } catch (e) {
+  } catch {
     // If parse fails, attempt to extract JSON substring heuristically
     const match = llmText.match(/\{[\s\S]*\}$/);
     if (match) {
-      try { parsedJson = JSON.parse(match[0]); } catch (_) { parsedJson = null; }
+      try { parsedJson = JSON.parse(match[0]); } catch { parsedJson = null; }
     }
   }
 
