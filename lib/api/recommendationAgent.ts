@@ -5,7 +5,8 @@ export interface RecommendationRequest {
   question: string;
   current_deck?: DeckType;
   format?: "MASTER_DUEL" | "TCG";
-  recommendation_type?: "personalized" | "archetype" | "engine" | "tech";
+  recommendation_type?: "personalized" | "archetype" | "engine" | "tech" | "simple";
+  use_hybrid_search?: boolean; // Enable hybrid RAG (default: true)
 }
 
 export interface RecommendationResponse {
@@ -42,6 +43,7 @@ export async function getRecommendations(
         current_deck: request.current_deck,
         format: request.format || "MASTER_DUEL",
         recommendation_type: request.recommendation_type || "personalized",
+        use_hybrid_search: request.use_hybrid_search !== false, // Default to true
       }),
     }
   );

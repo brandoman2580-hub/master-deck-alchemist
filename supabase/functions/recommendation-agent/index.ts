@@ -1,5 +1,14 @@
 import { createClient } from "@supabase/supabase-js";
 import { corsHeaders } from "../_shared/cors.ts";
+import {
+  analyzeQuestionForFilters,
+  buildDeckContextText,
+  getQueryEmbedding,
+  hybridSearch,
+  type CardCandidate,
+} from "../_shared/cardSearch.ts";
+import { mmrSelect, type MMRCandidate } from "../_shared/mmr.ts";
+import { toTOON } from "../_shared/toon.ts";
 
 type Card = {
   id: number;
@@ -25,13 +34,14 @@ interface MasterDuelBanlistEntry {
 }
 
 const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
-const MODEL_NAME = Deno.env.get("MODEL_NAME") || "llama3-70b-8192";
+const MODEL_NAME = Deno.env.get("MODEL_NAME") || "llama-3.3-70b-versatile";
 
-// Helper: truncate card descriptions
-function truncateDesc(desc: string, maxLen = 200): string {
-  if (!desc) return "";
-  return desc.length > maxLen ? desc.slice(0, maxLen) + "..." : desc;
-}
+// Configuration constants
+const MAX_CANDIDATES_TO_LLM = 30; // Maximum cards to send to LLM (target < 1500 tokens)
+const MMR_LAMBDA = 0.65; // MMR balance: 0.65 = 65% relevance, 35% diversity
+const VECTOR_WEIGHT = 0.7; // Hybrid search: 70% vector, 30% FTS
+const FTS_WEIGHT = 0.3;
+
 
 // Helper: safely extract archetype as string
 function getArchetypeNameServer(card: { archetype?: any }): string {
@@ -50,9 +60,60 @@ function getArchetypeNameServer(card: { archetype?: any }): string {
   return "";
 }
 
-// Helper: sanitize AI text - be conservative, don't replace valid card names
-function sanitizeAiCardText(content: string, allowedCardNames: string[], allCardNames: string[] = []): string {
+// Helper: sanitize AI text and replace "this card" with actual card names
+function sanitizeAiCardText(
+  content: string, 
+  allowedCardNames: string[], 
+  candidateCards: CardCandidate[] = [],
+  allCardNames: string[] = []
+): string {
   let cleaned = content.replace(/\[object Object\]/g, "this archetype");
+  
+  // First, replace "this card" / "that card" / "the card" with actual candidate card names
+  // Strategy: Find the most recently mentioned candidate card name before each "this card"
+  const thisCardRegex = /\b(this|that|the)\s+card\b/gi;
+  const candidateNames = candidateCards.map(c => c.name);
+  
+  // Create a regex that matches any candidate card name (case-insensitive)
+  const candidateNamesPattern = candidateNames
+    .map(name => name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+    .join('|');
+  const candidateNameRegex = new RegExp(`\\b(${candidateNamesPattern})\\b`, 'gi');
+  
+  cleaned = cleaned.replace(thisCardRegex, (match, pronoun, offset) => {
+    // Find the text before this match (look back up to 300 chars)
+    const beforeText = cleaned.substring(Math.max(0, offset - 300), offset);
+    
+    // Extract all candidate card names mentioned before this "this card"
+    const mentionedCandidates: string[] = [];
+    let cardMatch;
+    const searchText = beforeText;
+    
+    // Reset regex lastIndex to search from start
+    candidateNameRegex.lastIndex = 0;
+    while ((cardMatch = candidateNameRegex.exec(searchText)) !== null) {
+      const matchedName = cardMatch[1];
+      // Find the original casing from candidateCards
+      const originalName = candidateNames.find(
+        n => n.toLowerCase() === matchedName.toLowerCase()
+      );
+      if (originalName && !mentionedCandidates.includes(originalName)) {
+        mentionedCandidates.push(originalName);
+      }
+    }
+    
+    // Use the most recently mentioned candidate card
+    if (mentionedCandidates.length > 0) {
+      return `**${mentionedCandidates[mentionedCandidates.length - 1]}**`;
+    } else if (candidateCards.length > 0) {
+      // Use first candidate card as fallback
+      return `**${candidateCards[0].name}**`;
+    }
+    
+    return match; // Keep original if no replacement found
+  });
+  
+  // Now validate and fix any card names that might be incorrect
   if (!allowedCardNames || allowedCardNames.length === 0) {
     return cleaned;
   }
@@ -68,11 +129,7 @@ function sanitizeAiCardText(content: string, allowedCardNames: string[], allCard
     cardNameMap.set(name.toLowerCase(), name);
   });
   
-  // Don't replace if the string already contains "this card" - it's likely intentional
-  if (cleaned.toLowerCase().includes("this card")) {
-    return cleaned;
-  }
-  
+  // Validate card names in the text
   const cardLikeRegex = /\b([A-Z][A-Za-z0-9'&-]+(?:\s+[A-Z][A-Za-z0-9'&-]+)+)\b/g;
   cleaned = cleaned.replace(cardLikeRegex, (match) => {
     const trimmed = match.trim();
@@ -98,7 +155,7 @@ function sanitizeAiCardText(content: string, allowedCardNames: string[], allCard
       "deck", "card", "hand", "field", "graveyard", "banish", "summon", "tribute",
       "monster", "spell", "trap", "extra deck", "main deck", "side deck",
       "going first", "going second", "turn", "phase", "battle", "damage", "life points",
-      "this card", "that card", "your card", "opponent", "player", "duel", "game"
+      "opponent", "player", "duel", "game"
     ];
     if (commonTerms.some(term => normalized.includes(term) || term.includes(normalized))) {
       return trimmed;
@@ -107,6 +164,7 @@ function sanitizeAiCardText(content: string, allowedCardNames: string[], allCard
     // Be conservative - preserve card names even if not validated
     return trimmed;
   });
+  
   return cleaned;
 }
 
@@ -356,7 +414,8 @@ Deno.serve(async (req) => {
       question,
       current_deck,
       format = "MASTER_DUEL",
-      recommendation_type = "personalized", // personalized, archetype, engine, tech
+      recommendation_type = "personalized", // personalized, archetype, engine, tech, simple
+      use_hybrid_search = true, // Enable hybrid RAG by default
     } = await req.json();
 
     if (!question) {
@@ -392,6 +451,130 @@ Deno.serve(async (req) => {
       : [];
     const excludeIds = allDeckCards.map((c: Card) => c.id);
 
+    // Extract archetypes from deck for exclusion
+    const deckArchetypes = new Set<string>();
+    allDeckCards.forEach((card: Card) => {
+      const arch = getArchetypeNameServer(card);
+      if (arch) deckArchetypes.add(arch);
+    });
+    const excludeArchetypes = Array.from(deckArchetypes);
+
+    // Analyze question for structured filters (auto-detect)
+    const questionFilters = analyzeQuestionForFilters(question);
+    
+    // Build deck context text for embedding
+    const deckContextText = buildDeckContextText(current_deck || {});
+    
+    // Build query text: question + deck context
+    const queryText = `${question}. ${deckContextText}`;
+
+    // Get card candidates using hybrid search
+    let candidateCards: CardCandidate[] = [];
+    
+    if (use_hybrid_search) {
+      try {
+        // Generate embedding for query
+        const queryEmbedding = await getQueryEmbedding(queryText);
+        
+        // Perform hybrid search
+        candidateCards = await hybridSearch(
+          {
+            queryEmbedding,
+            queryText: question, // Use just the question for FTS
+            excludeArchetypes,
+            excludeIds,
+            excludeTypes: questionFilters.excludeTypes,
+            excludeRaces: questionFilters.excludeRaces,
+            banlistFormat: format,
+            vectorWeight: VECTOR_WEIGHT,
+            ftsWeight: FTS_WEIGHT,
+            matchCount: 200, // Get 200 candidates for MMR reranking
+          },
+          supabase
+        );
+      } catch (err) {
+        console.error("Hybrid search failed, falling back to simple search:", err);
+        // Fallback: use simple archetype matching (existing logic)
+        if (recommendation_type === "archetype") {
+          const archetypeMatch = question.match(/(?:for|in|with)\s+([A-Z][a-zA-Z\s-]+?)(?:\s+deck|$)/i);
+          if (archetypeMatch) {
+            const archetypeName = archetypeMatch[1].trim();
+            const relatedCards = await findCardsByArchetype(supabase, archetypeName, excludeIds);
+            candidateCards = relatedCards.map((c) => ({
+              id: c.id,
+              name: c.name,
+              archetype: c.archetype,
+              type: c.type,
+              desc: c.desc,
+            }));
+          }
+        }
+      }
+    } else {
+      // Legacy: simple archetype matching
+      if (recommendation_type === "archetype") {
+        const archetypeMatch = question.match(/(?:for|in|with)\s+([A-Z][a-zA-Z\s-]+?)(?:\s+deck|$)/i);
+        if (archetypeMatch) {
+          const archetypeName = archetypeMatch[1].trim();
+          const relatedCards = await findCardsByArchetype(supabase, archetypeName, excludeIds);
+          candidateCards = relatedCards.map((c) => ({
+            id: c.id,
+            name: c.name,
+            archetype: c.archetype,
+            type: c.type,
+            desc: c.desc,
+          }));
+        }
+      }
+    }
+
+    // Apply MMR reranking (enabled by default, skip for "simple" type)
+    let finalCandidates: CardCandidate[] = candidateCards;
+    
+    if (use_hybrid_search && recommendation_type !== "simple" && candidateCards.length > 0) {
+      try {
+        // Fetch embeddings for MMR
+        const candidateIds = candidateCards.map((c) => c.id);
+        const { data: embRows } = await supabase
+          .from("cards")
+          .select("id, effect_embedding")
+          .in("id", candidateIds);
+
+        const embMap = new Map<number, number[]>();
+        for (const e of embRows || []) {
+          if (e.effect_embedding && Array.isArray(e.effect_embedding)) {
+            embMap.set(e.id, e.effect_embedding);
+          }
+        }
+
+        // Generate query embedding if not already done
+        const queryEmbedding = await getQueryEmbedding(queryText);
+
+        // Prepare MMR candidates
+        const mmrCandidates: MMRCandidate[] = candidateCards.map((c) => ({
+          id: c.id,
+          embedding: embMap.get(c.id) ?? null,
+          sim: c.hybrid_score ?? c.vector_sim ?? 0,
+          row: c,
+        }));
+
+        // Apply MMR reranking
+        const mmrSelected = mmrSelect(mmrCandidates, queryEmbedding, MAX_CANDIDATES_TO_LLM, MMR_LAMBDA);
+        finalCandidates = mmrSelected.map((s) => s.row);
+      } catch (err) {
+        console.warn("MMR reranking failed, using top candidates by score:", err);
+        // Fallback: just take top candidates by hybrid_score
+        finalCandidates = candidateCards
+          .sort((a, b) => (b.hybrid_score ?? b.vector_sim ?? 0) - (a.hybrid_score ?? a.vector_sim ?? 0))
+          .slice(0, MAX_CANDIDATES_TO_LLM);
+      }
+    } else {
+      // No MMR: just take top candidates
+      finalCandidates = candidateCards
+        .sort((a, b) => (b.hybrid_score ?? b.vector_sim ?? 0) - (a.hybrid_score ?? a.vector_sim ?? 0))
+        .slice(0, MAX_CANDIDATES_TO_LLM);
+    }
+
     // Get card names for sanitization
     let allCardNames: string[] = [];
     try {
@@ -407,23 +590,26 @@ Deno.serve(async (req) => {
       console.error("Error fetching card names for sanitization:", err);
     }
 
-    // Build context based on recommendation type
-    let contextText = "";
-    let relatedCards: Card[] = [];
+    const allowedCardNames = Array.from(
+      new Set([
+        ...allDeckCards.map((c: Card) => c.name),
+        ...finalCandidates.map((c) => c.name),
+      ].map((n) => n.trim()))
+    );
 
-    if (recommendation_type === "archetype") {
-      // Extract archetype from question (simple pattern matching)
-      const archetypeMatch = question.match(/(?:for|in|with)\s+([A-Z][a-zA-Z\s-]+?)(?:\s+deck|$)/i);
-      if (archetypeMatch) {
-        const archetypeName = archetypeMatch[1].trim();
-        relatedCards = await findCardsByArchetype(supabase, archetypeName, excludeIds);
-        contextText = `Archetype: ${archetypeName}\nRelated Cards: ${relatedCards.slice(0, 20).map(c => `${c.name} (${c.type})`).join(", ")}`;
-      }
-    }
-
-    const deckCardsText = allDeckCards.length > 0
-      ? allDeckCards.map((card: Card) => `${card.name} (${card.type}): ${truncateDesc(card.desc)}`).join("\n\n")
-      : "No deck provided";
+    // Convert candidates to TOON format for efficient token usage
+    const toonTable = toTOON({
+      name: "candidate_cards",
+      items: finalCandidates.map((c) => ({
+        id: c.id,
+        name: c.name,
+        archetype: c.archetype || "",
+        type: c.type || "",
+        desc: (c.desc || "").slice(0, 320), // Truncate to 320 chars
+      })),
+      fields: ["id", "name", "archetype", "type", "desc"],
+      truncate: { desc: 320 },
+    });
 
     const profileText = userProfile
       ? `User Profile:
@@ -434,39 +620,44 @@ Deno.serve(async (req) => {
 - Deck Count: ${userProfile.deckCount}`
       : "";
 
-    const allowedCardNames = Array.from(
-      new Set([
-        ...allDeckCards.map((c: Card) => c.name),
-        ...relatedCards.map((c: Card) => c.name),
-      ].map((n) => n.trim()))
-    );
+    const deckSummary = allDeckCards.length > 0
+      ? `Deck contains ${allDeckCards.length} cards. Key archetypes: ${excludeArchetypes.join(", ") || "None"}.`
+      : "No deck provided.";
 
-    const prompt = `You are an expert Yu-Gi-Oh! recommendation assistant. Answer the user's question about card or deck recommendations.
+    // Build list of candidate card names for the prompt
+    const candidateCardNames = finalCandidates.map((c) => c.name).join(", ");
+    
+    // Build expert-level prompt with TOON format
+    const systemPrompt = `You are an expert Yu-Gi-Oh! strategist and deck builder with deep knowledge of card interactions, meta strategies, and competitive play.
 
-${profileText ? `${profileText}\n\n` : ""}Current Deck:
-${deckCardsText}
+Your task is to provide expert-level card recommendations based on the user's question and the candidate cards provided in TOON format.
 
-${contextText ? `${contextText}\n\n` : ""}Format: ${format === "MASTER_DUEL" ? "Master Duel" : "TCG"}
+CRITICAL RULES - READ CAREFULLY:
+1. Use ONLY the candidate cards provided in the TOON table below
+2. NEVER suggest cards that are not in the candidate list
+3. ALWAYS use the EXACT card name from the "name" column in the TOON table
+4. NEVER use generic terms like "this card", "that card", "the card" - ALWAYS use the actual card name
+5. Format card names in **bold** markdown when mentioning them (e.g., **Blue-Eyes White Dragon**)
+6. When discussing a card, use its full name from the TOON table - do not abbreviate or use pronouns
+7. Provide strategic, expert-level reasoning - not generic advice
+8. Consider card synergies, combo potential, and meta relevance
+9. Be specific about why each card fits the deck/strategy
 
-Banlist Restrictions:
-${banlistText || "No major restrictions"}
+Available candidate card names (use these EXACT names):
+${candidateCardNames}
 
-User Question: ${question}
+Format: ${format === "MASTER_DUEL" ? "Master Duel" : "TCG"}
+${banlistText ? `\nBanlist Restrictions:\n${banlistText}` : ""}
+${profileText ? `\n${profileText}` : ""}`;
 
-CRITICAL: Available card names you can reference:
-${allowedCardNames.length > 0 ? allowedCardNames.join(", ") : "None"}
+    const userPrompt = `User Question: ${question}
 
-Instructions:
-1. Answer the user's question directly and helpfully
-2. Provide specific card recommendations when appropriate
-3. ALWAYS use actual card names from the Yu-Gi-Oh! card database - NEVER use generic terms like "this card" or "that card"
-4. Only reference cards that exist in the official Yu-Gi-Oh! card database
-5. NEVER invent card names - only use real card names
-6. Format card names in **bold** markdown when mentioning them (e.g., **Blue-Eyes White Dragon**)
-7. Be specific and actionable in your recommendations
-8. Consider the user's profile and current deck when making recommendations
+${deckSummary}
 
-Return your response as plain text (not JSON). Be conversational and helpful.`;
+Candidate Cards (TOON format - use ONLY these cards, reference by EXACT name from "name" column):
+${toonTable}
+
+Task: Analyze the candidate cards and provide expert recommendations. For EACH card you mention, use its EXACT name from the "name" column above. NEVER use "this card" or "that card" - always use the actual card name.`;
 
     // Call Groq API
     if (!GROQ_API_KEY) {
@@ -489,9 +680,12 @@ Return your response as plain text (not JSON). Be conversational and helpful.`;
         },
         body: JSON.stringify({
           model: MODEL_NAME,
-          messages: [{ role: "user", content: prompt }],
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt },
+          ],
           temperature: 0.7,
-          max_tokens: 2048,
+          max_tokens: 1500, // Reduced for token efficiency (target < 1500 total)
         }),
       }
     );
@@ -507,11 +701,13 @@ Return your response as plain text (not JSON). Be conversational and helpful.`;
     const result = await groqResponse.json();
     const rawContent = result.choices?.[0]?.message?.content || "";
 
-    // Sanitize response
-    let sanitizedContent = sanitizeAiCardText(rawContent, allowedCardNames, allCardNames);
-    
-    // Replace "this card" with actual card names
-    sanitizedContent = replaceThisCardWithActualNames(sanitizedContent, allDeckCards);
+    // Sanitize response - replace "this card" with actual candidate card names
+    let sanitizedContent = sanitizeAiCardText(
+      rawContent, 
+      allowedCardNames, 
+      finalCandidates, // Pass candidate cards for context-aware replacement
+      allCardNames
+    );
 
     // Extract card names mentioned in response for validation
     const extractCardNames = (text: string): string[] => {
@@ -556,11 +752,16 @@ Return your response as plain text (not JSON). Be conversational and helpful.`;
       }
     }
 
-    // Calculate token usage
-    const inputTokens = Math.ceil(prompt.length / 4);
+    // Calculate token usage (more accurate estimation)
+    const systemTokens = Math.ceil(systemPrompt.length / 4);
+    const userTokens = Math.ceil(userPrompt.length / 4);
+    const inputTokens = systemTokens + userTokens;
     const outputTokens = Math.ceil(rawContent.length / 4);
     const totalTokens = inputTokens + outputTokens;
     const estimatedCostUSD = (totalTokens / 1000000) * 0.27;
+    
+    // Log token usage for monitoring
+    console.log(`Token usage: ${inputTokens} input + ${outputTokens} output = ${totalTokens} total (target: < 1500)`);
 
     return new Response(
       JSON.stringify({
