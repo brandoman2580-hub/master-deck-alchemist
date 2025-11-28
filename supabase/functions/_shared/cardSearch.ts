@@ -186,11 +186,55 @@ export function analyzeQuestionForFilters(question: string): StructuredFilters {
     filters.attributes = detectedAttributes;
   }
 
-  // Detect archetype mentions (capitalized words, common patterns)
-  // This is a simple heuristic - could be improved with NLP
-  const archetypePattern = /\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\b/g;
-  const archetypeMatches = question.match(archetypePattern);
-  if (archetypeMatches) {
+  // Detect archetype mentions (improved: case-insensitive, supports single words)
+  // Strategy 1: Check for quoted strings (e.g., "Toy" cards, 'Blue-Eyes')
+  const quotedPattern = /["']([^"']+)["']/g;
+  const quotedMatches: string[] = [];
+  let quotedMatch;
+  while ((quotedMatch = quotedPattern.exec(question)) !== null) {
+    quotedMatches.push(quotedMatch[1].trim());
+  }
+
+  // Strategy 2: Look for "explore X", "find X", "recommend X" patterns (BEFORE other patterns)
+  // This catches "Explore Toy cards" -> "Toy"
+  const explorePattern = /\b(?:explore|find|recommend|suggest|show|list|search|look\s+for)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+(?:cards?|archetype|monsters?|spells?|traps?)/gi;
+  const exploreMatches = question.match(explorePattern) || [];
+  const extractedExplore = exploreMatches.map(m => {
+    const match = m.match(/\b(?:explore|find|recommend|suggest|show|list|search|look\s+for)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+/);
+    return match ? match[1] : null;
+  }).filter(Boolean) as string[];
+
+  // Strategy 3: Single capitalized words that might be archetypes (e.g., "Toy", "Blue-Eyes")
+  // Look for patterns like "Toy cards", "Toy archetype", etc.
+  const singleWordArchetypePattern = /\b([A-Z][a-z]+)\s+(?:cards?|archetype|deck|monsters?|spells?|traps?|support)/gi;
+  const singleWordMatches = question.match(singleWordArchetypePattern) || [];
+  const extractedSingleWords = singleWordMatches.map(m => {
+    const match = m.match(/\b([A-Z][a-z]+)\s+/);
+    return match ? match[1] : null;
+  }).filter(Boolean) as string[];
+
+  // Strategy 4: Capitalized words (case-insensitive regex) - multi-word archetypes
+  const archetypePattern = /\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\b/gi;
+  const archetypeMatches = question.match(archetypePattern) || [];
+
+  // Strategy 5: Common archetype keywords followed by a word
+  const archetypeKeywords = ['archetype', 'cards', 'deck'];
+  const keywordMatches: string[] = [];
+  for (const keyword of archetypeKeywords) {
+    const keywordPattern = new RegExp(`\\b${keyword}\\s+([A-Z][a-z]+(?:\\s+[A-Z][a-z]+)*)`, 'gi');
+    const matches = question.match(keywordPattern);
+    if (matches) {
+      matches.forEach(match => {
+        const extracted = match.replace(new RegExp(`\\b${keyword}\\s+`, 'gi'), '').trim();
+        if (extracted) keywordMatches.push(extracted);
+      });
+    }
+  }
+
+  // Combine all matches (prioritize explore/find patterns)
+  const allMatches = [...quotedMatches, ...extractedExplore, ...extractedSingleWords, ...archetypeMatches, ...keywordMatches];
+
+  if (allMatches.length > 0) {
     // Filter out common false positives
     const falsePositives = [
       "Spell Card",
@@ -205,10 +249,14 @@ export function analyzeQuestionForFilters(question: string): StructuredFilters {
       "Extra Deck",
       "Main Deck",
       "Side Deck",
+      "Card",
+      "Cards",
     ];
-    const potentialArchetypes = archetypeMatches.filter(
-      (match) => !falsePositives.some((fp) => match.includes(fp))
-    );
+    const potentialArchetypes = allMatches
+      .map(m => m.trim())
+      .filter(m => m.length > 0)
+      .filter((match) => !falsePositives.some((fp) => match.toLowerCase().includes(fp.toLowerCase())));
+    
     if (potentialArchetypes.length > 0) {
       filters.archetypes = [...new Set(potentialArchetypes)];
     }
@@ -371,6 +419,15 @@ export async function hybridSearch(
 
   // Try hybrid search RPC first
   try {
+    console.log("🔍 Attempting hybrid_card_search RPC with params:", {
+      queryText: queryText?.substring(0, 50),
+      excludeArchetypes: excludeArchetypes.length,
+      excludeIds: excludeIds.length,
+      excludeTypes: excludeTypes.length,
+      excludeRaces: excludeRaces.length,
+      matchCount,
+    });
+    
     const { data, error } = await supabaseClient.rpc("hybrid_card_search", {
       query_embedding: queryEmbedding,
       query_text: queryText || "card",
@@ -384,7 +441,10 @@ export async function hybridSearch(
       match_count: matchCount,
     });
 
-    if (!error && data && data.length > 0) {
+    if (error) {
+      console.error("❌ Hybrid search RPC error:", error.message, error.code, error.details);
+    } else if (data && data.length > 0) {
+      console.log(`✅ Hybrid search RPC returned ${data.length} results`);
       return data.map((row: any) => ({
         id: Number(row.id),
         name: String(row.name),
@@ -395,13 +455,16 @@ export async function hybridSearch(
         fts_rank: row.fts_rank,
         hybrid_score: row.hybrid_score,
       }));
+    } else {
+      console.warn("⚠️ Hybrid search RPC returned empty result (no error)");
     }
   } catch (err) {
-    console.warn("Hybrid search RPC not available, falling back:", err);
+    console.error("❌ Hybrid search RPC exception:", err instanceof Error ? err.message : String(err));
   }
 
   // Fallback 1: Try vector search only
   try {
+    console.log("🔍 Attempting vector-only search (match_cards_with_exclusions)...");
     const { data, error } = await supabaseClient.rpc("match_cards_with_exclusions", {
       query_embedding: queryEmbedding,
       exclude_archetypes: excludeArchetypes,
@@ -409,7 +472,10 @@ export async function hybridSearch(
       match_count: matchCount,
     });
 
-    if (!error && data && data.length > 0) {
+    if (error) {
+      console.error("❌ Vector search RPC error:", error.message, error.code);
+    } else if (data && data.length > 0) {
+      console.log(`✅ Vector search returned ${data.length} results`);
       return data.map((row: any) => ({
         id: Number(row.id),
         name: String(row.name),
@@ -418,14 +484,17 @@ export async function hybridSearch(
         desc: row.desc ?? null,
         vector_sim: row.similarity,
       }));
+    } else {
+      console.warn("⚠️ Vector search returned empty result");
     }
   } catch (err) {
-    console.warn("Vector search RPC also failed:", err);
+    console.error("❌ Vector search RPC exception:", err instanceof Error ? err.message : String(err));
   }
 
   // Fallback 2: Try FTS search only
   if (queryText) {
     try {
+      console.log("🔍 Attempting FTS-only search (match_cards_by_text)...");
       const { data, error } = await supabaseClient.rpc("match_cards_by_text", {
         query: queryText,
         match_count: matchCount,
@@ -433,7 +502,10 @@ export async function hybridSearch(
         banlist_format: banlistFormat,
       });
 
-      if (!error && data && data.length > 0) {
+      if (error) {
+        console.error("❌ FTS search RPC error:", error.message, error.code);
+      } else if (data && data.length > 0) {
+        console.log(`✅ FTS search returned ${data.length} results`);
         return data.map((row: any) => ({
           id: Number(row.card_id || row.id),
           name: String(row.name),
@@ -442,14 +514,44 @@ export async function hybridSearch(
           desc: row.desc ?? null,
           fts_rank: row.rank,
         }));
+      } else {
+        console.warn("⚠️ FTS search returned empty result");
       }
     } catch (err) {
-      console.warn("FTS search RPC also failed:", err);
+      console.error("❌ FTS search RPC exception:", err instanceof Error ? err.message : String(err));
     }
   }
 
-  // Last resort: return empty array
-  console.error("All search methods failed");
+  // Last resort: Try a very permissive search without exclusions (if we have too many exclusions)
+  if (excludeIds.length > 50 || excludeArchetypes.length > 10) {
+    console.log("🔄 Last resort: Trying search with reduced exclusions...");
+    try {
+      // Try with only ID exclusions (no archetype exclusions)
+      const { data, error } = await supabaseClient.rpc("match_cards_with_exclusions", {
+        query_embedding: queryEmbedding,
+        exclude_archetypes: [],
+        exclude_ids: excludeIds.slice(0, 20), // Only exclude first 20 IDs
+        match_count: matchCount,
+      });
+
+      if (!error && data && data.length > 0) {
+        console.log(`✅ Last resort search returned ${data.length} results`);
+        return data.map((row: any) => ({
+          id: Number(row.id),
+          name: String(row.name),
+          archetype: row.archetype ?? null,
+          type: row.type ?? null,
+          desc: row.desc ?? null,
+          vector_sim: row.similarity,
+        }));
+      }
+    } catch (err) {
+      console.error("❌ Last resort search also failed:", err);
+    }
+  }
+
+  // All methods failed
+  console.error("❌ All search methods failed - no candidates found");
   return [];
 }
 

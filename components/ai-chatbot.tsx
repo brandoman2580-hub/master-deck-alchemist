@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo, memo } from "react";
 import { X, Send, Bot, User, Loader2, Sparkles } from "lucide-react";
 import { Avatar, AvatarFallback } from "@radix-ui/react-avatar";
 import { useDeck } from "@/context/deck-context";
@@ -297,21 +297,27 @@ const levenshteinDistance = (str1: string, str2: string): number => {
 };
 
 // Detect if a question is a recommendation request
+// Now treats ALL user prompts as recommendation requests to use the hybrid search card pool
 const isRecommendationRequest = (question: string): boolean => {
-  const lowerQuestion = question.toLowerCase();
-  const recommendationKeywords = [
-    "recommend",
-    "suggest",
-    "what cards",
-    "what engines",
-    "what tech",
-    "best cards for",
-    "essential cards",
-    "tech options",
-    "engine",
-    "personalized",
-  ];
-  return recommendationKeywords.some(keyword => lowerQuestion.includes(keyword));
+  // Always use recommendation agent for all prompts - it has better card search capabilities
+  // The recommendation agent can handle both recommendation and analysis questions
+  return true;
+  
+  // Legacy: Only use for specific keywords (disabled to ensure all prompts use card pool)
+  // const lowerQuestion = question.toLowerCase();
+  // const recommendationKeywords = [
+  //   "recommend",
+  //   "suggest",
+  //   "what cards",
+  //   "what engines",
+  //   "what tech",
+  //   "best cards for",
+  //   "essential cards",
+  //   "tech options",
+  //   "engine",
+  //   "personalized",
+  // ];
+  // return recommendationKeywords.some(keyword => lowerQuestion.includes(keyword));
 };
 
 const generateAIResponse = async (
@@ -880,10 +886,10 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
   ]);
   const [input, setInput] = useState("");
   
-  // Direct input handler for immediate responsiveness
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Optimized input handler - useCallback to prevent unnecessary re-renders
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setInput(e.target.value);
-  };
+  }, []);
   const [isLoading, setIsLoading] = useState(false);
   const [isQuickPromptLoading, setIsQuickPromptLoading] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -908,16 +914,17 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
     loadBanlist();
   }, []);
 
+  // Define scrollToBottom before useEffect that uses it
+  const scrollToBottom = useCallback(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, []);
+
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, scrollToBottom]);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
-  // Handler for quick prompt clicks (recommendations only)
-  const handleQuickPromptClick = async (prompt: QuickPrompt) => {
+  // Handler for quick prompt clicks (recommendations only) - Memoized
+  const handleQuickPromptClick = useCallback(async (prompt: QuickPrompt) => {
     const deckId = currentDeck?.id;
     if (!deckId) return;
 
@@ -961,20 +968,23 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
     } finally {
       setIsQuickPromptLoading(null);
     }
-  };
+  }, [currentDeck, allCards, saveDeck]);
 
   const handleSendMessage = async () => {
     if (input.trim() === "") return;
 
+    // Capture input content and clear immediately for better UX (non-blocking)
+    const messageContent = input.trim();
+    setInput(""); // Clear input immediately
+
     const userMessage: Message = {
       id: crypto.randomUUID(),
       role: "user",
-      content: input,
+      content: messageContent,
       timestamp: new Date(),
     };
 
     setMessages((prev) => [...prev, userMessage]);
-    setInput("");
     setIsLoading(true);
 
     try {
@@ -988,7 +998,7 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
       }
 
       const { message } = await generateAIResponse(
-        userMessage.content,
+        messageContent, // Use captured content
         currentDeck,
         allCards
       );
@@ -1008,8 +1018,8 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
     }
   };
 
-  // Enhanced card handling functions
-  const canAddCardToDeck = (card: Card, deckType: DeckSection): boolean => {
+  // Enhanced card handling functions - memoized to prevent re-renders
+  const canAddCardToDeck = useCallback((card: Card, deckType: DeckSection): boolean => {
     const banStatus = banlist[card.name] || "Unlimited";
     if (banStatus === "Forbidden") return false;
 
@@ -1029,9 +1039,9 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
     if (deckType === "sideDeck" && deckStats.sideCount >= 15) return false;
 
     return true;
-  };
+  }, [currentDeck, banlist, getDeckStats]);
 
-  const getOptimalDeckType = (card: Card): DeckSection => {
+  const getOptimalDeckType = useCallback((card: Card): DeckSection => {
     if (
       card.type.includes("Fusion") ||
       card.type.includes("Synchro") ||
@@ -1041,9 +1051,9 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
       return "extraDeck";
     }
     return "mainDeck";
-  };
+  }, []);
 
-  const handleAddCardToDeck = async (
+  const handleAddCardToDeck = useCallback(async (
     card: Card,
     selectedDeckType?: DeckSection
   ) => {
@@ -1068,7 +1078,339 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
         return newSet;
       });
     }, 2000);
-  };
+  }, [addCardToDeck]);
+
+  // Memoize expensive renders to prevent re-renders on input changes
+  const memoizedQuickPrompts = useMemo(() => (
+    <div className="flex flex-wrap gap-2 items-center">
+      <Sparkles className="h-4 w-4 text-cyan-400" />
+      <span className="text-sm font-semibold text-slate-300">
+        Quick Recommendations:
+      </span>
+      {RECOMMENDATION_PROMPTS.map((rp) => {
+        const isThisPromptLoading = isQuickPromptLoading === rp.id;
+        const isDisabled = !currentDeck?.id || isQuickPromptLoading !== null;
+        
+        return (
+          <Button
+            key={rp.id}
+            type="button"
+            variant="outline"
+            size="sm"
+            className="text-xs px-3 py-1.5 h-auto rounded-lg border-cyan-400/30 bg-cyan-500/5 text-cyan-300 hover:bg-cyan-500/15 hover:text-cyan-200 hover:border-cyan-400/50 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            disabled={isDisabled}
+            onClick={() => handleQuickPromptClick(rp)}
+            title={rp.description}
+          >
+            {isThisPromptLoading ? (
+              <>
+                <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
+                Getting...
+              </>
+            ) : (
+              rp.label
+            )}
+          </Button>
+        );
+      })}
+    </div>
+  ), [isQuickPromptLoading, currentDeck?.id, handleQuickPromptClick]);
+
+  const memoizedMessages = useMemo(() => messages.map((message) => {
+    const isAssistant = message.role === "assistant";
+    const isDeckAnalysis =
+      message.type === "deck-analysis" &&
+      message.meta?.structuredAnalysis != null;
+
+    // Render deck analysis card for structured analysis messages
+    if (isAssistant && isDeckAnalysis) {
+      const analysisType = message.meta?.analysisType ?? "summary";
+      const meta = message.meta!;
+
+      let analysisCard: JSX.Element | null = null;
+
+      if (analysisType === "summary") {
+        analysisCard = renderDeckAnalysisCard(
+          meta.structuredAnalysis!,
+          meta.deckStats ?? null
+        );
+      } else if (analysisType === "power_level") {
+        analysisCard = renderPowerLevelCard(meta.structuredAnalysis!);
+      } else if (analysisType === "card_suggestions") {
+        analysisCard = renderCardSuggestionsCard(
+          meta.structuredAnalysis!,
+          allCards,
+          addCardToDeck,
+          getOptimalDeckType,
+          getDeckStats,
+          banlist,
+          meta.deckId
+        );
+      } else if (analysisType === "consistency") {
+        const consistency = meta.structuredAnalysis?.consistency;
+        if (consistency) {
+          analysisCard = (
+            <div className="w-full max-w-xl rounded-2xl border border-cyan-500/30 bg-slate-900/70 backdrop-blur-sm p-4 shadow-[0_2px_12px_rgba(0,0,0,0.2)] space-y-3">
+              <h3 className="text-sm font-semibold tracking-wide uppercase text-cyan-400/80">
+                Consistency Analysis
+              </h3>
+              <div className="inline-flex items-center gap-2 rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3 py-1 text-xs">
+                <span className="font-medium text-slate-300">Consistency</span>
+                <span className="rounded-full bg-cyan-400/20 px-2 py-0.5 text-[11px] font-semibold text-cyan-300">
+                  {consistency.score}/10
+                </span>
+              </div>
+              <p className="text-sm text-slate-300">{consistency.explanation}</p>
+              {consistency.suggestions && consistency.suggestions.length > 0 && (
+                <div className="space-y-1">
+                  <h4 className="text-xs font-semibold uppercase text-slate-400">
+                    Suggestions
+                  </h4>
+                  <ul className="list-disc pl-5 text-xs text-slate-400">
+                    {consistency.suggestions.map((s, i) => (
+                      <li key={i}>{s}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          );
+        }
+      } else if (analysisType === "resilience") {
+        const resilience = meta.structuredAnalysis?.resilience_and_grind;
+        if (resilience) {
+          analysisCard = (
+            <div className="w-full max-w-xl rounded-2xl border border-cyan-500/30 bg-slate-900/70 backdrop-blur-sm p-4 shadow-[0_2px_12px_rgba(0,0,0,0.2)] space-y-3">
+              <h3 className="text-sm font-semibold tracking-wide uppercase text-cyan-400/80">
+                Resilience & Grind Analysis
+              </h3>
+              <div className="inline-flex items-center gap-2 rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3 py-1 text-xs">
+                <span className="font-medium text-slate-300">Resilience</span>
+                <span className="rounded-full bg-cyan-400/20 px-2 py-0.5 text-[11px] font-semibold text-cyan-300">
+                  {resilience.score}/10
+                </span>
+              </div>
+              <p className="text-sm text-slate-300">{resilience.explanation}</p>
+              {resilience.suggestions && resilience.suggestions.length > 0 && (
+                <div className="space-y-1">
+                  <h4 className="text-xs font-semibold uppercase text-slate-400">
+                    Suggestions
+                  </h4>
+                  <ul className="list-disc pl-5 text-xs text-slate-400">
+                    {resilience.suggestions.map((s, i) => (
+                      <li key={i}>{s}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          );
+        }
+      } else if (analysisType === "matchup") {
+        const matchup = meta.structuredAnalysis?.matchup_profile;
+        if (matchup) {
+          analysisCard = (
+            <div className="w-full max-w-xl rounded-2xl border border-cyan-500/30 bg-slate-900/70 backdrop-blur-sm p-4 shadow-[0_2px_12px_rgba(0,0,0,0.2)] space-y-3">
+              <h3 className="text-sm font-semibold tracking-wide uppercase text-cyan-400/80">
+                Matchup Profile Analysis
+              </h3>
+              <div className="inline-flex items-center gap-2 rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3 py-1 text-xs">
+                <span className="font-medium text-slate-300">Matchup Profile</span>
+                <span className="rounded-full bg-cyan-400/20 px-2 py-0.5 text-[11px] font-semibold text-cyan-300">
+                  {matchup.score}/10
+                </span>
+              </div>
+              <p className="text-sm text-slate-300">{matchup.explanation}</p>
+              {matchup.suggestions && matchup.suggestions.length > 0 && (
+                <div className="space-y-1">
+                  <h4 className="text-xs font-semibold uppercase text-slate-400">
+                    Suggestions
+                  </h4>
+                  <ul className="list-disc pl-5 text-xs text-slate-400">
+                    {matchup.suggestions.map((s, i) => (
+                      <li key={i}>{s}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          );
+        }
+      } else if (analysisType === "complexity") {
+        const complexity = meta.structuredAnalysis?.complexity_and_skill;
+        if (complexity) {
+          analysisCard = (
+            <div className="w-full max-w-xl rounded-2xl border border-cyan-500/30 bg-slate-900/70 backdrop-blur-sm p-4 shadow-[0_2px_12px_rgba(0,0,0,0.2)] space-y-3">
+              <h3 className="text-sm font-semibold tracking-wide uppercase text-cyan-400/80">
+                Complexity & Skill Analysis
+              </h3>
+              <div className="inline-flex items-center gap-2 rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3 py-1 text-xs">
+                <span className="font-medium text-slate-300">Complexity</span>
+                <span className="rounded-full bg-cyan-400/20 px-2 py-0.5 text-[11px] font-semibold text-cyan-300">
+                  {complexity.score}/10
+                </span>
+              </div>
+              <p className="text-sm text-slate-300">{complexity.explanation}</p>
+              <div className="flex flex-wrap gap-2 text-xs text-slate-400">
+                <span className="rounded-full border border-cyan-500/30 bg-slate-900/40 px-2 py-0.5">
+                  Skill floor: {complexity.skill_floor}
+                </span>
+                <span className="rounded-full border border-cyan-500/30 bg-slate-900/40 px-2 py-0.5">
+                  Skill ceiling: {complexity.skill_ceiling}
+                </span>
+              </div>
+            </div>
+          );
+        }
+      }
+
+      // Fallback to summary if no specific card was rendered
+      if (!analysisCard && meta.structuredAnalysis) {
+        analysisCard = renderDeckAnalysisCard(
+          meta.structuredAnalysis,
+          meta.deckStats ?? null
+        );
+      }
+
+      return (
+        <div
+          key={message.id}
+          className="flex justify-start"
+        >
+          <div className="flex gap-2 max-w-[90%]">
+            {/* Clean, icon-only avatar with transparent bg */}
+            <Avatar className="bg-transparent shadow-none">
+              <AvatarFallback className="bg-transparent">
+                <Bot className="h-6 w-6 text-cyan-400/70" />
+              </AvatarFallback>
+            </Avatar>
+            {/* Mode-specific Analysis Card */}
+            <div className="flex-1">
+              {analysisCard}
+              <div className="text-xs text-slate-500 mt-1 text-left">
+                {message.timestamp.toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Default rendering for all other messages
+    return (
+      <div
+        key={message.id}
+        className={`flex ${
+          message.role === "user" ? "justify-end" : "justify-start"
+        }`}
+      >
+        <div
+          className={`flex gap-2 max-w-[80%] ${
+            message.role === "user" ? "flex-row-reverse" : ""
+          }`}
+        >
+          {/* Clean, icon-only avatar with transparent bg */}
+          <Avatar className="bg-transparent shadow-none">
+            <AvatarFallback className="bg-transparent">
+              {message.role === "user" ? (
+                <User className="h-6 w-6 text-cyan-400" />
+              ) : (
+                <Bot className="h-6 w-6 text-cyan-400/70" />
+              )}
+            </AvatarFallback>
+          </Avatar>
+          {/* Bubble */}
+          <div>
+            <div
+              className={`px-5 py-3 rounded-2xl ${
+                message.role === "user"
+                  ? "bg-cyan-500/15 border border-cyan-400/60 text-slate-50 rounded-tr-sm"
+                  : "bg-slate-900/70 border border-cyan-500/30 text-slate-50 backdrop-blur-sm shadow-[0_2px_12px_rgba(0,0,0,0.2)]"
+              }`}
+            >
+              <AIResponseCard 
+                content={message.content}
+                suggestedCards={message.suggestedCards || []}
+                cardSuggestionsMeta={message.cardSuggestionsMeta}
+                candidateCards={message.candidateCards}
+                banlist={banlist}
+                currentDeckMode={currentDeck.mode}
+                addingCardId={addingCardId}
+                addedCards={addedCards}
+                canAddCardToDeck={canAddCardToDeck}
+                getOptimalDeckType={getOptimalDeckType}
+                handleAddCardToDeck={handleAddCardToDeck}
+                allCards={allCards}
+                isCardSuggestionMode={message.meta?.analysisType === "card_suggestions"}
+              />
+            </div>
+            <div className={`text-xs text-slate-500 mt-1 ${message.role === "user" ? "text-right" : "text-left"}`}>
+              {message.timestamp.toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }), [messages, allCards, banlist, addingCardId, addedCards, currentDeck, canAddCardToDeck, getOptimalDeckType, handleAddCardToDeck]);
+
+  const memoizedInputForm = useMemo(() => (
+    <form
+      className="flex w-full gap-3 items-end"
+      onSubmit={(e) => {
+        e.preventDefault();
+        handleSendMessage();
+      }}
+    >
+      <div className="flex-1 relative">
+        <Input
+          placeholder="Enter your prompt here..."
+          value={input}
+          autoFocus
+          onChange={handleInputChange}
+          onKeyDown={(e) => {
+            // Prevent lag by handling Enter key directly
+            if (e.key === "Enter" && !e.shiftKey && !isLoading && input.trim() !== "") {
+              e.preventDefault();
+              handleSendMessage();
+            }
+          }}
+          className="w-full bg-slate-950/60 border border-cyan-500/20 rounded-xl px-4 py-3 pr-12 text-slate-50 placeholder:text-slate-500 focus:border-cyan-400 focus:shadow-[0_0_20px_rgba(56,189,248,0.2)] focus-visible:ring-1 focus-visible:ring-cyan-400/50 transition-colors transition-shadow"
+        />
+        <button
+          type="button"
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-300 transition-colors"
+          title="Voice input (coming soon)"
+        >
+          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+          </svg>
+        </button>
+      </div>
+      <Button
+        type="submit"
+        variant="default"
+        disabled={isLoading || input.trim() === ""}
+        className="px-6 bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-400 hover:to-purple-400 text-white border-0 shadow-lg shadow-cyan-500/25"
+      >
+        <Send className="h-5 w-5" />
+      </Button>
+      <button
+        type="button"
+        className="text-slate-400 hover:text-slate-300 transition-colors p-2 rounded-lg hover:bg-slate-800/50"
+        title="Help"
+      >
+        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      </button>
+    </form>
+  ), [input, isLoading, handleInputChange, handleSendMessage]);
 
   if (!isOpen) return null;
 
@@ -1104,287 +1446,15 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
         </CardHeader>
 
         <CardContent className="flex-1 overflow-hidden px-0 flex flex-col">
-          {/* Recommendations Section - Cleaner, more prominent */}
+          {/* Recommendations Section - Cleaner, more prominent - Memoized */}
           <div className="px-6 pt-4 pb-3 border-b border-cyan-500/10 bg-slate-900/30">
-            <div className="flex flex-wrap gap-2 items-center">
-              <Sparkles className="h-4 w-4 text-cyan-400" />
-              <span className="text-sm font-semibold text-slate-300">
-                Quick Recommendations:
-              </span>
-              {RECOMMENDATION_PROMPTS.map((rp) => {
-                const isThisPromptLoading = isQuickPromptLoading === rp.id;
-                const isDisabled = !currentDeck?.id || isQuickPromptLoading !== null;
-                
-                return (
-                  <Button
-                    key={rp.id}
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="text-xs px-3 py-1.5 h-auto rounded-lg border-cyan-400/30 bg-cyan-500/5 text-cyan-300 hover:bg-cyan-500/15 hover:text-cyan-200 hover:border-cyan-400/50 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                    disabled={isDisabled}
-                    onClick={() => handleQuickPromptClick(rp)}
-                    title={rp.description}
-                  >
-                    {isThisPromptLoading ? (
-                      <>
-                        <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
-                        Getting...
-                      </>
-                    ) : (
-                      rp.label
-                    )}
-                  </Button>
-                );
-              })}
-            </div>
+            {memoizedQuickPrompts}
           </div>
           {/* Modern scrollable area */}
           <div className="h-full flex-1 min-h-0 flex flex-col">
             <ScrollArea className="flex-1 h-full min-h-0 overflow-y-auto px-4 pr-2">
               <div className="flex flex-col space-y-3 py-4">
-                {messages.map((message) => {
-                  const isAssistant = message.role === "assistant";
-                  const isDeckAnalysis =
-                    message.type === "deck-analysis" &&
-                    message.meta?.structuredAnalysis != null;
-
-                  // Render deck analysis card for structured analysis messages
-                  if (isAssistant && isDeckAnalysis) {
-                    const analysisType = message.meta?.analysisType ?? "summary";
-                    const meta = message.meta!;
-
-                    let analysisCard: JSX.Element | null = null;
-
-                    if (analysisType === "summary") {
-                      analysisCard = renderDeckAnalysisCard(
-                        meta.structuredAnalysis!,
-                        meta.deckStats ?? null
-                      );
-                    } else if (analysisType === "power_level") {
-                      analysisCard = renderPowerLevelCard(meta.structuredAnalysis!);
-                    } else if (analysisType === "card_suggestions") {
-                      analysisCard = renderCardSuggestionsCard(
-                        meta.structuredAnalysis!,
-                        allCards,
-                        addCardToDeck,
-                        getOptimalDeckType,
-                        getDeckStats,
-                        banlist,
-                        meta.deckId
-                      );
-                    } else if (analysisType === "consistency") {
-                      const consistency = meta.structuredAnalysis?.consistency;
-                      if (consistency) {
-                        analysisCard = (
-                          <div className="w-full max-w-xl rounded-2xl border border-cyan-500/30 bg-slate-900/70 backdrop-blur-sm p-4 shadow-[0_2px_12px_rgba(0,0,0,0.2)] space-y-3">
-                            <h3 className="text-sm font-semibold tracking-wide uppercase text-cyan-400/80">
-                              Consistency Analysis
-                            </h3>
-                            <div className="inline-flex items-center gap-2 rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3 py-1 text-xs">
-                              <span className="font-medium text-slate-300">Consistency</span>
-                              <span className="rounded-full bg-cyan-400/20 px-2 py-0.5 text-[11px] font-semibold text-cyan-300">
-                                {consistency.score}/10
-                              </span>
-                            </div>
-                            <p className="text-sm text-slate-300">{consistency.explanation}</p>
-                            {consistency.suggestions && consistency.suggestions.length > 0 && (
-                              <div className="space-y-1">
-                                <h4 className="text-xs font-semibold uppercase text-slate-400">
-                                  Suggestions
-                                </h4>
-                                <ul className="list-disc pl-5 text-xs text-slate-400">
-                                  {consistency.suggestions.map((s, i) => (
-                                    <li key={i}>{s}</li>
-                                  ))}
-                                </ul>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      }
-                    } else if (analysisType === "resilience") {
-                      const resilience = meta.structuredAnalysis?.resilience_and_grind;
-                      if (resilience) {
-                        analysisCard = (
-                          <div className="w-full max-w-xl rounded-2xl border border-cyan-500/30 bg-slate-900/70 backdrop-blur-sm p-4 shadow-[0_2px_12px_rgba(0,0,0,0.2)] space-y-3">
-                            <h3 className="text-sm font-semibold tracking-wide uppercase text-cyan-400/80">
-                              Resilience & Grind Analysis
-                            </h3>
-                            <div className="inline-flex items-center gap-2 rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3 py-1 text-xs">
-                              <span className="font-medium text-slate-300">Resilience</span>
-                              <span className="rounded-full bg-cyan-400/20 px-2 py-0.5 text-[11px] font-semibold text-cyan-300">
-                                {resilience.score}/10
-                              </span>
-                            </div>
-                            <p className="text-sm text-slate-300">{resilience.explanation}</p>
-                            {resilience.suggestions && resilience.suggestions.length > 0 && (
-                              <div className="space-y-1">
-                                <h4 className="text-xs font-semibold uppercase text-slate-400">
-                                  Suggestions
-                                </h4>
-                                <ul className="list-disc pl-5 text-xs text-slate-400">
-                                  {resilience.suggestions.map((s, i) => (
-                                    <li key={i}>{s}</li>
-                                  ))}
-                                </ul>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      }
-                    } else if (analysisType === "matchup") {
-                      const matchup = meta.structuredAnalysis?.matchup_profile;
-                      if (matchup) {
-                        analysisCard = (
-                          <div className="w-full max-w-xl rounded-2xl border border-cyan-500/30 bg-slate-900/70 backdrop-blur-sm p-4 shadow-[0_2px_12px_rgba(0,0,0,0.2)] space-y-3">
-                            <h3 className="text-sm font-semibold tracking-wide uppercase text-cyan-400/80">
-                              Matchup Profile Analysis
-                            </h3>
-                            <div className="inline-flex items-center gap-2 rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3 py-1 text-xs">
-                              <span className="font-medium text-slate-300">Matchup Profile</span>
-                              <span className="rounded-full bg-cyan-400/20 px-2 py-0.5 text-[11px] font-semibold text-cyan-300">
-                                {matchup.score}/10
-                              </span>
-                            </div>
-                            <p className="text-sm text-slate-300">{matchup.explanation}</p>
-                            {matchup.suggestions && matchup.suggestions.length > 0 && (
-                              <div className="space-y-1">
-                                <h4 className="text-xs font-semibold uppercase text-slate-400">
-                                  Suggestions
-                                </h4>
-                                <ul className="list-disc pl-5 text-xs text-slate-400">
-                                  {matchup.suggestions.map((s, i) => (
-                                    <li key={i}>{s}</li>
-                                  ))}
-                                </ul>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      }
-                    } else if (analysisType === "complexity") {
-                      const complexity = meta.structuredAnalysis?.complexity_and_skill;
-                      if (complexity) {
-                        analysisCard = (
-                          <div className="w-full max-w-xl rounded-2xl border border-cyan-500/30 bg-slate-900/70 backdrop-blur-sm p-4 shadow-[0_2px_12px_rgba(0,0,0,0.2)] space-y-3">
-                            <h3 className="text-sm font-semibold tracking-wide uppercase text-cyan-400/80">
-                              Complexity & Skill Analysis
-                            </h3>
-                            <div className="inline-flex items-center gap-2 rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3 py-1 text-xs">
-                              <span className="font-medium text-slate-300">Complexity</span>
-                              <span className="rounded-full bg-cyan-400/20 px-2 py-0.5 text-[11px] font-semibold text-cyan-300">
-                                {complexity.score}/10
-                              </span>
-                            </div>
-                            <p className="text-sm text-slate-300">{complexity.explanation}</p>
-                            <div className="flex flex-wrap gap-2 text-xs text-slate-400">
-                              <span className="rounded-full border border-cyan-500/30 bg-slate-900/40 px-2 py-0.5">
-                                Skill floor: {complexity.skill_floor}
-                              </span>
-                              <span className="rounded-full border border-cyan-500/30 bg-slate-900/40 px-2 py-0.5">
-                                Skill ceiling: {complexity.skill_ceiling}
-                              </span>
-                            </div>
-                          </div>
-                        );
-                      }
-                    }
-
-                    // Fallback to summary if no specific card was rendered
-                    if (!analysisCard && meta.structuredAnalysis) {
-                      analysisCard = renderDeckAnalysisCard(
-                        meta.structuredAnalysis,
-                        meta.deckStats ?? null
-                      );
-                    }
-
-                    return (
-                      <div
-                        key={message.id}
-                        className="flex justify-start"
-                      >
-                        <div className="flex gap-2 max-w-[90%]">
-                          {/* Clean, icon-only avatar with transparent bg */}
-                          <Avatar className="bg-transparent shadow-none">
-                            <AvatarFallback className="bg-transparent">
-                              <Bot className="h-6 w-6 text-cyan-400/70" />
-                            </AvatarFallback>
-                          </Avatar>
-                          {/* Mode-specific Analysis Card */}
-                          <div className="flex-1">
-                            {analysisCard}
-                            <div className="text-xs text-slate-500 mt-1 text-left">
-                              {message.timestamp.toLocaleTimeString([], {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  }
-
-                  // Default rendering for all other messages
-                  return (
-                    <div
-                      key={message.id}
-                      className={`flex ${
-                        message.role === "user" ? "justify-end" : "justify-start"
-                      }`}
-                    >
-                      <div
-                        className={`flex gap-2 max-w-[80%] ${
-                          message.role === "user" ? "flex-row-reverse" : ""
-                        }`}
-                      >
-                        {/* Clean, icon-only avatar with transparent bg */}
-                        <Avatar className="bg-transparent shadow-none">
-                          <AvatarFallback className="bg-transparent">
-                            {message.role === "user" ? (
-                              <User className="h-6 w-6 text-cyan-400" />
-                            ) : (
-                              <Bot className="h-6 w-6 text-cyan-400/70" />
-                            )}
-                          </AvatarFallback>
-                        </Avatar>
-                        {/* Bubble */}
-                        <div>
-                          <div
-                            className={`px-5 py-3 rounded-2xl ${
-                              message.role === "user"
-                                ? "bg-cyan-500/15 border border-cyan-400/60 text-slate-50 rounded-tr-sm"
-                                : "bg-slate-900/70 border border-cyan-500/30 text-slate-50 backdrop-blur-sm shadow-[0_2px_12px_rgba(0,0,0,0.2)]"
-                            }`}
-                          >
-                            <AIResponseCard 
-                              content={message.content}
-                              suggestedCards={message.suggestedCards || []}
-                              cardSuggestionsMeta={message.cardSuggestionsMeta}
-                              candidateCards={message.candidateCards}
-                              banlist={banlist}
-                              currentDeckMode={currentDeck.mode}
-                              addingCardId={addingCardId}
-                              addedCards={addedCards}
-                              canAddCardToDeck={canAddCardToDeck}
-                              getOptimalDeckType={getOptimalDeckType}
-                              handleAddCardToDeck={handleAddCardToDeck}
-                              allCards={allCards}
-                              isCardSuggestionMode={message.meta?.analysisType === "card_suggestions"}
-                            />
-                          </div>
-                          <div className={`text-xs text-slate-500 mt-1 ${message.role === "user" ? "text-right" : "text-left"}`}>
-                            {message.timestamp.toLocaleTimeString([], {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
+                {memoizedMessages}
                 {(isLoading || isQuickPromptLoading) && (
                   <div className="flex justify-start">
                     <div className="flex gap-2 max-w-[80%]">
@@ -1447,51 +1517,9 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
           </div>
         )}
 
-        {/* Clean Input Bar */}
+        {/* Clean Input Bar - Memoized to prevent re-renders */}
         <CardFooter className="pt-4 pb-6 px-6 border-t border-cyan-500/10 bg-slate-900/30">
-          <form
-            className="flex w-full gap-3 items-end"
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleSendMessage();
-            }}
-          >
-            <div className="flex-1 relative">
-              <Input
-                placeholder="Enter your prompt here..."
-                value={input}
-                autoFocus
-                onChange={handleInputChange}
-                className="w-full bg-slate-950/60 border border-cyan-500/20 rounded-xl px-4 py-3 pr-12 text-slate-50 placeholder:text-slate-500 focus:border-cyan-400 focus:shadow-[0_0_20px_rgba(56,189,248,0.2)] focus-visible:ring-1 focus-visible:ring-cyan-400/50 transition-colors transition-shadow"
-              />
-              <button
-                type="button"
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-300 transition-colors"
-                title="Voice input (coming soon)"
-              >
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                </svg>
-              </button>
-            </div>
-            <Button
-              type="submit"
-              variant="default"
-              disabled={isLoading || input.trim() === ""}
-              className="px-6 bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-400 hover:to-purple-400 text-white border-0 shadow-lg shadow-cyan-500/25"
-            >
-              <Send className="h-5 w-5" />
-            </Button>
-            <button
-              type="button"
-              className="text-slate-400 hover:text-slate-300 transition-colors p-2 rounded-lg hover:bg-slate-800/50"
-              title="Help"
-            >
-              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </button>
-          </form>
+          {memoizedInputForm}
         </CardFooter>
       </CardUI>
     </div>

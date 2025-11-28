@@ -337,7 +337,7 @@ async function analyzeUserProfile(
   }
 }
 
-// Find cards by archetype
+// Find cards by archetype (case-insensitive, supports partial matches)
 async function findCardsByArchetype(
   supabaseClient: any,
   archetype: string,
@@ -345,22 +345,82 @@ async function findCardsByArchetype(
 ): Promise<Card[]> {
   if (!archetype) return [];
 
-  const { data, error } = await supabaseClient
+  // Try exact match first, then case-insensitive match
+  // Use case-insensitive search to catch "Toy" regardless of case
+  let query = supabaseClient
     .from("cards")
-    .select("id, name, type, desc, level, race, attribute, archetype, card_images, atk, def")
-    .eq("archetype", archetype)
-    .not("id", "in", `(${excludeIds.length > 0 ? excludeIds.join(",") : "0"})`)
-    .limit(50);
+    .select("id, name, type, desc, level, race, attribute, archetype, atk, def, ban_tcg")
+    .ilike("archetype", archetype); // Case-insensitive exact match
+  
+  // Apply exclusion filter if needed
+  if (excludeIds.length > 0) {
+    query = query.not("id", "in", `(${excludeIds.join(",")})`);
+  }
+  
+  let { data, error } = await query.limit(50);
+
+  // If no exact match, try partial match
+  if ((!data || data.length === 0) && !error) {
+    let partialQuery = supabaseClient
+      .from("cards")
+      .select("id, name, type, desc, level, race, attribute, archetype, atk, def, ban_tcg")
+      .ilike("archetype", `%${archetype}%`);
+    
+    if (excludeIds.length > 0) {
+      partialQuery = partialQuery.not("id", "in", `(${excludeIds.join(",")})`);
+    }
+    
+    const { data: partialData, error: partialError } = await partialQuery.limit(50);
+    
+    if (!partialError && partialData && partialData.length > 0) {
+      data = partialData;
+      error = null;
+    } else if (partialError) {
+      error = partialError;
+    }
+  }
+
+  // If still no results, try archetype_normalized column if it exists
+  if ((!data || data.length === 0) && !error) {
+    try {
+      let normalizedQuery = supabaseClient
+        .from("cards")
+        .select("id, name, type, desc, level, race, attribute, archetype, atk, def, ban_tcg")
+        .ilike("archetype_normalized", `%${archetype.toLowerCase()}%`);
+      
+      if (excludeIds.length > 0) {
+        normalizedQuery = normalizedQuery.not("id", "in", `(${excludeIds.join(",")})`);
+      }
+      
+      const { data: normalizedData, error: normalizedError } = await normalizedQuery.limit(50);
+      
+      if (!normalizedError && normalizedData && normalizedData.length > 0) {
+        data = normalizedData;
+        error = null;
+        console.log(`  Found ${normalizedData.length} cards using archetype_normalized column`);
+      }
+    } catch (err) {
+      // archetype_normalized might not exist, ignore error
+      console.log("  Note: archetype_normalized column not available");
+    }
+  }
 
   if (error) {
     console.error("Error finding cards by archetype:", error);
     return [];
   }
 
-  return (data || []).map((card: any) => ({
+  const results = (data || []).map((card: Card) => ({
     ...card,
     archetype: getArchetypeNameServer(card),
   }));
+  
+  console.log(`  Found ${results.length} cards for archetype "${archetype}"`);
+  if (results.length > 0) {
+    console.log(`  Sample: ${results.slice(0, 3).map((c: Card) => c.name).join(", ")}`);
+  }
+
+  return results;
 }
 
 Deno.serve(async (req) => {
@@ -386,9 +446,19 @@ Deno.serve(async (req) => {
 
     // Check authentication
     const authHeader = req.headers.get("Authorization");
+    console.log("🔐 Auth check:", {
+      hasAuthHeader: !!authHeader,
+      authHeaderLength: authHeader?.length || 0,
+      authHeaderPrefix: authHeader?.substring(0, 20) || "none",
+    });
+    
     if (!authHeader) {
+      console.error("❌ No Authorization header provided");
       return new Response(
-        JSON.stringify({ error: "Authentication required." }),
+        JSON.stringify({ 
+          error: "Authentication required.",
+          details: "No Authorization header found in request. Please ensure you are logged in.",
+        }),
         {
           status: 401,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -396,13 +466,116 @@ Deno.serve(async (req) => {
       );
     }
 
-    const token = authHeader.replace("Bearer ", "");
-    const {
-      data: { user },
-    } = await supabase.auth.getUser(token);
-    if (!user) {
+    const token = authHeader.replace("Bearer ", "").trim();
+    if (!token || token.length === 0) {
+      console.error("❌ Empty token after Bearer prefix removal");
       return new Response(
-        JSON.stringify({ error: "User not authenticated." }),
+        JSON.stringify({ 
+          error: "Invalid authentication token.",
+          details: "Token is empty or malformed.",
+        }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // Basic JWT structure validation (should have 3 parts separated by dots)
+    const tokenParts = token.split(".");
+    if (tokenParts.length !== 3) {
+      console.error("❌ Token doesn't appear to be a valid JWT (expected 3 parts, got", tokenParts.length, ")");
+      console.error("   Token preview:", token.substring(0, 50), "...");
+      return new Response(
+        JSON.stringify({ 
+          error: "Invalid token format.",
+          details: "Token does not appear to be a valid JWT. Please ensure you are using an access token, not an API key.",
+        }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // Try to decode the payload to check for 'sub' claim (without verification)
+    try {
+      const payload = JSON.parse(atob(tokenParts[1]));
+      console.log("🔍 Token payload preview:", {
+        hasSub: !!payload.sub,
+        sub: payload.sub,
+        exp: payload.exp,
+        iat: payload.iat,
+        aud: payload.aud,
+      });
+      
+      if (!payload.sub) {
+        console.error("❌ Token missing 'sub' claim in payload");
+        return new Response(
+          JSON.stringify({ 
+            error: "Invalid token: missing user identifier.",
+            details: "The provided token does not contain a user identifier (sub claim). This might be an API key instead of an access token. Please ensure you are logged in and using a valid access token.",
+          }),
+          {
+            status: 401,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
+      }
+    } catch (decodeErr) {
+      console.error("❌ Failed to decode token payload:", decodeErr);
+      // Continue anyway - let Supabase handle validation
+    }
+
+    console.log("🔍 Validating token with Supabase (length:", token.length, ")");
+    let user;
+    try {
+      // Create a client with anon key for user token validation
+      // The service role key can validate user tokens, but let's be explicit
+      const {
+        data: { user: authUser },
+        error: authError,
+      } = await supabase.auth.getUser(token);
+      
+      if (authError) {
+        console.error("❌ Auth error:", authError.message, "Status:", authError.status);
+        console.error("   Error details:", JSON.stringify(authError));
+        return new Response(
+          JSON.stringify({ 
+            error: "Authentication failed.",
+            details: authError.message || "Invalid or expired token. Please try logging in again.",
+            error_code: authError.status,
+          }),
+          {
+            status: 401,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
+      }
+      
+      user = authUser;
+      if (!user) {
+        console.error("❌ No user returned from auth.getUser()");
+        return new Response(
+          JSON.stringify({ 
+            error: "User not authenticated.",
+            details: "Token validation succeeded but no user found.",
+          }),
+          {
+            status: 401,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
+      }
+      
+      console.log("✅ User authenticated:", user.id);
+    } catch (err) {
+      console.error("❌ Exception during auth validation:", err);
+      return new Response(
+        JSON.stringify({ 
+          error: "Authentication validation failed.",
+          details: err instanceof Error ? err.message : "Unknown error",
+        }),
         {
           status: 401,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -461,6 +634,11 @@ Deno.serve(async (req) => {
 
     // Analyze question for structured filters (auto-detect)
     const questionFilters = analyzeQuestionForFilters(question);
+    console.log("🔍 Question analysis:", {
+      question,
+      filters: questionFilters,
+      detectedArchetypes: questionFilters.archetypes,
+    });
     
     // Build deck context text for embedding
     const deckContextText = buildDeckContextText(current_deck || {});
@@ -471,13 +649,42 @@ Deno.serve(async (req) => {
     // Get card candidates using hybrid search
     let candidateCards: CardCandidate[] = [];
     
+    // If archetype detected, try direct archetype search first (more reliable)
+    if (questionFilters.archetypes && questionFilters.archetypes.length > 0) {
+      console.log(`🎯 Archetype detected, searching directly for: ${questionFilters.archetypes.join(", ")}`);
+      for (const arch of questionFilters.archetypes) {
+        try {
+          const archCards = await findCardsByArchetype(supabase, arch, excludeIds);
+          console.log(`  Found ${archCards.length} cards for archetype "${arch}"`);
+          candidateCards.push(...archCards.map((c) => ({
+            id: c.id,
+            name: c.name,
+            archetype: c.archetype,
+            type: c.type,
+            desc: c.desc,
+          })));
+        } catch (err) {
+          console.warn(`  Error searching for archetype "${arch}":`, err);
+        }
+      }
+      // Deduplicate by ID
+      const seenIds = new Set<number>();
+      candidateCards = candidateCards.filter(c => {
+        if (seenIds.has(c.id)) return false;
+        seenIds.add(c.id);
+        return true;
+      });
+      console.log(`📊 After archetype search: ${candidateCards.length} unique candidates`);
+    }
+    
     if (use_hybrid_search) {
       try {
         // Generate embedding for query
         const queryEmbedding = await getQueryEmbedding(queryText);
+        console.log("✅ Generated query embedding");
         
-        // Perform hybrid search
-        candidateCards = await hybridSearch(
+        // Perform hybrid search (combine with archetype results if any)
+        const hybridResults = await hybridSearch(
           {
             queryEmbedding,
             queryText: question, // Use just the question for FTS
@@ -492,8 +699,19 @@ Deno.serve(async (req) => {
           },
           supabase
         );
+        console.log(`🔎 Hybrid search found ${hybridResults.length} candidates`);
+        
+        // Merge with archetype results (deduplicate)
+        const existingIds = new Set(candidateCards.map(c => c.id));
+        for (const result of hybridResults) {
+          if (!existingIds.has(result.id)) {
+            candidateCards.push(result);
+            existingIds.add(result.id);
+          }
+        }
+        console.log(`📊 Total candidates after hybrid search: ${candidateCards.length}`);
       } catch (err) {
-        console.error("Hybrid search failed, falling back to simple search:", err);
+        console.error("❌ Hybrid search failed, falling back to simple search:", err);
         // Fallback: use simple archetype matching (existing logic)
         if (recommendation_type === "archetype") {
           const archetypeMatch = question.match(/(?:for|in|with)\s+([A-Z][a-zA-Z\s-]+?)(?:\s+deck|$)/i);
@@ -528,8 +746,112 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Check if we have any candidates
+    if (candidateCards.length === 0) {
+      console.warn("⚠️ No candidates found! Attempting fallback search with reduced restrictions...");
+      
+      // Last resort: Try a very permissive search for generic terms like "engines", "tech cards", etc.
+      const genericTerms = ["engine", "tech", "staple", "support", "combo", "extender", "searcher"];
+      const lowerQuestion = question.toLowerCase();
+      const hasGenericTerm = genericTerms.some(term => lowerQuestion.includes(term));
+      
+      if (hasGenericTerm && use_hybrid_search) {
+        console.log("🔄 Attempting permissive fallback search for generic term...");
+        try {
+          // Build a more generic query
+          const fallbackQuery = lowerQuestion.includes("engine") 
+            ? "cards that support deck strategy and enable combos"
+            : lowerQuestion.includes("tech")
+            ? "versatile cards that work in many decks"
+            : "useful cards for deck building";
+          
+          const fallbackEmbedding = await getQueryEmbedding(`${fallbackQuery}. ${deckContextText}`);
+          
+          // Try with minimal exclusions (only exclude deck cards, not archetypes)
+          const fallbackResults = await hybridSearch(
+            {
+              queryEmbedding: fallbackEmbedding,
+              queryText: fallbackQuery,
+              excludeArchetypes: [], // Don't exclude archetypes for generic searches
+              excludeIds: excludeIds.slice(0, 20), // Only exclude first 20 deck cards
+              excludeTypes: [],
+              excludeRaces: [],
+              banlistFormat: format,
+              vectorWeight: VECTOR_WEIGHT,
+              ftsWeight: FTS_WEIGHT,
+              matchCount: 100, // Get fewer candidates
+            },
+            supabase
+          );
+          
+          if (fallbackResults.length > 0) {
+            console.log(`✅ Fallback search found ${fallbackResults.length} candidates`);
+            candidateCards = fallbackResults;
+          }
+        } catch (err) {
+          console.error("❌ Fallback search also failed:", err);
+        }
+      }
+      
+      // If still no candidates, return helpful error
+      if (candidateCards.length === 0) {
+        console.warn("⚠️ No candidates found after all attempts! Diagnostic info:", {
+          question,
+          questionFilters,
+          excludeIds: excludeIds.length,
+          excludeArchetypes,
+          use_hybrid_search,
+        });
+        
+        return new Response(
+          JSON.stringify({
+            answer: `I couldn't find any candidate cards matching "${question}". 
+
+This might be because:
+- The search terms don't match any cards in the database
+- All matching cards are already in your deck (${excludeIds.length} cards excluded)
+- The RPC search functions may not be available or configured correctly
+
+Try rephrasing your question or being more specific. For example:
+- "What Toy archetype cards work with this deck?"
+- "Recommend Spell cards for this strategy"
+- "What tech cards counter [specific archetype]?"`,
+            validated_cards: [],
+            diagnostic: {
+              question,
+              filters: questionFilters,
+              candidates_found: 0,
+              exclude_ids_count: excludeIds.length,
+              exclude_archetypes: excludeArchetypes,
+            },
+          }),
+          {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 200,
+          }
+        );
+      }
+    }
+
     // Apply MMR reranking (enabled by default, skip for "simple" type)
+    // IMPORTANT: If archetype was detected, prioritize archetype matches
     let finalCandidates: CardCandidate[] = candidateCards;
+    
+    // Check if we have archetype matches that should be prioritized
+    const detectedArchetypes = questionFilters.archetypes || [];
+    const archetypeMatches = detectedArchetypes.length > 0
+      ? candidateCards.filter(c => 
+          detectedArchetypes.some(arch => 
+            c.archetype?.toLowerCase().includes(arch.toLowerCase()) ||
+            arch.toLowerCase().includes(c.archetype?.toLowerCase() || "")
+          )
+        )
+      : [];
+    
+    console.log(`🎯 Found ${archetypeMatches.length} archetype matches out of ${candidateCards.length} total candidates`);
+    if (archetypeMatches.length > 0) {
+      console.log(`   Archetype match names: ${archetypeMatches.map(c => c.name).join(", ")}`);
+    }
     
     if (use_hybrid_search && recommendation_type !== "simple" && candidateCards.length > 0) {
       try {
@@ -551,18 +873,50 @@ Deno.serve(async (req) => {
         const queryEmbedding = await getQueryEmbedding(queryText);
 
         // Prepare MMR candidates
-        const mmrCandidates: MMRCandidate[] = candidateCards.map((c) => ({
-          id: c.id,
-          embedding: embMap.get(c.id) ?? null,
-          sim: c.hybrid_score ?? c.vector_sim ?? 0,
-          row: c,
-        }));
+        // Boost scores for archetype matches to ensure they're included
+        const archetypeMatchIds = new Set(archetypeMatches.map(c => c.id));
+        const mmrCandidates: MMRCandidate[] = candidateCards.map((c) => {
+          const baseSim = c.hybrid_score ?? c.vector_sim ?? 0;
+          // Boost archetype matches significantly to ensure they're selected
+          const boostedSim = archetypeMatchIds.has(c.id) ? baseSim + 0.5 : baseSim;
+          return {
+            id: c.id,
+            embedding: embMap.get(c.id) ?? null,
+            sim: boostedSim,
+            row: c,
+          };
+        });
 
         // Apply MMR reranking
         const mmrSelected = mmrSelect(mmrCandidates, queryEmbedding, MAX_CANDIDATES_TO_LLM, MMR_LAMBDA);
         finalCandidates = mmrSelected.map((s) => s.row);
+        
+        // Ensure archetype matches are included (add any missing ones)
+        const finalIds = new Set(finalCandidates.map(c => c.id));
+        for (const archMatch of archetypeMatches) {
+          if (!finalIds.has(archMatch.id)) {
+            finalCandidates.push(archMatch);
+            finalIds.add(archMatch.id);
+            console.log(`  ➕ Added archetype match to final candidates: ${archMatch.name}`);
+          }
+        }
+        
+        // Limit to MAX_CANDIDATES_TO_LLM (but keep archetype matches)
+        if (finalCandidates.length > MAX_CANDIDATES_TO_LLM) {
+          // Keep all archetype matches, then fill rest with top non-archetype matches
+          const archetypeInFinal = finalCandidates.filter(c => archetypeMatchIds.has(c.id));
+          const nonArchetype = finalCandidates
+            .filter(c => !archetypeMatchIds.has(c.id))
+            .sort((a, b) => (b.hybrid_score ?? b.vector_sim ?? 0) - (a.hybrid_score ?? a.vector_sim ?? 0))
+            .slice(0, MAX_CANDIDATES_TO_LLM - archetypeInFinal.length);
+          finalCandidates = [...archetypeInFinal, ...nonArchetype];
+        }
+        
+        console.log(`🎯 After MMR reranking: ${finalCandidates.length} final candidates`);
+        const archetypeInFinal = finalCandidates.filter(c => archetypeMatchIds.has(c.id)).length;
+        console.log(`   Includes ${archetypeInFinal} archetype matches`);
       } catch (err) {
-        console.warn("MMR reranking failed, using top candidates by score:", err);
+        console.warn("⚠️ MMR reranking failed, using top candidates by score:", err);
         // Fallback: just take top candidates by hybrid_score
         finalCandidates = candidateCards
           .sort((a, b) => (b.hybrid_score ?? b.vector_sim ?? 0) - (a.hybrid_score ?? a.vector_sim ?? 0))
@@ -610,6 +964,23 @@ Deno.serve(async (req) => {
       fields: ["id", "name", "archetype", "type", "desc"],
       truncate: { desc: 320 },
     });
+    
+    console.log(`📋 TOON table generated: ${toonTable.length} chars, ${finalCandidates.length} cards`);
+    console.log(`📝 Sample candidate names: ${finalCandidates.slice(0, 5).map(c => c.name).join(", ")}`);
+    console.log(`📝 All candidate names: ${finalCandidates.map(c => c.name).join(", ")}`);
+    console.log(`📝 TOON table preview (first 1000 chars):\n${toonTable.slice(0, 1000)}`);
+    
+    // Check if any candidates match the question keywords
+    const questionLower = question.toLowerCase();
+    const matchingCandidates = finalCandidates.filter(c => 
+      c.name.toLowerCase().includes(questionLower) ||
+      c.archetype?.toLowerCase().includes(questionLower) ||
+      c.desc?.toLowerCase().includes(questionLower)
+    );
+    console.log(`🎯 Candidates matching question keywords: ${matchingCandidates.length}`);
+    if (matchingCandidates.length > 0) {
+      console.log(`   Matches: ${matchingCandidates.map(c => c.name).join(", ")}`);
+    }
 
     const profileText = userProfile
       ? `User Profile:
@@ -625,39 +996,77 @@ Deno.serve(async (req) => {
       : "No deck provided.";
 
     // Build list of candidate card names for the prompt
-    const candidateCardNames = finalCandidates.map((c) => c.name).join(", ");
+    const candidateCardNamesList = finalCandidates.map((c, i) => `${i + 1}. ${c.name}${c.archetype ? ` (${c.archetype})` : ""}`).join("\n");
+    
+    // Validate TOON table has content
+    if (!toonTable || toonTable.trim().length === 0) {
+      console.error("❌ TOON table is empty! This should not happen if finalCandidates.length > 0");
+      return new Response(
+        JSON.stringify({
+          answer: `Error: No candidate cards were found or formatted correctly. Please try again or rephrase your question.`,
+          validated_cards: [],
+          diagnostic: {
+            question,
+            finalCandidatesCount: finalCandidates.length,
+            toonTableLength: toonTable?.length || 0,
+          },
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        }
+      );
+    }
     
     // Build expert-level prompt with TOON format
-    const systemPrompt = `You are an expert Yu-Gi-Oh! strategist and deck builder with deep knowledge of card interactions, meta strategies, and competitive play.
+    const systemPrompt = `You are an expert Yu-Gi-Oh! strategist and deck builder.
 
-Your task is to provide expert-level card recommendations based on the user's question and the candidate cards provided in TOON format.
+⚠️⚠️⚠️ CRITICAL INSTRUCTIONS - READ CAREFULLY ⚠️⚠️⚠️
 
-CRITICAL RULES - READ CAREFULLY:
-1. Use ONLY the candidate cards provided in the TOON table below
-2. NEVER suggest cards that are not in the candidate list
-3. ALWAYS use the EXACT card name from the "name" column in the TOON table
-4. NEVER use generic terms like "this card", "that card", "the card" - ALWAYS use the actual card name
-5. Format card names in **bold** markdown when mentioning them (e.g., **Blue-Eyes White Dragon**)
-6. When discussing a card, use its full name from the TOON table - do not abbreviate or use pronouns
-7. Provide strategic, expert-level reasoning - not generic advice
-8. Consider card synergies, combo potential, and meta relevance
-9. Be specific about why each card fits the deck/strategy
+You have been provided with ${finalCandidates.length} CANDIDATE CARDS below. These are NEW cards NOT in the user's deck.
 
-Available candidate card names (use these EXACT names):
-${candidateCardNames}
+MANDATORY REQUIREMENTS:
+1. You MUST recommend at least 3-5 cards from the candidate list below
+2. You MUST use the EXACT card names from the "CANDIDATE CARDS LIST" below
+3. You MUST format EVERY card name in **bold** markdown (e.g., **Card Name**)
+4. You MUST mention card names explicitly - NEVER use "this card", "that card", or generic pronouns
+5. The candidate cards ARE available - do NOT say they are not listed or unavailable
+
+CANDIDATE CARDS LIST (${finalCandidates.length} cards available - USE THESE):
+${candidateCardNamesList}
 
 Format: ${format === "MASTER_DUEL" ? "Master Duel" : "TCG"}
 ${banlistText ? `\nBanlist Restrictions:\n${banlistText}` : ""}
 ${profileText ? `\n${profileText}` : ""}`;
 
-    const userPrompt = `User Question: ${question}
+    const userPrompt = `User Question: "${question}"
 
-${deckSummary}
+Current Deck Context: ${deckSummary}
 
-Candidate Cards (TOON format - use ONLY these cards, reference by EXACT name from "name" column):
+CANDIDATE CARDS TABLE (TOON format - ${finalCandidates.length} cards):
 ${toonTable}
 
-Task: Analyze the candidate cards and provide expert recommendations. For EACH card you mention, use its EXACT name from the "name" column above. NEVER use "this card" or "that card" - always use the actual card name.`;
+YOUR TASK:
+1. Read the user's question: "${question}"
+2. Look at the CANDIDATE CARDS TABLE above - these are the ONLY cards you can recommend
+3. Find 3-5 cards from the table that match the user's question
+4. For EACH recommended card:
+   - Use the EXACT name from the "name" column in the table
+   - Format it in **bold** markdown (e.g., **Card Name**)
+   - Explain why it answers the user's question
+5. DO NOT use generic terms like "this card" or "that card" - ALWAYS use the actual card name
+
+EXAMPLE FORMAT:
+"Based on your question, I recommend:
+- **Card Name 1** - [explanation]
+- **Card Name 2** - [explanation]
+- **Card Name 3** - [explanation]"
+
+REMEMBER: 
+- The candidate cards ARE listed in the table above
+- You MUST mention at least 3-5 specific cards by name
+- Format each card name in **bold** markdown
+- Use EXACT names from the "name" column in the table`;
 
     // Call Groq API
     if (!GROQ_API_KEY) {
@@ -669,6 +1078,17 @@ Task: Analyze the candidate cards and provide expert recommendations. For EACH c
         }
       );
     }
+
+    // Log what we're sending to LLM for debugging
+    console.log("📤 Sending to LLM:", {
+      systemPromptLength: systemPrompt.length,
+      userPromptLength: userPrompt.length,
+      candidateCount: finalCandidates.length,
+      toonTableLength: toonTable.length,
+      candidateNamesPreview: finalCandidates.slice(0, 5).map(c => c.name).join(", "),
+    });
+    console.log("📤 System prompt preview (first 500 chars):", systemPrompt.substring(0, 500));
+    console.log("📤 User prompt preview (first 500 chars):", userPrompt.substring(0, 500));
 
     const groqResponse = await fetch(
       "https://api.groq.com/openai/v1/chat/completions",
@@ -700,9 +1120,12 @@ Task: Analyze the candidate cards and provide expert recommendations. For EACH c
 
     const result = await groqResponse.json();
     const rawContent = result.choices?.[0]?.message?.content || "";
+    
+    console.log("📝 LLM raw response length:", rawContent.length);
+    console.log("📝 LLM response preview (first 500 chars):", rawContent.substring(0, 500));
 
     // Sanitize response - replace "this card" with actual candidate card names
-    let sanitizedContent = sanitizeAiCardText(
+    const sanitizedContent = sanitizeAiCardText(
       rawContent, 
       allowedCardNames, 
       finalCandidates, // Pass candidate cards for context-aware replacement
@@ -710,46 +1133,188 @@ Task: Analyze the candidate cards and provide expert recommendations. For EACH c
     );
 
     // Extract card names mentioned in response for validation
+    // Only extract names that match actual candidate cards (more precise)
     const extractCardNames = (text: string): string[] => {
-      const cardNames: string[] = [];
-      const boldPattern = /\*\*([^*]+)\*\*/g;
+      const cardNames = new Set<string>();
+      
+      // First, extract potential card names from bold markdown
+      const boldPattern = /\*\*([^*]+?)\*\*/g;
+      const boldMatches: string[] = [];
       let match;
       while ((match = boldPattern.exec(text)) !== null) {
-        cardNames.push(match[1].trim());
+        const extracted = match[1].trim();
+        // Filter out obvious non-card text (too long, contains special patterns)
+        if (extracted.length > 2 && extracted.length < 100 && 
+            !extracted.includes('\\n') && !extracted.includes('+') &&
+            !extracted.startsWith('s ') && !extracted.startsWith('user') &&
+            !extracted.includes('playstyle') && !extracted.includes('archetype')) {
+          boldMatches.push(extracted);
+        }
       }
-      return cardNames;
+      
+      // Match extracted names against actual candidate card names (case-insensitive)
+      // This ensures we only return valid card names
+      for (const extractedName of boldMatches) {
+        // Clean up extracted name (remove extra whitespace, handle commas)
+        const cleanedName = extractedName.trim();
+        
+        // Try exact match first
+        const exactMatch = finalCandidates.find(c => 
+          c.name.toLowerCase() === cleanedName.toLowerCase()
+        );
+        if (exactMatch) {
+          cardNames.add(exactMatch.name); // Use exact name from candidate
+          continue;
+        }
+        
+        // Handle cards with commas (e.g., "Goldd, Wu-Lord of Dark World" might be extracted as one name)
+        // Check if extracted name contains a comma and try matching each part
+        if (cleanedName.includes(',')) {
+          const parts = cleanedName.split(',').map(p => p.trim()).filter(p => p.length > 0);
+          for (const part of parts) {
+            const partMatch = finalCandidates.find(c => 
+              c.name.toLowerCase().includes(part.toLowerCase()) ||
+              part.toLowerCase().includes(c.name.toLowerCase().split(',')[0].toLowerCase())
+            );
+            if (partMatch) {
+              cardNames.add(partMatch.name);
+              break; // Only add one match per extracted name
+            }
+          }
+          continue;
+        }
+        
+        // Try partial match (card name contains extracted text or vice versa)
+        const partialMatch = finalCandidates.find(c => {
+          const candidateLower = c.name.toLowerCase();
+          const extractedLower = cleanedName.toLowerCase();
+          // Check if either name contains the other (but require at least 3 chars to avoid false matches)
+          if (extractedLower.length < 3) return false;
+          return candidateLower.includes(extractedLower) || 
+                 extractedLower.includes(candidateLower);
+        });
+        if (partialMatch) {
+          cardNames.add(partialMatch.name); // Use exact name from candidate
+        }
+      }
+      
+      // Also check if any candidate names appear in the text (even without bold)
+      // This catches cases where LLM mentions cards but forgets bold formatting
+      // But be more strict - only match if it's clearly a card mention
+      for (const candidate of finalCandidates) {
+        const candidateName = candidate.name;
+        if (cardNames.has(candidateName)) continue; // Already matched
+        
+        // Check if candidate name appears in text (case-insensitive, whole word)
+        const escapedName = candidateName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const nameRegex = new RegExp(`\\b${escapedName}\\b`, 'gi');
+        if (nameRegex.test(text)) {
+          // Only add if it's mentioned in a context that suggests it's a recommendation
+          // Look for patterns like "recommend X", "X is", "X can", "X has", etc.
+          const contextPatterns = [
+            new RegExp(`(?:recommend|suggest|include|add|use|try|consider|think|believe).{0,100}${escapedName}`, 'gi'),
+            new RegExp(`${escapedName}.{0,50}(?:is|can|has|provides|offers|allows|enables)`, 'gi'),
+            new RegExp(`(?:card|monster|spell|trap).{0,50}${escapedName}`, 'gi'),
+          ];
+          
+          const hasGoodContext = contextPatterns.some(pattern => pattern.test(text));
+          if (hasGoodContext) {
+            cardNames.add(candidateName);
+          }
+        }
+      }
+      
+      console.log(`🔍 Extracted ${boldMatches.length} bold matches, matched ${cardNames.size} to candidate cards`);
+      if (cardNames.size > 0) {
+        console.log(`   Matched cards: ${Array.from(cardNames).join(", ")}`);
+      }
+      return Array.from(cardNames);
     };
 
     const mentionedCardNames = extractCardNames(sanitizedContent);
+    console.log(`🎯 Extracted ${mentionedCardNames.length} card names from LLM response:`, mentionedCardNames);
     
     // Validate and fetch card data
     const validatedCards: Card[] = [];
     if (mentionedCardNames.length > 0) {
+      console.log(`🔍 Validating ${mentionedCardNames.length} mentioned card names...`);
       const batchSize = 20;
       for (let i = 0; i < mentionedCardNames.length; i += batchSize) {
         const batch = mentionedCardNames.slice(i, i + batchSize);
-        const nameConditions = batch
-          .map((name) => {
-            const escapedName = name.replace(/[%_\\]/g, '\\$&');
-            return `name.ilike.${escapedName}`;
-          })
-          .join(",");
-
-        const { data: validatedCardsData } = await supabase
+        console.log(`  Batch ${Math.floor(i / batchSize) + 1}:`, batch);
+        
+        // Try exact match first (select only columns that exist in database)
+        const { data: exactMatches } = await supabase
           .from("cards")
-          .select("id, name, type, desc, level, race, attribute, archetype, card_images, atk, def, misc_info, card_sets, card_prices")
-          .or(nameConditions)
+          .select("id, name, type, desc, level, race, attribute, archetype, atk, def, ban_tcg")
+          .in("name", batch)
           .limit(batchSize * 2);
-
-        if (validatedCardsData) {
-          validatedCardsData.forEach((card: any) => {
+        
+        if (exactMatches && exactMatches.length > 0) {
+          exactMatches.forEach((card: any) => {
             validatedCards.push({
               ...card,
               archetype: getArchetypeNameServer(card),
+              // Add client-side fields that don't exist in DB
+              misc_info: [{ md_rarity: "" }],
+              card_images: [{ 
+                id: card.id, 
+                image_url: `https://images.ygoprodeck.com/images/cards/${card.id}.jpg`,
+                image_url_small: `https://images.ygoprodeck.com/images/cards_small/${card.id}.jpg`
+              }],
+              card_sets: [],
+              card_prices: [],
             });
           });
+          console.log(`  ✅ Found ${exactMatches.length} exact matches`);
+        }
+        
+        // If not all found, try case-insensitive search
+        const foundNames = new Set(exactMatches?.map((c: any) => c.name.toLowerCase()) || []);
+        const notFound = batch.filter(name => !foundNames.has(name.toLowerCase()));
+        
+        if (notFound.length > 0) {
+          console.log(`  🔍 Trying case-insensitive search for ${notFound.length} cards...`);
+          const nameConditions = notFound
+            .map((name) => {
+              const escapedName = name.replace(/[%_\\]/g, '\\$&');
+              return `name.ilike.${escapedName}`;
+            })
+            .join(",");
+
+          const { data: fuzzyMatches } = await supabase
+            .from("cards")
+            .select("id, name, type, desc, level, race, attribute, archetype, atk, def, ban_tcg")
+            .or(nameConditions)
+            .limit(batchSize * 2);
+
+          if (fuzzyMatches) {
+            fuzzyMatches.forEach((card: any) => {
+              // Avoid duplicates
+              if (!validatedCards.some(c => c.id === card.id)) {
+                validatedCards.push({
+                  ...card,
+                  archetype: getArchetypeNameServer(card),
+                  // Add client-side fields that don't exist in DB
+                  misc_info: [{ md_rarity: "" }],
+                  card_images: [{ 
+                    id: card.id, 
+                    image_url: `https://images.ygoprodeck.com/images/cards/${card.id}.jpg`,
+                    image_url_small: `https://images.ygoprodeck.com/images/cards_small/${card.id}.jpg`
+                  }],
+                  card_sets: [],
+                  card_prices: [],
+                });
+              }
+            });
+            console.log(`  ✅ Found ${fuzzyMatches.length} fuzzy matches`);
+          }
         }
       }
+      console.log(`📊 Total validated cards: ${validatedCards.length}`);
+    } else {
+      console.warn("⚠️ No card names extracted from LLM response. LLM may not have mentioned specific cards.");
+      console.warn("   Response preview:", sanitizedContent.substring(0, 200));
     }
 
     // Calculate token usage (more accurate estimation)
