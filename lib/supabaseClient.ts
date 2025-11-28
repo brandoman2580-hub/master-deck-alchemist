@@ -18,49 +18,54 @@ export async function getAccessToken() {
     console.log("✅ User authenticated:", userData.user.id)
     
     // Get the session - but be careful: getSession() might return anon key if session is stale
-    let { data, error } = await supabase.auth.getSession()
+    let sessionData: Awaited<ReturnType<typeof supabase.auth.getSession>> = await supabase.auth.getSession()
     
-    if (error) {
-      console.error("❌ Error getting session:", error.message)
+    if (sessionData.error) {
+      console.error("❌ Error getting session:", sessionData.error.message)
       // Try refreshing to get a fresh session
-      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession()
-      if (refreshError || !refreshData.session) {
-        console.error("❌ Failed to refresh session:", refreshError?.message)
+      const refreshResult = await supabase.auth.refreshSession()
+      if (refreshResult.error || !refreshResult.data.session) {
+        console.error("❌ Failed to refresh session:", refreshResult.error?.message)
         return null
       }
-      data = refreshData
+      sessionData = refreshResult as Awaited<ReturnType<typeof supabase.auth.getSession>>
       console.log("✅ Session refreshed after error")
     }
     
     // Check if session exists and has a valid token
-    if (!data.session) {
+    if (!sessionData.data.session) {
       console.warn("⚠️ No session found - attempting to refresh...")
-      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession()
-      if (refreshError || !refreshData.session) {
-        console.error("❌ Failed to refresh session:", refreshError?.message)
+      const refreshResult = await supabase.auth.refreshSession()
+      if (refreshResult.error || !refreshResult.data.session) {
+        console.error("❌ Failed to refresh session:", refreshResult.error?.message)
         return null
       }
-      data = refreshData
+      sessionData = refreshResult as Awaited<ReturnType<typeof supabase.auth.getSession>>
     }
     
     // Check if token is expired (with 5 minute buffer)
-    const expiresAt = data.session.expires_at
+    if (!sessionData.data.session) {
+      console.error("❌ No session available after refresh attempts")
+      return null
+    }
+    
+    const expiresAt = sessionData.data.session.expires_at
     if (expiresAt) {
       const expiresIn = expiresAt - Math.floor(Date.now() / 1000)
       if (expiresIn < 300) { // Less than 5 minutes remaining
         console.log("🔄 Token expiring soon, refreshing session...")
-        const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession()
-        if (refreshError) {
-          console.error("❌ Error refreshing session:", refreshError.message)
+        const refreshResult = await supabase.auth.refreshSession()
+        if (refreshResult.error) {
+          console.error("❌ Error refreshing session:", refreshResult.error.message)
           // Still try to use the existing token
-        } else if (refreshData.session) {
-          data = refreshData
+        } else if (refreshResult.data.session) {
+          sessionData = refreshResult as Awaited<ReturnType<typeof supabase.auth.getSession>>
           console.log("✅ Session refreshed")
         }
       }
     }
     
-    const token = data.session?.access_token || null
+    const token = sessionData.data.session?.access_token || null
     if (!token) {
       console.warn("⚠️ No access token in session - user may not be logged in")
       return null
@@ -91,14 +96,14 @@ export async function getAccessToken() {
         
         // Try to force a session refresh
         console.log("🔄 Attempting to force session refresh...")
-        const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession()
-        if (refreshError || !refreshData.session) {
-          console.error("❌ Failed to refresh session:", refreshError?.message)
+        const refreshResult = await supabase.auth.refreshSession()
+        if (refreshResult.error || !refreshResult.data.session) {
+          console.error("❌ Failed to refresh session:", refreshResult.error?.message)
           return null
         }
         
         // Check the refreshed token
-        const refreshedToken = refreshData.session.access_token
+        const refreshedToken = refreshResult.data.session.access_token
         const refreshedParts = refreshedToken.split(".")
         if (refreshedParts.length === 3) {
           const refreshedPayload = JSON.parse(atob(refreshedParts[1]))
