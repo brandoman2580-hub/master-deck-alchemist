@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback, useMemo, memo } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { X, Send, Bot, User, Loader2, Sparkles } from "lucide-react";
 import { Avatar, AvatarFallback } from "@radix-ui/react-avatar";
 import { useDeck } from "@/context/deck-context";
@@ -103,7 +103,14 @@ interface Message {
     deckId?: string | number;
     banlistFormat?: string;
     analysisType?: AnalysisType;
-    structuredAnalysis?: any; // mode-specific shape
+    structuredAnalysis?: DeckAnalysisStructured | Record<string, unknown> | {
+      suggested_cards?: {
+        card_name: string;
+        section: "main" | "side" | "extra";
+        reason: string;
+      }[];
+      notes?: string;
+    }; // mode-specific shape
     deckStats?: DeckStats | null;
   };
 }
@@ -298,26 +305,10 @@ const levenshteinDistance = (str1: string, str2: string): number => {
 
 // Detect if a question is a recommendation request
 // Now treats ALL user prompts as recommendation requests to use the hybrid search card pool
-const isRecommendationRequest = (question: string): boolean => {
+const isRecommendationRequest = (): boolean => {
   // Always use recommendation agent for all prompts - it has better card search capabilities
   // The recommendation agent can handle both recommendation and analysis questions
   return true;
-  
-  // Legacy: Only use for specific keywords (disabled to ensure all prompts use card pool)
-  // const lowerQuestion = question.toLowerCase();
-  // const recommendationKeywords = [
-  //   "recommend",
-  //   "suggest",
-  //   "what cards",
-  //   "what engines",
-  //   "what tech",
-  //   "best cards for",
-  //   "essential cards",
-  //   "tech options",
-  //   "engine",
-  //   "personalized",
-  // ];
-  // return recommendationKeywords.some(keyword => lowerQuestion.includes(keyword));
 };
 
 const generateAIResponse = async (
@@ -346,7 +337,7 @@ const generateAIResponse = async (
     const banlistFormat = currentDeck.mode === "Master Duel" ? "MASTER_DUEL" : "TCG";
 
     // Check if this is a recommendation request
-    const isRecommendation = isRecommendationRequest(userMessage);
+    const isRecommendation = isRecommendationRequest();
     
     if (isRecommendation) {
       // Use recommendation agent
@@ -362,7 +353,7 @@ const generateAIResponse = async (
         
         // Use validated cards from recommendation response
         if (recommendationResult.validated_cards && Array.isArray(recommendationResult.validated_cards)) {
-          message.suggestedCards = recommendationResult.validated_cards.map((card: any) => {
+          message.suggestedCards = recommendationResult.validated_cards.map((card: Card) => {
             const fullCard = allCards.find((c) => c.id === card.id);
             if (fullCard) {
               return fullCard;
@@ -379,7 +370,7 @@ const generateAIResponse = async (
         }
 
         return { message };
-      } catch (recError: any) {
+      } catch (recError: unknown) {
         // Fall back to deck-analysis if recommendation fails
         console.warn("Recommendation agent failed, falling back to deck-analysis:", recError);
       }
@@ -438,7 +429,7 @@ const generateAIResponse = async (
     // Handle card suggestions: use recommendedCards from backend
     if (analysisType === "card_suggestions" && result.recommendedCards && Array.isArray(result.recommendedCards)) {
       // Use recommendedCards from backend - these are the primary_card recommendations
-      message.suggestedCards = result.recommendedCards.map((card: any) => {
+      message.suggestedCards = result.recommendedCards.map((card: Card) => {
         // Find the full card data from allCards to ensure we have all fields (like card_images, deckInstanceId)
         const fullCard = allCards.find((c) => c.id === card.id);
         if (fullCard) {
@@ -466,7 +457,7 @@ const generateAIResponse = async (
       }
     } else if (analysisType === "custom" && result.validated_cards && Array.isArray(result.validated_cards)) {
       // For custom responses, use validated cards from backend (more reliable)
-      message.suggestedCards = result.validated_cards.map((card: any) => {
+      message.suggestedCards = result.validated_cards.map((card: Card) => {
         // Find the full card data from allCards to ensure we have all fields (like card_images, deckInstanceId)
         const fullCard = allCards.find((c) => c.id === card.id);
         if (fullCard) {
@@ -513,8 +504,8 @@ const generateAIResponse = async (
         : undefined;
 
     return { message, quota };
-  } catch (error: any) {
-    message.content = `Error contacting AI: ${error.message}`;
+  } catch (error: unknown) {
+    message.content = `Error contacting AI: ${error instanceof Error ? error.message : "Unknown error"}`;
     return { message };
   }
 };
@@ -955,12 +946,12 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
         allCards
       );
       setMessages((prev) => [...prev, message]);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error in quick prompt:", error);
       const errorMessage: Message = {
         id: crypto.randomUUID(),
         role: "assistant",
-        content: `Error: ${error.message || "Failed to get recommendations."}`,
+        content: `Error: ${error instanceof Error ? error.message : "Failed to get recommendations."}`,
         timestamp: new Date(),
         type: "error",
       };
@@ -970,7 +961,7 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
     }
   }, [currentDeck, allCards, saveDeck]);
 
-  const handleSendMessage = async () => {
+  const handleSendMessage = useCallback(async () => {
     if (input.trim() === "") return;
 
     // Capture input content and clear immediately for better UX (non-blocking)
@@ -1016,7 +1007,7 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [input, currentDeck, allCards, saveDeck]);
 
   // Enhanced card handling functions - memoized to prevent re-renders
   const canAddCardToDeck = useCallback((card: Card, deckType: DeckSection): boolean => {
@@ -1078,7 +1069,7 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
         return newSet;
       });
     }, 2000);
-  }, [addCardToDeck]);
+  }, [addCardToDeck, canAddCardToDeck, getOptimalDeckType]);
 
   // Memoize expensive renders to prevent re-renders on input changes
   const memoizedQuickPrompts = useMemo(() => (
@@ -1131,14 +1122,21 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
 
       if (analysisType === "summary") {
         analysisCard = renderDeckAnalysisCard(
-          meta.structuredAnalysis!,
+          meta.structuredAnalysis as DeckAnalysisStructured,
           meta.deckStats ?? null
         );
       } else if (analysisType === "power_level") {
-        analysisCard = renderPowerLevelCard(meta.structuredAnalysis!);
+        analysisCard = renderPowerLevelCard(meta.structuredAnalysis as { power_level?: { score: number; explanation: string; suggestions: string[] } });
       } else if (analysisType === "card_suggestions") {
         analysisCard = renderCardSuggestionsCard(
-          meta.structuredAnalysis!,
+          meta.structuredAnalysis as {
+            suggested_cards?: {
+              card_name: string;
+              section: "main" | "side" | "extra";
+              reason: string;
+            }[];
+            notes?: string;
+          },
           allCards,
           addCardToDeck,
           getOptimalDeckType,
@@ -1147,7 +1145,7 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
           meta.deckId
         );
       } else if (analysisType === "consistency") {
-        const consistency = meta.structuredAnalysis?.consistency;
+        const consistency = (meta.structuredAnalysis as DeckAnalysisStructured)?.consistency;
         if (consistency) {
           analysisCard = (
             <div className="w-full max-w-xl rounded-2xl border border-cyan-500/30 bg-slate-900/70 backdrop-blur-sm p-4 shadow-[0_2px_12px_rgba(0,0,0,0.2)] space-y-3">
@@ -1177,7 +1175,7 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
           );
         }
       } else if (analysisType === "resilience") {
-        const resilience = meta.structuredAnalysis?.resilience_and_grind;
+        const resilience = (meta.structuredAnalysis as DeckAnalysisStructured)?.resilience_and_grind;
         if (resilience) {
           analysisCard = (
             <div className="w-full max-w-xl rounded-2xl border border-cyan-500/30 bg-slate-900/70 backdrop-blur-sm p-4 shadow-[0_2px_12px_rgba(0,0,0,0.2)] space-y-3">
@@ -1207,7 +1205,7 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
           );
         }
       } else if (analysisType === "matchup") {
-        const matchup = meta.structuredAnalysis?.matchup_profile;
+        const matchup = (meta.structuredAnalysis as DeckAnalysisStructured)?.matchup_profile;
         if (matchup) {
           analysisCard = (
             <div className="w-full max-w-xl rounded-2xl border border-cyan-500/30 bg-slate-900/70 backdrop-blur-sm p-4 shadow-[0_2px_12px_rgba(0,0,0,0.2)] space-y-3">
@@ -1237,7 +1235,7 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
           );
         }
       } else if (analysisType === "complexity") {
-        const complexity = meta.structuredAnalysis?.complexity_and_skill;
+        const complexity = (meta.structuredAnalysis as DeckAnalysisStructured)?.complexity_and_skill;
         if (complexity) {
           analysisCard = (
             <div className="w-full max-w-xl rounded-2xl border border-cyan-500/30 bg-slate-900/70 backdrop-blur-sm p-4 shadow-[0_2px_12px_rgba(0,0,0,0.2)] space-y-3">
@@ -1267,7 +1265,7 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
       // Fallback to summary if no specific card was rendered
       if (!analysisCard && meta.structuredAnalysis) {
         analysisCard = renderDeckAnalysisCard(
-          meta.structuredAnalysis,
+          meta.structuredAnalysis as DeckAnalysisStructured,
           meta.deckStats ?? null
         );
       }
@@ -1357,7 +1355,7 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
         </div>
       </div>
     );
-  }), [messages, allCards, banlist, addingCardId, addedCards, currentDeck, canAddCardToDeck, getOptimalDeckType, handleAddCardToDeck]);
+  }), [messages, allCards, banlist, addingCardId, addedCards, currentDeck, canAddCardToDeck, getOptimalDeckType, handleAddCardToDeck, addCardToDeck, getDeckStats]);
 
   const memoizedInputForm = useMemo(() => (
     <form
@@ -1486,6 +1484,7 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
                 Recent History
               </span>
               <button
+                type="button"
                 onClick={() => setMessages([messages[0]])}
                 className="text-xs text-cyan-400 hover:text-cyan-300 transition-colors"
               >
