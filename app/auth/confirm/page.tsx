@@ -1,5 +1,5 @@
 "use client";
-import { useLoginModalStore } from "../../../store/useLoginModalStore.ts";
+import { useLoginModalStore } from "../../../store/useLoginModalStore";
 
 export default function ConfirmPage() {
   const { openLoginModal } = useLoginModalStore();
@@ -11,6 +11,7 @@ export default function ConfirmPage() {
         Your email has been successfully confirmed. You can now log in.
       </p>
       <button
+        type="button"
         onClick={openLoginModal}
         className="text-blue-600 underline mt-4 inline-block"
       >
