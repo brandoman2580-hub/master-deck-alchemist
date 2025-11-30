@@ -1,9 +1,9 @@
 "use client"
 
-import { useDeck } from "@/context/deck-context"
+import { useDeck } from "../context/deck-context.tsx"
 import { useState } from "react"
-import { Card, CardContent } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "./ui/card.tsx"
+import { Button } from "./ui/button.tsx"
 import { Plus, Info } from "lucide-react"
 import {
   Dialog,
@@ -13,12 +13,12 @@ import {
   DialogTitle,
   DialogTrigger,
   DialogClose,
-} from "@/components/ui/dialog"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { Card as CardType } from "@/types/card"
+} from "./ui/dialog.tsx"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu.tsx"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip.tsx"
+import { Card as CardType } from "../types/card.ts"
 import Image from "next/image"
-import { getArchetypeName } from "@/lib/helpers"
+import { getArchetypeName } from "../lib/helpers.ts"
 
 export default function CardGrid({ cards }: { cards: CardType[] }) {
   const { addCardToDeck } = useDeck()
@@ -34,12 +34,14 @@ export default function CardGrid({ cards }: { cards: CardType[] }) {
   }
 
   const isExtraDeckCard = (card: CardType) => {
+    // Check for Extra Deck monster types (case-insensitive check for all variations)
+    const type = card.type.toLowerCase();
     return (
-      card.type.includes("Fusion") ||
-      card.type.includes("Synchro") ||
-      card.type.includes("Xyz") ||
-      card.type.includes("Link")
-    )
+      type.includes("fusion") ||
+      type.includes("synchro") ||
+      type.includes("xyz") ||
+      type.includes("link")
+    );
   }
 
   const handleAddToDeck = (card: CardType, deckType: "mainDeck" | "extraDeck" | "sideDeck") => {

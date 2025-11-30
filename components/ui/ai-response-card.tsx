@@ -3,16 +3,15 @@
 import React from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { CardPreview } from "./card-preview";
-import { Badge } from "./badge";
-import { Button } from "./button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./select";
+import { CardPreview } from "./card-preview.tsx";
+import { Badge } from "./badge.tsx";
+import { Button } from "./button.tsx";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./select.tsx";
 import Image from "next/image";
-import { Card } from "@/types/card";
-import { BanStatus, DeckSection } from "@/types/types";
+import { Card } from "../../types/card.ts";
+import { BanStatus, DeckSection } from "../../types/types.ts";
 import { Plus, Loader2, Check } from "lucide-react";
-import { getArchetypeName } from "@/lib/helpers";
-import * as Tooltip from "@radix-ui/react-tooltip";
+import { getArchetypeName } from "../../lib/helpers.ts";
 
 interface CandidateCard {
   candidateId: number;
@@ -166,198 +165,16 @@ function highlightKeywords(text: string, allCards: Card[]): string {
   return highlighted;
 }
 
-// Enhanced CardPreview component with Add to Deck button
-function InteractiveCardPreview({
-  card,
-  banStatus,
-  canAdd,
-  isAdding,
-  wasAdded,
-  optimalDeckType,
-  currentDeckMode,
-  onAddCard,
-  children,
-}: {
-  card: Card;
-  banStatus: BanStatus;
-  canAdd: boolean;
-  isAdding: boolean;
-  wasAdded: boolean;
-  optimalDeckType: DeckSection;
-  currentDeckMode: string;
-  onAddCard?: (card: Card, deckType?: DeckSection) => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <Tooltip.Provider delayDuration={200}>
-      <Tooltip.Root>
-        <Tooltip.Trigger asChild>
-          {children}
-        </Tooltip.Trigger>
-        <Tooltip.Portal>
-          <Tooltip.Content
-            className="z-50 bg-slate-950/95 bg-gradient-to-b from-cyan-400/30 via-cyan-500/25 to-cyan-600/15 backdrop-blur-md border border-cyan-500/30 rounded-lg shadow-xl p-4 sm:p-6 w-[90vw] sm:w-[500px] max-w-[min(500px,calc(100vw-1rem))]"
-            side="right"
-            sideOffset={10}
-            align="start"
-            collisionPadding={24}
-            alignOffset={-5}
-          >
-            <div className="flex gap-5">
-              {/* Card Image */}
-              <div className="flex-shrink-0">
-                <Image
-                  width={160}
-                  height={235}
-                  src={card.card_images[0]?.image_url || "/placeholder.svg"}
-                  alt={card.name}
-                  className="w-[160px] h-auto object-contain rounded"
-                />
-              </div>
 
-              {/* Card Information */}
-              <div className="flex-1 min-w-0 space-y-3">
-                <div>
-                  <h3 className="font-bold text-base leading-tight text-slate-50">{card.name}</h3>
-                  <div className="flex flex-wrap gap-1 mt-2">
-                    <Badge variant="outline" className="text-xs border-cyan-500/50 text-cyan-300">
-                      {card.type}
-                    </Badge>
-                    {card.attribute && (
-                      <Badge variant="outline" className="text-xs border-cyan-500/50 text-cyan-300">
-                        {card.attribute}
-                      </Badge>
-                    )}
-                    {card.race && (
-                      <Badge variant="outline" className="text-xs border-cyan-500/50 text-cyan-300">
-                        {card.race}
-                      </Badge>
-                    )}
-                    {banStatus && banStatus !== "Unlimited" && (
-                      <Badge 
-                        className={`text-xs ${
-                          banStatus === "Forbidden" ? "bg-red-500" :
-                          banStatus === "Limited" ? "bg-yellow-500 text-black" :
-                          banStatus === "Semi-Limited" ? "bg-orange-500" :
-                          "bg-green-500"
-                        }`}
-                      >
-                        {banStatus}
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-
-                {/* Stats */}
-                {(card.atk !== undefined || card.def !== undefined || card.level !== undefined) && card.type !== "Spell Card" && card.type !== "Trap Card" && (
-                  <div className="space-y-1">
-                    {card.level !== undefined && (
-                      <p className="text-sm text-slate-200">
-                        <span className="font-medium text-cyan-300">Level:</span> {card.level}
-                      </p>
-                    )}
-                    {card.atk !== undefined && (
-                      <p className="text-sm text-slate-200">
-                        <span className="font-medium text-cyan-300">ATK:</span> {card.atk} 
-                        {card.def !== undefined && <span> / <span className="font-medium text-cyan-300">DEF:</span> {card.def}</span>}
-                      </p>
-                    )}
-                  </div>
-                )}
-
-                {/* Archetype */}
-                {(() => {
-                  const archetypeName = getArchetypeName(card);
-                  return archetypeName ? (
-                    <p className="text-sm text-slate-200">
-                      <span className="font-medium text-cyan-300">Archetype:</span> {archetypeName}
-                    </p>
-                  ) : null;
-                })()}
-
-                {/* Description */}
-                <div className="text-sm text-slate-300 leading-relaxed">
-                  {card.desc}
-                </div>
-
-                {/* Add to Deck button */}
-                <div className="pt-3 border-t border-cyan-500/20">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex-1">
-                      <p className="text-xs text-slate-400 mb-1">
-                        {currentDeckMode === "TCG" ? "Add to:" : `→ ${optimalDeckType === "mainDeck" ? "Main" : "Extra"} Deck`}
-                      </p>
-                      {!canAdd && (
-                        <p className="text-xs text-slate-500">
-                          {banStatus === "Forbidden" ? "Forbidden" : "Limit reached"}
-                        </p>
-                      )}
-                    </div>
-                    <Button
-                      variant={wasAdded ? "default" : "ghost"}
-                      size="sm"
-                      className="h-8 px-3"
-                      disabled={!canAdd || isAdding}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (onAddCard && canAdd) {
-                          onAddCard(card, optimalDeckType);
-                        }
-                      }}
-                    >
-                      {isAdding ? (
-                        <>
-                          <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                          Adding...
-                        </>
-                      ) : wasAdded ? (
-                        <>
-                          <Check className="h-3 w-3 mr-1" />
-                          Added
-                        </>
-                      ) : (
-                        <>
-                          <Plus className="h-3 w-3 mr-1" />
-                          Add to Deck
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            <Tooltip.Arrow className="fill-cyan-500/30" />
-          </Tooltip.Content>
-        </Tooltip.Portal>
-      </Tooltip.Root>
-    </Tooltip.Provider>
-  );
-}
-
-// Component to render markdown with card previews
+// Component to render markdown with highlighted card names (no previews)
 function MarkdownWithCardPreviews({
   content,
   suggestedCards = [],
   allCards = [],
-  banlist = {},
-  currentDeckMode = "Master Duel",
-  addingCardId = null,
-  addedCards = new Set(),
-  canAddCardToDeck,
-  getOptimalDeckType,
-  handleAddCardToDeck,
 }: {
   content: string;
   suggestedCards?: Card[];
   allCards?: Card[];
-  banlist?: Record<string, BanStatus>;
-  currentDeckMode?: string;
-  addingCardId?: string | null;
-  addedCards?: Set<string>;
-  canAddCardToDeck?: (card: Card, deckType: DeckSection) => boolean;
-  getOptimalDeckType?: (card: Card) => DeckSection;
-  handleAddCardToDeck?: (card: Card, selectedDeckType?: DeckSection) => void;
 }) {
   // Create a map of card names to cards for quick lookup
   // Prioritize suggestedCards, but also include allCards for comprehensive matching
@@ -455,29 +272,11 @@ function MarkdownWithCardPreviews({
           }
           
           if (matchedCard) {
-            // Wrap with interactive card preview on hover
-            const cardId = matchedCard.id.toString();
-            const banStatus = banlist[matchedCard.name] || "Unlimited";
-            const optimalDeckType = getOptimalDeckType ? getOptimalDeckType(matchedCard) : "mainDeck";
-            const canAdd = canAddCardToDeck ? canAddCardToDeck(matchedCard, optimalDeckType) : false;
-            const isAdding = addingCardId === cardId;
-            const wasAdded = addedCards.has(cardId);
-            
+            // Just show as highlighted text, no card preview
             return (
-              <InteractiveCardPreview
-                card={matchedCard}
-                banStatus={banStatus}
-                canAdd={canAdd}
-                isAdding={isAdding}
-                wasAdded={wasAdded}
-                optimalDeckType={optimalDeckType}
-                currentDeckMode={currentDeckMode || "Master Duel"}
-                onAddCard={handleAddCardToDeck}
-              >
-                <strong className="text-primary font-semibold cursor-pointer hover:text-cyan-400 transition-colors underline decoration-cyan-500/50 decoration-dotted">
-                  {trimmedText}
-                </strong>
-              </InteractiveCardPreview>
+              <strong className="text-cyan-400 font-semibold">
+                {trimmedText}
+              </strong>
             );
           }
           
@@ -574,12 +373,131 @@ export function AIResponseCard({
   // Only do this if NOT in card suggestion mode (where we don't want to auto-detect cards from text)
   let processedContent = content;
   if (!isCardSuggestionMode) {
-    processedContent = content.replace(/\*\*([^*]+)\*\*:/g, (match, cardName) => {
+    // Remove common introductory phrases
+    processedContent = processedContent.replace(/^(Based on your question,?\s*)?(I\s+)?(recommend|suggest|would\s+recommend|would\s+suggest)[:.]?\s*/gim, '');
+    processedContent = processedContent.replace(/^(Here\s+are\s+)?(some\s+)?(recommendations|suggestions)[:.]?\s*/gim, '');
+    
+    processedContent = processedContent.replace(/\*\*([^*]+)\*\*:/g, (match, cardName) => {
       const lowerCardName = cardName.toLowerCase();
       if (cardMap.has(lowerCardName)) {
         return `**${cardName}**`; // Remove the colon
       }
       return match; // Keep the colon if it's not a card name
+    });
+  }
+
+  // Format recommendations as numbered list (1, 2, 3...)
+  // This processes the content to show only one card title per recommendation
+  if (!isCardSuggestionMode && allowedSuggestedCards.length > 0) {
+    // Create a map of card names to their index in suggestedCards (ordered by appearance)
+    const cardNameToIndex = new Map<string, number>();
+    allowedSuggestedCards.forEach((card, index) => {
+      cardNameToIndex.set(card.name.toLowerCase().trim(), index + 1);
+    });
+
+    // Track which cards we've already numbered to avoid duplicates
+    const numberedCards = new Set<string>();
+
+    // First, remove duplicate card names that appear with dashes and numbers (with or without bold)
+    // Handle various patterns: "Card Name - X. Card Name", "**Card Name** - X. **Card Name**", etc.
+    allowedSuggestedCards.forEach((card) => {
+      const cardName = card.name;
+      const escapedCardName = cardName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const lowerCardName = cardName.toLowerCase().trim();
+      const correctIndex = cardNameToIndex.get(lowerCardName);
+      if (!correctIndex) return;
+
+      // Pattern 1: "**Card Name** - X. **Card Name**" (with bold, with dash)
+      const boldPattern1 = new RegExp(`\\*\\*${escapedCardName}\\*\\*\\s*-\\s*\\d+\\.\\s*\\*\\*${escapedCardName}\\*\\*`, 'gi');
+      processedContent = processedContent.replace(boldPattern1, (match) => {
+        if (!numberedCards.has(lowerCardName)) {
+          numberedCards.add(lowerCardName);
+          return `${correctIndex}. **${cardName}**`;
+        }
+        return match;
+      });
+
+      // Pattern 2: "Card Name - X. Card Name" (without bold, with dash)
+      const plainPattern1 = new RegExp(`${escapedCardName}\\s*-\\s*\\d+\\.\\s*${escapedCardName}`, 'gi');
+      processedContent = processedContent.replace(plainPattern1, (match) => {
+        if (!numberedCards.has(lowerCardName)) {
+          numberedCards.add(lowerCardName);
+          return `${correctIndex}. ${cardName}`;
+        }
+        return match;
+      });
+
+      // Pattern 3: "**Card Name** X. **Card Name**" (with bold, without dash)
+      const boldPattern2 = new RegExp(`\\*\\*${escapedCardName}\\*\\*\\s+\\d+\\.\\s*\\*\\*${escapedCardName}\\*\\*`, 'gi');
+      processedContent = processedContent.replace(boldPattern2, (match) => {
+        if (!numberedCards.has(lowerCardName)) {
+          numberedCards.add(lowerCardName);
+          return `${correctIndex}. **${cardName}**`;
+        }
+        return match;
+      });
+
+      // Pattern 4: "Card Name X. Card Name" (without bold, without dash)
+      const plainPattern2 = new RegExp(`${escapedCardName}\\s+\\d+\\.\\s*${escapedCardName}`, 'gi');
+      processedContent = processedContent.replace(plainPattern2, (match) => {
+        if (!numberedCards.has(lowerCardName)) {
+          numberedCards.add(lowerCardName);
+          return `${correctIndex}. ${cardName}`;
+        }
+        return match;
+      });
+
+      // Pattern 5: "Card Name - Card Name" (duplicate without number, with dash)
+      const duplicatePattern1 = new RegExp(`${escapedCardName}\\s*-\\s*${escapedCardName}`, 'gi');
+      processedContent = processedContent.replace(duplicatePattern1, (match) => {
+        if (!numberedCards.has(lowerCardName)) {
+          numberedCards.add(lowerCardName);
+          return `${correctIndex}. ${cardName}`;
+        }
+        return match;
+      });
+
+      // Pattern 6: "**Card Name** - **Card Name**" (duplicate with bold, with dash)
+      const duplicatePattern2 = new RegExp(`\\*\\*${escapedCardName}\\*\\*\\s*-\\s*\\*\\*${escapedCardName}\\*\\*`, 'gi');
+      processedContent = processedContent.replace(duplicatePattern2, (match) => {
+        if (!numberedCards.has(lowerCardName)) {
+          numberedCards.add(lowerCardName);
+          return `${correctIndex}. **${cardName}**`;
+        }
+        return match;
+      });
+    });
+
+    // Now add numbers to card names that don't have them yet (in order of appearance in suggestedCards)
+    // Process in order to maintain correct numbering
+    const cardOrder = allowedSuggestedCards.map((card, idx) => ({
+      name: card.name,
+      lowerName: card.name.toLowerCase().trim(),
+      index: idx + 1,
+    }));
+
+    cardOrder.forEach(({ name, lowerName, index }) => {
+      if (numberedCards.has(lowerName)) return;
+
+      // Pattern: "**Card Name** is/would/can..." -> "1. **Card Name** is/would/can..."
+      const pattern1 = new RegExp(`\\*\\*${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\*\\*\\s+(is|would|can|works|provides|offers|adds|helps|improves|enhances|gives|makes|allows|enables|creates|generates|brings|supports|synergizes|combines|pairs|works well|fits|matches|complements|would be|can be|is an|is a)`, 'gi');
+      processedContent = processedContent.replace(pattern1, (match, verb) => {
+        if (!numberedCards.has(lowerName)) {
+          numberedCards.add(lowerName);
+          return `${index}. **${name}** ${verb}`;
+        }
+        return match;
+      });
+
+      // Pattern: "**Card Name**: reason" -> "1. **Card Name**: reason"
+      const pattern2 = new RegExp(`\\*\\*${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\*\\*:\\s*`, 'g');
+      processedContent = processedContent.replace(pattern2, (match) => {
+        if (!numberedCards.has(lowerName)) {
+          numberedCards.add(lowerName);
+          return `${index}. **${name}**: `;
+        }
+        return match;
+      });
     });
   }
 
@@ -629,7 +547,7 @@ export function AIResponseCard({
                 width={80}
                 height={120}
                 src={
-                  card.card_images[0]?.image_url_small ||
+                  card.card_images[0]?.image_url ||
                   "/placeholder.svg"
                 }
                 alt={card.name}
@@ -790,13 +708,6 @@ export function AIResponseCard({
             content={processedContent}
             suggestedCards={allowedSuggestedCards}
             allCards={allCards}
-            banlist={banlist}
-            currentDeckMode={currentDeckMode}
-            addingCardId={addingCardId}
-            addedCards={addedCards}
-            canAddCardToDeck={canAddCardToDeck}
-            getOptimalDeckType={getOptimalDeckType}
-            handleAddCardToDeck={handleAddCardToDeck}
           />
         </>
       )}

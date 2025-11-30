@@ -3,8 +3,9 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 
-import { createClient } from '@/utils/supabase/server'
-import { SignupFormState } from '@/types/types'
+import { createClient } from '../../utils/supabase/server.ts'
+import { SignupFormState } from '../../types/types.ts'
+import process from "node:process";
 
 type LoginResult = {
   success: boolean

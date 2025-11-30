@@ -2,16 +2,16 @@
 
 import { useState } from "react";
 import { Lightbulb } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button } from "./ui/button.tsx";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { useDeck } from "@/context/deck-context";
-import { getArchetypeName } from "@/lib/helpers";
+} from "./ui/dialog.tsx";
+import { useDeck } from "../context/deck-context.tsx";
+import { getArchetypeName } from "../lib/helpers.ts";
 
 export default function DeckBuilderTips() {
   const { currentDeck, getDeckStats } = useDeck();

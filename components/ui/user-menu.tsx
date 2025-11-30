@@ -1,10 +1,10 @@
 "use client"
 
-import { useUserStore } from "@/store/useUserStore"
+import { useUserStore } from "../../store/useUserStore.ts"
 import { useState, useRef, useEffect } from "react"
-import { Button } from "@/components/ui/button"
+import { Button } from "./button.tsx"
 import { HelpCircle, LogOut } from "lucide-react"
-import { supabase } from "@/lib/supabaseClient"
+import { supabase } from "../../lib/supabaseClient.ts"
 
 function getInitials(user: { user_metadata?: { name?: string }; email?: string } | null) {
   if (!user) return "U"
@@ -39,7 +39,7 @@ export function UserMenu() {
   const handleLogout = async () => {
     await supabase.auth.signOut()
     setDropdownOpen(false)
-    window.location.reload()
+    globalThis.location.reload()
   }
 
   if (!user) return null

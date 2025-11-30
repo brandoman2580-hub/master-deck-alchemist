@@ -1,8 +1,8 @@
 "use client";
 
-import { DeckType, DeckMode } from "@/types/types";
-import { DeckCard } from "./deck-card";
-import { Card, CardContent } from "@/components/ui/card";
+import { DeckType, DeckMode } from "../../types/types.ts";
+import { DeckCard } from "./deck-card.tsx";
+import { Card, CardContent } from "../ui/card.tsx";
 
 interface ModeDecksSectionProps {
   decks: DeckType[];

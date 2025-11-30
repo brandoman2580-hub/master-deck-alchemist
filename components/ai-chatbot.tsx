@@ -1,12 +1,12 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { X, Send, Bot, User, Loader2, Sparkles } from "lucide-react";
+import { X, Send, Bot, User, Loader2, Sparkles, Info, ThumbsUp, ThumbsDown, Plus, Check } from "lucide-react";
 import { Avatar, AvatarFallback } from "@radix-ui/react-avatar";
-import { useDeck } from "@/context/deck-context";
-import { Card } from "@/types/card";
+import { useDeck } from "../context/deck-context.tsx";
+import { Card } from "../types/card.ts";
 import { ScrollArea } from "@radix-ui/react-scroll-area";
-import { Button } from "./ui/button";
+import { Button } from "./ui/button.tsx";
 import Image from "next/image";
 import {
   Card as CardUI,
@@ -15,14 +15,23 @@ import {
   CardDescription,
   CardContent,
   CardFooter,
-} from "./ui/card";
-import { Input } from "./ui/input";
-import { supabase } from "@/lib/supabaseClient";
-import { useCardStore } from "@/store/cardStore";
-import { BanStatus, DeckSection } from "@/types/types";
-import { AIResponseCard } from "./ui/ai-response-card";
-import { CardPreview } from "./ui/card-preview";
-import { getRecommendations } from "@/lib/api/recommendationAgent";
+} from "./ui/card.tsx";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "./ui/dialog.tsx";
+import { Input } from "./ui/input.tsx";
+import { supabase } from "../lib/supabaseClient.ts";
+import { useCardStore } from "../store/cardStore.ts";
+import { BanStatus, DeckSection } from "../types/types.ts";
+import { AIResponseCard } from "./ui/ai-response-card.tsx";
+import { CardPreview } from "./ui/card-preview.tsx";
+import { FormattedRecommendationResponse } from "./ui/formatted-recommendation-response.tsx";
+import { getRecommendations } from "../lib/api/recommendationAgent.ts";
+import { submitFeedback } from "../lib/api/recommendationFeedback.ts";
 
 type DeckAnalysisStructured = {
   overview: string;
@@ -98,6 +107,24 @@ interface Message {
   suggestedCards?: Card[];
   cardSuggestionsMeta?: CardSuggestionMeta[]; // For card_suggestions analysis type
   candidateCards?: CandidateCard[]; // For card_suggestions analysis type
+  recommendation_id?: string; // NEW: For feedback tracking
+  response_version?: string; // NEW: Schema version
+  recommendedCards?: Array<{
+    id?: number;
+    name: string;
+    reason?: string;
+    synergy_score?: number;
+    risk_assessment?: "low" | "medium" | "high";
+  }>; // NEW: Structured recommended cards from JSON response
+  alternativeConsiderations?: Array<{
+    name: string;
+    why_not?: string;
+  }>; // NEW: Alternative considerations from JSON response
+  recommendationMeta?: {
+    intent_classified?: string;
+    confidence?: number;
+    format_specific_notes?: string;
+  }; // NEW: Meta information from JSON response
   type?: "quick-prompt" | "deck-analysis" | "error";
   meta?: {
     deckId?: string | number;
@@ -350,6 +377,23 @@ const generateAIResponse = async (
         });
 
         message.content = recommendationResult.answer || "No recommendations available.";
+        
+        // Store recommendation_id and response_version for feedback tracking
+        if (recommendationResult.recommendation_id) {
+          message.recommendation_id = recommendationResult.recommendation_id;
+        }
+        message.response_version = recommendationResult.response_version || "1.0";
+        
+        // Store structured JSON response data if available
+        if (recommendationResult.recommended_cards) {
+          message.recommendedCards = recommendationResult.recommended_cards;
+        }
+        if (recommendationResult.alternative_considerations) {
+          message.alternativeConsiderations = recommendationResult.alternative_considerations;
+        }
+        if (recommendationResult.meta) {
+          message.recommendationMeta = recommendationResult.meta;
+        }
         
         // Use validated cards from recommendation response
         if (recommendationResult.validated_cards && Array.isArray(recommendationResult.validated_cards)) {
@@ -887,6 +931,8 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
   const [banlist, setBanlist] = useState<Record<string, BanStatus>>({});
   const [addingCardId, setAddingCardId] = useState<string | null>(null);
   const [addedCards, setAddedCards] = useState<Set<string>>(new Set());
+  const [isInfoDialogOpen, setIsInfoDialogOpen] = useState(false);
+  const [feedbackStates, setFeedbackStates] = useState<Map<string, "approved" | "disapproved" | null>>(new Map());
 
   const allCards = useCardStore((state) => state.cardList);
 
@@ -894,7 +940,7 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
   useEffect(() => {
     const loadBanlist = async () => {
       try {
-        const { getMasterDuelBanlist } = await import("@/lib/api");
+        const { getMasterDuelBanlist } = await import("../lib/api.ts");
         const banlistData = await getMasterDuelBanlist();
         setBanlist(banlistData);
       } catch (error) {
@@ -1033,11 +1079,13 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
   }, [currentDeck, banlist, getDeckStats]);
 
   const getOptimalDeckType = useCallback((card: Card): DeckSection => {
+    // Check for Extra Deck monster types (case-insensitive check for all variations)
+    const type = card.type.toLowerCase();
     if (
-      card.type.includes("Fusion") ||
-      card.type.includes("Synchro") ||
-      card.type.includes("Xyz") ||
-      card.type.includes("Link")
+      type.includes("fusion") ||
+      type.includes("synchro") ||
+      type.includes("xyz") ||
+      type.includes("link")
     ) {
       return "extraDeck";
     }
@@ -1070,6 +1118,44 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
       });
     }, 2000);
   }, [addCardToDeck, canAddCardToDeck, getOptimalDeckType]);
+
+  // Handle feedback for AI responses with optimistic UI and undo
+  const handleFeedback = useCallback(async (messageId: string, feedback: "approved" | "disapproved") => {
+    const message = messages.find(m => m.id === messageId);
+    if (!message || !message.recommendation_id) {
+      console.warn("Cannot submit feedback: message or recommendation_id not found");
+      return;
+    }
+
+    // Optimistic update
+    const previousFeedback = feedbackStates.get(messageId);
+    setFeedbackStates((prev) => {
+      const newMap = new Map(prev);
+      newMap.set(messageId, feedback);
+      return newMap;
+    });
+
+    try {
+      await submitFeedback({
+        recommendation_id: message.recommendation_id,
+        feedback_type: feedback,
+      });
+      console.log("Feedback submitted successfully");
+    } catch (error) {
+      // Revert on error
+      setFeedbackStates((prev) => {
+        const newMap = new Map(prev);
+        if (previousFeedback) {
+          newMap.set(messageId, previousFeedback);
+        } else {
+          newMap.delete(messageId);
+        }
+        return newMap;
+      });
+      console.error("Error sending feedback:", error);
+      // Optionally show error toast
+    }
+  }, [messages, feedbackStates]);
 
   // Memoize expensive renders to prevent re-renders on input changes
   const memoizedQuickPrompts = useMemo(() => (
@@ -1301,61 +1387,199 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
     return (
       <div
         key={message.id}
-        className={`flex ${
-          message.role === "user" ? "justify-end" : "justify-start"
-        }`}
+        className="space-y-3 overflow-x-hidden"
       >
         <div
-          className={`flex gap-2 max-w-[80%] ${
-            message.role === "user" ? "flex-row-reverse" : ""
+          className={`flex ${
+            message.role === "user" ? "justify-end" : "justify-start"
           }`}
         >
-          {/* Clean, icon-only avatar with transparent bg */}
-          <Avatar className="bg-transparent shadow-none">
-            <AvatarFallback className="bg-transparent">
-              {message.role === "user" ? (
-                <User className="h-6 w-6 text-cyan-400" />
-              ) : (
-                <Bot className="h-6 w-6 text-cyan-400/70" />
-              )}
-            </AvatarFallback>
-          </Avatar>
-          {/* Bubble */}
-          <div>
-            <div
-              className={`px-5 py-3 rounded-2xl ${
-                message.role === "user"
-                  ? "bg-cyan-500/15 border border-cyan-400/60 text-slate-50 rounded-tr-sm"
-                  : "bg-slate-900/70 border border-cyan-500/30 text-slate-50 backdrop-blur-sm shadow-[0_2px_12px_rgba(0,0,0,0.2)]"
-              }`}
-            >
-              <AIResponseCard 
-                content={message.content}
-                suggestedCards={message.suggestedCards || []}
-                cardSuggestionsMeta={message.cardSuggestionsMeta}
-                candidateCards={message.candidateCards}
-                banlist={banlist}
-                currentDeckMode={currentDeck.mode}
-                addingCardId={addingCardId}
-                addedCards={addedCards}
-                canAddCardToDeck={canAddCardToDeck}
-                getOptimalDeckType={getOptimalDeckType}
-                handleAddCardToDeck={handleAddCardToDeck}
-                allCards={allCards}
-                isCardSuggestionMode={message.meta?.analysisType === "card_suggestions"}
-              />
-            </div>
-            <div className={`text-xs text-slate-500 mt-1 ${message.role === "user" ? "text-right" : "text-left"}`}>
-              {message.timestamp.toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
+          <div
+            className={`flex gap-2 max-w-[80%] ${
+              message.role === "user" ? "flex-row-reverse" : ""
+            }`}
+          >
+            {/* Clean, icon-only avatar with transparent bg */}
+            <Avatar className="bg-transparent shadow-none">
+              <AvatarFallback className="bg-transparent">
+                {message.role === "user" ? (
+                  <User className="h-6 w-6 text-cyan-400" />
+                ) : (
+                  <Bot className="h-6 w-6 text-cyan-400/70" />
+                )}
+              </AvatarFallback>
+            </Avatar>
+            {/* Bubble */}
+            <div>
+              <div
+                className={`px-5 py-3 rounded-2xl ${
+                  message.role === "user"
+                    ? "bg-cyan-500/15 border border-cyan-400/60 text-slate-50 rounded-tr-sm"
+                    : "bg-slate-900/70 border border-cyan-500/30 text-slate-50 backdrop-blur-sm shadow-[0_2px_12px_rgba(0,0,0,0.2)]"
+                }`}
+              >
+                {/* Use formatted response if we have structured JSON data */}
+                {message.recommendedCards || message.alternativeConsiderations ? (
+                  <FormattedRecommendationResponse
+                    answer={message.content}
+                    recommendedCards={message.recommendedCards}
+                    alternativeConsiderations={message.alternativeConsiderations}
+                    meta={message.recommendationMeta}
+                    validatedCards={message.suggestedCards || []}
+                    allCards={allCards}
+                  />
+                ) : (
+                  <AIResponseCard 
+                    content={message.content}
+                    suggestedCards={message.suggestedCards || []}
+                    cardSuggestionsMeta={message.cardSuggestionsMeta}
+                    candidateCards={message.candidateCards}
+                    banlist={banlist}
+                    currentDeckMode={currentDeck.mode}
+                    addingCardId={addingCardId}
+                    addedCards={addedCards}
+                    canAddCardToDeck={canAddCardToDeck}
+                    getOptimalDeckType={getOptimalDeckType}
+                    handleAddCardToDeck={handleAddCardToDeck}
+                    allCards={allCards}
+                    isCardSuggestionMode={message.meta?.analysisType === "card_suggestions"}
+                  />
+                )}
+              </div>
+              <div className={`flex items-center gap-2 mt-1 ${message.role === "user" ? "justify-end" : "justify-start"}`}>
+                <div className={`text-xs text-slate-500 ${message.role === "user" ? "text-right" : "text-left"}`}>
+                  {message.timestamp.toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </div>
+                {message.role === "assistant" && message.type !== "error" && message.id !== "welcome" && message.recommendation_id && (
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => handleFeedback(message.id, "approved")}
+                      className={`p-1 rounded transition-colors ${
+                        feedbackStates.get(message.id) === "approved"
+                          ? "text-green-400 bg-green-500/20"
+                          : "text-slate-400 hover:text-green-400 hover:bg-green-500/10"
+                      }`}
+                      title="This response was helpful"
+                    >
+                      <ThumbsUp className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleFeedback(message.id, "disapproved")}
+                      className={`p-1 rounded transition-colors ${
+                        feedbackStates.get(message.id) === "disapproved"
+                          ? "text-red-400 bg-red-500/20"
+                          : "text-slate-400 hover:text-red-400 hover:bg-red-500/10"
+                      }`}
+                      title="This response was not helpful"
+                    >
+                      <ThumbsDown className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
+        
+        {/* Horizontal slideshow for recommended cards (separate from response bubble, below entire message) */}
+        {message.role === "assistant" && 
+         message.meta?.analysisType !== "card_suggestions" && 
+         message.suggestedCards && 
+         message.suggestedCards.length > 0 && (
+          <div className="flex justify-start">
+            <div className="flex gap-2 max-w-[80%]">
+              {/* Spacer to align with avatar */}
+              <div className="w-6 h-6 flex-shrink-0" />
+              {/* Slideshow card */}
+              <div className="flex-1 rounded-xl border border-cyan-500/30 bg-slate-900/70 backdrop-blur-sm p-4 shadow-[0_2px_12px_rgba(0,0,0,0.2)] min-w-0">
+                <h4 className="text-sm font-semibold text-cyan-400 mb-3">
+                  Recommended Cards
+                </h4>
+                <div className="overflow-x-auto overflow-y-hidden pb-2 -mx-2 px-2 [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-cyan-500/30 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:hover:bg-cyan-500/50">
+                  <div className="flex gap-3 min-w-max">
+                {message.suggestedCards
+                  .filter((card) => {
+                    const banStatus = banlist[card.name] || "Unlimited";
+                    return banStatus !== "Forbidden";
+                  })
+                  .map((card) => {
+                    const cardId = card.id.toString();
+                    const banStatus = banlist[card.name] || "Unlimited";
+                    const optimalDeckType = getOptimalDeckType(card);
+                    const canAdd = canAddCardToDeck(card, optimalDeckType);
+                    const isAdding = addingCardId === cardId;
+                    const wasAdded = addedCards.has(cardId);
+
+                    return (
+                      <div
+                        key={card.id}
+                        className="flex-shrink-0 w-[200px] rounded-lg border border-cyan-500/20 bg-slate-900/50 backdrop-blur-sm p-3 hover:border-cyan-500/40 hover:bg-slate-900/70 transition-all group"
+                      >
+                        <div className="flex flex-col items-center gap-2">
+                          {/* Card Image with Preview */}
+                          <CardPreview card={card} banStatus={banStatus}>
+                            <div className="relative w-full aspect-[5/7] flex items-center justify-center cursor-pointer">
+                              <Image
+                                width={120}
+                                height={168}
+                                src={
+                                  card.card_images[0]?.image_url_small ||
+                                  "/placeholder.svg"
+                                }
+                                alt={card.name}
+                                className="w-full h-full object-contain rounded shadow-sm group-hover:shadow-lg transition-shadow"
+                              />
+                            </div>
+                          </CardPreview>
+
+                          {/* Card Name */}
+                          <h4 className="font-medium text-xs text-center text-slate-50 line-clamp-2 min-h-[2.5rem]">
+                            {card.name}
+                          </h4>
+
+                          {/* Add Button */}
+                          <Button
+                            variant={wasAdded ? "default" : "ghost"}
+                            size="sm"
+                            className="h-7 w-full text-xs"
+                            disabled={!canAdd || isAdding}
+                            onClick={() => handleAddCardToDeck(card)}
+                          >
+                            {isAdding ? (
+                              <>
+                                <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                                Adding...
+                              </>
+                            ) : wasAdded ? (
+                              <>
+                                <Check className="h-3 w-3 mr-1" />
+                                Added
+                              </>
+                            ) : (
+                              <>
+                                <Plus className="h-3 w-3 mr-1" />
+                                Add to Deck
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
-  }), [messages, allCards, banlist, addingCardId, addedCards, currentDeck, canAddCardToDeck, getOptimalDeckType, handleAddCardToDeck, addCardToDeck, getDeckStats]);
+  }), [messages, allCards, banlist, addingCardId, addedCards, currentDeck, canAddCardToDeck, getOptimalDeckType, handleAddCardToDeck, addCardToDeck, getDeckStats, feedbackStates, handleFeedback]);
 
   const memoizedInputForm = useMemo(() => (
     <form
@@ -1400,12 +1624,11 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
       </Button>
       <button
         type="button"
+        onClick={() => setIsInfoDialogOpen(true)}
         className="text-slate-400 hover:text-slate-300 transition-colors p-2 rounded-lg hover:bg-slate-800/50"
-        title="Help"
+        title="How to use the AI Assistant"
       >
-        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
+        <Info className="h-5 w-5" />
       </button>
     </form>
   ), [input, isLoading, handleInputChange, handleSendMessage]);
@@ -1450,8 +1673,8 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
           </div>
           {/* Modern scrollable area */}
           <div className="h-full flex-1 min-h-0 flex flex-col">
-            <ScrollArea className="flex-1 h-full min-h-0 overflow-y-auto px-4 pr-2">
-              <div className="flex flex-col space-y-3 py-4">
+            <ScrollArea className="flex-1 h-full min-h-0 overflow-y-auto overflow-x-hidden px-4 pr-2">
+              <div className="flex flex-col space-y-3 py-4 min-w-0">
                 {memoizedMessages}
                 {(isLoading || isQuickPromptLoading) && (
                   <div className="flex justify-start">
@@ -1521,6 +1744,75 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
           {memoizedInputForm}
         </CardFooter>
       </CardUI>
+
+      {/* Information Dialog */}
+      <Dialog open={isInfoDialogOpen} onOpenChange={setIsInfoDialogOpen}>
+        <DialogContent className="max-w-2xl bg-slate-900 border-cyan-500/30">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-slate-50 flex items-center gap-2">
+              <Info className="h-5 w-5 text-cyan-400" />
+              How to Use the AI Assistant
+            </DialogTitle>
+            <DialogDescription className="text-slate-300 pt-2">
+              Learn how to get the most out of your AI-powered deck building assistant.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 text-sm text-slate-200">
+            <section className="space-y-2">
+              <h3 className="font-semibold text-cyan-400 text-base">Getting Started</h3>
+              <p className="leading-relaxed">
+                The AI Assistant uses advanced hybrid search and expert-level analysis to help you build better decks. Simply type your question in the input field and press Enter or click Send. The AI considers your deck context, format, and playstyle to provide personalized recommendations.
+              </p>
+            </section>
+            
+            <section className="space-y-2">
+              <h3 className="font-semibold text-cyan-400 text-base">Quick Recommendations</h3>
+              <p className="leading-relaxed">
+                Use the Quick Recommendation buttons at the top to get instant suggestions powered by hybrid RAG (Retrieval-Augmented Generation):
+              </p>
+              <ul className="list-disc pl-5 space-y-1 text-slate-300">
+                <li><strong className="text-cyan-300">Archetype Cards:</strong> Get essential cards for your deck&apos;s archetype</li>
+                <li><strong className="text-cyan-300">Engine Suggestions:</strong> Find compatible engines that work with your deck</li>
+                <li><strong className="text-cyan-300">Tech Cards:</strong> Get matchup-specific tech recommendations</li>
+                <li><strong className="text-cyan-300">Personalized:</strong> Receive recommendations tailored to your playstyle and deck history</li>
+              </ul>
+            </section>
+
+            <section className="space-y-2">
+              <h3 className="font-semibold text-cyan-400 text-base">Writing Effective Prompts</h3>
+              <p className="leading-relaxed">
+                The AI uses a hybrid prompt system that combines freeform analysis with structured output. To get the best results:
+              </p>
+              <ul className="list-disc pl-5 space-y-1 text-slate-300">
+                <li><strong className="text-cyan-300">Be specific:</strong> Instead of &quot;improve my deck&quot;, try &quot;what cards can improve my deck&apos;s consistency?&quot;</li>
+                <li><strong className="text-cyan-300">Ask targeted questions:</strong> &quot;What are good side deck options against control decks?&quot; or &quot;Find me 5 cards that synergize with this deck&quot;</li>
+                <li><strong className="text-cyan-300">Request explanations:</strong> &quot;What is the purpose of Neo Space Connector in this deck?&quot;</li>
+                <li><strong className="text-cyan-300">Format awareness:</strong> The AI automatically considers your deck&apos;s format (Master Duel or TCG) and banlist restrictions</li>
+                <li><strong className="text-cyan-300">Request analysis:</strong> Ask for power level, consistency, or matchup analysis</li>
+              </ul>
+            </section>
+
+            <section className="space-y-2">
+              <h3 className="font-semibold text-cyan-400 text-base">Providing Feedback</h3>
+              <p className="leading-relaxed">
+                Help us improve the AI by providing feedback on recommendations:
+              </p>
+              <ul className="list-disc pl-5 space-y-1 text-slate-300">
+                <li><strong className="text-cyan-300">Thumbs Up (👍):</strong> Click if a recommendation was helpful or accurate</li>
+                <li><strong className="text-cyan-300">Thumbs Down (👎):</strong> Click if a recommendation was not helpful or inaccurate</li>
+                <li>Feedback buttons appear below AI responses that include recommendations</li>
+                <li>Your feedback helps improve future recommendations for you and other users</li>
+              </ul>
+            </section>
+
+            <section className="space-y-2 pt-2 border-t border-cyan-500/20">
+              <p className="text-xs text-slate-400">
+                <strong className="text-cyan-300">Tip:</strong> Hover over card names in responses to see card details and add them directly to your deck! The AI uses hybrid search (vector + full-text) to find the most relevant cards from a database of 14,000+ cards.
+              </p>
+            </section>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

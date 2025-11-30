@@ -3,8 +3,8 @@
 import { useMemo, useState } from "react";
 import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Button } from "./ui/button.tsx";
+import { Badge } from "./ui/badge.tsx";
 import { Plus, Info } from "lucide-react";
 import {
   Dialog,
@@ -13,16 +13,16 @@ import {
   DialogHeader,
   DialogTitle,
   DialogClose,
-} from "@/components/ui/dialog";
+} from "./ui/dialog.tsx";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Card } from "@/types/card";
+} from "./ui/dropdown-menu.tsx";
+import { Card } from "../types/card.ts";
 import Image from "next/image";
-import { getArchetypeName } from "@/lib/helpers";
+import { getArchetypeName } from "../lib/helpers.ts";
 
 interface CardItemProps {
   isBeingDragged: boolean;

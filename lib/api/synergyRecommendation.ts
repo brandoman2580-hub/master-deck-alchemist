@@ -10,10 +10,10 @@
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { CardCandidate } from '@/lib/schemas';
+import type { CardCandidate } from '../schemas.ts';
 import { createClient } from '@supabase/supabase-js';
-import { CardCandidateSchema, LlmResponseSchema } from '@/lib/schemas';
-import { toTOON } from '@/lib/toon';
+import { CardCandidateSchema, LlmResponseSchema } from '../schemas.ts';
+import { toTOON } from '../toon.ts';
 
 // Helper functions for vector similarity
 function dot(a: number[], b: number[]): number {

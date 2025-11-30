@@ -1,5 +1,6 @@
-import { getAccessToken } from "@/lib/supabaseClient";
-import { Card } from "@/types/card";
+import { getAccessToken } from "../supabaseClient.ts";
+import { Card } from "../../types/card.ts";
+import process from "node:process";
 
 export interface SynergyAnalysisRequest {
   selectedCards: string[];

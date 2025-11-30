@@ -1,5 +1,5 @@
 "use client";
-import { useLoginModalStore } from "@/store/useLoginModalStore";
+import { useLoginModalStore } from "../../../store/useLoginModalStore.ts";
 
 export default function ConfirmPage() {
   const { openLoginModal } = useLoginModalStore();

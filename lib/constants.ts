@@ -1,4 +1,4 @@
-import { DeckMode, FilterConfig } from "@/types/types";
+import { DeckMode, FilterConfig } from "../types/types.ts";
 
 export const DECK_MODES = ["TCG", "Master Duel"] as const;
 

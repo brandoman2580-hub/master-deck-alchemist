@@ -1,3 +1,6 @@
+// Refactored recommendation agent with hybrid prompts, feedback integration, and observability
+// Rationale: Implements hybrid prompt system (freeform analysis + templated output), adds recommendation_id for feedback tracking, and logs all requests
+
 import { createClient } from "@supabase/supabase-js";
 import { corsHeaders } from "../_shared/cors.ts";
 import {
@@ -9,6 +12,11 @@ import {
 } from "../_shared/cardSearch.ts";
 import { mmrSelect, type MMRCandidate } from "../_shared/mmr.ts";
 import { toTOON } from "../_shared/toon.ts";
+import {
+  GRANDMASTER_SYSTEM_PROMPT,
+  buildHybridUserPrompt,
+  classifyIntent,
+} from "../_shared/prompts.ts";
 
 type Card = {
   id: number;
@@ -80,7 +88,7 @@ function sanitizeAiCardText(
     .join('|');
   const candidateNameRegex = new RegExp(`\\b(${candidateNamesPattern})\\b`, 'gi');
   
-  cleaned = cleaned.replace(thisCardRegex, (match, pronoun, offset) => {
+  cleaned = cleaned.replace(thisCardRegex, (match, _pronoun, offset) => {
     // Find the text before this match (look back up to 300 chars)
     const beforeText = cleaned.substring(Math.max(0, offset - 300), offset);
     
@@ -168,43 +176,101 @@ function sanitizeAiCardText(
   return cleaned;
 }
 
-// Post-process to replace "this card" with actual card names
-function replaceThisCardWithActualNames(obj: any, deckCards: Card[] = []): any {
-  if (typeof obj === "string") {
-    if (obj.toLowerCase().includes("this card")) {
-      const cardLikeRegex = /\b([A-Z][A-Za-z0-9'&-]+(?:\s+[A-Z][A-Za-z0-9'&-]+)+)\b/g;
-      const mentionedCards: string[] = [];
-      let match;
-      const tempStr = obj;
-      while ((match = cardLikeRegex.exec(tempStr)) !== null) {
-        const cardName = match[1].trim();
-        if (!mentionedCards.includes(cardName)) {
-          mentionedCards.push(cardName);
-        }
-      }
+// Clean up and format response text for better readability
+function formatResponseText(text: string): string {
+  let formatted = text;
+  
+  // Remove excessive markdown formatting (e.g., ****text**** -> **text**)
+  // Pattern: 4+ asterisks should be reduced to 2
+  formatted = formatted.replace(/\*{4,}([^*]+?)\*{4,}/g, '**$1**');
+  formatted = formatted.replace(/\*{3,}([^*]+?)\*{3,}/g, '**$1**');
+  
+  // Fix multiple consecutive numbers (e.g., "1. 6. Card" -> "1. Card")
+  formatted = formatted.replace(/(\d+)\.\s+(\d+)\.\s+/g, '$1. ');
+  
+  // Fix out-of-order numbering: find all numbered list items and renumber them sequentially
+  // Pattern: number followed by period and space, typically before bold text or card names
+  const numberPattern = /\b(\d+)\.\s+(?=\*\*[^*]+\*\*|[A-Z])/g;
+  
+  // Find all numbered items and their positions
+  const matches: Array<{ number: number; index: number; length: number }> = [];
+  let match;
+  const textCopy = formatted; // Work with copy to avoid index issues
+  while ((match = numberPattern.exec(textCopy)) !== null) {
+    matches.push({
+      number: parseInt(match[1], 10),
+      index: match.index,
+      length: match[0].length,
+    });
+  }
+  
+  // If we have multiple numbered items, fix them to be sequential
+  if (matches.length > 1) {
+    // Work backwards to avoid index shifting
+    for (let i = matches.length - 1; i >= 0; i--) {
+      const matchInfo = matches[i];
+      const correctNumber = i + 1;
       
-      if (mentionedCards.length > 0) {
-        return obj.replace(/\bthis card\b/gi, mentionedCards[0]);
-      }
-      
-      // Fallback to first deck card
-      if (deckCards.length > 0) {
-        return obj.replace(/\bthis card\b/gi, deckCards[0].name);
+      if (matchInfo.number !== correctNumber) {
+        // Replace the number at this specific position
+        const before = formatted.substring(0, matchInfo.index);
+        const numberStr = matchInfo.number.toString();
+        const after = formatted.substring(matchInfo.index + numberStr.length + 2); // +2 for ". "
+        formatted = before + correctNumber + ". " + after;
       }
     }
-    return obj;
   }
-  if (Array.isArray(obj)) {
-    return obj.map((item) => replaceThisCardWithActualNames(item, deckCards));
-  }
-  if (obj && typeof obj === "object") {
-    const processed: any = {};
-    for (const [key, value] of Object.entries(obj)) {
-      processed[key] = replaceThisCardWithActualNames(value, deckCards);
+  
+  // Clean up excessive backticks and formatting
+  // Remove backticks around single words (e.g., `add` -> add, but keep code blocks)
+  formatted = formatted.replace(/`([a-zA-Z]+)`/g, '$1');
+  
+  // Clean up spacing and formatting
+  // Remove multiple spaces
+  formatted = formatted.replace(/\s{2,}/g, ' ');
+  
+  // Ensure proper spacing after periods (but preserve numbered lists)
+  formatted = formatted.replace(/\.([A-Z])/g, '. $1');
+  
+  // Fix spacing around bold text
+  formatted = formatted.replace(/\s+\*\*/g, ' **');
+  formatted = formatted.replace(/\*\*\s+/g, '** ');
+  
+  // Remove duplicate bold markers (e.g., **text** **text** -> **text**)
+  formatted = formatted.replace(/\*\*([^*]+?)\*\*\s+\*\*([^*]+?)\*\*/g, (match, p1, p2) => {
+    // If they're the same, keep one
+    if (p1.trim() === p2.trim()) {
+      return `**${p1}**`;
     }
-    return processed;
-  }
-  return obj;
+    return match;
+  });
+  
+  // Ensure proper paragraph breaks
+  formatted = formatted.replace(/\n{3,}/g, '\n\n');
+  
+  // Clean up any remaining formatting issues
+  formatted = formatted.trim();
+  
+  return formatted;
+}
+
+// Clean up card names in JSON response (remove excessive formatting)
+function cleanCardName(name: string): string {
+  if (!name) return name;
+  
+  let cleaned = name;
+  
+  // Remove excessive asterisks (keep only double asterisks for bold)
+  cleaned = cleaned.replace(/\*{4,}([^*]+?)\*{4,}/g, '**$1**');
+  cleaned = cleaned.replace(/\*{3,}([^*]+?)\*{3,}/g, '**$1**');
+  
+  // Remove backticks
+  cleaned = cleaned.replace(/`/g, '');
+  
+  // Clean up spacing
+  cleaned = cleaned.replace(/\s{2,}/g, ' ').trim();
+  
+  return cleaned;
 }
 
 // Load Master Duel banlist from Supabase
@@ -399,7 +465,7 @@ async function findCardsByArchetype(
         error = null;
         console.log(`  Found ${normalizedData.length} cards using archetype_normalized column`);
       }
-    } catch (err) {
+    } catch (_err) {
       // archetype_normalized might not exist, ignore error
       console.log("  Note: archetype_normalized column not available");
     }
@@ -582,6 +648,10 @@ Deno.serve(async (req) => {
         }
       );
     }
+
+    // Generate recommendation_id for tracking and feedback
+    const recommendationId = crypto.randomUUID();
+    const startTime = Date.now();
 
     const {
       question,
@@ -995,16 +1065,36 @@ Try rephrasing your question or being more specific. For example:
       ? `Deck contains ${allDeckCards.length} cards. Key archetypes: ${excludeArchetypes.join(", ") || "None"}.`
       : "No deck provided.";
 
-    // Build list of candidate card names for the prompt
-    const candidateCardNamesList = finalCandidates.map((c, i) => `${i + 1}. ${c.name}${c.archetype ? ` (${c.archetype})` : ""}`).join("\n");
+    // Validate TOON table has content (skip for explanation questions)
+    const intentClassified = classifyIntent(question);
+    const isExplanation = intentClassified === "explanation";
     
-    // Validate TOON table has content
-    if (!toonTable || toonTable.trim().length === 0) {
+    if ((!toonTable || toonTable.trim().length === 0) && !isExplanation) {
       console.error("❌ TOON table is empty! This should not happen if finalCandidates.length > 0");
+      
+      // Log error
+      const { error: logError } = await supabase.from("recommendation_logs").insert({
+        recommendation_id: recommendationId,
+        user_id: user.id,
+        question,
+        format,
+        recommendation_type,
+        use_hybrid_search,
+        candidate_count: candidateCards.length,
+        final_candidate_count: 0,
+        response_version: "1.0",
+        error_message: "TOON table is empty",
+      });
+      if (logError) {
+        console.error("Failed to log error:", logError);
+      }
+      
       return new Response(
         JSON.stringify({
           answer: `Error: No candidate cards were found or formatted correctly. Please try again or rephrase your question.`,
           validated_cards: [],
+          recommendation_id: recommendationId,
+          response_version: "1.0",
           diagnostic: {
             question,
             finalCandidatesCount: finalCandidates.length,
@@ -1018,55 +1108,38 @@ Try rephrasing your question or being more specific. For example:
       );
     }
     
-    // Build expert-level prompt with TOON format
-    const systemPrompt = `You are an expert Yu-Gi-Oh! strategist and deck builder.
+    // For explanation questions, allow proceeding even without candidate cards
+    if (isExplanation && (!toonTable || toonTable.trim().length === 0)) {
+      console.log("ℹ️ Explanation question with no candidates - proceeding with deck context only");
+    }
+    
+    // Build hybrid prompts (freeform analysis + templated output)
+    // Customize system prompt for explanation questions
+    const systemPrompt = isExplanation
+      ? `${GRANDMASTER_SYSTEM_PROMPT}
 
-⚠️⚠️⚠️ CRITICAL INSTRUCTIONS - READ CAREFULLY ⚠️⚠️⚠️
-
-You have been provided with ${finalCandidates.length} CANDIDATE CARDS below. These are NEW cards NOT in the user's deck.
-
-MANDATORY REQUIREMENTS:
-1. You MUST recommend at least 3-5 cards from the candidate list below
-2. You MUST use the EXACT card names from the "CANDIDATE CARDS LIST" below
-3. You MUST format EVERY card name in **bold** markdown (e.g., **Card Name**)
-4. You MUST mention card names explicitly - NEVER use "this card", "that card", or generic pronouns
-5. The candidate cards ARE available - do NOT say they are not listed or unavailable
-
-CANDIDATE CARDS LIST (${finalCandidates.length} cards available - USE THESE):
-${candidateCardNamesList}
-
-Format: ${format === "MASTER_DUEL" ? "Master Duel" : "TCG"}
-${banlistText ? `\nBanlist Restrictions:\n${banlistText}` : ""}
-${profileText ? `\n${profileText}` : ""}`;
-
-    const userPrompt = `User Question: "${question}"
-
-Current Deck Context: ${deckSummary}
-
-CANDIDATE CARDS TABLE (TOON format - ${finalCandidates.length} cards):
-${toonTable}
-
-YOUR TASK:
-1. Read the user's question: "${question}"
-2. Look at the CANDIDATE CARDS TABLE above - these are the ONLY cards you can recommend
-3. Find 3-5 cards from the table that match the user's question
-4. For EACH recommended card:
-   - Use the EXACT name from the "name" column in the table
-   - Format it in **bold** markdown (e.g., **Card Name**)
-   - Explain why it answers the user's question
-5. DO NOT use generic terms like "this card" or "that card" - ALWAYS use the actual card name
-
-EXAMPLE FORMAT:
-"Based on your question, I recommend:
-- **Card Name 1** - [explanation]
-- **Card Name 2** - [explanation]
-- **Card Name 3** - [explanation]"
-
-REMEMBER: 
-- The candidate cards ARE listed in the table above
-- You MUST mention at least 3-5 specific cards by name
-- Format each card name in **bold** markdown
-- Use EXACT names from the "name" column in the table`;
+IMPORTANT FOR EXPLANATION QUESTIONS:
+- If the user asks about cards in their deck, focus on explaining those specific cards
+- Explain the purpose, benefits, and strategic value of the mentioned cards
+- Discuss synergies and how they work together
+- DO NOT mention "candidate table", "candidate cards", or any technical implementation details
+- DO NOT pivot to recommending other cards unless the user explicitly asks for recommendations
+- If the cards mentioned aren't in the deck, explain what you know about those cards in general
+- If you're unsure about something, be honest and say "I'm not certain" or "I don't have enough information"
+- Provide strategic insight and reasoning, not just card effects`
+      : GRANDMASTER_SYSTEM_PROMPT;
+    
+    const userPrompt = buildHybridUserPrompt(
+      question,
+      deckSummary,
+      toonTable || "",
+      finalCandidates.length,
+      format,
+      banlistText,
+      profileText,
+      intentClassified,
+      allDeckCards // Pass deck cards for explanation questions
+    );
 
     // Call Groq API
     if (!GROQ_API_KEY) {
@@ -1123,17 +1196,87 @@ REMEMBER:
     
     console.log("📝 LLM raw response length:", rawContent.length);
     console.log("📝 LLM response preview (first 500 chars):", rawContent.substring(0, 500));
+    
+    // Try to parse JSON response (hybrid prompt may return JSON)
+    let answerText = rawContent;
+    type ParsedResponse = {
+      answer?: string;
+      recommended_cards?: Array<{ id?: number; name?: string; reason?: string; synergy_score?: number; risk_assessment?: string }>;
+      alternative_considerations?: Array<{ name?: string; why_not?: string }>;
+      meta?: { intent_classified?: string; confidence?: number; format_specific_notes?: string };
+    };
+    let parsedResponse: ParsedResponse | null = null;
+    const jsonMatch = rawContent.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      try {
+        parsedResponse = JSON.parse(jsonMatch[0]) as ParsedResponse;
+        if (parsedResponse?.answer) {
+          answerText = parsedResponse.answer;
+        }
+        
+        // Clean up card names in recommended_cards if present
+        if (parsedResponse?.recommended_cards && Array.isArray(parsedResponse.recommended_cards)) {
+          parsedResponse.recommended_cards = parsedResponse.recommended_cards.map((card) => ({
+            ...card,
+            name: card.name ? cleanCardName(card.name) : card.name,
+            reason: card.reason ? formatResponseText(card.reason) : card.reason,
+          }));
+        }
+        
+        // Clean up card names in alternative_considerations if present
+        if (parsedResponse?.alternative_considerations && Array.isArray(parsedResponse.alternative_considerations)) {
+          parsedResponse.alternative_considerations = parsedResponse.alternative_considerations.map((alt) => ({
+            ...alt,
+            name: alt.name ? cleanCardName(alt.name) : alt.name,
+            why_not: alt.why_not ? formatResponseText(alt.why_not) : alt.why_not,
+          }));
+        }
+      } catch (e) {
+        console.warn("⚠️ Failed to parse JSON response, using raw text:", e);
+      }
+    }
 
     // Sanitize response - replace "this card" with actual candidate card names
-    const sanitizedContent = sanitizeAiCardText(
-      rawContent, 
+    let sanitizedContent = sanitizeAiCardText(
+      answerText, 
       allowedCardNames, 
       finalCandidates, // Pass candidate cards for context-aware replacement
       allCardNames
     );
+    
+    // Format and clean up the response for better readability
+    sanitizedContent = formatResponseText(sanitizedContent);
+
+    // For explanation questions, also extract card names from the user's question
+    // (cards they're asking about that might be in their deck)
+    let questionCardNames: string[] = [];
+    if (intentClassified === "explanation") {
+      // Extract card names from the question using simple patterns
+      const cardNamePatterns = [
+        /\b([A-Z][a-zA-Z0-9\s'-]+(?:Connector|Dolphin|Monster|Dragon|Magician|Warrior|Beast|Machine|Fiend|Spellcaster|Zombie|Plant|Insect|Rock|Pyro|Thunder|Aqua|Psychic|Divine|Winged|Elemental|Creator|HERO|Cyber|Blackwing|Gladiator|Six|Samurai|Archfiend|Ojama|Harpie|Amazoness|Toon|Spirit|Union|Gemini|Tuner|Synchro|Xyz|Pendulum|Link|Fusion|Ritual|Ruler|Cardcar))\b/g,
+        /\b([A-Z][a-zA-Z0-9\s'-]+(?:\s+[A-Z][a-zA-Z0-9\s'-]+)+)\b/g, // Multi-word card names
+      ];
+      
+      for (const pattern of cardNamePatterns) {
+        let match;
+        while ((match = pattern.exec(question)) !== null) {
+          const cardName = match[1].trim();
+          // Filter out common words
+          if (cardName.length > 3 && 
+              !["Master Duel", "TCG", "Deck", "Card", "Cards"].some(word => 
+                cardName.toLowerCase().includes(word.toLowerCase())
+              )) {
+            questionCardNames.push(cardName);
+          }
+        }
+      }
+      // Remove duplicates
+      questionCardNames = [...new Set(questionCardNames)];
+      console.log(`📋 Extracted ${questionCardNames.length} card names from question:`, questionCardNames);
+    }
 
     // Extract card names mentioned in response for validation
-    // Only extract names that match actual candidate cards (more precise)
+    // For explanation questions, also include cards from the user's question
     const extractCardNames = (text: string): string[] => {
       const cardNames = new Set<string>();
       
@@ -1152,18 +1295,23 @@ REMEMBER:
         }
       }
       
-      // Match extracted names against actual candidate card names (case-insensitive)
+      // For explanation questions, also check deck cards
+      const searchTargets = isExplanation 
+        ? [...finalCandidates, ...allDeckCards.map(c => ({ name: c.name, id: c.id }))]
+        : finalCandidates;
+      
+      // Match extracted names against actual card names (case-insensitive)
       // This ensures we only return valid card names
       for (const extractedName of boldMatches) {
         // Clean up extracted name (remove extra whitespace, handle commas)
         const cleanedName = extractedName.trim();
         
         // Try exact match first
-        const exactMatch = finalCandidates.find(c => 
+        const exactMatch = searchTargets.find(c => 
           c.name.toLowerCase() === cleanedName.toLowerCase()
         );
         if (exactMatch) {
-          cardNames.add(exactMatch.name); // Use exact name from candidate
+          cardNames.add(exactMatch.name); // Use exact name
           continue;
         }
         
@@ -1172,7 +1320,7 @@ REMEMBER:
         if (cleanedName.includes(',')) {
           const parts = cleanedName.split(',').map(p => p.trim()).filter(p => p.length > 0);
           for (const part of parts) {
-            const partMatch = finalCandidates.find(c => 
+            const partMatch = searchTargets.find(c => 
               c.name.toLowerCase().includes(part.toLowerCase()) ||
               part.toLowerCase().includes(c.name.toLowerCase().split(',')[0].toLowerCase())
             );
@@ -1185,7 +1333,7 @@ REMEMBER:
         }
         
         // Try partial match (card name contains extracted text or vice versa)
-        const partialMatch = finalCandidates.find(c => {
+        const partialMatch = searchTargets.find(c => {
           const candidateLower = c.name.toLowerCase();
           const extractedLower = cleanedName.toLowerCase();
           // Check if either name contains the other (but require at least 3 chars to avoid false matches)
@@ -1194,37 +1342,41 @@ REMEMBER:
                  extractedLower.includes(candidateLower);
         });
         if (partialMatch) {
-          cardNames.add(partialMatch.name); // Use exact name from candidate
+          cardNames.add(partialMatch.name); // Use exact name
         }
       }
       
-      // Also check if any candidate names appear in the text (even without bold)
+      // Also check if any card names appear in the text (even without bold)
       // This catches cases where LLM mentions cards but forgets bold formatting
       // But be more strict - only match if it's clearly a card mention
-      for (const candidate of finalCandidates) {
-        const candidateName = candidate.name;
-        if (cardNames.has(candidateName)) continue; // Already matched
+      for (const card of searchTargets) {
+        const cardName = card.name;
+        if (cardNames.has(cardName)) continue; // Already matched
         
-        // Check if candidate name appears in text (case-insensitive, whole word)
-        const escapedName = candidateName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        // Check if card name appears in text (case-insensitive, whole word)
+        const escapedName = cardName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         const nameRegex = new RegExp(`\\b${escapedName}\\b`, 'gi');
         if (nameRegex.test(text)) {
-          // Only add if it's mentioned in a context that suggests it's a recommendation
-          // Look for patterns like "recommend X", "X is", "X can", "X has", etc.
-          const contextPatterns = [
-            new RegExp(`(?:recommend|suggest|include|add|use|try|consider|think|believe).{0,100}${escapedName}`, 'gi'),
-            new RegExp(`${escapedName}.{0,50}(?:is|can|has|provides|offers|allows|enables)`, 'gi'),
-            new RegExp(`(?:card|monster|spell|trap).{0,50}${escapedName}`, 'gi'),
-          ];
-          
-          const hasGoodContext = contextPatterns.some(pattern => pattern.test(text));
-          if (hasGoodContext) {
-            cardNames.add(candidateName);
+          // For explanation questions, be more lenient - any mention is valid
+          // For discovery questions, only add if it's mentioned in a context that suggests it's a recommendation
+          if (isExplanation) {
+            cardNames.add(cardName);
+          } else {
+            const contextPatterns = [
+              new RegExp(`(?:recommend|suggest|include|add|use|try|consider|think|believe).{0,100}${escapedName}`, 'gi'),
+              new RegExp(`${escapedName}.{0,50}(?:is|can|has|provides|offers|allows|enables)`, 'gi'),
+              new RegExp(`(?:card|monster|spell|trap).{0,50}${escapedName}`, 'gi'),
+            ];
+            
+            const hasGoodContext = contextPatterns.some(pattern => pattern.test(text));
+            if (hasGoodContext) {
+              cardNames.add(cardName);
+            }
           }
         }
       }
       
-      console.log(`🔍 Extracted ${boldMatches.length} bold matches, matched ${cardNames.size} to candidate cards`);
+      console.log(`🔍 Extracted ${boldMatches.length} bold matches, matched ${cardNames.size} to cards`);
       if (cardNames.size > 0) {
         console.log(`   Matched cards: ${Array.from(cardNames).join(", ")}`);
       }
@@ -1234,13 +1386,32 @@ REMEMBER:
     const mentionedCardNames = extractCardNames(sanitizedContent);
     console.log(`🎯 Extracted ${mentionedCardNames.length} card names from LLM response:`, mentionedCardNames);
     
+    // For explanation questions, combine cards from response and question
+    // Also try to match question card names against deck cards
+    const allMentionedCardNames: string[] = [...mentionedCardNames];
+    if (isExplanation && questionCardNames.length > 0) {
+      // Try to match question card names to deck cards or database
+      for (const qCardName of questionCardNames) {
+        // Check if it's in the deck
+        const deckMatch = allDeckCards.find(c => 
+          c.name.toLowerCase() === qCardName.toLowerCase() ||
+          c.name.toLowerCase().includes(qCardName.toLowerCase()) ||
+          qCardName.toLowerCase().includes(c.name.toLowerCase())
+        );
+        if (deckMatch && !allMentionedCardNames.includes(deckMatch.name)) {
+          allMentionedCardNames.push(deckMatch.name);
+        }
+      }
+      console.log(`📋 Combined ${allMentionedCardNames.length} card names (${mentionedCardNames.length} from response, ${questionCardNames.length} from question)`);
+    }
+    
     // Validate and fetch card data
     const validatedCards: Card[] = [];
-    if (mentionedCardNames.length > 0) {
-      console.log(`🔍 Validating ${mentionedCardNames.length} mentioned card names...`);
+    if (allMentionedCardNames.length > 0) {
+      console.log(`🔍 Validating ${allMentionedCardNames.length} mentioned card names...`);
       const batchSize = 20;
-      for (let i = 0; i < mentionedCardNames.length; i += batchSize) {
-        const batch = mentionedCardNames.slice(i, i + batchSize);
+      for (let i = 0; i < allMentionedCardNames.length; i += batchSize) {
+        const batch = allMentionedCardNames.slice(i, i + batchSize);
         console.log(`  Batch ${Math.floor(i / batchSize) + 1}:`, batch);
         
         // Try exact match first (select only columns that exist in database)
@@ -1327,23 +1498,106 @@ REMEMBER:
     
     // Log token usage for monitoring
     console.log(`Token usage: ${inputTokens} input + ${outputTokens} output = ${totalTokens} total (target: < 1500)`);
+    
+    const durationMs = Date.now() - startTime;
+    const responseVersion = "1.0";
+    
+    // Log successful recommendation
+    const { error: logError } = await supabase.from("recommendation_logs").insert({
+      recommendation_id: recommendationId,
+      user_id: user.id,
+      question,
+      format,
+      recommendation_type,
+      use_hybrid_search,
+      candidate_count: candidateCards.length,
+      final_candidate_count: finalCandidates.length,
+      tokens_used: totalTokens,
+      cost_usd: estimatedCostUSD,
+      response_version: responseVersion,
+    });
+    if (logError) {
+      console.error("Failed to log recommendation:", logError);
+    }
+    
+    // Structured log for observability
+    console.log(JSON.stringify({
+      level: "info",
+      timestamp: new Date().toISOString(),
+      recommendation_id: recommendationId,
+      user_id: user.id,
+      question: question.substring(0, 100),
+      candidate_count: candidateCards.length,
+      final_candidate_count: finalCandidates.length,
+      tokens_used: totalTokens,
+      cost_usd: estimatedCostUSD,
+      response_version: responseVersion,
+      duration_ms: durationMs,
+      intent_classified: intentClassified,
+    }));
 
+    // Build response with structured JSON data if available
+    type ResponseData = {
+      answer: string;
+      validated_cards: typeof validatedCards;
+      recommendation_id: string;
+      response_version: string;
+      estimated_cost: {
+        tokens_used: number;
+        cost_usd: number;
+      };
+      recommended_cards?: ParsedResponse["recommended_cards"];
+      alternative_considerations?: ParsedResponse["alternative_considerations"];
+      meta?: ParsedResponse["meta"];
+    };
+    
+    const responseData: ResponseData = {
+      answer: sanitizedContent,
+      validated_cards: validatedCards,
+      recommendation_id: recommendationId,
+      response_version: responseVersion,
+      estimated_cost: {
+        tokens_used: totalTokens,
+        cost_usd: estimatedCostUSD,
+      },
+    };
+    
+    // Include structured JSON data if available
+    if (parsedResponse?.recommended_cards) {
+      responseData.recommended_cards = parsedResponse.recommended_cards;
+    }
+    if (parsedResponse?.alternative_considerations) {
+      responseData.alternative_considerations = parsedResponse.alternative_considerations;
+    }
+    if (parsedResponse?.meta) {
+      responseData.meta = parsedResponse.meta;
+    }
+    
     return new Response(
-      JSON.stringify({
-        answer: sanitizedContent,
-        validated_cards: validatedCards,
-        estimated_cost: {
-          tokens_used: totalTokens,
-          cost_usd: estimatedCostUSD,
-        },
-      }),
+      JSON.stringify(responseData),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
       }
     );
-  } catch (error: any) {
-    return new Response(JSON.stringify({ error: error.message }), {
+  } catch (error: unknown) {
+    // Log error
+    const recommendationId = crypto.randomUUID();
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    
+    console.error(JSON.stringify({
+      level: "error",
+      timestamp: new Date().toISOString(),
+      recommendation_id: recommendationId,
+      error_message: errorMessage,
+      error_type: "exception",
+    }));
+    
+    return new Response(JSON.stringify({ 
+      error: errorMessage,
+      recommendation_id: recommendationId,
+      response_version: "1.0",
+    }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

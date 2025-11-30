@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Button } from "@/components/ui/button";
+import { Button } from "./ui/button.tsx";
 // import { ModeToggle } from "@/components/mode-toggle"
-import { cn } from "@/lib/utils";
+import { cn } from "../lib/utils.ts";
 import { Layers, Save, FlaskConical } from "lucide-react";
-import { openLoginModal } from "@/lib/helpers";
-import { useUserStore } from "@/store/useUserStore";
-import { UserMenu } from "./ui/user-menu";
+import { openLoginModal } from "../lib/helpers.ts";
+import { useUserStore } from "../store/useUserStore.ts";
+import { UserMenu } from "./ui/user-menu.tsx";
 import MDAIcon from "@/public/images/MDA_Logo_One.svg"
 
 export default function Navbar() {

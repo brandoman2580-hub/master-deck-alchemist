@@ -1,6 +1,6 @@
 // store/cardStore.ts
 import { create } from "zustand";
-import { Card } from "@/types/card";
+import { Card } from "../types/card.ts";
 
 interface CardStore {
   cardList: Card[];

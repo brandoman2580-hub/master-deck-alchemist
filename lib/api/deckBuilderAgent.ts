@@ -1,8 +1,9 @@
-import { getAccessToken } from "@/lib/supabaseClient";
+import { getAccessToken } from "../supabaseClient.ts";
 import {
   DeckBuilderAgentRequest,
   DeckBuilderAgentResponse,
-} from "@/types/ai-agents";
+} from "../../types/ai-agents.ts";
+import process from "node:process";
 
 /**
  * Get deck building suggestions from the AI agent

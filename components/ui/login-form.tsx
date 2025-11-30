@@ -7,10 +7,10 @@ import {
   signInWithFacebook,
   signInWithDiscord,
   signInWithApple,
-} from "@/app/login/actions";
-import { useLoginModalStore } from "@/store/useLoginModalStore";
-import { useUserStore } from "@/store/useUserStore";
-import { supabase } from "@/lib/supabaseClient";
+} from "../../app/login/actions.tsx";
+import { useLoginModalStore } from "../../store/useLoginModalStore.ts";
+import { useUserStore } from "../../store/useUserStore.ts";
+import { supabase } from "../../lib/supabaseClient.ts";
 
 type LoginFormProps = {
   onSignupClick: () => void;

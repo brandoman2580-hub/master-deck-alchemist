@@ -1,8 +1,8 @@
 import { useState, useMemo, useRef } from "react";
 import fuzzysort from "fuzzysort";
-import { Input } from "@/components/ui/input";
+import { Input } from "./input.tsx";
 import { X } from "lucide-react";
-import { CARD_ARCHETYPE_FILTERS } from "@/lib/constants";
+import { CARD_ARCHETYPE_FILTERS } from "../../lib/constants.ts";
 
 type ArchetypeOption = { value: string; label: string };
 

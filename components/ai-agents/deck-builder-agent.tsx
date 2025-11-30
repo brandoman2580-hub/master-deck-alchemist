@@ -2,26 +2,26 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Loader2, Zap, Sparkles, CheckCircle2, AlertCircle, TrendingUp } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button } from "../ui/button.tsx";
 import {
   Card as CardUI,
   CardHeader,
   CardTitle,
   CardDescription,
   CardContent,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { CardPreview } from "@/components/ui/card-preview";
-import { useDeck } from "@/context/deck-context";
-import { Card } from "@/types/card";
-import { BanStatus, DeckSection } from "@/types/types";
-import { getDeckBuilderSuggestions } from "@/lib/api/deckBuilderAgent";
-import { CardRecommendation, DeckAssessment } from "@/types/ai-agents";
+} from "../ui/card.tsx";
+import { Badge } from "../ui/badge.tsx";
+import { Progress } from "../ui/progress.tsx";
+import { ScrollArea } from "../ui/scroll-area.tsx";
+import { CardPreview } from "../ui/card-preview.tsx";
+import { useDeck } from "../../context/deck-context.tsx";
+import { Card } from "../../types/card.ts";
+import { BanStatus, DeckSection } from "../../types/types.ts";
+import { getDeckBuilderSuggestions } from "../../lib/api/deckBuilderAgent.ts";
+import { CardRecommendation, DeckAssessment } from "../../types/ai-agents.ts";
 import Image from "next/image";
-import { getMasterDuelBanlist, getTCGBanlist } from "@/lib/api";
-import { useModeStore } from "@/store/modeStore";
+import { getMasterDuelBanlist, getTCGBanlist } from "../../lib/api.ts";
+import { useModeStore } from "../../store/modeStore.ts";
 
 const MILESTONE_CARD_COUNTS = [10, 20, 30, 40, 50]; // Auto-suggest at these card counts
 
@@ -208,11 +208,13 @@ export default function DeckBuilderAgent() {
   };
 
   const getOptimalDeckType = (card: Card): DeckSection => {
+    // Check for Extra Deck monster types (case-insensitive check for all variations)
+    const type = card.type.toLowerCase();
     if (
-      card.type.includes("Fusion") ||
-      card.type.includes("Synchro") ||
-      card.type.includes("Xyz") ||
-      card.type.includes("Link")
+      type.includes("fusion") ||
+      type.includes("synchro") ||
+      type.includes("xyz") ||
+      type.includes("link")
     ) {
       return "extraDeck";
     }

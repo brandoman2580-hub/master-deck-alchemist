@@ -1,7 +1,7 @@
 import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
-import type { Card } from "@/types/card";
-import DeckCard from "../deck-card";
+import type { Card } from "../../types/card.ts";
+import DeckCard from "../deck-card.tsx";
 
 interface DraggableCardProps {
   id: string; // Should be deckInstanceId

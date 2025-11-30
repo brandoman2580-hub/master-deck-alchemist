@@ -1,10 +1,10 @@
 "use client"
 
 import { useState } from "react"
-import { SignupForm } from "./signup-form"
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
-import { useLoginModalStore } from "@/store/useLoginModalStore"
-import { LoginForm } from "./login-form"
+import { SignupForm } from "./signup-form.tsx"
+import { Dialog, DialogContent, DialogTitle } from "./dialog.tsx"
+import { useLoginModalStore } from "../../store/useLoginModalStore.ts"
+import { LoginForm } from "./login-form.tsx"
 
 export function LoginModal() {
   const { isOpen, closeLoginModal } = useLoginModalStore()

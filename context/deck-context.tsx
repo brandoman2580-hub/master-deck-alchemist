@@ -9,17 +9,17 @@ import {
   useCallback,
   useRef,
 } from "react";
-import { Card } from "@/types/card";
-import { BanStatus, Deck, DeckMode, DeckType } from "@/types/types";
+import { Card } from "../types/card.ts";
+import { BanStatus, Deck, DeckMode, DeckType } from "../types/types.ts";
 import { v4 as uuidv4 } from "uuid";
-import { supabase } from "@/lib/supabaseClient";
-import { getArchetypeName } from "@/lib/helpers";
+import { supabase } from "../lib/supabaseClient.ts";
+import { getArchetypeName } from "../lib/helpers.ts";
 import {
   saveDeck as saveDeckToSupabase,
   deleteDeck as deleteDeckFromSupabase,
   getUserDecks as getUserDecksFromSupabase,
   loadDeck as loadDeckFromSupabase,
-} from "@/lib/supabaseDecks";
+} from "../lib/supabaseDecks.ts";
 
 type DeckSection = "mainDeck" | "extraDeck" | "sideDeck";
 
@@ -72,7 +72,7 @@ export function DeckProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const loadBanlist = async () => {
       try {
-        const { getMasterDuelBanlist } = await import("@/lib/api");
+        const { getMasterDuelBanlist } = await import("../lib/api.ts");
         const banlistData = await getMasterDuelBanlist();
         setBanlist(banlistData);
       } catch (error) {
