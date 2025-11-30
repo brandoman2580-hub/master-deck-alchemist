@@ -1,9 +1,9 @@
 "use client"
 
-import { useDeck } from "../context/deck-context.tsx"
+import { useDeck } from "../context/deck-context"
 import { useState } from "react"
-import { Card, CardContent } from "./ui/card.tsx"
-import { Button } from "./ui/button.tsx"
+import { Card, CardContent } from "./ui/card"
+import { Button } from "./ui/button"
 import { Plus, Info } from "lucide-react"
 import {
   Dialog,
@@ -13,12 +13,12 @@ import {
   DialogTitle,
   DialogTrigger,
   DialogClose,
-} from "./ui/dialog.tsx"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu.tsx"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip.tsx"
-import { Card as CardType } from "../types/card.ts"
+} from "./ui/dialog"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip"
+import { Card as CardType } from "../types/card"
 import Image from "next/image"
-import { getArchetypeName } from "../lib/helpers.ts"
+import { getArchetypeName } from "../lib/helpers"
 
 export default function CardGrid({ cards }: { cards: CardType[] }) {
   const { addCardToDeck } = useDeck()

@@ -3,15 +3,15 @@
 import React from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { CardPreview } from "./card-preview.tsx";
-import { Badge } from "./badge.tsx";
-import { Button } from "./button.tsx";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./select.tsx";
+import { CardPreview } from "./card-preview";
+import { Badge } from "./badge";
+import { Button } from "./button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./select";
 import Image from "next/image";
-import { Card } from "../../types/card.ts";
-import { BanStatus, DeckSection } from "../../types/types.ts";
+import { Card } from "../../types/card";
+import { BanStatus, DeckSection } from "../../types/types";
 import { Plus, Loader2, Check } from "lucide-react";
-import { getArchetypeName } from "../../lib/helpers.ts";
+import { getArchetypeName } from "../../lib/helpers";
 
 interface CandidateCard {
   candidateId: number;

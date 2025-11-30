@@ -1,8 +1,8 @@
 "use client"
 import { useState } from "react"
 import { useActionState } from "react"
-import { signup } from "../../app/login/actions.tsx"
-import { SignupFormState } from "../../types/types.ts"
+import { signup } from "../../app/login/actions"
+import { SignupFormState } from "../../types/types"
 
 const initialState: SignupFormState = { success: false }
 

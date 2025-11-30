@@ -1,5 +1,5 @@
 import { ToggleGroup, ToggleGroupItem } from "@radix-ui/react-toggle-group";
-import { Label } from "./label.tsx";
+import { Label } from "./label";
 
 export type ToggleFilterOption = {
   value: string;

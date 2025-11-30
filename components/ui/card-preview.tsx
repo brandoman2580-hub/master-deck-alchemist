@@ -1,10 +1,10 @@
 "use client";
 
-import { Card } from "../../types/card.ts";
-import { Badge } from "./badge.tsx";
+import { Card } from "../../types/card";
+import { Badge } from "./badge";
 import Image from "next/image";
 import * as Tooltip from "@radix-ui/react-tooltip";
-import { getArchetypeName } from "../../lib/helpers.ts";
+import { getArchetypeName } from "../../lib/helpers";
 
 interface CardPreviewProps {
   card: Card;

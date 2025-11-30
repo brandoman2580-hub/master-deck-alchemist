@@ -2,26 +2,26 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Loader2, Zap, Sparkles, CheckCircle2, AlertCircle, TrendingUp } from "lucide-react";
-import { Button } from "../ui/button.tsx";
+import { Button } from "../ui/button";
 import {
   Card as CardUI,
   CardHeader,
   CardTitle,
   CardDescription,
   CardContent,
-} from "../ui/card.tsx";
-import { Badge } from "../ui/badge.tsx";
-import { Progress } from "../ui/progress.tsx";
-import { ScrollArea } from "../ui/scroll-area.tsx";
-import { CardPreview } from "../ui/card-preview.tsx";
-import { useDeck } from "../../context/deck-context.tsx";
-import { Card } from "../../types/card.ts";
-import { BanStatus, DeckSection } from "../../types/types.ts";
-import { getDeckBuilderSuggestions } from "../../lib/api/deckBuilderAgent.ts";
-import { CardRecommendation, DeckAssessment } from "../../types/ai-agents.ts";
+} from "../ui/card";
+import { Badge } from "../ui/badge";
+import { Progress } from "../ui/progress";
+import { ScrollArea } from "../ui/scroll-area";
+import { CardPreview } from "../ui/card-preview";
+import { useDeck } from "../../context/deck-context";
+import { Card } from "../../types/card";
+import { BanStatus, DeckSection } from "../../types/types";
+import { getDeckBuilderSuggestions } from "../../lib/api/deckBuilderAgent";
+import { CardRecommendation, DeckAssessment } from "../../types/ai-agents";
 import Image from "next/image";
-import { getMasterDuelBanlist, getTCGBanlist } from "../../lib/api.ts";
-import { useModeStore } from "../../store/modeStore.ts";
+import { getMasterDuelBanlist, getTCGBanlist } from "../../lib/api";
+import { useModeStore } from "../../store/modeStore";
 
 const MILESTONE_CARD_COUNTS = [10, 20, 30, 40, 50]; // Auto-suggest at these card counts
 
@@ -41,7 +41,7 @@ export default function DeckBuilderAgent() {
   const [lastAnalyzedDeckId, setLastAnalyzedDeckId] = useState<string | null>(null);
   const [lastMilestone, setLastMilestone] = useState<number>(0);
   
-  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const analysisCacheRef = useRef<Map<string, any>>(new Map());
 
   // Load banlist on mount

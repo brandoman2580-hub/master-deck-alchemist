@@ -1,5 +1,5 @@
 import { X } from "lucide-react";
-import { CardPreview } from "./ui/card-preview.tsx";
+import { CardPreview } from "./ui/card-preview";
 import { Card } from "../types/card.ts";
 import Image from "next/image";
 

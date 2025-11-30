@@ -1,8 +1,8 @@
 "use client";
 
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "../ui/card.tsx";
-import { Button } from "../ui/button.tsx";
-import { Badge } from "../ui/badge.tsx";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "../ui/card";
+import { Button } from "../ui/button";
+import { Badge } from "../ui/badge";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -13,15 +13,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "../ui/alert-dialog.tsx";
+} from "../ui/alert-dialog";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "../ui/tooltip.tsx";
+} from "../ui/tooltip";
 import { Edit, Trash2, Clock, Pin } from "lucide-react";
-import { DeckType } from "../../types/types.ts";
+import { DeckType } from "../../types/types";
 
 interface DeckCardProps {
   deck: DeckType;

@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useRef, useEffect, useMemo } from "react";
-import { Input } from "../ui/input.tsx";
+import { Input } from "../ui/input";
 import { Search, Clock } from "lucide-react";
-import { DeckType } from "../../types/types.ts";
+import { DeckType } from "../../types/types";
 import { useRouter } from "next/navigation";
-import { useDeck } from "../../context/deck-context.tsx";
+import { useDeck } from "../../context/deck-context";
 
 interface DeckSearchAutocompleteProps {
   decks: DeckType[];

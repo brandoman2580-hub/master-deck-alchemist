@@ -1,10 +1,10 @@
 "use client"
 
-import { useUserStore } from "../../store/useUserStore.ts"
+import { useUserStore } from "../../store/useUserStore"
 import { useState, useRef, useEffect } from "react"
-import { Button } from "./button.tsx"
+import { Button } from "./button"
 import { HelpCircle, LogOut } from "lucide-react"
-import { supabase } from "../../lib/supabaseClient.ts"
+import { supabase } from "../../lib/supabaseClient"
 
 function getInitials(user: { user_metadata?: { name?: string }; email?: string } | null) {
   if (!user) return "U"

@@ -66,7 +66,7 @@ export function DeckProvider({ children }: { children: ReactNode }) {
   const [banlist, setBanlist] = useState<Record<string, BanStatus>>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const saveTimeout = useRef<NodeJS.Timeout | null>(null);
+  const saveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Fetch banlist on mount from Supabase
   useEffect(() => {

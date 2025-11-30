@@ -3,10 +3,10 @@
 import { useMemo, useRef } from "react";
 import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
-import { Badge } from "./badge.tsx";
-import { Card } from "../../types/card.ts";
-import { BanStatus } from "../../types/types.ts";
-import { CardPreview } from "./card-preview.tsx";
+import { Badge } from "./badge";
+import { Card } from "../../types/card";
+import { BanStatus } from "../../types/types";
+import { CardPreview } from "./card-preview";
 import Image from "next/image";
 
 interface CardStackProps {

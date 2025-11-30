@@ -3,10 +3,10 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { X, Send, Bot, User, Loader2, Sparkles, Info, ThumbsUp, ThumbsDown, Plus, Check } from "lucide-react";
 import { Avatar, AvatarFallback } from "@radix-ui/react-avatar";
-import { useDeck } from "../context/deck-context.tsx";
-import { Card } from "../types/card.ts";
+import { useDeck } from "../context/deck-context";
+import { Card } from "../types/card";
 import { ScrollArea } from "@radix-ui/react-scroll-area";
-import { Button } from "./ui/button.tsx";
+import { Button } from "./ui/button";
 import Image from "next/image";
 import {
   Card as CardUI,
@@ -15,23 +15,23 @@ import {
   CardDescription,
   CardContent,
   CardFooter,
-} from "./ui/card.tsx";
+} from "./ui/card";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "./ui/dialog.tsx";
-import { Input } from "./ui/input.tsx";
-import { supabase } from "../lib/supabaseClient.ts";
-import { useCardStore } from "../store/cardStore.ts";
+} from "./ui/dialog";
+import { Input } from "./ui/input";
+import { supabase } from "../lib/supabaseClient";
+import { useCardStore } from "../store/cardStore";
 import { BanStatus, DeckSection } from "../types/types.ts";
-import { AIResponseCard } from "./ui/ai-response-card.tsx";
-import { CardPreview } from "./ui/card-preview.tsx";
-import { FormattedRecommendationResponse } from "./ui/formatted-recommendation-response.tsx";
-import { getRecommendations } from "../lib/api/recommendationAgent.ts";
-import { submitFeedback } from "../lib/api/recommendationFeedback.ts";
+import { AIResponseCard } from "./ui/ai-response-card";
+import { CardPreview } from "./ui/card-preview";
+import { FormattedRecommendationResponse } from "./ui/formatted-recommendation-response";
+import { getRecommendations } from "../lib/api/recommendationAgent";
+import { submitFeedback } from "../lib/api/recommendationFeedback";
 
 type DeckAnalysisStructured = {
   overview: string;

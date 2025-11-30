@@ -5,15 +5,15 @@ import {
   SheetHeader,
   SheetTitle,
   SheetDescription,
-} from "./sheet.tsx";
-import { Button } from "./button.tsx";
+} from "./sheet";
+import { Button } from "./button";
 import { Filter, Trash2 } from "lucide-react";
-import { Input } from "./input.tsx";
-import { Label } from "./label.tsx";
-import { CARD_ARCHETYPE_FILTERS, FILTER_CONFIGS } from "../../lib/constants.ts";
-import { ToggleFilter } from "./filter-toggle.tsx";
-import { SearchParams } from "../../types/types.ts";
-import { ArchetypeAutocomplete } from "./archetype-autocomplete.tsx";
+import { Input } from "./input";
+import { Label } from "./label";
+import { CARD_ARCHETYPE_FILTERS, FILTER_CONFIGS } from "../../lib/constants";
+import { ToggleFilter } from "./filter-toggle";
+import { SearchParams } from "../../types/types";
+import { ArchetypeAutocomplete } from "./archetype-autocomplete";
 
 type ArchetypeOption = { value: string; label: string };
 type HandleSelectChange = (key: string, value: string) => void;
