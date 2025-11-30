@@ -3,11 +3,11 @@
 import { useEffect } from "react";
 import type { ReactNode } from "react";
 import { ThemeProvider } from "next-themes";
-import { DeckProvider } from "../context/deck-context.tsx";
-import Navbar from "../components/navbar.tsx";
-import { useCardStore } from "../store/cardStore.ts";
-import { getCardData } from "../lib/api.ts";
-import { useSupabaseUserSync } from "../hooks/useSupabaseUserSync.ts";
+import { DeckProvider } from "../context/deck-context";
+import Navbar from "../components/navbar";
+import { useCardStore } from "../store/cardStore";
+import { getCardData } from "../lib/api";
+import { useSupabaseUserSync } from "../hooks/useSupabaseUserSync";
 
 export function Providers({ children }: { children: ReactNode }) {
   const setCardList = useCardStore((state) => state.setCardList);

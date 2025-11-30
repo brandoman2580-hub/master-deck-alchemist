@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { Button } from "../../components/ui/button.tsx";
+import { Button } from "../../components/ui/button";
 import {
   Card,
   CardContent,
@@ -9,32 +9,32 @@ import {
   CardHeader,
   CardTitle,
   CardDescription,
-} from "../../components/ui/card.tsx";
+} from "../../components/ui/card";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../../components/ui/select.tsx";
-import { Input } from "../../components/ui/input.tsx";
-import { Badge } from "../../components/ui/badge.tsx";
-import { Progress } from "../../components/ui/progress.tsx";
-import { ScrollArea } from "../../components/ui/scroll-area.tsx";
-import { getMetaDecks, getUserDecks } from "../../lib/supabaseDecks.ts";
-import { useUserStore } from "../../store/useUserStore.ts";
-import { DeckType } from "../../types/types.ts";
-import { openLoginModal } from "../../lib/helpers.ts";
+} from "../../components/ui/select";
+import { Input } from "../../components/ui/input";
+import { Badge } from "../../components/ui/badge";
+import { Progress } from "../../components/ui/progress";
+import { ScrollArea } from "../../components/ui/scroll-area";
+import { getMetaDecks, getUserDecks } from "../../lib/supabaseDecks";
+import { useUserStore } from "../../store/useUserStore";
+import { DeckType } from "../../types/types";
+import { openLoginModal } from "../../lib/helpers";
 import {
   analyzeMatchup,
   simulateDuels,
   getStrategicInsights,
-} from "../../lib/api/deckTesterAgent.ts";
-import { DeckTesterAgentResponse } from "../../types/ai-agents.ts";
+} from "../../lib/api/deckTesterAgent";
+import { DeckTesterAgentResponse } from "../../types/ai-agents";
 
-import { DECK_MODES } from "../../lib/constants.ts";
-import { useModeStore } from "../../store/modeStore.ts";
-import { useDeck } from "../../context/deck-context.tsx";
+import { DECK_MODES } from "../../lib/constants";
+import { useModeStore } from "../../store/modeStore";
+import { useDeck } from "../../context/deck-context";
 import { Loader2, Zap, AlertCircle, CheckCircle2, X, Info, Target, Dices, Brain } from "lucide-react";
 import {
   Dialog,
@@ -43,7 +43,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "../../components/ui/dialog.tsx";
+} from "../../components/ui/dialog";
 
 type TestType = "matchup_analysis" | "duel_simulation" | "strategic_insights";
 

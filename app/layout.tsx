@@ -3,8 +3,8 @@ import type { ReactNode } from "react";
 import { Inter } from "next/font/google";
 import localFont from "next/font/local";
 import "./globals.css";
-import { Providers } from "./providers.tsx";
-import { LoginModal } from "../components/ui/login-modal.tsx";
+import { Providers } from "./providers";
+import { LoginModal } from "../components/ui/login-modal";
 
 const inter = Inter({ subsets: ["latin"] });
 

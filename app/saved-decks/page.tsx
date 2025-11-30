@@ -1,17 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Button } from "../../components/ui/button.tsx";
-import { Card, CardContent } from "../../components/ui/card.tsx";
+import { Button } from "../../components/ui/button";
+import { Card, CardContent } from "../../components/ui/card";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { getUserDecks, deleteDeck, toggleDeckPin } from "../../lib/supabaseDecks.ts";
-import { useUserStore } from "../../store/useUserStore.ts";
-import { useDeck } from "../../context/deck-context.tsx";
-import { DeckType } from "../../types/types.ts";
-import { DeckSearchAutocomplete } from "../../components/saved-decks/deck-search-autocomplete.tsx";
-import { PinnedDecksSection } from "../../components/saved-decks/pinned-decks-section.tsx";
-import { ModeDecksSection } from "../../components/saved-decks/mode-decks-section.tsx";
+import { getUserDecks, deleteDeck, toggleDeckPin } from "../../lib/supabaseDecks";
+import { useUserStore } from "../../store/useUserStore";
+import { useDeck } from "../../context/deck-context";
+import { DeckType } from "../../types/types";
+import { DeckSearchAutocomplete } from "../../components/saved-decks/deck-search-autocomplete";
+import { PinnedDecksSection } from "../../components/saved-decks/pinned-decks-section";
+import { ModeDecksSection } from "../../components/saved-decks/mode-decks-section";
 
 export default function SavedDecks() {
   const [decks, setDecks] = useState<DeckType[]>([]);
