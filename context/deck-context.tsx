@@ -72,7 +72,7 @@ export function DeckProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const loadBanlist = async () => {
       try {
-        const { getMasterDuelBanlist } = await import("../lib/api.ts");
+        const { getMasterDuelBanlist } = await import("../lib/api");
         const banlistData = await getMasterDuelBanlist();
         setBanlist(banlistData);
       } catch (error) {
