@@ -10,7 +10,7 @@ import {
   useRef,
   useMemo,
 } from "react";
-import { useDeck } from "../../context/deck-context.tsx";
+import { useDeck } from "../../context/deck-context";
 import {
   DndContext,
   type DragEndEvent,
@@ -21,23 +21,23 @@ import {
   DragOverlay,
   UniqueIdentifier,
 } from "@dnd-kit/core";
-import { Button } from "../../components/ui/button.tsx";
+import { Button } from "../../components/ui/button";
 import {
   Card as CardUI,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "../../components/ui/card.tsx";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs.tsx";
-import { Badge } from "../../components/ui/badge.tsx";
+} from "../../components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
+import { Badge } from "../../components/ui/badge";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../../components/ui/select.tsx";
+} from "../../components/ui/select";
 import { Virtuoso } from "react-virtuoso";
 import {
   AlertCircle,
@@ -67,36 +67,36 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "../../components/ui/dialog.tsx";
+} from "../../components/ui/dialog";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "../../components/ui/tooltip.tsx";
-import { Progress } from "../../components/ui/progress.tsx";
-import { CardStack } from "../../components/ui/card-stack.tsx";
-import AIChatbot from "../../components/ai-chatbot.tsx";
-import { Card } from "../../types/card.ts";
+} from "../../components/ui/tooltip";
+import { Progress } from "../../components/ui/progress";
+import { CardStack } from "../../components/ui/card-stack";
+import AIChatbot from "../../components/ai-chatbot";
+import { Card } from "../../types/card";
 import Image from "next/image";
 import {
   DECK_MODES,
   FLOODGATE_CARDS,
   POWERFUL_ARCHETYPE_CARDS,
   ROGUE_ARCHETYPE_CARDS,
-} from "../../lib/constants.ts";
-import { DeckDropZone } from "../../components/ui/deck-drop-zone.tsx";
-import { DraggableCard } from "../../components/ui/draggable-card.tsx";
-import { filterCards, openLoginModal, getArchetypeName } from "../../lib/helpers.ts";
-import { BanStatus, DeckMode } from "../../types/types.ts";
-import { InputWithClear } from "../../components/ui/input-with-clear.tsx";
-import { FilterMenu } from "../../components/ui/filter-menu.tsx";
-import { useCardStore } from "../../store/cardStore.ts";
-import { useUserStore } from "../../store/useUserStore.ts";
-import { Skeleton } from "../../components/ui/skeleton.tsx";
-import { getTCGBanlist, getMasterDuelBanlist } from "../../lib/api.ts";
-import { useModeStore } from "../../store/modeStore.ts";
-import DeckBuilderTips from "../../components/deck-builder-tips.tsx";
+} from "../../lib/constants";
+import { DeckDropZone } from "../../components/ui/deck-drop-zone";
+import { DraggableCard } from "../../components/ui/draggable-card";
+import { filterCards, openLoginModal, getArchetypeName } from "../../lib/helpers";
+import { BanStatus, DeckMode } from "../../types/types";
+import { InputWithClear } from "../../components/ui/input-with-clear";
+import { FilterMenu } from "../../components/ui/filter-menu";
+import { useCardStore } from "../../store/cardStore";
+import { useUserStore } from "../../store/useUserStore";
+import { Skeleton } from "../../components/ui/skeleton";
+import { getTCGBanlist, getMasterDuelBanlist } from "../../lib/api";
+import { useModeStore } from "../../store/modeStore";
+import DeckBuilderTips from "../../components/deck-builder-tips";
 
 export default function DeckBuilder() {
   const {
