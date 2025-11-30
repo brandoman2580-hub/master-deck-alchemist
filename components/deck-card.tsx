@@ -1,6 +1,6 @@
 import { X } from "lucide-react";
 import { CardPreview } from "./ui/card-preview";
-import { Card } from "../types/card.ts";
+import { Card } from "../types/card";
 import Image from "next/image";
 
 interface DeckCardProps {

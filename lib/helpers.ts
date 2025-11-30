@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Card } from "../types/card.ts";
+import { Card } from "../types/card";
 import {
   BanStatus,
   CountedCard,
@@ -10,9 +10,9 @@ import {
   ImportedDeck,
   NormalizedDeck,
   SearchParams,
-} from "../types/types.ts";
-import { ATK_RANGE_MAP, DEF_RANGE_MAP } from "./constants.ts";
-import { useLoginModalStore } from "../store/useLoginModalStore.ts";
+} from "../types/types";
+import { ATK_RANGE_MAP, DEF_RANGE_MAP } from "./constants";
+import { useLoginModalStore } from "../store/useLoginModalStore";
 
 function expandCardList(list?: (string | CountedCard)[]): string[] {
   if (!list) return [];

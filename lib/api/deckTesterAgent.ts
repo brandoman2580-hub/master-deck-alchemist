@@ -1,8 +1,8 @@
-import { getAccessToken } from "../supabaseClient.ts";
+import { getAccessToken } from "../supabaseClient";
 import {
   DeckTesterAgentRequest,
   DeckTesterAgentResponse,
-} from "../../types/ai-agents.ts";
+} from "../../types/ai-agents";
 import process from "node:process";
 
 const DECK_TESTER_AGENT_URL = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/deck-tester-agent`;

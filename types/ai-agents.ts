@@ -1,5 +1,5 @@
-import { Card } from "./card.ts";
-import { DeckType } from "./types.ts";
+import { Card } from "./card";
+import { DeckType } from "./types";
 
 // Base request interface for all AI agents
 export interface AIAgentRequest {

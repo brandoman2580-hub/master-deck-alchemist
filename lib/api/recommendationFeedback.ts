@@ -1,7 +1,7 @@
 // Client API for recommendation feedback
 // Rationale: Type-safe feedback submission with error handling
 
-import { getAccessToken } from "../supabaseClient.ts";
+import { getAccessToken } from "../supabaseClient";
 
 export interface FeedbackRequest {
   recommendation_id: string;

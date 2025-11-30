@@ -1,6 +1,6 @@
 "use client";
 
-import { DeckType, DeckMode } from "../../types/types.ts";
+import { DeckType, DeckMode } from "../../types/types";
 import { DeckCard } from "./deck-card";
 import { Card, CardContent } from "../ui/card";
 

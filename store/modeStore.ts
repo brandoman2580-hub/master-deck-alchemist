@@ -1,4 +1,4 @@
-import { DeckMode } from "../types/types.ts";
+import { DeckMode } from "../types/types";
 import { create } from "zustand"
 
 type ModeStore = {

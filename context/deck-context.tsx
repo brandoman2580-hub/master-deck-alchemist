@@ -9,17 +9,17 @@ import {
   useCallback,
   useRef,
 } from "react";
-import { Card } from "../types/card.ts";
-import { BanStatus, Deck, DeckMode, DeckType } from "../types/types.ts";
+import { Card } from "../types/card";
+import { BanStatus, Deck, DeckMode, DeckType } from "../types/types";
 import { v4 as uuidv4 } from "uuid";
-import { supabase } from "../lib/supabaseClient.ts";
-import { getArchetypeName } from "../lib/helpers.ts";
+import { supabase } from "../lib/supabaseClient";
+import { getArchetypeName } from "../lib/helpers";
 import {
   saveDeck as saveDeckToSupabase,
   deleteDeck as deleteDeckFromSupabase,
   getUserDecks as getUserDecksFromSupabase,
   loadDeck as loadDeckFromSupabase,
-} from "../lib/supabaseDecks.ts";
+} from "../lib/supabaseDecks";
 
 type DeckSection = "mainDeck" | "extraDeck" | "sideDeck";
 

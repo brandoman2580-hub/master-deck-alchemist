@@ -1,7 +1,6 @@
-// api.ts
 import { createClient } from "@supabase/supabase-js";
-import { Card, CardSearchParams } from "../types/card.ts";
-import { BanStatus } from "../types/types.ts";
+import { Card, CardSearchParams } from "../types/card";
+import { BanStatus } from "../types/types";
 
 // 1. Setup your Supabase client
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;

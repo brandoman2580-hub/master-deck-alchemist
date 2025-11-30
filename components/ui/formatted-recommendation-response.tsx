@@ -1,7 +1,6 @@
 "use client";
 
-import React from "react";
-import { Card } from "../../types/card.ts";
+import { Card } from "../../types/card";
 import { Sparkles, TrendingUp, AlertCircle, CheckCircle2, XCircle } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";

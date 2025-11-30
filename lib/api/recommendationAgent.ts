@@ -1,5 +1,5 @@
-import { getAccessToken } from "../supabaseClient.ts";
-import { DeckType } from "../../types/types.ts";
+import { getAccessToken } from "../supabaseClient";
+import { DeckType } from "../../types/types";
 
 export interface RecommendationRequest {
   question: string;

@@ -26,7 +26,7 @@ import {
 import { Input } from "./ui/input";
 import { supabase } from "../lib/supabaseClient";
 import { useCardStore } from "../store/cardStore";
-import { BanStatus, DeckSection } from "../types/types.ts";
+import { BanStatus, DeckSection } from "../types/types";
 import { AIResponseCard } from "./ui/ai-response-card";
 import { CardPreview } from "./ui/card-preview";
 import { FormattedRecommendationResponse } from "./ui/formatted-recommendation-response";
@@ -940,7 +940,7 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
   useEffect(() => {
     const loadBanlist = async () => {
       try {
-        const { getMasterDuelBanlist } = await import("../lib/api.ts");
+        const { getMasterDuelBanlist } = await import("../lib/api");
         const banlistData = await getMasterDuelBanlist();
         setBanlist(banlistData);
       } catch (error) {

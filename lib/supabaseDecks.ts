@@ -1,5 +1,5 @@
-import { Deck, DeckType } from "../types/types.ts";
-import { supabase } from "./supabaseClient.ts";
+import { Deck, DeckType } from "../types/types";
+import { supabase } from "./supabaseClient";
 
 export async function saveDeck(deck: DeckType, userId: string) {
   const { data, error } = await supabase

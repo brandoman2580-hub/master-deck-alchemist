@@ -1,5 +1,5 @@
-import { DECK_MODES } from "../lib/constants.ts";
-import { Card } from "./card.ts";
+import { DECK_MODES } from "../lib/constants";
+import { Card } from "./card";
 
 export type AuthProvider = 'google' | 'facebook' | 'discord' | 'apple'
 export type DeckMode = (typeof DECK_MODES)[number];
