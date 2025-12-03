@@ -34,9 +34,9 @@ export default function Navbar() {
   ];
 
   return (
-    <header className="sticky top-4 z-50">
+    <header className="sticky top-4 z-[30]">
       <div className="mx-8">
-        <div className="container flex h-14 items-center bg-gradient-to-b from-cyan-400/20 via-cyan-500/15 to-cyan-600/5 backdrop-blur-md border border-cyan-500/30 rounded-lg shadow-[0_0_20px_rgba(56,189,248,0.15)] px-4">
+        <div className="container flex h-14 items-center bg-gradient-to-b from-cyan-400/20 via-cyan-500/15 to-cyan-600/5 backdrop-blur-md border border-cyan-500/30 rounded-lg shadow-[0_0_20px_rgba(56,189,248,0.15)] px-4 glass-panel border-thin-neon">
           <Link href="/" className="mr-6 flex items-center space-x-0">
             <div className="flex items-center gap-3">
               <MDAIcon className="w-14 h-14" />

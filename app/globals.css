@@ -33,6 +33,11 @@
     --ring: 221.2 83.2% 53.3%;
     --radius: 0.5rem;
     --font-heading: 'Orbitron', system-ui, sans-serif;
+    /* Cyberpunk theme variables */
+    --cyb-900: #06121a;
+    --cyb-800: #0b2633;
+    --accent-cyan: #14EFFF;
+    --muted-50: #B7C6D6;
   }
 
   .dark {
@@ -64,6 +69,12 @@
   }
   body {
     @apply bg-background text-foreground overflow-x-hidden;
+    font-family: 'Inter', system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    background: linear-gradient(180deg,var(--cyb-900) 0%, #071826 60%);
+    color: #E8F1F8;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    line-height: 1.4;
   }
   html,
   body,
@@ -72,4 +83,126 @@
     margin: 0;
     padding: 0;
   }
+}
+
+/* Glass panels — lighter opacity */
+.glass-panel {
+  background: rgba(255,255,255,0.02); /* very light, more transparent */
+  backdrop-filter: blur(6px) saturate(120%);
+  -webkit-backdrop-filter: blur(6px) saturate(120%);
+  border: 1px solid rgba(255,255,255,0.035); /* thin border */
+  box-shadow: 0 6px 24px rgba(2,6,23,0.45);
+  border-radius: 14px;
+}
+
+/* Slightly more visible glass for dashboard cards */
+.glass-panel-strong {
+  background: rgba(255,255,255,0.035);
+  border: 1px solid rgba(20,239,255,0.06);
+  box-shadow: 0 8px 30px rgba(2,6,23,0.5), inset 0 1px 0 rgba(255,255,255,0.02);
+  border-radius: 12px;
+}
+
+/* Thin neon border utility */
+.border-thin-neon {
+  border-style: solid;
+  border-width: 1px;
+  border-color: rgba(20,239,255,0.18);
+}
+
+/* Neon text accent */
+.text-accent {
+  color: var(--accent-cyan);
+  text-shadow: 0 2px 18px rgba(20,239,255,0.10);
+}
+
+/* Buttons: transparent / light opacity backgrounds and thin borders */
+.btn-cyber {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.95rem;
+  border-radius: 8px;
+  font-weight: 600;
+  border: 1px solid rgba(255,255,255,0.04);
+  background: rgba(20,239,255,0.035); /* low opacity cyan tint for primary */
+  color: #e8f1f8;
+  transition: all 180ms cubic-bezier(.2,.9,.35,1);
+}
+
+.btn-cyber:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(20,239,255,0.06);
+  border-color: rgba(20,239,255,0.12);
+}
+
+/* Ghost button */
+.btn-ghost {
+  background: rgba(255,255,255,0.01);
+  border: 1px solid rgba(255,255,255,0.03);
+  color: rgba(255,255,255,0.9);
+}
+
+/* Focus outline (theme fit) */
+:focus {
+  outline: 2px solid rgba(20,239,255,0.12);
+  outline-offset: 3px;
+  box-shadow: 0 0 18px rgba(20,239,255,0.05);
+}
+
+/* subtle noise layer helper (optional) */
+.canvas-noise {
+  background-image: url('/ui/noise-2x.png'); /* optional small grain file in public/ui */
+  opacity: 0.025;
+  pointer-events: none;
+  mix-blend-mode: overlay;
+}
+
+/* Streaks layer - static vertical cyan lines (max 30px height, thicker) */
+.streaks-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  opacity: 0.25;
+  background-image: 
+    linear-gradient(180deg, transparent 0%, rgba(20,239,255,0.8) 50%, transparent 100%),
+    linear-gradient(180deg, transparent 0%, rgba(20,239,255,0.7) 50%, transparent 100%),
+    linear-gradient(180deg, transparent 0%, rgba(20,239,255,0.9) 50%, transparent 100%),
+    linear-gradient(180deg, transparent 0%, rgba(20,239,255,0.6) 50%, transparent 100%),
+    linear-gradient(180deg, transparent 0%, rgba(20,239,255,0.75) 50%, transparent 100%),
+    linear-gradient(180deg, transparent 0%, rgba(20,239,255,0.85) 50%, transparent 100%),
+    linear-gradient(180deg, transparent 0%, rgba(20,239,255,0.65) 50%, transparent 100%),
+    linear-gradient(180deg, transparent 0%, rgba(20,239,255,0.8) 50%, transparent 100%),
+    linear-gradient(180deg, transparent 0%, rgba(20,239,255,0.7) 50%, transparent 100%),
+    linear-gradient(180deg, transparent 0%, rgba(20,239,255,0.75) 50%, transparent 100%),
+    linear-gradient(180deg, transparent 0%, rgba(20,239,255,0.6) 50%, transparent 100%),
+    linear-gradient(180deg, transparent 0%, rgba(20,239,255,0.8) 50%, transparent 100%);
+  background-size: 
+    2.5px 30px,
+    3px 28px,
+    2px 30px,
+    2.5px 25px,
+    3px 30px,
+    2px 27px,
+    2.5px 24px,
+    3px 30px,
+    2px 26px,
+    2.5px 29px,
+    3px 23px,
+    2px 30px;
+  background-position:
+    12% 8%,
+    25% 35%,
+    38% 15%,
+    52% 42%,
+    65% 22%,
+    78% 50%,
+    18% 60%,
+    88% 28%,
+    32% 55%,
+    72% 18%,
+    45% 38%,
+    82% 45%;
+  background-repeat: no-repeat;
 }

@@ -257,7 +257,7 @@ export default function DeckTester() {
                         <Info className="h-4 w-4" />
                       </Button>
                     </DialogTrigger>
-                    <DialogContent className="bg-gradient-to-b from-cyan-400/20 via-cyan-500/15 to-cyan-600/5 backdrop-blur-md border border-cyan-500/30 text-slate-50 max-w-2xl">
+                    <DialogContent className="text-slate-50 max-w-2xl">
                       <DialogHeader>
                         <DialogTitle className="text-cyan-100" style={{ fontFamily: "var(--font-heading)" }}>
                           Test Type Information
