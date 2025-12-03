@@ -44,7 +44,7 @@ export function DeckCard({
   const displayName = shouldTruncate ? `${deck.name.slice(0, 25)}...` : deck.name;
 
   return (
-    <Card className="bg-gradient-to-b from-cyan-400/20 via-cyan-500/15 to-cyan-600/5 backdrop-blur-md border border-cyan-500/30 rounded-2xl">
+    <Card className="hover:border-accent-cyan/25 transition-colors">
       <CardHeader>
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -53,8 +53,7 @@ export function DeckCard({
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <CardTitle 
-                      className="text-slate-50 truncate cursor-help" 
-                      style={{ fontFamily: "var(--font-heading)" }}
+                      className="text-white truncate cursor-help font-display" 
                     >
                       {displayName}
                     </CardTitle>
@@ -69,15 +68,14 @@ export function DeckCard({
               </TooltipProvider>
             ) : (
               <CardTitle 
-                className="text-slate-50 truncate" 
-                style={{ fontFamily: "var(--font-heading)" }}
+                className="text-white truncate font-display" 
               >
                 {displayName}
               </CardTitle>
             )}
             <Badge
               variant="secondary"
-              className="text-xs font-medium pointer-events-none border bg-cyan-500/40 border-cyan-400/60 text-cyan-100 whitespace-nowrap"
+              className="text-xs font-medium pointer-events-none border bg-accent-cyan/20 border-accent-cyan/30 text-accent-cyan/80 whitespace-nowrap font-display"
             >
               {deck.mode}
             </Badge>
@@ -88,8 +86,8 @@ export function DeckCard({
             onClick={() => onTogglePin(deck.id, !deck.isPinned)}
             className={`h-8 w-8 flex-shrink-0 ${
               deck.isPinned
-                ? "text-cyan-400 hover:text-cyan-300"
-                : "text-slate-400 hover:text-cyan-400"
+                ? "text-accent-cyan hover:text-accent-cyan/90"
+                : "text-muted-50/70 hover:text-accent-cyan"
             }`}
             aria-pressed={deck.isPinned}
             aria-label={deck.isPinned ? "Unpin deck" : "Pin deck"}
@@ -97,24 +95,24 @@ export function DeckCard({
             <Pin className={`h-4 w-4 ${deck.isPinned ? "fill-current" : ""}`} />
           </Button>
         </div>
-        <CardDescription className="flex items-center text-slate-300">
-          <Clock className="h-3 w-3 mr-1 text-cyan-400" />
+        <CardDescription className="flex items-center text-muted-50">
+          <Clock className="h-3 w-3 mr-1 text-accent-cyan" />
           Last updated: {deck.updated_at ? formatDate(deck.updated_at) : "Unknown"}
         </CardDescription>
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-3 gap-2 text-sm">
-          <div className="bg-slate-950/60 border border-cyan-500/30 p-2 rounded-md text-center">
-            <p className="text-xs text-slate-300">Main</p>
-            <p className="font-bold text-cyan-300">{deck.mainDeck.length}</p>
+          <div className="bg-cyb-800/40 border border-accent-cyan/18 p-2 rounded-md text-center">
+            <p className="text-xs text-muted-50">Main</p>
+            <p className="font-bold text-accent-cyan/90 font-display">{deck.mainDeck.length}</p>
           </div>
-          <div className="bg-slate-950/60 border border-cyan-500/30 p-2 rounded-md text-center">
-            <p className="text-xs text-slate-300">Extra</p>
-            <p className="font-bold text-cyan-300">{deck.extraDeck.length}</p>
+          <div className="bg-cyb-800/40 border border-accent-cyan/18 p-2 rounded-md text-center">
+            <p className="text-xs text-muted-50">Extra</p>
+            <p className="font-bold text-accent-cyan/90 font-display">{deck.extraDeck.length}</p>
           </div>
-          <div className="bg-slate-950/60 border border-cyan-500/30 p-2 rounded-md text-center">
-            <p className="text-xs text-slate-300">Side</p>
-            <p className="font-bold text-cyan-300">{deck.sideDeck.length}</p>
+          <div className="bg-cyb-800/40 border border-accent-cyan/18 p-2 rounded-md text-center">
+            <p className="text-xs text-muted-50">Side</p>
+            <p className="font-bold text-accent-cyan/90 font-display">{deck.sideDeck.length}</p>
           </div>
         </div>
       </CardContent>
@@ -139,20 +137,23 @@ export function DeckCard({
                 <Trash2 className="h-4 w-4" />
               </Button>
             </AlertDialogTrigger>
-            <AlertDialogContent className="bg-gradient-to-b from-cyan-400/20 via-cyan-500/15 to-cyan-600/5 backdrop-blur-md border border-cyan-500/30">
+            <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle className="text-slate-50" style={{ fontFamily: "var(--font-heading)" }}>
+                <AlertDialogTitle className="text-white font-display">
                   Delete Deck
                 </AlertDialogTitle>
-                <AlertDialogDescription className="text-slate-300">
+                <AlertDialogDescription className="text-muted-50">
                   Are you sure you want to delete {deck.name}? This action cannot be undone.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogCancel className="text-slate-300 hover:text-slate-50 border-cyan-500/30 hover:border-cyan-500/50 bg-slate-800/40 hover:bg-slate-800/60">
+                  Cancel
+                </AlertDialogCancel>
                 <AlertDialogAction
                   onClick={() => onDelete(deck.id)}
                   disabled={loading}
+                  className="bg-red-600 hover:bg-red-700 text-white border-red-500/50"
                 >
                   Delete
                 </AlertDialogAction>

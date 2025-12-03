@@ -12,6 +12,7 @@ import { DeckType } from "../../types/types";
 import { DeckSearchAutocomplete } from "../../components/saved-decks/deck-search-autocomplete";
 import { PinnedDecksSection } from "../../components/saved-decks/pinned-decks-section";
 import { ModeDecksSection } from "../../components/saved-decks/mode-decks-section";
+import CutCornerWrapper from "../../components/cut-corner-wrapper";
 
 export default function SavedDecks() {
   const [decks, setDecks] = useState<DeckType[]>([]);
@@ -95,15 +96,12 @@ export default function SavedDecks() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 px-8 pt-8 pb-10">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-cyb-900 px-8 pt-8 pb-10 relative">
+      <div className="max-w-7xl mx-auto relative z-10">
         <div className="flex flex-col space-y-6">
           <div className="flex items-center justify-between">
-            <h1
-              className="text-3xl font-bold text-slate-50"
-              style={{ fontFamily: "var(--font-heading)" }}
-            >
-              Saved Decks
+            <h1 className="text-3xl font-bold text-white font-display tracking-wider">
+              SAVED DECKS
             </h1>
             <Button asChild>
               <Link href="/deck-builder">Create New Deck</Link>
@@ -111,18 +109,27 @@ export default function SavedDecks() {
           </div>
 
           {error && (
-            <div className="bg-red-500/20 border border-red-500/50 text-red-300 px-4 py-3 rounded-lg backdrop-blur-sm">
-              {error}
-            </div>
+            <CutCornerWrapper
+              size="md"
+              padding="0.75rem 1rem"
+              style={{
+                ["--cut-corner-stroke" as any]: "rgba(20,239,255,0.38)",
+                ["--cut-corner-fill" as any]: "transparent",
+              }}
+            >
+              <div className="bg-accent-cyan/10 border border-accent-cyan/30 text-accent-cyan backdrop-blur-sm glass-panel">
+                {error}
+              </div>
+            </CutCornerWrapper>
           )}
 
           {loading ? (
-            <p className="text-slate-300">Loading decks...</p>
+            <p className="text-muted-50">Loading decks...</p>
           ) : decks.length === 0 ? (
-            <Card className="p-8 text-center bg-gradient-to-b from-cyan-400/20 via-cyan-500/15 to-cyan-600/5 backdrop-blur-md border border-cyan-500/30 rounded-2xl">
+            <Card className="p-8 text-center glass-panel border-thin-neon">
               <CardContent className="pt-6">
-                <p className="text-slate-300">No saved decks found</p>
-                <p className="text-sm text-slate-400 mt-2">
+                <p className="text-muted-50">No saved decks found</p>
+                <p className="text-sm text-muted-50/70 mt-2">
                   Start building a deck and save it to see it here
                 </p>
                 <Button className="mt-4" asChild>

@@ -29,7 +29,8 @@ import {
   CardHeader,
   CardTitle,
 } from "../../components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
+import CutCornerWrapper from "../../components/cut-corner-wrapper";
+import { Tabs, TabsContent } from "../../components/ui/tabs";
 import { Badge } from "../../components/ui/badge";
 import {
   Select,
@@ -278,6 +279,13 @@ export default function DeckBuilder() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [sliderStyle, setSliderStyle] = useState<React.CSSProperties>({});
 
+  // Tab refs for sliding indicator
+  const mainTabRef = useRef<HTMLButtonElement>(null);
+  const extraTabRef = useRef<HTMLButtonElement>(null);
+  const sideTabRef = useRef<HTMLButtonElement>(null);
+  const tabsContainerRef = useRef<HTMLDivElement>(null);
+  const [tabSliderStyle, setTabSliderStyle] = useState<React.CSSProperties>({});
+
   useLayoutEffect(() => {
     if (containerRef.current && btnRefs[deckMode].current) {
       const containerRect = containerRef.current.getBoundingClientRect();
@@ -288,6 +296,24 @@ export default function DeckBuilder() {
       });
     }
   }, [deckMode, btnRefs]);
+
+  useLayoutEffect(() => {
+    if (tabsContainerRef.current) {
+      let activeTabRef: React.RefObject<HTMLButtonElement> | null = null;
+      if (activeTab === "main") activeTabRef = mainTabRef;
+      else if (activeTab === "extra") activeTabRef = extraTabRef;
+      else if (activeTab === "side") activeTabRef = sideTabRef;
+
+      if (activeTabRef?.current) {
+        const containerRect = tabsContainerRef.current.getBoundingClientRect();
+        const btnRect = activeTabRef.current.getBoundingClientRect();
+        setTabSliderStyle({
+          left: btnRect.left - containerRect.left,
+          width: btnRect.width,
+        });
+      }
+    }
+  }, [activeTab]);
 
   const analyzeDeck = useCallback(() => {
     const stats = getDeckStats();
@@ -702,13 +728,13 @@ export default function DeckBuilder() {
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      {/* HUD-styled deck builder layout: maintains multi-file uploader mental model (left = drop zone, right = library). */}
-      <div className="min-h-screen bg-slate-950 px-8 pt-8 pb-10">
-        <div className="max-w-7xl mx-auto">
+      {/* Cyberpunk-styled deck builder layout */}
+      <div className="min-h-screen bg-cyb-900 px-8 pt-8 pb-10 relative">
+        <div className="max-w-7xl mx-auto relative z-10">
           <div className="flex flex-col space-y-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-slate-50" style={{ fontFamily: "var(--font-heading)" }}>Deck Builder</h1>
+              <h1 className="text-3xl font-bold text-white font-display tracking-wider">DECK BUILDER</h1>
               <div className="flex flex-wrap gap-2 mt-2">
                 {deckPlayStyle.map((style, index) => {
                   const Icon = getPlaystyleIcon(style);
@@ -748,7 +774,19 @@ export default function DeckBuilder() {
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-6">
             {/* Left side - Deck Building Area (Primary Drop/Upload Panel) */}
             <div className="space-y-6">
-              <CardUI className="bg-gradient-to-b from-cyan-400/20 via-cyan-500/15 to-cyan-600/5 backdrop-blur-md border border-cyan-500/30 rounded-2xl">
+              <CutCornerWrapper
+                size="md"
+                hoverHighlight
+                padding="0"
+                style={{
+                  ["--cut-corner-stroke" as any]: "rgba(20,239,255,0.38)",
+                  ["--cut-corner-stroke-hover" as any]: "rgba(20,239,255,0.52)",
+                  ["--cut-corner-fill" as any]: "transparent",
+                  backdropFilter: "blur(6px) saturate(120%)",
+                  WebkitBackdropFilter: "blur(6px) saturate(120%)",
+                }}
+              >
+                <CardUI className="bg-transparent">
                 <CardHeader className="pb-2">
                   <div className="flex items-center justify-between w-full">
                     <div className="flex items-center gap-2">
@@ -762,14 +800,13 @@ export default function DeckBuilder() {
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <span 
-                                  className="text-xl font-bold text-slate-50 truncate cursor-help" 
-                                  style={{ fontFamily: "var(--font-heading)" }}
+                                  className="text-xl font-bold text-white truncate cursor-help font-display" 
                                 >
                                   {displayName}
                                 </span>
                               </TooltipTrigger>
                               <TooltipContent
-                                className="bg-gradient-to-b from-cyan-400/20 via-cyan-500/15 to-cyan-600/5 backdrop-blur-md border border-cyan-500/30 text-slate-50 shadow-[0_0_20px_rgba(56,189,248,0.25)] max-w-xs"
+                                className="text-white shadow-[0_0_20px_rgba(56,189,248,0.25)] max-w-xs"
                                 side="top"
                               >
                                 <p className="font-medium">{deckName}</p>
@@ -777,7 +814,7 @@ export default function DeckBuilder() {
                             </Tooltip>
                           </TooltipProvider>
                         ) : (
-                          <span className="text-xl font-bold text-slate-50" style={{ fontFamily: "var(--font-heading)" }}>
+                          <span className="text-xl font-bold text-white font-display">
                             {displayName}
                           </span>
                         );
@@ -838,14 +875,15 @@ export default function DeckBuilder() {
                           </DialogFooter>
                         </DialogContent>
                       </Dialog>
+                    </div>
                       <div className="flex items-center gap-2">
                         <div
-                          className="relative flex w-fit rounded-full bg-slate-900/60 border border-cyan-500/30 backdrop-blur-sm"
+                          className="relative flex w-fit bg-cyb-800/40 border border-accent-cyan/18 backdrop-blur-sm rounded-lg"
                           ref={containerRef}
                         >
-                          {/* Animated background: matches active button */}
+                          {/* Active background: matches active button */}
                           <span
-                            className="absolute top-0 bottom-0 rounded-full transition-all duration-200 bg-cyan-500/40"
+                            className="absolute top-0 bottom-0 transition-all duration-200 bg-accent-cyan/20 rounded-lg"
                             style={{
                               ...sliderStyle,
                               zIndex: 0,
@@ -860,8 +898,8 @@ export default function DeckBuilder() {
                                 setDeckMode(mode);
                                 updateDeckMode(mode);
                               }}
-                              className={`relative z-10 px-4 py-1 font-semibold rounded-full transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60
-            ${deckMode === mode ? "text-cyan-100" : "text-slate-300"}
+                              className={`relative z-10 px-3 py-2 font-semibold transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60 font-display text-xs flex items-center justify-center gap-1
+            ${deckMode === mode ? "text-accent-cyan/80" : "text-muted-50"}
           `}
                               aria-pressed={deckMode === mode}
                               style={{
@@ -871,9 +909,8 @@ export default function DeckBuilder() {
                             >
                               {mode}
                             </button>
-                          ))}
+                            ))}
                         </div>
-                      </div>
                     </div>
 
                     <TooltipProvider>
@@ -984,7 +1021,7 @@ export default function DeckBuilder() {
                       </div>
                     </TooltipProvider>
                   </div>
-                  <CardDescription className="text-slate-300">
+                  <CardDescription className="text-muted-50">
                     Drag cards from the right panel to add them to your deck, or
                     drag cards back to the browser to remove them
                   </CardDescription>
@@ -996,43 +1033,75 @@ export default function DeckBuilder() {
                     value={activeTab}
                   >
                     <div className="px-6">
-                      <TabsList
-                        className={`grid w-full bg-slate-900/60 border border-cyan-500/30 rounded-lg p-1 ${
-                          deckMode === "Master Duel"
-                            ? "grid-cols-2"
-                            : "grid-cols-3"
-                        }`}
+                      <div
+                        className="relative flex w-full bg-cyb-800/40 border border-accent-cyan/18 backdrop-blur-sm rounded-lg"
+                        ref={tabsContainerRef}
                       >
-                        <TabsTrigger 
-                          value="main"
-                          className="data-[state=active]:bg-cyan-500/40 data-[state=active]:text-cyan-100 data-[state=inactive]:text-slate-300 data-[state=inactive]:hover:text-cyan-300 transition-colors"
+                        {/* Active background: matches active tab */}
+                        <span
+                          className="absolute top-0 bottom-0 transition-all duration-200 bg-accent-cyan/20 rounded-lg"
+                          style={{
+                            ...tabSliderStyle,
+                            zIndex: 0,
+                          }}
+                        />
+                        <button
+                          ref={mainTabRef}
+                          type="button"
+                          onClick={() => setActiveTab("main")}
+                          className={`relative z-10 flex-1 px-3 py-2 font-semibold transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60 font-display text-xs flex items-center justify-center gap-1 ${
+                            activeTab === "main" ? "text-accent-cyan/80" : "text-muted-50"
+                          }`}
+                          aria-pressed={activeTab === "main"}
+                          style={{
+                            background: "transparent",
+                            position: "relative",
+                          }}
                         >
                           Main Deck ({stats.mainCount})
-                        </TabsTrigger>
-                        <TabsTrigger 
-                          value="extra"
-                          className="data-[state=active]:bg-cyan-500/40 data-[state=active]:text-cyan-100 data-[state=inactive]:text-slate-300 data-[state=inactive]:hover:text-cyan-300 transition-colors"
+                        </button>
+                        <button
+                          ref={extraTabRef}
+                          type="button"
+                          onClick={() => setActiveTab("extra")}
+                          className={`relative z-10 flex-1 px-3 py-2 font-semibold transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60 font-display text-xs flex items-center justify-center gap-1 ${
+                            activeTab === "extra" ? "text-accent-cyan/80" : "text-muted-50"
+                          }`}
+                          aria-pressed={activeTab === "extra"}
+                          style={{
+                            background: "transparent",
+                            position: "relative",
+                          }}
                         >
                           Extra Deck ({stats.extraCount})
-                        </TabsTrigger>
+                        </button>
                         {deckMode === "TCG" && (
-                          <TabsTrigger 
-                            value="side"
-                            className="data-[state=active]:bg-cyan-500/40 data-[state=active]:text-cyan-100 data-[state=inactive]:text-slate-300 data-[state=inactive]:hover:text-cyan-300 transition-colors"
+                          <button
+                            ref={sideTabRef}
+                            type="button"
+                            onClick={() => setActiveTab("side")}
+                            className={`relative z-10 flex-1 px-3 py-2 font-semibold transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60 font-display text-xs flex items-center justify-center gap-1 ${
+                              activeTab === "side" ? "text-accent-cyan/80" : "text-muted-50"
+                            }`}
+                            aria-pressed={activeTab === "side"}
+                            style={{
+                              background: "transparent",
+                              position: "relative",
+                            }}
                           >
                             Side Deck ({stats.sideCount})
-                          </TabsTrigger>
+                          </button>
                         )}
-                      </TabsList>
+                      </div>
                     </div>
 
                     <TabsContent value="main" className="pt-4 px-6 pb-6">
                       <div className="space-y-4">
                         <div className="flex items-center justify-between">
-                          <h3 className="text-lg font-semibold text-slate-50">
+                          <h3 className="text-lg font-semibold text-white">
                             Main Deck ({stats.mainCount}/60)
                           </h3>
-                          <div className="text-sm text-slate-300">
+                          <div className="text-sm text-muted-50">
                             Min: 40 cards
                           </div>
                         </div>
@@ -1046,9 +1115,10 @@ export default function DeckBuilder() {
                           id="main-deck"
                           className={`
                             w-full
-                            rounded-lg
-                            bg-slate-950/60
-                            transition-transform duration-150 hover:scale-[1.01]
+                            bg-cyb-900/60
+                            hover:bg-[rgba(20,239,255,0.08)]
+                            hover:outline hover:outline-[1px] hover:outline-[rgba(20,239,255,0.35)]
+                            hover:shadow-[0_0_12px_rgba(20,239,255,0.20)]
                           `}
                         >
                           <DeckDropZone
@@ -1056,9 +1126,9 @@ export default function DeckBuilder() {
                             isEmpty={currentDeck.mainDeck.length === 0}
                           >
                             {currentDeck.mainDeck.length === 0 ? (
-                              <div className="flex flex-col items-center text-slate-300 py-8">
-                                <AlertCircle className="h-8 w-8 mb-2 text-cyan-400" />
-                                <span className="text-sm font-medium text-slate-300">
+                              <div className="flex flex-col items-center text-muted-50 py-8">
+                                <AlertCircle className="h-8 w-8 mb-2 text-accent-cyan" />
+                                <span className="text-sm font-medium text-muted-50">
                                   Drag and drop cards here to build your Main
                                   Deck
                                 </span>
@@ -1099,10 +1169,10 @@ export default function DeckBuilder() {
                     <TabsContent value="extra" className="pt-4 px-6 pb-6">
                       <div className="space-y-4">
                         <div className="flex items-center justify-between">
-                          <h3 className="text-lg font-semibold text-slate-50">
+                          <h3 className="text-lg font-semibold text-white">
                             Extra Deck ({stats.extraCount}/15)
                           </h3>
-                          <div className="text-sm text-slate-300">
+                          <div className="text-sm text-muted-50">
                             Max: 15 cards
                           </div>
                         </div>
@@ -1116,9 +1186,10 @@ export default function DeckBuilder() {
                           id="extra-deck"
                           className={`
                             w-full
-                            rounded-lg
-                            bg-slate-950/60
-                            transition-transform duration-150 hover:scale-[1.01]
+                            bg-cyb-900/60
+                            hover:bg-[rgba(20,239,255,0.08)]
+                            hover:outline hover:outline-[1px] hover:outline-[rgba(20,239,255,0.35)]
+                            hover:shadow-[0_0_12px_rgba(20,239,255,0.20)]
                           `}
                         >
                           <DeckDropZone
@@ -1126,9 +1197,9 @@ export default function DeckBuilder() {
                             isEmpty={currentDeck.extraDeck.length === 0}
                           >
                             {currentDeck.extraDeck.length === 0 ? (
-                              <div className="flex flex-col items-center text-slate-300 py-8">
-                                <AlertCircle className="h-8 w-8 mb-2 text-cyan-400" />
-                                <span className="text-sm font-medium text-slate-300">
+                              <div className="flex flex-col items-center text-muted-50 py-8">
+                                <AlertCircle className="h-8 w-8 mb-2 text-accent-cyan" />
+                                <span className="text-sm font-medium text-muted-50">
                                   Drag and drop cards here to build your Extra
                                   Deck
                                 </span>
@@ -1169,10 +1240,10 @@ export default function DeckBuilder() {
                     <TabsContent value="side" className="pt-4 px-6 pb-6">
                       <div className="space-y-4">
                         <div className="flex items-center justify-between">
-                          <h3 className="text-lg font-semibold text-slate-50">
+                          <h3 className="text-lg font-semibold text-white">
                             Side Deck ({stats.sideCount}/15)
                           </h3>
-                          <div className="text-sm text-slate-300">
+                          <div className="text-sm text-muted-50">
                             Max: 15 cards
                           </div>
                         </div>
@@ -1189,7 +1260,7 @@ export default function DeckBuilder() {
                             h-full
                             min-h-[300px]
                             rounded-lg
-                            bg-slate-950/60
+                            bg-cyb-900/60
                             transition-transform duration-150 hover:scale-[1.01]
                           `}
                         >
@@ -1198,9 +1269,9 @@ export default function DeckBuilder() {
                             isEmpty={currentDeck.sideDeck.length === 0}
                           >
                             {currentDeck.sideDeck.length === 0 ? (
-                              <div className="flex flex-col items-center text-slate-300 py-8">
-                                <AlertCircle className="h-8 w-8 mb-2 text-cyan-400" />
-                                <span className="text-sm font-medium text-slate-300">
+                              <div className="flex flex-col items-center text-muted-50 py-8">
+                                <AlertCircle className="h-8 w-8 mb-2 text-accent-cyan" />
+                                <span className="text-sm font-medium text-muted-50">
                                   Drag and drop cards here to build your Side
                                   Deck
                                 </span>
@@ -1240,14 +1311,27 @@ export default function DeckBuilder() {
                   </Tabs>
                 </CardContent>
               </CardUI>
+              </CutCornerWrapper>
             </div>
 
             {/* Right side - Card Browser (File List / Library) */}
             <div className="space-y-4">
-              <CardUI className="bg-gradient-to-b from-cyan-400/20 via-cyan-500/15 to-cyan-600/5 backdrop-blur-md border border-cyan-500/30 rounded-2xl">
+              <CutCornerWrapper
+                size="md"
+                hoverHighlight
+                padding="0"
+                style={{
+                  ["--cut-corner-stroke" as any]: "rgba(20,239,255,0.38)",
+                  ["--cut-corner-stroke-hover" as any]: "rgba(20,239,255,0.52)",
+                  ["--cut-corner-fill" as any]: "transparent",
+                  backdropFilter: "blur(6px) saturate(120%)",
+                  WebkitBackdropFilter: "blur(6px) saturate(120%)",
+                }}
+              >
+                <CardUI className="bg-transparent">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-xl text-slate-50" style={{ fontFamily: "var(--font-heading)" }}>Card Browser</CardTitle>
-                  <CardDescription className="text-slate-300">
+                  <CardTitle className="text-xl text-white font-display">Card Browser</CardTitle>
+                  <CardDescription className="text-muted-50">
                     Search, filter, and drag/double click cards to add to your deck
                   </CardDescription>
                 </CardHeader>
@@ -1260,7 +1344,7 @@ export default function DeckBuilder() {
                           value={searchQuery}
                           onChange={(e) => setSearchQuery(e.target.value)}
                           onClear={() => setSearchQuery("")}
-                          className="w-full bg-slate-950/60 border-cyan-500/50 text-slate-50 placeholder:text-slate-400 focus-visible:border-cyan-400 focus-visible:ring-cyan-400/60"
+                          className="w-full bg-cyb-900/60 border-cyan-500/50 text-white placeholder:text-muted-50/70 focus-visible:border-cyan-400 focus-visible:ring-cyan-400/60"
                         />
                       </div>
                       <FilterMenu
@@ -1279,7 +1363,7 @@ export default function DeckBuilder() {
                           <Skeleton className="h-4 w-12" />
                         </div>
                       ) : (
-                        <p className="text-sm text-slate-300">
+                        <p className="text-sm text-muted-50">
                           Found {filteredCards.length} cards
                         </p>
                       )}
@@ -1291,14 +1375,14 @@ export default function DeckBuilder() {
                           }
                           disabled
                         >
-                          <SelectTrigger className="w-[120px] bg-slate-950/60 border-cyan-500/50 text-slate-50 focus:ring-cyan-400/60 opacity-50 cursor-not-allowed">
+                          <SelectTrigger className="w-[120px] bg-cyb-900/60 border-cyan-500/50 text-white focus:ring-cyan-400/60 opacity-50 cursor-not-allowed">
                             <SelectValue placeholder="Sort by" />
                           </SelectTrigger>
-                          <SelectContent className="bg-gradient-to-b from-cyan-400/20 via-cyan-500/15 to-cyan-600/5 backdrop-blur-md border border-cyan-500/30">
-                            <SelectItem value="name" className="text-slate-50 focus:bg-cyan-500/40 focus:text-cyan-100">Name</SelectItem>
-                            <SelectItem value="atk" className="text-slate-50 focus:bg-cyan-500/40 focus:text-cyan-100">ATK</SelectItem>
-                            <SelectItem value="def" className="text-slate-50 focus:bg-cyan-500/40 focus:text-cyan-100">DEF</SelectItem>
-                            <SelectItem value="level" className="text-slate-50 focus:bg-cyan-500/40 focus:text-cyan-100">Level</SelectItem>
+                          <SelectContent>
+                            <SelectItem value="name" className="text-white focus:bg-accent-cyan/20 focus:text-accent-cyan/80">Name</SelectItem>
+                            <SelectItem value="atk" className="text-white focus:bg-accent-cyan/20 focus:text-accent-cyan/80">ATK</SelectItem>
+                            <SelectItem value="def" className="text-white focus:bg-accent-cyan/20 focus:text-accent-cyan/80">DEF</SelectItem>
+                            <SelectItem value="level" className="text-white focus:bg-accent-cyan/20 focus:text-accent-cyan/80">Level</SelectItem>
                           </SelectContent>
                         </Select>
                         <Button
@@ -1316,30 +1400,30 @@ export default function DeckBuilder() {
                           disabled
                         >
                           {searchParams.sortDirection === "asc" ? (
-                            <ArrowUp className="h-5 w-5 text-cyan-400" />
+                            <ArrowUp className="h-5 w-5 text-accent-cyan" />
                           ) : (
-                            <ArrowDown className="h-5 w-5 text-cyan-400" />
+                            <ArrowDown className="h-5 w-5 text-accent-cyan" />
                           )}
                         </Button>
                       </div>
                     </div>
                   </div>
 
-                  <div className="h-[500px] border-t border-cyan-500/30">
+                  <div className="h-[500px] border-t border-accent-cyan/18">
                     <DeckDropZone id="card-browser" isEmpty={false}>
                       {loading ? (
                         <div className="flex flex-col items-center justify-center h-full">
                           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-400 mb-4"></div>
-                          <p className="text-slate-300">
+                          <p className="text-muted-50">
                             Loading cards...
                           </p>
                         </div>
                       ) : filteredCards.length === 0 ? (
                         <div className="flex flex-col items-center justify-center h-full">
-                          <p className="text-slate-300">
+                          <p className="text-muted-50">
                             No cards found
                           </p>
-                          <p className="text-sm text-slate-400">
+                          <p className="text-sm text-muted-50/70">
                             Try adjusting your search filters
                           </p>
                         </div>
@@ -1356,9 +1440,8 @@ export default function DeckBuilder() {
                             if (banStatus === "Forbidden") maxCopies = 0;
 
                             return (
-                              <div className="hover:bg-slate-900/40 border border-transparent hover:border-cyan-500/40 transition-colors">
+                              <div key={card.id} className="px-2 py-1.5">
                                 <CardStack
-                                  key={card.id}
                                   card={card}
                                   remainingCopies={getRemainingCopies(card)}
                                   maxCopies={maxCopies}
@@ -1384,7 +1467,7 @@ export default function DeckBuilder() {
                             if (banStatus === "Forbidden") maxCopies = 0;
 
                             return (
-                              <div key={card.id} className="hover:bg-slate-900/40 border border-transparent hover:border-cyan-500/40 transition-colors">
+                              <div key={card.id} className="px-2 py-1.5">
                                 <CardStack
                                   card={card}
                                   remainingCopies={getRemainingCopies(card)}
@@ -1406,6 +1489,7 @@ export default function DeckBuilder() {
                   </div>
                 </CardContent>
               </CardUI>
+              </CutCornerWrapper>
             </div>
           </div>
           </div>

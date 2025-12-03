@@ -5,6 +5,7 @@ import MDAIcon from "@/public/images/MDA_Logo_One.svg";
 import { ParallaxHero } from "../components/parallax-hero";
 import { Button } from "../components/ui/button";
 import Link from "next/link";
+import CutCornerWrapper from "../components/cut-corner-wrapper";
 
 export default function Home() {
   return (
@@ -19,7 +20,7 @@ export default function Home() {
           <div className="max-w-3xl">
             {/* Label */}
             <div className="inline-flex items-center gap-2 mb-6">
-              <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></div>
+              <div className="w-2 h-2 bg-cyan-400 animate-pulse"></div>
               <span
                 className="text-cyan-400 tracking-[0.2em] uppercase text-xs"
                 style={{ fontFamily: "var(--font-heading)" }}
@@ -46,7 +47,7 @@ export default function Home() {
 
             {/* Subtext */}
             <div className="mb-10 max-w-2xl">
-              <p className="text-slate-100 text-lg md:text-xl leading-relaxed relative z-10 bg-slate-950/40 backdrop-blur-sm px-4 py-3 rounded-lg border border-cyan-500/10">
+              <p className="text-slate-100 text-lg md:text-xl leading-relaxed relative z-10 bg-slate-950/40 backdrop-blur-sm px-4 py-3 border border-cyan-500/10">
                 Harness AI-powered synergy analysis and real-time meta insights to
                 craft tournament-grade decks. Optimize ratios, discover combos, and
                 dominate the competitive landscape.
@@ -139,10 +140,20 @@ function Features() {
         {/* Feature Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {features.map((feature, index) => (
-            <div
+            <CutCornerWrapper
               key={index}
-              className="group relative bg-slate-900/60 backdrop-blur-sm border border-cyan-500/15 rounded-2xl p-6 hover:border-cyan-400/40 transition-all duration-300 hover:bg-slate-900/80 glass-panel border-thin-neon"
+              size="md"
+              hoverHighlight
+              padding="1.5rem"
+              style={{
+                ["--cut-corner-stroke" as any]: "rgba(20,239,255,0.38)",
+                ["--cut-corner-stroke-hover" as any]: "rgba(20,239,255,0.52)",
+                ["--cut-corner-fill" as any]: "transparent",
+                backdropFilter: "blur(6px) saturate(120%)",
+                WebkitBackdropFilter: "blur(6px) saturate(120%)",
+              }}
             >
+              <div className="group relative">
               {/* Icon Container */}
               <div className="mb-6 relative">
                 <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-cyan-500/20 to-cyan-700/20 flex items-center justify-center ring-1 ring-cyan-500/30 group-hover:ring-cyan-400/50 transition-all duration-300">
@@ -162,7 +173,8 @@ function Features() {
                 {feature.description}
               </p>
 
-            </div>
+              </div>
+            </CutCornerWrapper>
           ))}
         </div>
 

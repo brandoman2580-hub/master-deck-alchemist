@@ -3,6 +3,7 @@ import fuzzysort from "fuzzysort";
 import { Input } from "./input";
 import { X } from "lucide-react";
 import { CARD_ARCHETYPE_FILTERS } from "../../lib/constants";
+import CutCornerWrapper from "../cut-corner-wrapper";
 
 type ArchetypeOption = { value: string; label: string };
 
@@ -115,7 +116,16 @@ export function ArchetypeAutocomplete({
         )}
         {/* Dropdown */}
         {open && filtered.length > 0 && (
-          <div className="absolute z-10 bg-gradient-to-b from-cyan-400/20 via-cyan-500/15 to-cyan-600/5 backdrop-blur-md border border-cyan-500/30 rounded-lg shadow-xl w-full max-h-60 overflow-y-auto mt-1">
+          <CutCornerWrapper
+            size="sm"
+            padding="0"
+            className="absolute z-10 w-full max-h-60 overflow-y-auto mt-1"
+            style={{
+              ["--cut-corner-stroke" as any]: "rgba(20,239,255,0.38)",
+              ["--cut-corner-fill" as any]: "transparent",
+            }}
+          >
+            <div className="bg-gradient-to-b from-cyan-400/20 via-cyan-500/15 to-cyan-600/5 backdrop-blur-md border border-cyan-500/30 shadow-xl">
             {filtered.map((archetype) => (
               <div
                 key={archetype.value}
@@ -125,12 +135,23 @@ export function ArchetypeAutocomplete({
                 {archetype.label}
               </div>
             ))}
-          </div>
+            </div>
+          </CutCornerWrapper>
         )}
         {open && search && filtered.length === 0 && (
-          <div className="absolute z-10 bg-gradient-to-b from-cyan-400/20 via-cyan-500/15 to-cyan-600/5 backdrop-blur-md border border-cyan-500/30 rounded-lg shadow-xl w-full max-h-60 overflow-y-auto mt-1">
-            <div className="px-3 py-2 text-slate-400">No results</div>
-          </div>
+          <CutCornerWrapper
+            size="sm"
+            padding="0"
+            className="absolute z-10 w-full max-h-60 overflow-y-auto mt-1"
+            style={{
+              ["--cut-corner-stroke" as any]: "rgba(20,239,255,0.38)",
+              ["--cut-corner-fill" as any]: "transparent",
+            }}
+          >
+            <div className="bg-gradient-to-b from-cyan-400/20 via-cyan-500/15 to-cyan-600/5 backdrop-blur-md border border-cyan-500/30 shadow-xl">
+              <div className="px-3 py-2 text-slate-400">No results</div>
+            </div>
+          </CutCornerWrapper>
         )}
       </div>
     </div>

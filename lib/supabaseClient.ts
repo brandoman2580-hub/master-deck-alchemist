@@ -1,11 +1,13 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseUrlEnv = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-if (!supabaseUrl) {
+if (!supabaseUrlEnv) {
   throw new Error('Missing env.NEXT_PUBLIC_SUPABASE_URL')
 }
+
+export const supabaseUrl: string = supabaseUrlEnv
 
 if (!supabaseAnonKey) {
   throw new Error('Missing env.NEXT_PUBLIC_SUPABASE_ANON_KEY')

@@ -33,13 +33,13 @@ export function ModeDecksSection({
   if (modeDecks.length === 0) {
     return (
       <div className="space-y-4">
-        <h2 className="text-xl font-bold text-slate-50" style={{ fontFamily: "var(--font-heading)" }}>
-          {mode} Decks
+        <h2 className="text-xl font-bold text-white font-display tracking-wider">
+          {mode} DECKS
         </h2>
-        <Card className="p-6 text-center bg-gradient-to-b from-cyan-400/10 via-cyan-500/8 to-cyan-600/5 backdrop-blur-md border border-cyan-500/20 rounded-xl">
+        <Card className="p-6 text-center">
           <CardContent className="pt-0">
-            <p className="text-slate-400 text-sm">No {mode} decks found</p>
-            <p className="text-xs text-slate-500 mt-1">Create a deck in {mode} mode to see it here</p>
+            <p className="text-muted-50/70 text-sm">No {mode} decks found</p>
+            <p className="text-xs text-muted-50/50 mt-1">Create a deck in {mode} mode to see it here</p>
           </CardContent>
         </Card>
       </div>

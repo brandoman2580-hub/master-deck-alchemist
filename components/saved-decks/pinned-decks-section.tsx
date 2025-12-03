@@ -31,13 +31,13 @@ export function PinnedDecksSection({
   if (pinnedDecks.length === 0) {
     return (
       <div className="space-y-4">
-        <h2 className="text-xl font-bold text-slate-50" style={{ fontFamily: "var(--font-heading)" }}>
-          Pinned Decks
+        <h2 className="text-xl font-bold text-white font-display tracking-wider">
+          PINNED DECKS
         </h2>
-        <Card className="p-6 text-center bg-gradient-to-b from-cyan-400/10 via-cyan-500/8 to-cyan-600/5 backdrop-blur-md border border-cyan-500/20 rounded-xl">
+        <Card className="p-6 text-center">
           <CardContent className="pt-0">
-            <p className="text-slate-400 text-sm">No pinned decks yet</p>
-            <p className="text-xs text-slate-500 mt-1">Pin decks to keep them at the top</p>
+            <p className="text-muted-50/70 text-sm">No pinned decks yet</p>
+            <p className="text-xs text-muted-50/50 mt-1">Pin decks to keep them at the top</p>
           </CardContent>
         </Card>
       </div>
@@ -46,8 +46,8 @@ export function PinnedDecksSection({
 
   return (
     <div className="space-y-4">
-      <h2 className="text-xl font-bold text-slate-50" style={{ fontFamily: "var(--font-heading)" }}>
-        Pinned Decks
+      <h2 className="text-xl font-bold text-white font-display tracking-wider">
+        PINNED DECKS
       </h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {pinnedDecks.map((deck) => (

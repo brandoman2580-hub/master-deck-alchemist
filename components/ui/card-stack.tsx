@@ -8,6 +8,7 @@ import { Card } from "../../types/card";
 import { BanStatus } from "../../types/types";
 import { CardPreview } from "./card-preview";
 import Image from "next/image";
+import CutCornerWrapper from "../cut-corner-wrapper";
 
 interface CardStackProps {
   card: Card;
@@ -69,14 +70,27 @@ export function CardStack({
 
   return (
     <CardPreview card={card} banStatus={banStatus}>
-      <div
-        ref={cardRef}
-        className={`p-3 border-b border-cyan-500/20 hover:bg-slate-900/40 ${
+      <CutCornerWrapper
+        size="sm"
+        hoverHighlight={!disabled}
+        className={`relative overflow-visible cyan-corner-triangle ${
           isBeingDragged ? "opacity-50" : ""
         } ${!disabled ? "cursor-pointer" : ""}`}
-        onDoubleClick={handleDoubleClick}
+        padding="0.5rem"
+        style={{
+          ["--cut-corner-stroke" as any]: "rgba(20,239,255,0.15)",
+          ["--cut-corner-stroke-hover" as any]: "rgba(20,239,255,0.25)",
+          ["--cut-corner-fill" as any]: "rgba(15, 23, 42, 0.4)",
+          background: "rgba(15, 23, 42, 0.4)",
+          backdropFilter: "blur(4px)",
+          WebkitBackdropFilter: "blur(4px)",
+        }}
       >
-      <div className="flex gap-3 items-center">
+        <div
+          ref={cardRef}
+          onDoubleClick={handleDoubleClick}
+        >
+      <div className="flex gap-3 items-center p-1">
         {/* DRAGGABLE STACK IMAGE -- IMAGES ARE HIDDEN WHILE isBeingDragged */}
         <div
           ref={setNodeRef}
@@ -102,7 +116,7 @@ export function CardStack({
               {Array.from({ length: Math.min(maxCopies, 3) }, (_, index) => (
                 <div
                   key={index}
-                  className={`absolute rounded shadow-sm ${
+                  className={`absolute shadow-sm ${
                     disabled ? "opacity-40" : ""
                   }`}
                   style={{
@@ -118,7 +132,7 @@ export function CardStack({
                       card.card_images[0].image_url_small || "/placeholder.svg"
                     }
                     alt={card.name}
-                    className="w-full h-auto object-contain rounded"
+                    className="w-full h-auto object-contain"
                     style={{
                       filter: index > 0 ? "brightness(0.8)" : "none",
                     }}
@@ -165,7 +179,8 @@ export function CardStack({
           </p>
         </div>
       </div>
-      </div>
+        </div>
+      </CutCornerWrapper>
     </CardPreview>
   );
 }

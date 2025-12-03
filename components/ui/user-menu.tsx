@@ -2,9 +2,11 @@
 
 import { useUserStore } from "../../store/useUserStore"
 import { useState, useRef, useEffect } from "react"
+import { createPortal } from "react-dom"
 import { Button } from "./button"
 import { HelpCircle, LogOut } from "lucide-react"
 import { supabase } from "../../lib/supabaseClient"
+import CutCornerWrapper from "../cut-corner-wrapper"
 
 function getInitials(user: { user_metadata?: { name?: string }; email?: string } | null) {
   if (!user) return "U"
@@ -24,16 +26,62 @@ export function UserMenu() {
   const user = useUserStore((state) => state.user)
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const buttonRef = useRef<HTMLButtonElement>(null)
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, right: 0 })
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  // Calculate dropdown position when opening or scrolling
+  useEffect(() => {
+    if (!mounted) return
+
+    const updatePosition = () => {
+      if (dropdownOpen && buttonRef.current) {
+        const rect = buttonRef.current.getBoundingClientRect()
+        setDropdownPosition({
+          top: rect.bottom + 8, // mt-2 = 8px
+          right: window.innerWidth - rect.right,
+        })
+      }
+    }
+
+    if (dropdownOpen) {
+      updatePosition()
+      window.addEventListener("scroll", updatePosition, true)
+      window.addEventListener("resize", updatePosition)
+    }
+
+    return () => {
+      window.removeEventListener("scroll", updatePosition, true)
+      window.removeEventListener("resize", updatePosition)
+    }
+  }, [dropdownOpen, mounted])
 
   // Close dropdown on outside click
   useEffect(() => {
     function handleClick(e: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+      if (
+        dropdownRef.current && 
+        !dropdownRef.current.contains(e.target as Node) &&
+        buttonRef.current &&
+        !buttonRef.current.contains(e.target as Node)
+      ) {
         setDropdownOpen(false)
       }
     }
-    if (dropdownOpen) document.addEventListener("mousedown", handleClick)
-    return () => document.removeEventListener("mousedown", handleClick)
+    if (dropdownOpen) {
+      // Use a small delay to avoid immediate closure
+      const timeoutId = setTimeout(() => {
+        document.addEventListener("mousedown", handleClick)
+      }, 0)
+      return () => {
+        clearTimeout(timeoutId)
+        document.removeEventListener("mousedown", handleClick)
+      }
+    }
   }, [dropdownOpen])
 
   const handleLogout = async () => {
@@ -46,32 +94,67 @@ export function UserMenu() {
 
   return (
     <div className="relative" ref={dropdownRef}>
-      <button
-        className="w-10 h-10 rounded-full bg-blue-200 text-blue-900 font-bold flex items-center justify-center"
-        aria-label="User menu"
-        onClick={() => setDropdownOpen((v) => !v)}
+      <CutCornerWrapper
+        size="sm"
+        hoverHighlight
+        padding="0"
+        className="inline-block"
+        style={{
+          ["--cut-corner-stroke" as any]: "rgba(20,239,255,0.38)",
+          ["--cut-corner-stroke-hover" as any]: "rgba(20,239,255,0.52)",
+          ["--cut-corner-fill" as any]: "transparent",
+        }}
       >
-        {getInitials(user)}
-      </button>
-      {dropdownOpen && (
-        <div className="absolute right-0 mt-2 w-48 bg-white border rounded shadow-lg z-50 py-2">
-          <Button
-            variant="ghost"
-            className="w-full justify-start text-gray-400 cursor-not-allowed"
-            startIcon={<HelpCircle className="mr-2" />}
-            disabled
+        <button
+          ref={buttonRef}
+          className="w-10 h-10 bg-cyan-500/20 text-cyan-400 font-bold flex items-center justify-center hover:bg-cyan-500/30 transition-colors"
+          aria-label="User menu"
+          onClick={() => setDropdownOpen((v) => !v)}
+        >
+          {getInitials(user)}
+        </button>
+      </CutCornerWrapper>
+      {mounted && dropdownOpen && createPortal(
+        <div
+          ref={dropdownRef}
+          className="fixed w-48 z-[100]"
+          style={{
+            top: `${dropdownPosition.top}px`,
+            right: `${dropdownPosition.right}px`,
+          }}
+        >
+          <CutCornerWrapper
+            size="sm"
+            padding="0.5rem 0"
+            style={{
+              ["--cut-corner-stroke" as any]: "rgba(20,239,255,0.38)",
+              ["--cut-corner-fill" as any]: "rgba(15, 23, 42, 0.85)",
+              background: "rgba(15, 23, 42, 0.85)",
+              backdropFilter: "blur(6px) saturate(120%)",
+              WebkitBackdropFilter: "blur(6px) saturate(120%)",
+            }}
           >
-            Help
-          </Button>
-          <Button
-            variant="ghost"
-            className="w-full justify-start text-black hover:bg-gray-500"
-            startIcon={<LogOut className="mr-2" />}
-            onClick={handleLogout}
-          >
-            Logout
-          </Button>
-        </div>
+            <div className="py-2">
+            <Button
+              variant="ghost"
+              className="w-full justify-start text-slate-300 hover:text-cyan-400 cursor-not-allowed"
+              startIcon={<HelpCircle className="mr-2" />}
+              disabled
+            >
+              Help
+            </Button>
+            <Button
+              variant="ghost"
+              className="w-full justify-start text-slate-300 hover:text-cyan-400 hover:bg-cyan-500/10"
+              startIcon={<LogOut className="mr-2" />}
+              onClick={handleLogout}
+            >
+              Logout
+            </Button>
+            </div>
+          </CutCornerWrapper>
+        </div>,
+        document.body
       )}
     </div>
   )

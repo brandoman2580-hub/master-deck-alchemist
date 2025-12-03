@@ -1,11 +1,8 @@
-import { getAccessToken } from "../supabaseClient";
+import { getAccessToken, supabaseUrl } from "../supabaseClient";
 import {
   DeckTesterAgentRequest,
   DeckTesterAgentResponse,
 } from "../../types/ai-agents";
-import process from "node:process";
-
-const DECK_TESTER_AGENT_URL = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/deck-tester-agent`;
 
 // Cache for API responses
 const cache = new Map<string, { response: DeckTesterAgentResponse; timestamp: number }>();
@@ -59,6 +56,11 @@ async function callDeckTesterAgent(
     throw new Error("Authentication required");
   }
 
+  // Use the validated URL from supabaseClient (which already checked the env var)
+  if (!supabaseUrl) {
+    throw new Error("Missing Supabase URL. Please check your environment variables.");
+  }
+
   // Check cache first
   const cacheKey = generateCacheKey(request);
   const cached = getCachedResponse(cacheKey);
@@ -66,7 +68,8 @@ async function callDeckTesterAgent(
     return { ...cached, _cached: true };
   }
 
-  const response = await fetch(DECK_TESTER_AGENT_URL, {
+  const deckTesterAgentUrl = `${supabaseUrl}/functions/v1/deck-tester-agent`;
+  const response = await fetch(deckTesterAgentUrl, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -76,8 +79,30 @@ async function callDeckTesterAgent(
   });
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    throw new Error(error.error || "Failed to analyze matchup");
+    let errorMessage = `Failed to analyze matchup (Status: ${response.status})`;
+    
+    try {
+      const errorData = await response.json();
+      if (errorData.error) {
+        errorMessage = errorData.error;
+      } else if (errorData.message) {
+        errorMessage = errorData.message;
+      } else if (typeof errorData === "string") {
+        errorMessage = errorData;
+      }
+    } catch {
+      // If response is not JSON, try to get text
+      try {
+        const errorText = await response.text();
+        if (errorText) {
+          errorMessage = errorText;
+        }
+      } catch {
+        // If all else fails, use the default message with status code
+      }
+    }
+    
+    throw new Error(errorMessage);
   }
 
   const result = (await response.json()) as DeckTesterAgentResponse;

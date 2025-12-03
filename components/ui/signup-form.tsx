@@ -3,6 +3,7 @@ import { useState } from "react"
 import { useActionState } from "react"
 import { signup } from "../../app/login/actions"
 import { SignupFormState } from "../../types/types"
+import CutCornerWrapper from "../cut-corner-wrapper"
 
 const initialState: SignupFormState = { success: false }
 
@@ -54,13 +55,23 @@ export function SignupForm({ onBack }: { onBack: () => void }) {
         <div className="text-gray-600 text-sm">
           Please check your inbox and follow the instructions to confirm your account.
         </div>
-        <button
-          type="button"
-          onClick={onBack}
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-md transition"
+        <CutCornerWrapper
+          size="sm"
+          padding="0"
+          className="w-full"
+          style={{
+            ["--cut-corner-stroke" as any]: "rgba(20,239,255,0.38)",
+            ["--cut-corner-fill" as any]: "transparent",
+          }}
         >
-          Back to login
-        </button>
+          <button
+            type="button"
+            onClick={onBack}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 transition"
+          >
+            Back to login
+          </button>
+        </CutCornerWrapper>
       </div>
     )
   }
@@ -71,17 +82,27 @@ export function SignupForm({ onBack }: { onBack: () => void }) {
         <label htmlFor="signup-email" className="block text-sm font-medium text-gray-700 mb-1">
           Email
         </label>
-        <input
-          id="signup-email"
-          name="email"
-          type="email"
-          autoComplete="email"
-          value={email}
-          onChange={e => setEmail(e.target.value)}
-          onBlur={() => setTouched(t => ({ ...t, email: true }))}
-          required
-          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
+        <CutCornerWrapper
+          size="sm"
+          padding="0"
+          className="w-full"
+          style={{
+            ["--cut-corner-stroke" as any]: "rgba(20,239,255,0.38)",
+            ["--cut-corner-fill" as any]: "transparent",
+          }}
+        >
+          <input
+            id="signup-email"
+            name="email"
+            type="email"
+            autoComplete="email"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            onBlur={() => setTouched(t => ({ ...t, email: true }))}
+            required
+            className="w-full px-3 py-2 border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </CutCornerWrapper>
         {showEmailFeedback && (
           <div className="text-xs text-red-600 mt-1">Please enter a valid email address.</div>
         )}
@@ -90,17 +111,27 @@ export function SignupForm({ onBack }: { onBack: () => void }) {
         <label htmlFor="signup-password" className="block text-sm font-medium text-gray-700 mb-1">
           Password
         </label>
-        <input
-          id="signup-password"
-          name="password"
-          type="password"
-          autoComplete="new-password"
-          value={password}
-          onChange={e => setPassword(e.target.value)}
-          onBlur={() => setTouched(t => ({ ...t, password: true }))}
-          required
-          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
+        <CutCornerWrapper
+          size="sm"
+          padding="0"
+          className="w-full"
+          style={{
+            ["--cut-corner-stroke" as any]: "rgba(20,239,255,0.38)",
+            ["--cut-corner-fill" as any]: "transparent",
+          }}
+        >
+          <input
+            id="signup-password"
+            name="password"
+            type="password"
+            autoComplete="new-password"
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            onBlur={() => setTouched(t => ({ ...t, password: true }))}
+            required
+            className="w-full px-3 py-2 border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </CutCornerWrapper>
         <ul className="mt-2 space-y-0.5 text-xs">
           {passwordReqs.map((req, i) => (
             <li key={i} className={req.valid ? "text-green-600" : "text-gray-500"}>
@@ -116,17 +147,27 @@ export function SignupForm({ onBack }: { onBack: () => void }) {
         <label htmlFor="signup-confirm" className="block text-sm font-medium text-gray-700 mb-1">
           Confirm Password
         </label>
-        <input
-          id="signup-confirm"
-          name="confirm"
-          type="password"
-          autoComplete="new-password"
-          value={confirm}
-          onChange={e => setConfirm(e.target.value)}
-          onBlur={() => setTouched(t => ({ ...t, confirm: true }))}
-          required
-          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
+        <CutCornerWrapper
+          size="sm"
+          padding="0"
+          className="w-full"
+          style={{
+            ["--cut-corner-stroke" as any]: "rgba(20,239,255,0.38)",
+            ["--cut-corner-fill" as any]: "transparent",
+          }}
+        >
+          <input
+            id="signup-confirm"
+            name="confirm"
+            type="password"
+            autoComplete="new-password"
+            value={confirm}
+            onChange={e => setConfirm(e.target.value)}
+            onBlur={() => setTouched(t => ({ ...t, confirm: true }))}
+            required
+            className="w-full px-3 py-2 border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </CutCornerWrapper>
         {showConfirmFeedback && (
           <div className="text-xs text-red-600 mt-1">Passwords do not match.</div>
         )}
@@ -134,17 +175,27 @@ export function SignupForm({ onBack }: { onBack: () => void }) {
       {(formState.error) && (
         <div className="text-red-600 text-sm">{formState.error}</div>
       )}
-      <button
-        type="submit"
-        disabled={!canSignUp}
-        className={`w-full font-semibold py-2 rounded-md transition ${
-          canSignUp
-            ? "bg-blue-600 hover:bg-blue-700 text-white"
-            : "bg-gray-300 text-gray-500 cursor-not-allowed"
-        }`}
+      <CutCornerWrapper
+        size="sm"
+        padding="0"
+        className="w-full"
+        style={{
+          ["--cut-corner-stroke" as any]: "rgba(20,239,255,0.38)",
+          ["--cut-corner-fill" as any]: "transparent",
+        }}
       >
-        {isPending ? "Signing up..." : "Sign up"}
-      </button>
+        <button
+          type="submit"
+          disabled={!canSignUp}
+          className={`w-full font-semibold py-2 transition ${
+            canSignUp
+              ? "bg-blue-600 hover:bg-blue-700 text-white"
+              : "bg-gray-300 text-gray-500 cursor-not-allowed"
+          }`}
+        >
+          {isPending ? "Signing up..." : "Sign up"}
+        </button>
+      </CutCornerWrapper>
       <button
         type="button"
         onClick={onBack}

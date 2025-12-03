@@ -12,6 +12,7 @@ import { Card } from "../../types/card";
 import { BanStatus, DeckSection } from "../../types/types";
 import { Plus, Loader2, Check } from "lucide-react";
 import { getArchetypeName } from "../../lib/helpers";
+import CutCornerWrapper from "../cut-corner-wrapper";
 
 interface CandidateCard {
   candidateId: number;
@@ -659,10 +660,18 @@ export function AIResponseCard({
             const meta = candidate ? suggestionMetaMap.get(candidate.candidateId) : undefined;
             
             return (
-              <div 
-                key={card.id} 
-                className="rounded-xl border border-cyan-500/30 bg-slate-900/70 backdrop-blur-sm p-4 space-y-2 shadow-[0_2px_12px_rgba(0,0,0,0.2)]"
+              <CutCornerWrapper
+                key={card.id}
+                size="md"
+                hoverHighlight
+                padding="1rem"
+                style={{
+                  ["--cut-corner-stroke" as any]: "rgba(20,239,255,0.38)",
+                  ["--cut-corner-stroke-hover" as any]: "rgba(20,239,255,0.52)",
+                  ["--cut-corner-fill" as any]: "transparent",
+                }}
               >
+                <div className="border border-cyan-500/30 bg-slate-900/70 backdrop-blur-sm space-y-2 shadow-[0_2px_12px_rgba(0,0,0,0.2)]">
                 <div className="flex flex-col gap-3 md:flex-row md:items-start">
                   <div className="shrink-0">
                     {renderCardPreview(card)}
@@ -695,7 +704,8 @@ export function AIResponseCard({
                     )}
                   </div>
                 </div>
-              </div>
+                </div>
+              </CutCornerWrapper>
             );
           })}
         </div>

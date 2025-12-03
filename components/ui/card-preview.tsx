@@ -21,14 +21,15 @@ export function CardPreview({ card, children, banStatus }: CardPreviewProps) {
         </Tooltip.Trigger>
         <Tooltip.Portal>
           <Tooltip.Content
-            className="z-50 bg-slate-950/95 bg-gradient-to-b from-cyan-400/30 via-cyan-500/25 to-cyan-600/15 backdrop-blur-md border border-cyan-500/30 rounded-lg shadow-xl p-4 sm:p-6 w-[90vw] sm:w-[500px] max-w-[min(500px,calc(100vw-1rem))]"
+            className="z-50 w-[480px] max-w-[calc(100vw-3rem)] rounded-lg border border-cyan-500/30 bg-slate-900/95 backdrop-blur-md shadow-xl p-4"
             side="right"
             sideOffset={10}
             align="start"
-            collisionPadding={24}
+            collisionPadding={32}
             alignOffset={-5}
+            avoidCollisions
           >
-            <div className="flex gap-5">
+            <div className="flex gap-3">
               {/* Card Image */}
               <div className="flex-shrink-0">
                 <Image

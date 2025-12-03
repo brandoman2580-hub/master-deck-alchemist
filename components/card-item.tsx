@@ -81,7 +81,7 @@ export default function CardItem({
               height={120}
               src={card.card_images[0].image_url_small || "/placeholder.svg"}
               alt={card.name}
-              className={`w-full h-auto object-contain rounded ${
+              className={`w-full h-auto object-contain ${
                 disabled ? "opacity-60" : ""
               } ${isBeingDragged ? "opacity-30" : ""}`}
             />

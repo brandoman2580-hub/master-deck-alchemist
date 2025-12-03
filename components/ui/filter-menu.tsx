@@ -81,7 +81,7 @@ export function FilterMenu({
           Filters
         </Button>
       </SheetTrigger>
-      <SheetContent side="right" className="bg-gradient-to-b from-cyan-400/20 via-cyan-500/15 to-cyan-600/5 backdrop-blur-md border-l border-cyan-500/30 [&>button]:text-cyan-400 [&>button]:hover:text-cyan-300 [&>button]:hover:bg-cyan-500/10">
+      <SheetContent side="right" className="bg-[rgba(10,20,30,0.92)] backdrop-blur-md border-l border-cyan-500/30 [&>button]:text-cyan-400 [&>button]:hover:text-cyan-300 [&>button]:hover:bg-cyan-500/10">
         <SheetHeader>
           <SheetTitle className="text-slate-50" style={{ fontFamily: "var(--font-heading)" }}>Filter Cards</SheetTitle>
           <SheetDescription className="text-slate-300">Refine your card search</SheetDescription>

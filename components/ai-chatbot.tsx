@@ -28,6 +28,7 @@ import { supabase } from "../lib/supabaseClient";
 import { useCardStore } from "../store/cardStore";
 import { BanStatus, DeckSection } from "../types/types";
 import { AIResponseCard } from "./ui/ai-response-card";
+import CutCornerWrapper from "./cut-corner-wrapper";
 import { CardPreview } from "./ui/card-preview";
 import { FormattedRecommendationResponse } from "./ui/formatted-recommendation-response";
 import { getRecommendations } from "../lib/api/recommendationAgent";
@@ -1638,7 +1639,18 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
   // Modern, clean AI assistant UI inspired by the image
   return (
     <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <CardUI className="w-full max-w-4xl h-[90vh] flex flex-col bg-gradient-to-b from-slate-900 via-slate-950 to-slate-900 border border-cyan-500/20 rounded-2xl shadow-[0_0_30px_rgba(56,189,248,0.1)]">
+      <CutCornerWrapper
+        size="lg"
+        hoverHighlight
+        className="w-full max-w-4xl h-[90vh]"
+        padding="0"
+        style={{
+          ["--cut-corner-stroke" as any]: "rgba(20,239,255,0.38)",
+          ["--cut-corner-stroke-hover" as any]: "rgba(20,239,255,0.52)",
+          ["--cut-corner-fill" as any]: "transparent",
+        }}
+      >
+        <CardUI className="w-full h-full flex flex-col bg-gradient-to-b from-slate-900 via-slate-950 to-slate-900 border border-cyan-500/20 shadow-[0_0_30px_rgba(56,189,248,0.1)]">
         {/* Clean Header */}
         <CardHeader className="pb-4 border-b border-cyan-500/10">
           <div className="flex items-center justify-between">
@@ -1743,7 +1755,8 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
         <CardFooter className="pt-4 pb-6 px-6 border-t border-cyan-500/10 bg-slate-900/30">
           {memoizedInputForm}
         </CardFooter>
-      </CardUI>
+        </CardUI>
+      </CutCornerWrapper>
 
       {/* Information Dialog */}
       <Dialog open={isInfoDialogOpen} onOpenChange={setIsInfoDialogOpen}>

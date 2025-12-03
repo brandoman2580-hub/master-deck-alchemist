@@ -129,17 +129,14 @@ export default function DeckBuilderTips() {
         variant="ghost"
         size="icon"
         onClick={() => setIsOpen(true)}
-        className="relative text-yellow-400 hover:text-yellow-300 hover:bg-yellow-500/10 border border-yellow-500/30 hover:border-yellow-400/50 transition-all"
-        style={{
-          boxShadow: "0 0 20px rgba(250, 204, 21, 0.4), 0 0 40px rgba(250, 204, 21, 0.2)",
-        }}
+        className="relative text-cyan-400 hover:text-cyan-300 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 hover:border-cyan-400/50 transition-all focus:outline-none focus:ring-0"
         title="View helpful tips"
       >
         <Lightbulb className="h-5 w-5" />
       </Button>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="bg-gradient-to-b from-cyan-400/20 via-cyan-500/15 to-cyan-600/5 backdrop-blur-md border border-cyan-500/30 max-w-2xl">
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <div className="flex items-center gap-2">
               <Lightbulb className="h-5 w-5 text-yellow-400" />
