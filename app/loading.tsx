@@ -1,3 +1,5 @@
+import { CyberpunkLoaderFullScreen } from "@/components/ui/cyberpunk-loader";
+
 export default function Loading() {
-  return null
+  return <CyberpunkLoaderFullScreen message="Loading..." />;
 }

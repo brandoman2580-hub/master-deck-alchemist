@@ -1,6 +1,6 @@
 "use client";
 
-import { Brain, TrendingUp, Target, Cpu } from "lucide-react";
+import { Brain, MessageSquare, Target, Sparkles } from "lucide-react";
 import MDAIcon from "@/public/images/MDA_Logo_One.svg";
 import { ParallaxHero } from "../components/parallax-hero";
 import { Button } from "../components/ui/button";
@@ -88,28 +88,28 @@ export default function Home() {
 function Features() {
   const features = [
     {
-      icon: Brain,
-      title: "AI Synergy Scan",
+      icon: Sparkles,
+      title: "AI Recommendations",
       description:
-        "Advanced algorithms analyze card interactions and suggest optimal combinations for maximum consistency.",
+        "Get personalized card recommendations powered by hybrid RAG search. Find archetype-specific cards, tech options, and engine suggestions tailored to your deck.",
     },
     {
-      icon: TrendingUp,
-      title: "Matchup Insights",
+      icon: Brain,
+      title: "Deck Analysis",
       description:
-        "Real-time meta analysis reveals strengths and weaknesses against top-tier competitive strategies.",
+        "Comprehensive AI-powered analysis covering power level, consistency, resilience, matchups, and complexity. Get detailed insights with actionable suggestions.",
     },
     {
       icon: Target,
-      title: "Optimized Ratios",
+      title: "Deck Tester",
       description:
-        "Statistical modeling determines ideal deck ratios for starters, extenders, and disruption pieces.",
+        "Simulate matchups, analyze win rates, and get strategic insights. Test your deck against meta strategies with detailed matchup analysis and duel simulations.",
     },
     {
-      icon: Cpu,
-      title: "Combo Matrix",
+      icon: MessageSquare,
+      title: "AI Chatbot",
       description:
-        "Visual combo trees and probability calculations ensure you always have lines of play available.",
+        "Interactive AI assistant that understands your deck context. Ask questions, get recommendations, and receive expert-level strategic guidance in real-time.",
     },
   ];
 
@@ -187,10 +187,10 @@ function Features() {
 
 function StatsStrip() {
   const stats = [
-    { label: "Decks Built", value: "847,293" },
-    { label: "Combos Simulated", value: "12.4M" },
-    { label: "Engines Supported", value: "340+" },
-    { label: "Active Duelists", value: "156K" },
+    { label: "Cards in Database", value: "10,000+" },
+    { label: "Archetypes Supported", value: "500+" },
+    { label: "Formats Supported", value: "2" },
+    { label: "AI Analyses Run", value: "50K+" },
   ];
 
   return (

@@ -98,6 +98,7 @@ import { Skeleton } from "../../components/ui/skeleton";
 import { getTCGBanlist, getMasterDuelBanlist } from "../../lib/api";
 import { useModeStore } from "../../store/modeStore";
 import DeckBuilderTips from "../../components/deck-builder-tips";
+import { CyberpunkLoader } from "../../components/ui/cyberpunk-loader";
 
 export default function DeckBuilder() {
   const {
@@ -796,7 +797,7 @@ export default function DeckBuilder() {
                         const displayName = shouldTruncate ? `${deckName.slice(0, 8)}...` : deckName;
                         
                         return shouldTruncate ? (
-                          <TooltipProvider delayDuration={200}>
+                          <TooltipProvider delayDuration={100} skipDelayDuration={0}>
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <span 
@@ -823,26 +824,35 @@ export default function DeckBuilder() {
                         open={isRenameOpen}
                         onOpenChange={setIsRenameOpen}
                       >
-                        {!user ? (
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            aria-label="Rename deck"
-                            onClick={openLoginModal}
-                          >
-                            <Edit className="h-5 w-5" />
-                          </Button>
-                        ) : (
-                          <DialogTrigger asChild>
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              aria-label="Rename deck"
-                            >
-                              <Edit className="h-5 w-5" />
-                            </Button>
-                          </DialogTrigger>
-                        )}
+                        <TooltipProvider delayDuration={100} skipDelayDuration={0}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              {!user ? (
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  aria-label="Rename deck"
+                                  onClick={openLoginModal}
+                                >
+                                  <Edit className="h-5 w-5" />
+                                </Button>
+                              ) : (
+                                <DialogTrigger asChild>
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    aria-label="Rename deck"
+                                  >
+                                    <Edit className="h-5 w-5" />
+                                  </Button>
+                                </DialogTrigger>
+                              )}
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Rename Deck</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                         <DialogContent>
                           <DialogHeader>
                             <DialogTitle>Rename Deck</DialogTitle>
@@ -913,7 +923,7 @@ export default function DeckBuilder() {
                         </div>
                     </div>
 
-                    <TooltipProvider>
+                    <TooltipProvider delayDuration={100} skipDelayDuration={0}>
                       <div className="flex gap-1">
                         {/* Export Button */}
                         <Tooltip>
@@ -1411,11 +1421,11 @@ export default function DeckBuilder() {
 
                   <div className="h-[500px] border-t border-accent-cyan/18">
                     <DeckDropZone id="card-browser" isEmpty={false}>
-                      {loading ? (
+                      {loading || cardList.length === 0 ? (
                         <div className="flex flex-col items-center justify-center h-full">
-                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-400 mb-4"></div>
-                          <p className="text-muted-50">
-                            Loading cards...
+                          <CyberpunkLoader size="md" />
+                          <p className="text-muted-50 mt-4">
+                            Loading Card Database...
                           </p>
                         </div>
                       ) : filteredCards.length === 0 ? (
