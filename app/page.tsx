@@ -10,6 +10,7 @@ import CutCornerWrapper from "../components/cut-corner-wrapper";
 export default function Home() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
+      <main id="main-content" tabIndex={-1}>
       {/* Hero Section with Parallax Background */}
       <ParallaxHero>
         {/* Dark gradient overlay - minimal to show all parallax layers */}
@@ -79,6 +80,7 @@ export default function Home() {
 
       {/* Footer */}
       <Footer />
+      </main>
     </div>
   );
 }
@@ -226,7 +228,7 @@ function Footer() {
         <div className="flex flex-col md:flex-row items-center justify-between gap-6">
           {/* Logo */}
           <div className="flex items-center gap-3">
-            <MDAIcon className="w-24 h-24" />
+            <MDAIcon className="w-24 h-24" aria-label="Master Deck Alchemist logo" />
             <div>
               <div
                 className="tracking-wider uppercase text-sm"

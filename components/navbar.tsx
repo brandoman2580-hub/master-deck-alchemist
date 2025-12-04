@@ -51,9 +51,9 @@ export default function Navbar() {
           }}
         >
           <div className="flex h-14 items-center w-full px-4">
-            <Link href="/" className="mr-6 flex items-center space-x-0">
+            <Link href="/" className="mr-6 flex items-center space-x-0" aria-label="Master Deck Alchemist home">
               <div className="flex items-center gap-3">
-                <MDAIcon className="w-14 h-14" />
+                <MDAIcon className="w-14 h-14" aria-hidden="true" />
                 <span
                   className="tracking-wider uppercase text-cyan-400"
                   style={{ fontFamily: "var(--font-heading)" }}
@@ -62,7 +62,7 @@ export default function Navbar() {
                 </span>
               </div>
             </Link>
-            <nav className="flex items-center space-x-2 md:space-x-4 mx-6">
+            <nav className="flex items-center space-x-2 md:space-x-4 mx-6" aria-label="Main navigation">
               {navItems.map((item) => (
                 <Button
                   key={item.href}
@@ -70,7 +70,12 @@ export default function Navbar() {
                   size="md"
                   asChild
                 >
-                  <Link href={item.href} className="flex items-center">
+                  <Link 
+                    href={item.href} 
+                    className="flex items-center"
+                    aria-current={pathname === item.href ? "page" : undefined}
+                  >
+                    {item.icon && <span aria-hidden="true">{item.icon}</span>}
                     <span
                       className={cn(
                         "hidden sm:inline-block text-white",

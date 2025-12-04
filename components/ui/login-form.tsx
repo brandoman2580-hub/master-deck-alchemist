@@ -157,6 +157,9 @@ export function LoginForm({ onSignupClick }: LoginFormProps) {
               autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              aria-required="true"
+              aria-invalid={!!error}
+              aria-describedby={error ? "login-email-error" : undefined}
               className="w-full px-3 py-2 border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </CutCornerWrapper>
@@ -185,11 +188,23 @@ export function LoginForm({ onSignupClick }: LoginFormProps) {
               autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              aria-required="true"
+              aria-invalid={!!error}
+              aria-describedby={error ? "login-password-error" : undefined}
               className="w-full px-3 py-2 border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </CutCornerWrapper>
         </div>
-        {error && <div className="text-red-600 text-sm">{error}</div>}
+        {error && (
+          <div 
+            id="login-email-error"
+            role="alert"
+            aria-live="polite"
+            className="text-red-600 text-sm"
+          >
+            {error}
+          </div>
+        )}
         <CutCornerWrapper
           size="sm"
           padding="0"

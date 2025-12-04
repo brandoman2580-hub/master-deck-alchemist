@@ -5,6 +5,8 @@ import localFont from "next/font/local";
 import "./globals.css";
 import { Providers } from "./providers";
 import { LoginModal } from "../components/ui/login-modal";
+import { FocusManager } from "./(lib)/FocusManager";
+import { SkipLink } from "../components/skip-link";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -47,6 +49,8 @@ export default function RootLayout({
         `}
       >
         <Providers>
+          <SkipLink />
+          <FocusManager />
           {children}
           <LoginModal />
         </Providers>

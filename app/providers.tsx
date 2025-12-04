@@ -44,7 +44,7 @@ export function Providers({ children }: { children: ReactNode }) {
       <DeckProvider>
         <div className="relative z-20">
           <Navbar />
-          <main className="flex-1">{children}</main>
+          <main id="main-content" className="flex-1" tabIndex={-1}>{children}</main>
         </div>
       </DeckProvider>
     </ThemeProvider>

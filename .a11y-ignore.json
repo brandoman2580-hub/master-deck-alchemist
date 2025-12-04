@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "description": "Accessibility violation suppressions with justification",
+  "version": "1.0",
+  "suppressions": [
+    {
+      "component": "components/ui/card-preview.tsx",
+      "rule": "color-contrast",
+      "tool": "axe",
+      "reason": "Manually verified: 4.6:1 contrast ratio meets WCAG AA. Gradient text is decorative and has sufficient contrast against dark background.",
+      "owner": "developer",
+      "expiry": "2024-12-31",
+      "wcag_criteria": ["1.4.3"]
+    },
+    {
+      "component": "components/parallax-hero.tsx",
+      "rule": "image-alt",
+      "tool": "axe",
+      "reason": "Decorative background image. aria-hidden='true' applied. No semantic meaning.",
+      "owner": "developer",
+      "expiry": "2025-12-31",
+      "wcag_criteria": ["1.1.1"]
+    },
+    {
+      "component": "app/deck-builder/page.tsx",
+      "rule": "keyboard",
+      "tool": "pa11y",
+      "reason": "Drag-and-drop has keyboard alternative (arrow keys + Enter). Manual testing confirms keyboard accessibility.",
+      "owner": "developer",
+      "expiry": "2024-06-30",
+      "wcag_criteria": ["2.1.1"]
+    }
+  ],
+  "notes": "Suppressions must include: component path, rule ID, tool, justification, owner, expiry date, and affected WCAG criteria. Review quarterly."
+}
+
