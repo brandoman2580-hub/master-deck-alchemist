@@ -604,7 +604,7 @@ export function AIResponseCard({
                 </span>
               )}
               {!canAdd && (
-                <span className="text-xs text-slate-500">
+                <span className="text-xs text-slate-400">
                   {banStatus === "Forbidden" ? "Forbidden" : "Limit reached"}
                 </span>
               )}

@@ -740,7 +740,7 @@ function renderCardSuggestionsCard(
                       disabled={isFull}
                       className={`text-[11px] rounded-full border px-2 py-0.5 transition-colors ${
                         isFull
-                          ? "border-slate-600 bg-slate-800/50 text-slate-500 cursor-not-allowed"
+                          ? "border-slate-600 bg-slate-800/50 text-slate-400 cursor-not-allowed"
                           : "border-cyan-500/30 bg-cyan-500/10 hover:bg-cyan-500/20 hover:text-cyan-300 text-slate-300"
                       }`}
                       onClick={() => handleAddCard(s.card_name, s.section)}
@@ -1372,7 +1372,7 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
             {/* Mode-specific Analysis Card */}
             <div className="flex-1">
               {analysisCard}
-              <div className="text-xs text-slate-500 mt-1 text-left">
+              <div className="text-xs text-slate-400 mt-1 text-left">
                 {message.timestamp.toLocaleTimeString([], {
                   hour: "2-digit",
                   minute: "2-digit",
@@ -1448,7 +1448,7 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
                 )}
               </div>
               <div className={`flex items-center gap-2 mt-1 ${message.role === "user" ? "justify-end" : "justify-start"}`}>
-                <div className={`text-xs text-slate-500 ${message.role === "user" ? "text-right" : "text-left"}`}>
+                <div className={`text-xs text-slate-400 ${message.role === "user" ? "text-right" : "text-left"}`}>
                   {message.timestamp.toLocaleTimeString([], {
                     hour: "2-digit",
                     minute: "2-digit",
@@ -1603,7 +1603,7 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
               handleSendMessage();
             }
           }}
-          className="w-full bg-slate-950/60 border border-cyan-500/20 rounded-xl px-4 py-3 pr-12 text-slate-50 placeholder:text-slate-500 focus:border-cyan-400 focus:shadow-[0_0_20px_rgba(56,189,248,0.2)] focus-visible:ring-1 focus-visible:ring-cyan-400/50 transition-colors transition-shadow"
+          className="w-full bg-slate-950/60 border border-cyan-500/20 rounded-xl px-4 py-3 pr-12 text-slate-50 placeholder:text-slate-400 focus:border-cyan-400 focus:shadow-[0_0_20px_rgba(56,189,248,0.2)] focus-visible:ring-1 focus-visible:ring-cyan-400/50 transition-colors transition-shadow"
         />
         <button
           type="button"

@@ -127,7 +127,7 @@ export function LoginForm({ onSignupClick }: LoginFormProps) {
 
       <div className="flex items-center my-4">
         <div className="flex-grow border-t border-gray-200" />
-        <span className="mx-2 text-gray-400 text-xs">or</span>
+        <span className="mx-2 text-slate-300 text-xs">or</span>
         <div className="flex-grow border-t border-gray-200" />
       </div>
 

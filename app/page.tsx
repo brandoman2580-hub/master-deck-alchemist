@@ -10,7 +10,7 @@ import CutCornerWrapper from "../components/cut-corner-wrapper";
 export default function Home() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
-      <main id="main-content" tabIndex={-1}>
+      <main id="main-content" tabIndex={-1} aria-label="Main content" role="main">
       {/* Hero Section with Parallax Background */}
       <ParallaxHero>
         {/* Dark gradient overlay - minimal to show all parallax layers */}
@@ -223,7 +223,7 @@ function StatsStrip() {
 
 function Footer() {
   return (
-    <footer className="relative bg-slate-950 border-t border-cyan-500/20 py-12">
+    <footer className="relative bg-slate-950 border-t border-cyan-500/20 py-12" aria-label="Footer" role="contentinfo">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col md:flex-row items-center justify-between gap-6">
           {/* Logo */}
@@ -236,7 +236,7 @@ function Footer() {
               >
                 Master Deck Alchemist
               </div>
-              <div className="text-xs text-slate-500">
+              <div className="text-xs text-slate-400">
                 © 2025 All rights reserved
               </div>
             </div>

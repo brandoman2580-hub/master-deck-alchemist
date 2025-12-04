@@ -311,11 +311,11 @@ export default function DeckBuilderAgent() {
                 <span className="font-semibold text-cyan-400 tabular-nums">
                   {usage.tokens_used.toLocaleString()}
                 </span>
-                <span className="text-slate-500">/</span>
+                <span className="text-slate-400">/</span>
                 <span className="tabular-nums">{MAX_TOKENS_REFERENCE.toLocaleString()}</span>
                 {usage.cost_usd > 0 && (
                   <>
-                    <span className="text-slate-500">•</span>
+                    <span className="text-slate-400">•</span>
                     <span className="text-slate-300">${usage.cost_usd.toFixed(4)}</span>
                   </>
                 )}

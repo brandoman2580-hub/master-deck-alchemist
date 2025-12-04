@@ -62,7 +62,7 @@ export default function Navbar() {
                 </span>
               </div>
             </Link>
-            <nav className="flex items-center space-x-2 md:space-x-4 mx-6" aria-label="Main navigation">
+            <nav className="flex items-center space-x-2 md:space-x-4 mx-6" aria-label="Main navigation" role="navigation">
               {navItems.map((item) => (
                 <Button
                   key={item.href}

@@ -134,7 +134,7 @@ export function SignupForm({ onBack }: { onBack: () => void }) {
         </CutCornerWrapper>
         <ul className="mt-2 space-y-0.5 text-xs">
           {passwordReqs.map((req, i) => (
-            <li key={i} className={req.valid ? "text-green-600" : "text-gray-500"}>
+            <li key={i} className={req.valid ? "text-green-600" : "text-slate-400"}>
               {req.valid ? "✓" : "✗"} {req.label}
             </li>
           ))}
@@ -190,7 +190,7 @@ export function SignupForm({ onBack }: { onBack: () => void }) {
           className={`w-full font-semibold py-2 transition ${
             canSignUp
               ? "bg-blue-600 hover:bg-blue-700 text-white"
-              : "bg-gray-300 text-gray-500 cursor-not-allowed"
+              : "bg-gray-300 text-slate-600 cursor-not-allowed"
           }`}
         >
           {isPending ? "Signing up..." : "Sign up"}
@@ -199,7 +199,7 @@ export function SignupForm({ onBack }: { onBack: () => void }) {
       <button
         type="button"
         onClick={onBack}
-        className="w-full mt-2 text-gray-500 hover:text-gray-700 text-sm underline"
+        className="w-full mt-2 text-slate-400 hover:text-slate-300 text-sm underline"
       >
         Back to login
       </button>
