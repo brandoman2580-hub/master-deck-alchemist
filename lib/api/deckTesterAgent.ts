@@ -5,7 +5,10 @@ import {
 } from "../../types/ai-agents";
 
 // Cache for API responses
-const cache = new Map<string, { response: DeckTesterAgentResponse; timestamp: number }>();
+const cache = new Map<
+  string,
+  { response: DeckTesterAgentResponse; timestamp: number }
+>();
 const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
 
 // Generate cache key from request
@@ -21,18 +24,21 @@ function generateCacheKey(request: DeckTesterAgentRequest): string {
 function getCachedResponse(key: string): DeckTesterAgentResponse | null {
   const cached = cache.get(key);
   if (!cached) return null;
-  
+
   const now = Date.now();
   if (now - cached.timestamp > CACHE_TTL) {
     cache.delete(key);
     return null;
   }
-  
+
   return cached.response;
 }
 
 // Store response in cache
-function setCachedResponse(key: string, response: DeckTesterAgentResponse): void {
+function setCachedResponse(
+  key: string,
+  response: DeckTesterAgentResponse,
+): void {
   // Limit cache size to 50 entries
   if (cache.size >= 50) {
     const firstKey = cache.keys().next().value;
@@ -40,7 +46,7 @@ function setCachedResponse(key: string, response: DeckTesterAgentResponse): void
       cache.delete(firstKey);
     }
   }
-  
+
   cache.set(key, {
     response,
     timestamp: Date.now(),
@@ -48,7 +54,7 @@ function setCachedResponse(key: string, response: DeckTesterAgentResponse): void
 }
 
 async function callDeckTesterAgent(
-  request: DeckTesterAgentRequest
+  request: DeckTesterAgentRequest,
 ): Promise<DeckTesterAgentResponse & { _cached?: boolean }> {
   const accessToken = await getAccessToken();
 
@@ -58,7 +64,9 @@ async function callDeckTesterAgent(
 
   // Use the validated URL from supabaseClient (which already checked the env var)
   if (!supabaseUrl) {
-    throw new Error("Missing Supabase URL. Please check your environment variables.");
+    throw new Error(
+      "Missing Supabase URL. Please check your environment variables.",
+    );
   }
 
   // Check cache first
@@ -80,7 +88,7 @@ async function callDeckTesterAgent(
 
   if (!response.ok) {
     let errorMessage = `Failed to analyze matchup (Status: ${response.status})`;
-    
+
     try {
       const errorData = await response.json();
       if (errorData.error) {
@@ -101,20 +109,20 @@ async function callDeckTesterAgent(
         // If all else fails, use the default message with status code
       }
     }
-    
+
     throw new Error(errorMessage);
   }
 
   const result = (await response.json()) as DeckTesterAgentResponse;
-  
+
   // Cache the result
   setCachedResponse(cacheKey, result);
-  
+
   return { ...result, _cached: false };
 }
 
 export async function analyzeMatchup(
-  request: DeckTesterAgentRequest
+  request: DeckTesterAgentRequest,
 ): Promise<DeckTesterAgentResponse> {
   return callDeckTesterAgent({
     ...request,
@@ -123,10 +131,13 @@ export async function analyzeMatchup(
 }
 
 export async function simulateDuels(
-  request: DeckTesterAgentRequest
+  request: DeckTesterAgentRequest,
 ): Promise<DeckTesterAgentResponse> {
   // Enforce max 20 simulations
-  const numSimulations = Math.min(Math.max(1, request.num_simulations || 10), 20);
+  const numSimulations = Math.min(
+    Math.max(1, request.num_simulations || 10),
+    20,
+  );
 
   return callDeckTesterAgent({
     ...request,
@@ -136,7 +147,7 @@ export async function simulateDuels(
 }
 
 export async function getStrategicInsights(
-  request: DeckTesterAgentRequest
+  request: DeckTesterAgentRequest,
 ): Promise<DeckTesterAgentResponse> {
   return callDeckTesterAgent({
     ...request,

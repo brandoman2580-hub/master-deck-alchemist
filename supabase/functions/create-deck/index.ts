@@ -2,7 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
   Deno.env.get("SUPABASE_URL")!,
-  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
 );
 
 function parseYGOPRODeckText(rawText: string) {
@@ -14,7 +14,7 @@ function parseYGOPRODeckText(rawText: string) {
         line &&
         !line.startsWith("//") &&
         !line.startsWith("==") &&
-        !line.includes("cards)")
+        !line.includes("cards)"),
     );
 
   return lines

@@ -1,96 +1,101 @@
-"use client"
+"use client";
 
-import { useUserStore } from "../../store/useUserStore"
-import { useState, useRef, useEffect } from "react"
-import { createPortal } from "react-dom"
-import { Button } from "./button"
-import { HelpCircle, LogOut } from "lucide-react"
-import { supabase } from "../../lib/supabaseClient"
-import CutCornerWrapper from "../cut-corner-wrapper"
+import { useUserStore } from "../../store/useUserStore";
+import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
+import { Button } from "./button";
+import { HelpCircle, LogOut } from "lucide-react";
+import { supabase } from "../../lib/supabaseClient";
+import CutCornerWrapper from "../cut-corner-wrapper";
 
-function getInitials(user: { user_metadata?: { name?: string }; email?: string } | null) {
-  if (!user) return "U"
-  const name = user.user_metadata?.name as string | undefined
+function getInitials(
+  user: { user_metadata?: { name?: string }; email?: string } | null,
+) {
+  if (!user) return "U";
+  const name = user.user_metadata?.name as string | undefined;
   if (name) {
     return name
       .split(" ")
       .map((n) => n[0])
       .join("")
-      .toUpperCase()
+      .toUpperCase();
   }
-  if (user.email) return user.email[0].toUpperCase()
-  return "U"
+  if (user.email) return user.email[0].toUpperCase();
+  return "U";
 }
 
 export function UserMenu() {
-  const user = useUserStore((state) => state.user)
-  const [dropdownOpen, setDropdownOpen] = useState(false)
-  const dropdownRef = useRef<HTMLDivElement>(null)
-  const buttonRef = useRef<HTMLButtonElement>(null)
-  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, right: 0 })
-  const [mounted, setMounted] = useState(false)
+  const user = useUserStore((state) => state.user);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const [dropdownPosition, setDropdownPosition] = useState({
+    top: 0,
+    right: 0,
+  });
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true)
-  }, [])
+    setMounted(true);
+  }, []);
 
   // Calculate dropdown position when opening or scrolling
   useEffect(() => {
-    if (!mounted) return
+    if (!mounted) return;
 
     const updatePosition = () => {
       if (dropdownOpen && buttonRef.current) {
-        const rect = buttonRef.current.getBoundingClientRect()
+        const rect = buttonRef.current.getBoundingClientRect();
         setDropdownPosition({
           top: rect.bottom + 8, // mt-2 = 8px
           right: window.innerWidth - rect.right,
-        })
+        });
       }
-    }
+    };
 
     if (dropdownOpen) {
-      updatePosition()
-      window.addEventListener("scroll", updatePosition, true)
-      window.addEventListener("resize", updatePosition)
+      updatePosition();
+      window.addEventListener("scroll", updatePosition, true);
+      window.addEventListener("resize", updatePosition);
     }
 
     return () => {
-      window.removeEventListener("scroll", updatePosition, true)
-      window.removeEventListener("resize", updatePosition)
-    }
-  }, [dropdownOpen, mounted])
+      window.removeEventListener("scroll", updatePosition, true);
+      window.removeEventListener("resize", updatePosition);
+    };
+  }, [dropdownOpen, mounted]);
 
   // Close dropdown on outside click
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (
-        dropdownRef.current && 
+        dropdownRef.current &&
         !dropdownRef.current.contains(e.target as Node) &&
         buttonRef.current &&
         !buttonRef.current.contains(e.target as Node)
       ) {
-        setDropdownOpen(false)
+        setDropdownOpen(false);
       }
     }
     if (dropdownOpen) {
       // Use a small delay to avoid immediate closure
       const timeoutId = setTimeout(() => {
-        document.addEventListener("mousedown", handleClick)
-      }, 0)
+        document.addEventListener("mousedown", handleClick);
+      }, 0);
       return () => {
-        clearTimeout(timeoutId)
-        document.removeEventListener("mousedown", handleClick)
-      }
+        clearTimeout(timeoutId);
+        document.removeEventListener("mousedown", handleClick);
+      };
     }
-  }, [dropdownOpen])
+  }, [dropdownOpen]);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut()
-    setDropdownOpen(false)
-    globalThis.location.reload()
-  }
+    await supabase.auth.signOut();
+    setDropdownOpen(false);
+    globalThis.location.reload();
+  };
 
-  if (!user) return null
+  if (!user) return null;
 
   return (
     <div className="relative" ref={dropdownRef}>
@@ -114,48 +119,50 @@ export function UserMenu() {
           {getInitials(user)}
         </button>
       </CutCornerWrapper>
-      {mounted && dropdownOpen && createPortal(
-        <div
-          ref={dropdownRef}
-          className="fixed w-48 z-[100]"
-          style={{
-            top: `${dropdownPosition.top}px`,
-            right: `${dropdownPosition.right}px`,
-          }}
-        >
-          <CutCornerWrapper
-            size="sm"
-            padding="0.5rem 0"
+      {mounted &&
+        dropdownOpen &&
+        createPortal(
+          <div
+            ref={dropdownRef}
+            className="fixed w-48 z-[100]"
             style={{
-              ["--cut-corner-stroke" as any]: "rgba(20,239,255,0.38)",
-              ["--cut-corner-fill" as any]: "rgba(15, 23, 42, 0.85)",
-              background: "rgba(15, 23, 42, 0.85)",
-              backdropFilter: "blur(6px) saturate(120%)",
-              WebkitBackdropFilter: "blur(6px) saturate(120%)",
+              top: `${dropdownPosition.top}px`,
+              right: `${dropdownPosition.right}px`,
             }}
           >
-            <div className="py-2">
-            <Button
-              variant="ghost"
-              className="w-full justify-start text-slate-300 hover:text-cyan-400 cursor-not-allowed"
-              startIcon={<HelpCircle className="mr-2" />}
-              disabled
+            <CutCornerWrapper
+              size="sm"
+              padding="0.5rem 0"
+              style={{
+                ["--cut-corner-stroke" as any]: "rgba(20,239,255,0.38)",
+                ["--cut-corner-fill" as any]: "rgba(15, 23, 42, 0.85)",
+                background: "rgba(15, 23, 42, 0.85)",
+                backdropFilter: "blur(6px) saturate(120%)",
+                WebkitBackdropFilter: "blur(6px) saturate(120%)",
+              }}
             >
-              Help
-            </Button>
-            <Button
-              variant="ghost"
-              className="w-full justify-start text-slate-300 hover:text-cyan-400 hover:bg-cyan-500/10"
-              startIcon={<LogOut className="mr-2" />}
-              onClick={handleLogout}
-            >
-              Logout
-            </Button>
-            </div>
-          </CutCornerWrapper>
-        </div>,
-        document.body
-      )}
+              <div className="py-2">
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start text-slate-300 hover:text-cyan-400 cursor-not-allowed"
+                  startIcon={<HelpCircle className="mr-2" />}
+                  disabled
+                >
+                  Help
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start text-slate-300 hover:text-cyan-400 hover:bg-cyan-500/10"
+                  startIcon={<LogOut className="mr-2" />}
+                  onClick={handleLogout}
+                >
+                  Logout
+                </Button>
+              </div>
+            </CutCornerWrapper>
+          </div>,
+          document.body,
+        )}
     </div>
-  )
+  );
 }

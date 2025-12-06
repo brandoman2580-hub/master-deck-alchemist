@@ -7,11 +7,11 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl) {
-  throw new Error('Missing env.NEXT_PUBLIC_SUPABASE_URL');
+  throw new Error("Missing env.NEXT_PUBLIC_SUPABASE_URL");
 }
 
 if (!supabaseAnonKey) {
-  throw new Error('Missing env.NEXT_PUBLIC_SUPABASE_ANON_KEY');
+  throw new Error("Missing env.NEXT_PUBLIC_SUPABASE_ANON_KEY");
 }
 
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
@@ -19,8 +19,16 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey);
 // 2. Card data search, now from Supabase instead of YGOPRODeck
 export async function getCardData(params: CardSearchParams): Promise<Card[]> {
   // Check if this is a filtered search or a request for all cards
-  const hasFilters = params.name || params.type || params.race || params.attribute || 
-                    params.level || params.atk || params.def || params.archetype || params.effect;
+  const hasFilters =
+    params.name ||
+    params.type ||
+    params.race ||
+    params.attribute ||
+    params.level ||
+    params.atk ||
+    params.def ||
+    params.archetype ||
+    params.effect;
 
   if (hasFilters) {
     // For filtered searches, use single query (should return < 1000 results)
@@ -32,19 +40,21 @@ export async function getCardData(params: CardSearchParams): Promise<Card[]> {
 }
 
 async function fetchFilteredCards(params: CardSearchParams): Promise<Card[]> {
-  let query = supabase
-    .from("cards")
-    .select("*");
+  let query = supabase.from("cards").select("*");
 
   // Apply filters
-  if (params.name && params.name.trim()) query = query.ilike("name", `%${params.name}%`);
+  if (params.name && params.name.trim())
+    query = query.ilike("name", `%${params.name}%`);
   if (params.type && params.type.trim()) query = query.eq("type", params.type);
   if (params.race && params.race.trim()) query = query.eq("race", params.race);
-  if (params.attribute && params.attribute.trim()) query = query.eq("attribute", params.attribute);
-  if (params.level && params.level.trim()) query = query.eq("level", params.level);
+  if (params.attribute && params.attribute.trim())
+    query = query.eq("attribute", params.attribute);
+  if (params.level && params.level.trim())
+    query = query.eq("level", params.level);
   if (params.atk && params.atk.trim()) query = query.eq("atk", params.atk);
   if (params.def && params.def.trim()) query = query.eq("def", params.def);
-  if (params.archetype && params.archetype.trim()) query = query.ilike("archetype", `%${params.archetype}%`);
+  if (params.archetype && params.archetype.trim())
+    query = query.ilike("archetype", `%${params.archetype}%`);
 
   console.log("Executing filtered Supabase query...");
   const { data, error } = await query;
@@ -63,7 +73,7 @@ async function fetchFilteredCards(params: CardSearchParams): Promise<Card[]> {
   if (params.effect && params.effect.trim() !== "") {
     const effectLower = params.effect.toLowerCase();
     cards = cards.filter((card) =>
-      card.desc?.toLowerCase().includes(effectLower)
+      card.desc?.toLowerCase().includes(effectLower),
     );
   }
 
@@ -100,9 +110,11 @@ async function fetchAllCards(params: CardSearchParams): Promise<Card[]> {
 
     const batchCards = data.map(mapCardData) as Card[];
     allCards.push(...batchCards);
-    
-    console.log(`Fetched batch: ${data.length} cards (total: ${allCards.length})`);
-    
+
+    console.log(
+      `Fetched batch: ${data.length} cards (total: ${allCards.length})`,
+    );
+
     // If we got less than the batch size, we've reached the end
     if (data.length < batchSize) {
       hasMore = false;
@@ -126,18 +138,22 @@ function mapCardData(card: any) {
     ...card,
     deckInstanceId: "", // This will be set when added to deck
     // Add missing fields with default values to match Card interface
-    card_images: card.card_images || [{ 
-      id: card.id, 
-      image_url: `https://images.ygoprodeck.com/images/cards/${card.id}.jpg`,
-      image_url_small: `https://images.ygoprodeck.com/images/cards_small/${card.id}.jpg`
-    }],
+    card_images: card.card_images || [
+      {
+        id: card.id,
+        image_url: `https://images.ygoprodeck.com/images/cards/${card.id}.jpg`,
+        image_url_small: `https://images.ygoprodeck.com/images/cards_small/${card.id}.jpg`,
+      },
+    ],
     card_sets: card.card_sets || [],
-    card_prices: card.card_prices || [{ 
-      cardmarket_price: "0", 
-      tcgplayer_price: "0", 
-      ebay_price: "0", 
-      amazon_price: "0" 
-    }],
+    card_prices: card.card_prices || [
+      {
+        cardmarket_price: "0",
+        tcgplayer_price: "0",
+        ebay_price: "0",
+        amazon_price: "0",
+      },
+    ],
     misc_info: card.misc_info || [{ md_rarity: "" }],
   };
 }
@@ -145,7 +161,7 @@ function mapCardData(card: any) {
 function sortCards(
   cards: Card[],
   sortBy: string,
-  direction: "asc" | "desc"
+  direction: "asc" | "desc",
 ): Card[] {
   return [...cards].sort((a, b) => {
     let valueA;
@@ -199,14 +215,19 @@ export interface MasterDuelBanlistEntry {
 }
 
 // 3. Banlist fetch—Master Duel from Supabase master_duel_banlist table
-export async function getMasterDuelBanlist(): Promise<Record<string, BanStatus>> {
+export async function getMasterDuelBanlist(): Promise<
+  Record<string, BanStatus>
+> {
   try {
     const { data, error } = await supabase
       .from("master_duel_banlist")
       .select("card_name, ban_status");
 
     if (error) {
-      console.warn("Error fetching Master Duel banlist from Supabase:", error.message);
+      console.warn(
+        "Error fetching Master Duel banlist from Supabase:",
+        error.message,
+      );
       return {};
     }
 
@@ -223,7 +244,10 @@ export async function getMasterDuelBanlist(): Promise<Record<string, BanStatus>>
     }
     return banlist;
   } catch (error) {
-    console.warn("Error fetching Master Duel banlist, using empty banlist:", error);
+    console.warn(
+      "Error fetching Master Duel banlist, using empty banlist:",
+      error,
+    );
     return {};
   }
 }
@@ -241,7 +265,10 @@ export async function getTCGBanlist(): Promise<Record<string, BanStatus>> {
       .limit(1);
 
     if (error) {
-      console.warn("TCG banlist column not found, using empty banlist:", error.message);
+      console.warn(
+        "TCG banlist column not found, using empty banlist:",
+        error.message,
+      );
       return {};
     }
 
@@ -259,7 +286,7 @@ export async function getTCGBanlist(): Promise<Record<string, BanStatus>> {
     if (allError) throw allError;
 
     const banlist: Record<string, BanStatus> = {};
-    for (const card of (allData ?? [])) {
+    for (const card of allData ?? []) {
       if (card.ban_status) {
         banlist[card.name] = card.ban_status as BanStatus;
       }

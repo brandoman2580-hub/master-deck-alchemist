@@ -15,7 +15,9 @@ export function ParallaxHero({ children }: ParallaxHeroProps) {
   // Check for reduced motion preference
   useEffect(() => {
     if (typeof globalThis !== "undefined" && globalThis.matchMedia) {
-      const mediaQuery = globalThis.matchMedia("(prefers-reduced-motion: reduce)");
+      const mediaQuery = globalThis.matchMedia(
+        "(prefers-reduced-motion: reduce)",
+      );
       setPrefersReducedMotion(mediaQuery.matches);
 
       const handleChange = (e: MediaQueryListEvent) => {
@@ -38,17 +40,17 @@ export function ParallaxHero({ children }: ParallaxHeroProps) {
   const yBg = useTransform(
     scrollYProgress,
     [0, 1],
-    prefersReducedMotion ? ["0%", "0%"] : ["0%", "10%"]
+    prefersReducedMotion ? ["0%", "0%"] : ["0%", "10%"],
   );
   const yGlyphs = useTransform(
     scrollYProgress,
     [0, 1],
-    prefersReducedMotion ? ["0%", "0%"] : ["0%", "20%"]
+    prefersReducedMotion ? ["0%", "0%"] : ["0%", "20%"],
   );
   const yFg = useTransform(
     scrollYProgress,
     [0, 1],
-    prefersReducedMotion ? ["0%", "0%"] : ["0%", "30%"]
+    prefersReducedMotion ? ["0%", "0%"] : ["0%", "30%"],
   );
 
   return (
@@ -115,11 +117,8 @@ export function ParallaxHero({ children }: ParallaxHeroProps) {
 
       {/* Content above parallax layers */}
       {children && (
-        <div className="relative z-10 h-full flex items-center">
-          {children}
-        </div>
+        <div className="relative z-10 h-full flex items-center">{children}</div>
       )}
     </section>
   );
 }
-

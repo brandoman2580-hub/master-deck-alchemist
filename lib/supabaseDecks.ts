@@ -45,7 +45,11 @@ export async function getUserDecks(userId: string): Promise<Deck[]> {
   return data || [];
 }
 
-export async function toggleDeckPin(deckId: string, userId: string, isPinned: boolean): Promise<void> {
+export async function toggleDeckPin(
+  deckId: string,
+  userId: string,
+  isPinned: boolean,
+): Promise<void> {
   const { error } = await supabase
     .from("decks")
     .update({ is_pinned: isPinned })
@@ -55,7 +59,10 @@ export async function toggleDeckPin(deckId: string, userId: string, isPinned: bo
   if (error) throw error;
 }
 
-export async function loadDeck(deckId: string, userId: string): Promise<DeckType> {
+export async function loadDeck(
+  deckId: string,
+  userId: string,
+): Promise<DeckType> {
   const { data, error } = await supabase
     .from("decks")
     .select("*")

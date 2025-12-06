@@ -11,7 +11,7 @@ function safeStr(v: any): string {
 
 /**
  * Convert a uniform array of objects into a compact TOON table string.
- * 
+ *
  * @param name - Top-level name (used in header)
  * @param items - Array of objects to convert
  * @param fields - Ordered keys to include
@@ -45,10 +45,8 @@ export function toTOON({
         }
         return s;
       })
-      .join(" | ")
+      .join(" | "),
   );
 
   return [header, "", tableHeader, ...rows, ""].join("\n");
 }
-
-

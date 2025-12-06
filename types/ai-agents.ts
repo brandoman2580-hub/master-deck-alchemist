@@ -73,7 +73,12 @@ export interface MatchupAssessment {
   deck_a_advantages: string[];
   deck_b_advantages: string[];
   key_factors: string[];
-  difficulty_rating: "very_favorable" | "favorable" | "even" | "unfavorable" | "very_unfavorable";
+  difficulty_rating:
+    | "very_favorable"
+    | "favorable"
+    | "even"
+    | "unfavorable"
+    | "very_unfavorable";
 }
 
 export interface StrategicInsights {
@@ -180,7 +185,13 @@ export interface StrategicAnalytics {
     countermeasures: string[];
   }>;
   playstyle_profile: {
-    primary_style: "control" | "aggro" | "combo" | "midrange" | "stun" | "rogue";
+    primary_style:
+      | "control"
+      | "aggro"
+      | "combo"
+      | "midrange"
+      | "stun"
+      | "rogue";
     style_confidence: number; // 0-100
     evidence: string[];
     description: string;
@@ -242,4 +253,3 @@ export interface AgentUsage {
   cost_usd: number;
   requests_count: number;
 }
-

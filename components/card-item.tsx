@@ -56,7 +56,7 @@ export default function CardItem({
 
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: dragInstanceId, // Stable ID based on card ID
-    data: { cardId: card.id, type: 'browser' }, // Store the actual card id and type for lookup
+    data: { cardId: card.id, type: "browser" }, // Store the actual card id and type for lookup
     disabled: disabled,
   });
   const style = transform
@@ -67,7 +67,9 @@ export default function CardItem({
 
   return (
     <>
-      <div className={`p-2 border-b hover:bg-accent/10 ${isBeingDragged ? 'opacity-50' : ''}`}>
+      <div
+        className={`p-2 border-b hover:bg-accent/10 ${isBeingDragged ? "opacity-50" : ""}`}
+      >
         <div className="flex gap-3">
           <div
             ref={setNodeRef}

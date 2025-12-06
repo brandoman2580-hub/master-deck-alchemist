@@ -94,7 +94,12 @@
         "Logo image has alt='Master Deck Alchemist'",
         "Keyboard navigation works (Tab order logical)"
       ],
-      "labels": ["a11y", "wcag-2.1-aa", "priority:critical", "component:navigation"]
+      "labels": [
+        "a11y",
+        "wcag-2.1-aa",
+        "priority:critical",
+        "component:navigation"
+      ]
     },
     {
       "id": "A11Y-003",
@@ -113,7 +118,13 @@
         "Esc key closes modal",
         "Verified with keyboard and screen reader"
       ],
-      "labels": ["a11y", "wcag-2.1-aa", "priority:critical", "component:modal", "status:verified"]
+      "labels": [
+        "a11y",
+        "wcag-2.1-aa",
+        "priority:critical",
+        "component:modal",
+        "status:verified"
+      ]
     },
     {
       "id": "A11Y-004",
@@ -287,4 +298,3 @@
     }
   }
 }
-

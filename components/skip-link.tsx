@@ -3,7 +3,7 @@
 /**
  * SkipLink: Provides keyboard-accessible skip navigation to main content.
  * WCAG 2.4.1 (Bypass Blocks)
- * 
+ *
  * Hidden by default, becomes visible on focus.
  */
 
@@ -17,4 +17,3 @@ export function SkipLink() {
     </a>
   );
 }
-

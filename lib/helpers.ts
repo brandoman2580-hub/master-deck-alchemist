@@ -17,7 +17,7 @@ import { useLoginModalStore } from "../store/useLoginModalStore";
 function expandCardList(list?: (string | CountedCard)[]): string[] {
   if (!list) return [];
   return list.flatMap((card) =>
-    typeof card === "string" ? card : Array(card.count).fill(card.name)
+    typeof card === "string" ? card : Array(card.count).fill(card.name),
   );
 }
 
@@ -91,7 +91,7 @@ export function normalizeImportedDeck(jsonString: string): NormalizedDeck {
 // Maps ban status to allowed copies
 export function getAllowedCopies(
   card: Card,
-  banlist: Record<string, BanStatus>
+  banlist: Record<string, BanStatus>,
 ): number {
   const status = banlist[card.name];
   switch (status) {
@@ -109,7 +109,7 @@ export function getAllowedCopies(
 export function getDisabledCards(
   card: Card,
   currentDeck: { mainDeck: Card[]; extraDeck: Card[]; sideDeck: Card[] },
-  banlist: Record<string, BanStatus>
+  banlist: Record<string, BanStatus>,
 ): {
   isMainDisabled: boolean;
   isExtraDisabled: boolean;
@@ -219,14 +219,16 @@ export function filterCards(cards: Card[], params: SearchParams): Card[] {
 // This function can be imported and called anywhere (client-side)
 export function openLoginModal() {
   // Directly set the Zustand state
-  useLoginModalStore.getState().openLoginModal()
+  useLoginModalStore.getState().openLoginModal();
 }
 
 /**
  * Safely normalize archetype from a Card or raw value into a clean string.
  * This MUST NEVER return "[object Object]".
  */
-export function getArchetypeName(cardOrRaw: { archetype?: any } | Card | any): string {
+export function getArchetypeName(
+  cardOrRaw: { archetype?: any } | Card | any,
+): string {
   const raw = (cardOrRaw as any)?.archetype ?? cardOrRaw;
 
   if (!raw) return "";
@@ -255,7 +257,10 @@ export function getArchetypeName(cardOrRaw: { archetype?: any } | Card | any): s
  * - Any "[object Object]" is replaced with "this archetype".
  * - Any card-like name not in allowedCardNames is replaced with "this card".
  */
-export function sanitizeAiText(content: string, allowedCardNames: string[]): string {
+export function sanitizeAiText(
+  content: string,
+  allowedCardNames: string[],
+): string {
   if (!content) return "";
   let cleaned = content.replace(/\[object Object\]/g, "this archetype");
 

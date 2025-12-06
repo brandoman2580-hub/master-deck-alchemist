@@ -19,12 +19,14 @@ export interface FeedbackResponse {
  * Submit feedback for a recommendation
  */
 export async function submitFeedback(
-  request: FeedbackRequest
+  request: FeedbackRequest,
 ): Promise<FeedbackResponse> {
   const accessToken = await getAccessToken();
 
   if (!accessToken) {
-    throw new Error("Authentication required. Please log in to submit feedback.");
+    throw new Error(
+      "Authentication required. Please log in to submit feedback.",
+    );
   }
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -48,7 +50,10 @@ export async function submitFeedback(
     try {
       errorData = errorText ? JSON.parse(errorText) : {};
     } catch {
-      errorData = { error: errorText || "Unknown error", status: response.status };
+      errorData = {
+        error: errorText || "Unknown error",
+        status: response.status,
+      };
     }
 
     if (response.status === 429) {
@@ -56,10 +61,11 @@ export async function submitFeedback(
     }
 
     throw new Error(
-      errorData.error || errorData.message || `Failed to submit feedback (${response.status})`
+      errorData.error ||
+        errorData.message ||
+        `Failed to submit feedback (${response.status})`,
     );
   }
 
-  return await response.json() as FeedbackResponse;
+  return (await response.json()) as FeedbackResponse;
 }
-

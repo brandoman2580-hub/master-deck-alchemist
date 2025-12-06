@@ -9,12 +9,14 @@ import process from "node:process";
  * Get deck building suggestions from the AI agent
  */
 export async function getDeckBuilderSuggestions(
-  request: DeckBuilderAgentRequest
+  request: DeckBuilderAgentRequest,
 ): Promise<DeckBuilderAgentResponse> {
   const accessToken = await getAccessToken();
 
   if (!accessToken) {
-    throw new Error("Authentication required. Please log in to use the AI Builder Agent.");
+    throw new Error(
+      "Authentication required. Please log in to use the AI Builder Agent.",
+    );
   }
 
   const response = await fetch(
@@ -33,7 +35,7 @@ export async function getDeckBuilderSuggestions(
         context: request.context || "refining",
         banlist_format: request.banlist_format || "MASTER_DUEL",
       }),
-    }
+    },
   );
 
   if (!response.ok) {
@@ -50,7 +52,7 @@ export async function getDeckBuilderSuggestions(
 export async function analyzeDeckProgress(
   deck: DeckBuilderAgentRequest["current_deck"],
   context: "initial_build" | "refining" | "completing" = "refining",
-  banlistFormat: "MASTER_DUEL" | "TCG" = "MASTER_DUEL"
+  banlistFormat: "MASTER_DUEL" | "TCG" = "MASTER_DUEL",
 ): Promise<DeckBuilderAgentResponse> {
   return getDeckBuilderSuggestions({
     current_deck: deck,
@@ -65,7 +67,7 @@ export async function analyzeDeckProgress(
 export async function getArchetypeRecommendations(
   deck: DeckBuilderAgentRequest["current_deck"],
   archetype: string,
-  format: "MASTER_DUEL" | "TCG" = "MASTER_DUEL"
+  format: "MASTER_DUEL" | "TCG" = "MASTER_DUEL",
 ): Promise<DeckBuilderAgentResponse> {
   return getDeckBuilderSuggestions({
     current_deck: deck,
@@ -74,4 +76,3 @@ export async function getArchetypeRecommendations(
     context: "initial_build",
   });
 }
-

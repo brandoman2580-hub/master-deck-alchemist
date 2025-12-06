@@ -25,7 +25,9 @@ export function PinnedDecksSection({
     .filter((deck) => deck.isPinned)
     .sort((a, b) => {
       if (!a.updated_at || !b.updated_at) return 0;
-      return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+      return (
+        new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+      );
     });
 
   if (pinnedDecks.length === 0) {
@@ -37,7 +39,9 @@ export function PinnedDecksSection({
         <Card className="p-6 text-center">
           <CardContent className="pt-0">
             <p className="text-muted-50/70 text-sm">No pinned decks yet</p>
-            <p className="text-xs text-muted-50/50 mt-1">Pin decks to keep them at the top</p>
+            <p className="text-xs text-muted-50/50 mt-1">
+              Pin decks to keep them at the top
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -65,4 +69,3 @@ export function PinnedDecksSection({
     </div>
   );
 }
-

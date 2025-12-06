@@ -27,7 +27,9 @@ export function ModeDecksSection({
     .filter((deck) => deck.mode === mode)
     .sort((a, b) => {
       if (!a.updated_at || !b.updated_at) return 0;
-      return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+      return (
+        new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+      );
     });
 
   if (modeDecks.length === 0) {
@@ -39,7 +41,9 @@ export function ModeDecksSection({
         <Card className="p-6 text-center">
           <CardContent className="pt-0">
             <p className="text-muted-50/70 text-sm">No {mode} decks found</p>
-            <p className="text-xs text-muted-50/50 mt-1">Create a deck in {mode} mode to see it here</p>
+            <p className="text-xs text-muted-50/50 mt-1">
+              Create a deck in {mode} mode to see it here
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -48,7 +52,10 @@ export function ModeDecksSection({
 
   return (
     <div className="space-y-4">
-      <h2 className="text-xl font-bold text-slate-50" style={{ fontFamily: "var(--font-heading)" }}>
+      <h2
+        className="text-xl font-bold text-slate-50"
+        style={{ fontFamily: "var(--font-heading)" }}
+      >
         {mode} Decks
       </h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -67,4 +74,3 @@ export function ModeDecksSection({
     </div>
   );
 }
-

@@ -46,7 +46,9 @@ function getArchetypeNameServer(card: { archetype?: any }): string {
 }
 
 // Load Master Duel banlist from Supabase
-async function loadMasterDuelBanlist(supabaseClient: any): Promise<Record<string, string>> {
+async function loadMasterDuelBanlist(
+  supabaseClient: any,
+): Promise<Record<string, string>> {
   try {
     const { data, error } = await supabaseClient
       .from("master_duel_banlist")
@@ -99,11 +101,15 @@ function calculateDeckStats(deck: {
   const mainCount = deck.mainDeck.length;
   const extraCount = deck.extraDeck.length;
   const sideCount = deck.sideDeck.length;
-  
-  const monsterCount = deck.mainDeck.filter((c) => c.type.includes("Monster")).length;
-  const spellCount = deck.mainDeck.filter((c) => c.type.includes("Spell")).length;
+
+  const monsterCount = deck.mainDeck.filter((c) =>
+    c.type.includes("Monster"),
+  ).length;
+  const spellCount = deck.mainDeck.filter((c) =>
+    c.type.includes("Spell"),
+  ).length;
   const trapCount = deck.mainDeck.filter((c) => c.type.includes("Trap")).length;
-  
+
   const archetypes = new Map<string, number>();
   deck.mainDeck.forEach((card) => {
     const arch = getArchetypeNameServer(card);
@@ -111,10 +117,11 @@ function calculateDeckStats(deck: {
       archetypes.set(arch, (archetypes.get(arch) || 0) + 1);
     }
   });
-  
-  const primaryArchetype = Array.from(archetypes.entries())
-    .sort((a, b) => b[1] - a[1])[0]?.[0] || null;
-  
+
+  const primaryArchetype =
+    Array.from(archetypes.entries()).sort((a, b) => b[1] - a[1])[0]?.[0] ||
+    null;
+
   return {
     mainCount,
     extraCount,
@@ -128,11 +135,14 @@ function calculateDeckStats(deck: {
 }
 
 // Build deck composition text for prompt
-function buildDeckCompositionText(deck: {
-  mainDeck: Card[];
-  extraDeck: Card[];
-  sideDeck: Card[];
-}, deckName: string): string {
+function buildDeckCompositionText(
+  deck: {
+    mainDeck: Card[];
+    extraDeck: Card[];
+    sideDeck: Card[];
+  },
+  deckName: string,
+): string {
   const stats = calculateDeckStats(deck);
   const mainDeckText = deck.mainDeck
     .slice(0, 40) // Limit to first 40 for prompt size
@@ -158,9 +168,9 @@ function buildDeckCompositionText(deck: {
 
   // Create a clear list of card names for easy reference
   const allCardNamesList = [
-    ...deck.mainDeck.map(c => c.name),
-    ...deck.extraDeck.map(c => c.name),
-    ...deck.sideDeck.map(c => c.name)
+    ...deck.mainDeck.map((c) => c.name),
+    ...deck.extraDeck.map((c) => c.name),
+    ...deck.sideDeck.map((c) => c.name),
   ].join(", ");
 
   return `
@@ -200,7 +210,7 @@ Deno.serve(async (req) => {
         {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        },
       );
     }
 
@@ -214,7 +224,7 @@ Deno.serve(async (req) => {
         {
           status: 401,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        },
       );
     }
 
@@ -229,7 +239,7 @@ Deno.serve(async (req) => {
         {
           status: 401,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        },
       );
     }
 
@@ -248,7 +258,7 @@ Deno.serve(async (req) => {
         {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        },
       );
     }
 
@@ -256,9 +266,10 @@ Deno.serve(async (req) => {
     const simulations = Math.min(Math.max(1, num_simulations), MAX_SIMULATIONS);
 
     // Load banlist
-    const banlist = banlist_format === "MASTER_DUEL"
-      ? await loadMasterDuelBanlist(supabase)
-      : await fetchTCGBanlist();
+    const banlist =
+      banlist_format === "MASTER_DUEL"
+        ? await loadMasterDuelBanlist(supabase)
+        : await fetchTCGBanlist();
 
     const banlistText = Object.entries(banlist)
       .filter(([, status]) => status === "Forbidden" || status === "Limited")
@@ -272,14 +283,16 @@ Deno.serve(async (req) => {
 
     // Get all card names from decks for sanitization
     const deckCardNames = Array.from(
-      new Set([
-        ...deck_a.mainDeck.map((c) => c.name),
-        ...deck_a.extraDeck.map((c) => c.name),
-        ...deck_a.sideDeck.map((c) => c.name),
-        ...deck_b.mainDeck.map((c) => c.name),
-        ...deck_b.extraDeck.map((c) => c.name),
-        ...deck_b.sideDeck.map((c) => c.name),
-      ].map((n) => n.trim()))
+      new Set(
+        [
+          ...deck_a.mainDeck.map((c) => c.name),
+          ...deck_a.extraDeck.map((c) => c.name),
+          ...deck_a.sideDeck.map((c) => c.name),
+          ...deck_b.mainDeck.map((c) => c.name),
+          ...deck_b.extraDeck.map((c) => c.name),
+          ...deck_b.sideDeck.map((c) => c.name),
+        ].map((n) => n.trim()),
+      ),
     );
 
     // Fetch all card names from database for comprehensive sanitization
@@ -290,9 +303,11 @@ Deno.serve(async (req) => {
         .from("cards")
         .select("name")
         .limit(10000); // Get a large sample of card names
-      
+
       if (!cardError && allCards) {
-        const dbCardNames = allCards.map((c: any) => c.name.trim()).filter(Boolean);
+        const dbCardNames = allCards
+          .map((c: any) => c.name.trim())
+          .filter(Boolean);
         allCardNames = Array.from(new Set([...deckCardNames, ...dbCardNames]));
       }
     } catch (err) {
@@ -326,7 +341,7 @@ Provide a detailed matchup analysis including:
 5. Resource usage metrics - draw consistency, resource depletion rate, recovery success
 
 Return your analysis as valid JSON with this exact schema:`;
-      
+
       responseSchema = `{
   "analysis": "string - comprehensive matchup analysis",
   "predicted_win_rate": number - 0-100 (overall),
@@ -417,7 +432,7 @@ Simulate ${simulations} duels and provide:
 5. Detailed simulation analytics including turn-by-turn progression, combo success rates, decision points, game duration stats, and damage trends
 
 Return your analysis as valid JSON with this exact schema:`;
-      
+
       responseSchema = `{
   "analysis": "string - overall simulation analysis",
   "predicted_win_rate": number - 0-100,
@@ -520,7 +535,7 @@ Provide comprehensive strategic guidance including:
 5. Risk vs reward analysis - evaluate high-risk/high-reward plays
 
 Return your analysis as valid JSON with this exact schema:`;
-      
+
       responseSchema = `{
   "analysis": "string - strategic analysis",
   "predicted_win_rate": number - 0-100,
@@ -594,7 +609,7 @@ Return your analysis as valid JSON with this exact schema:`;
         {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        },
       );
     }
 
@@ -613,7 +628,7 @@ Return your analysis as valid JSON with this exact schema:`;
           max_tokens: 4096,
           response_format: { type: "json_object" },
         }),
-      }
+      },
     );
 
     if (!groqResponse.ok) {
@@ -626,7 +641,7 @@ Return your analysis as valid JSON with this exact schema:`;
 
     const result = await groqResponse.json();
     const rawContent = result.choices?.[0]?.message?.content || "{}";
-    
+
     // Parse JSON response
     let parsedResponse: any = null;
     try {
@@ -650,7 +665,7 @@ Return your analysis as valid JSON with this exact schema:`;
         {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        },
       );
     }
 
@@ -659,7 +674,8 @@ Return your analysis as valid JSON with this exact schema:`;
     const extractCardNames = (obj: any, names: Set<string>): void => {
       if (typeof obj === "string") {
         // Try to extract card names from text (2+ capitalized words)
-        const cardLikeRegex = /\b([A-Z][A-Za-z0-9'&-]+(?:\s+[A-Z][A-Za-z0-9'&-]+)+)\b/g;
+        const cardLikeRegex =
+          /\b([A-Z][A-Za-z0-9'&-]+(?:\s+[A-Z][A-Za-z0-9'&-]+)+)\b/g;
         let match;
         while ((match = cardLikeRegex.exec(obj)) !== null) {
           const potentialName = match[1].trim();
@@ -698,12 +714,12 @@ Return your analysis as valid JSON with this exact schema:`;
     if (aiCardNames.size > 0) {
       const cardNamesArray = Array.from(aiCardNames);
       const batchSize = 20;
-      
+
       for (let i = 0; i < cardNamesArray.length; i += batchSize) {
         const batch = cardNamesArray.slice(i, i + batchSize);
         const nameConditions = batch
           .map((name) => {
-            const escapedName = name.replace(/[%_\\]/g, '\\$&');
+            const escapedName = name.replace(/[%_\\]/g, "\\$&");
             return `name.ilike.${escapedName}`;
           })
           .join(",");
@@ -724,15 +740,15 @@ Return your analysis as valid JSON with this exact schema:`;
 
     // Create a comprehensive set of all valid card names (deck + validated)
     const allValidCardNames = new Set<string>();
-    allCardNames.forEach(name => allValidCardNames.add(name.toLowerCase()));
-    validatedCardNames.forEach(name => allValidCardNames.add(name));
-    
+    allCardNames.forEach((name) => allValidCardNames.add(name.toLowerCase()));
+    validatedCardNames.forEach((name) => allValidCardNames.add(name));
+
     // Create a map for exact matching (preserve original casing)
     const cardNameMap = new Map<string, string>();
-    allCardNames.forEach(name => {
+    allCardNames.forEach((name) => {
       cardNameMap.set(name.toLowerCase(), name);
     });
-    
+
     // Replace invalid card names with generic text - but be very conservative
     const replaceInvalidCardNames = (obj: any): any => {
       if (typeof obj === "string") {
@@ -740,46 +756,82 @@ Return your analysis as valid JSON with this exact schema:`;
         if (obj.toLowerCase().includes("this card")) {
           return obj;
         }
-        
+
         // Replace invalid card names in text - but only if we're very sure
-        const cardLikeRegex = /\b([A-Z][A-Za-z0-9'&-]+(?:\s+[A-Z][A-Za-z0-9'&-]+)+)\b/g;
+        const cardLikeRegex =
+          /\b([A-Z][A-Za-z0-9'&-]+(?:\s+[A-Z][A-Za-z0-9'&-]+)+)\b/g;
         return obj.replace(cardLikeRegex, (match) => {
           const trimmed = match.trim();
           const normalized = trimmed.toLowerCase();
-          
+
           // Check if it's a valid card name (exact match)
           if (allValidCardNames.has(normalized)) {
             // Try to preserve original casing from deck
             return cardNameMap.get(normalized) || trimmed;
           }
-          
+
           // Check for fuzzy matches (handles punctuation/spacing variations)
           for (const validName of allValidCardNames) {
             const validNormalized = validName.toLowerCase();
             // Exact match after removing special chars
             const matchNoSpecial = normalized.replace(/['&-]/g, "");
             const validNoSpecial = validNormalized.replace(/['&-]/g, "");
-            if (matchNoSpecial === validNoSpecial && matchNoSpecial.length > 0) {
+            if (
+              matchNoSpecial === validNoSpecial &&
+              matchNoSpecial.length > 0
+            ) {
               return cardNameMap.get(validNormalized) || trimmed;
             }
             // Check if it's a substring match (e.g., "Dark Magician" in "Dark Magician Girl")
-            if ((normalized.includes(validNormalized) && normalized.length <= validNormalized.length + 5) ||
-                (validNormalized.includes(normalized) && validNormalized.length <= normalized.length + 5)) {
+            if (
+              (normalized.includes(validNormalized) &&
+                normalized.length <= validNormalized.length + 5) ||
+              (validNormalized.includes(normalized) &&
+                validNormalized.length <= normalized.length + 5)
+            ) {
               return cardNameMap.get(validNormalized) || trimmed;
             }
           }
-          
+
           // Check common game terms - don't replace these
           const commonTerms = [
-            "deck", "card", "hand", "field", "graveyard", "banish", "summon", "tribute",
-            "monster", "spell", "trap", "extra deck", "main deck", "side deck",
-            "going first", "going second", "turn", "phase", "battle", "damage", "life points",
-            "this card", "that card", "your card", "opponent", "player", "duel", "game"
+            "deck",
+            "card",
+            "hand",
+            "field",
+            "graveyard",
+            "banish",
+            "summon",
+            "tribute",
+            "monster",
+            "spell",
+            "trap",
+            "extra deck",
+            "main deck",
+            "side deck",
+            "going first",
+            "going second",
+            "turn",
+            "phase",
+            "battle",
+            "damage",
+            "life points",
+            "this card",
+            "that card",
+            "your card",
+            "opponent",
+            "player",
+            "duel",
+            "game",
           ];
-          if (commonTerms.some(term => normalized.includes(term) || term.includes(normalized))) {
+          if (
+            commonTerms.some(
+              (term) => normalized.includes(term) || term.includes(normalized),
+            )
+          ) {
             return trimmed;
           }
-          
+
           // Be conservative - don't replace unless we're very sure it's an invalid card name
           // Only replace if it looks like a card name but isn't validated
           // For now, preserve it - let the AI's card names through
@@ -792,11 +844,20 @@ Return your analysis as valid JSON with this exact schema:`;
       if (obj && typeof obj === "object") {
         const sanitized: any = {};
         for (const [key, value] of Object.entries(obj)) {
-          if (key === "card_name" || key === "card_a" || key === "card_b" || key === "card_to_add" || key === "card_to_remove") {
+          if (
+            key === "card_name" ||
+            key === "card_a" ||
+            key === "card_b" ||
+            key === "card_to_add" ||
+            key === "card_to_remove"
+          ) {
             // Validate card name fields specifically
             if (typeof value === "string") {
               const normalized = value.trim().toLowerCase();
-              if (validatedCardNames.has(normalized) || allCardNames.some(name => name.toLowerCase() === normalized)) {
+              if (
+                validatedCardNames.has(normalized) ||
+                allCardNames.some((name) => name.toLowerCase() === normalized)
+              ) {
                 sanitized[key] = value; // Keep valid card names
               } else {
                 sanitized[key] = null; // Remove invalid card names
@@ -814,19 +875,25 @@ Return your analysis as valid JSON with this exact schema:`;
     };
 
     parsedResponse = replaceInvalidCardNames(parsedResponse);
-    
+
     // Remove null card names from arrays
     const removeNullCardNames = (obj: any): any => {
       if (Array.isArray(obj)) {
-        return obj.map((item) => removeNullCardNames(item)).filter((item: any) => {
-          // Filter out objects with null card_name fields
-          if (item && typeof item === "object") {
-            if (item.card_name === null || item.card_a === null || item.card_b === null) {
-              return false;
+        return obj
+          .map((item) => removeNullCardNames(item))
+          .filter((item: any) => {
+            // Filter out objects with null card_name fields
+            if (item && typeof item === "object") {
+              if (
+                item.card_name === null ||
+                item.card_a === null ||
+                item.card_b === null
+              ) {
+                return false;
+              }
             }
-          }
-          return true;
-        });
+            return true;
+          });
       }
       if (obj && typeof obj === "object") {
         const cleaned: any = {};
@@ -846,7 +913,8 @@ Return your analysis as valid JSON with this exact schema:`;
         // If the string contains "this card", try to infer which card it should be
         if (obj.toLowerCase().includes("this card")) {
           // First, try to find card names mentioned in the same string
-          const cardLikeRegex = /\b([A-Z][A-Za-z0-9'&-]+(?:\s+[A-Z][A-Za-z0-9'&-]+)+)\b/g;
+          const cardLikeRegex =
+            /\b([A-Z][A-Za-z0-9'&-]+(?:\s+[A-Z][A-Za-z0-9'&-]+)+)\b/g;
           const mentionedCards: string[] = [];
           let match;
           const tempStr = obj;
@@ -860,16 +928,17 @@ Return your analysis as valid JSON with this exact schema:`;
               }
             }
           }
-          
+
           // If we found card names in the same string, replace "this card" with the first one
           if (mentionedCards.length > 0) {
             return obj.replace(/\bthis card\b/gi, mentionedCards[0]);
           }
-          
+
           // If parent object exists, check its description or other fields for card names
           if (parentObj) {
             const parentStr = JSON.stringify(parentObj);
-            const parentCardRegex = /\b([A-Z][A-Za-z0-9'&-]+(?:\s+[A-Z][A-Za-z0-9'&-]+)+)\b/g;
+            const parentCardRegex =
+              /\b([A-Z][A-Za-z0-9'&-]+(?:\s+[A-Z][A-Za-z0-9'&-]+)+)\b/g;
             const parentCards: string[] = [];
             let parentMatch;
             while ((parentMatch = parentCardRegex.exec(parentStr)) !== null) {
@@ -886,17 +955,17 @@ Return your analysis as valid JSON with this exact schema:`;
               return obj.replace(/\bthis card\b/gi, parentCards[0]);
             }
           }
-          
+
           // Last resort: use the most common card from the deck (main deck cards prioritized)
           if (deckCardNames.length > 0) {
             // Prioritize main deck cards
-            const mainDeckCards = deck_a.mainDeck.map(c => c.name);
+            const mainDeckCards = deck_a.mainDeck.map((c) => c.name);
             if (mainDeckCards.length > 0) {
               return obj.replace(/\bthis card\b/gi, mainDeckCards[0]);
             }
             return obj.replace(/\bthis card\b/gi, deckCardNames[0]);
           }
-          
+
           return obj;
         }
         return obj;
@@ -908,10 +977,15 @@ Return your analysis as valid JSON with this exact schema:`;
         const processed: any = {};
         for (const [key, value] of Object.entries(obj)) {
           // Special handling for "play" field in risk_reward_analysis
-          if (key === "play" && typeof value === "string" && value.toLowerCase().includes("this card")) {
+          if (
+            key === "play" &&
+            typeof value === "string" &&
+            value.toLowerCase().includes("this card")
+          ) {
             // Try to extract card names from the description field if available
             if (obj.description && typeof obj.description === "string") {
-              const cardLikeRegex = /\b([A-Z][A-Za-z0-9'&-]+(?:\s+[A-Z][A-Za-z0-9'&-]+)+)\b/g;
+              const cardLikeRegex =
+                /\b([A-Z][A-Za-z0-9'&-]+(?:\s+[A-Z][A-Za-z0-9'&-]+)+)\b/g;
               const mentionedCards: string[] = [];
               let match;
               while ((match = cardLikeRegex.exec(obj.description)) !== null) {
@@ -925,21 +999,30 @@ Return your analysis as valid JSON with this exact schema:`;
                 }
               }
               if (mentionedCards.length > 0) {
-                processed[key] = value.replace(/\bthis card\b/gi, mentionedCards[0]);
+                processed[key] = value.replace(
+                  /\bthis card\b/gi,
+                  mentionedCards[0],
+                );
               } else {
                 // Fallback to most common deck card
-                const mainDeckCards = deck_a.mainDeck.map(c => c.name);
+                const mainDeckCards = deck_a.mainDeck.map((c) => c.name);
                 if (mainDeckCards.length > 0) {
-                  processed[key] = value.replace(/\bthis card\b/gi, mainDeckCards[0]);
+                  processed[key] = value.replace(
+                    /\bthis card\b/gi,
+                    mainDeckCards[0],
+                  );
                 } else {
                   processed[key] = value;
                 }
               }
             } else {
               // Fallback to most common deck card
-              const mainDeckCards = deck_a.mainDeck.map(c => c.name);
+              const mainDeckCards = deck_a.mainDeck.map((c) => c.name);
               if (mainDeckCards.length > 0) {
-                processed[key] = value.replace(/\bthis card\b/gi, mainDeckCards[0]);
+                processed[key] = value.replace(
+                  /\bthis card\b/gi,
+                  mainDeckCards[0],
+                );
               } else {
                 processed[key] = value;
               }
@@ -972,7 +1055,7 @@ Return your analysis as valid JSON with this exact schema:`;
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
-      }
+      },
     );
   } catch (error: any) {
     return new Response(JSON.stringify({ error: error.message }), {

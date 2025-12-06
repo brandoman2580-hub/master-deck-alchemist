@@ -13,7 +13,10 @@ const sizeMap = {
   lg: "w-24 h-24",
 };
 
-export function CyberpunkLoader({ size = "md", className = "" }: CyberpunkLoaderProps) {
+export function CyberpunkLoader({
+  size = "md",
+  className = "",
+}: CyberpunkLoaderProps) {
   return (
     <div className={`relative ${sizeMap[size]} ${className}`}>
       {/* Outer rotating ring */}
@@ -63,9 +66,11 @@ export function CyberpunkLoader({ size = "md", className = "" }: CyberpunkLoader
       <motion.div
         className="absolute inset-0 rounded-full"
         style={{
-          background: "conic-gradient(from 0deg, transparent, cyan-400, transparent)",
+          background:
+            "conic-gradient(from 0deg, transparent, cyan-400, transparent)",
           maskImage: "radial-gradient(circle, transparent 30%, black 50%)",
-          WebkitMaskImage: "radial-gradient(circle, transparent 30%, black 50%)",
+          WebkitMaskImage:
+            "radial-gradient(circle, transparent 30%, black 50%)",
         }}
         animate={{ rotate: 360 }}
         transition={{
@@ -95,7 +100,11 @@ export function CyberpunkLoader({ size = "md", className = "" }: CyberpunkLoader
 }
 
 // Full-screen loader variant
-export function CyberpunkLoaderFullScreen({ message = "Loading..." }: { message?: string }) {
+export function CyberpunkLoaderFullScreen({
+  message = "Loading...",
+}: {
+  message?: string;
+}) {
   return (
     <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-950/95 backdrop-blur-sm">
       <CyberpunkLoader size="lg" />
@@ -141,4 +150,3 @@ export function CyberpunkLoaderInline({ message }: { message?: string }) {
     </div>
   );
 }
-

@@ -41,9 +41,9 @@ export function ArchetypeAutocomplete({
   const availableOptions = useMemo(
     () =>
       CARD_ARCHETYPE_FILTERS.filter(
-        (opt) => !values.some((v) => v.value === opt.value)
+        (opt) => !values.some((v) => v.value === opt.value),
       ),
-    [values]
+    [values],
   );
 
   // Fuzzy search on label
@@ -79,7 +79,9 @@ export function ArchetypeAutocomplete({
 
   return (
     <div className="relative">
-      <label className="block text-sm font-medium mb-1 text-cyan-300">Archetype</label>
+      <label className="block text-sm font-medium mb-1 text-cyan-300">
+        Archetype
+      </label>
       <div className="flex flex-wrap items-center gap-1 mb-1">
         {values.map((archetype) => (
           <Chip
@@ -126,15 +128,15 @@ export function ArchetypeAutocomplete({
             }}
           >
             <div className="bg-gradient-to-b from-cyan-400/20 via-cyan-500/15 to-cyan-600/5 backdrop-blur-md border border-cyan-500/30 shadow-xl">
-            {filtered.map((archetype) => (
-              <div
-                key={archetype.value}
-                className="px-3 py-2 cursor-pointer hover:bg-cyan-500/20 text-slate-50 transition-colors"
-                onMouseDown={() => handleSelect(archetype)}
-              >
-                {archetype.label}
-              </div>
-            ))}
+              {filtered.map((archetype) => (
+                <div
+                  key={archetype.value}
+                  className="px-3 py-2 cursor-pointer hover:bg-cyan-500/20 text-slate-50 transition-colors"
+                  onMouseDown={() => handleSelect(archetype)}
+                >
+                  {archetype.label}
+                </div>
+              ))}
             </div>
           </CutCornerWrapper>
         )}

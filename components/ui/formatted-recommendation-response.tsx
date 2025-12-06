@@ -1,7 +1,13 @@
 "use client";
 
 import { Card } from "../../types/card";
-import { Sparkles, TrendingUp, AlertCircle, CheckCircle2, XCircle } from "lucide-react";
+import {
+  Sparkles,
+  TrendingUp,
+  AlertCircle,
+  CheckCircle2,
+  XCircle,
+} from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -43,13 +49,13 @@ export function FormattedRecommendationResponse({
 }: FormattedRecommendationResponseProps) {
   // Create a map of validated cards for quick lookup
   const validatedCardMap = new Map<number, Card>();
-  validatedCards.forEach(card => {
+  validatedCards.forEach((card) => {
     validatedCardMap.set(card.id, card);
   });
 
   // Create a map of all cards for name matching
   const allCardsMap = new Map<string, Card>();
-  allCards.forEach(card => {
+  allCards.forEach((card) => {
     allCardsMap.set(card.name.toLowerCase(), card);
   });
 
@@ -84,14 +90,16 @@ export function FormattedRecommendationResponse({
           strong({ children }) {
             const text = String(children).trim();
             const normalizedText = text.toLowerCase();
-            
+
             // Check if this matches a validated card
-            const matchedCard = Array.from(validatedCardMap.values()).find(
-              c => c.name.toLowerCase() === normalizedText
-            ) || Array.from(allCardsMap.values()).find(
-              c => c.name.toLowerCase() === normalizedText
-            );
-            
+            const matchedCard =
+              Array.from(validatedCardMap.values()).find(
+                (c) => c.name.toLowerCase() === normalizedText,
+              ) ||
+              Array.from(allCardsMap.values()).find(
+                (c) => c.name.toLowerCase() === normalizedText,
+              );
+
             if (matchedCard) {
               return (
                 <strong className="text-cyan-400 font-semibold hover:text-cyan-300 transition-colors">
@@ -99,17 +107,31 @@ export function FormattedRecommendationResponse({
                 </strong>
               );
             }
-            
-            return <strong className="text-slate-200 font-semibold">{children}</strong>;
+
+            return (
+              <strong className="text-slate-200 font-semibold">
+                {children}
+              </strong>
+            );
           },
           p({ children }) {
-            return <p className="text-slate-300 leading-relaxed mb-3">{children}</p>;
+            return (
+              <p className="text-slate-300 leading-relaxed mb-3">{children}</p>
+            );
           },
           ul({ children }) {
-            return <ul className="list-disc list-inside space-y-2 text-slate-300 ml-4 mb-3">{children}</ul>;
+            return (
+              <ul className="list-disc list-inside space-y-2 text-slate-300 ml-4 mb-3">
+                {children}
+              </ul>
+            );
           },
           ol({ children }) {
-            return <ol className="list-decimal list-inside space-y-2 text-slate-300 ml-4 mb-3">{children}</ol>;
+            return (
+              <ol className="list-decimal list-inside space-y-2 text-slate-300 ml-4 mb-3">
+                {children}
+              </ol>
+            );
           },
           li({ children }) {
             return <li className="leading-relaxed">{children}</li>;
@@ -139,12 +161,14 @@ export function FormattedRecommendationResponse({
               Recommended Cards
             </h3>
           </div>
-          
+
           <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
             {recommendedCards.map((card, index) => {
-              const validatedCard = card.id ? validatedCardMap.get(card.id) : null;
+              const validatedCard = card.id
+                ? validatedCardMap.get(card.id)
+                : null;
               const cardName = validatedCard?.name || card.name;
-              
+
               return (
                 <div
                   key={index}
@@ -164,17 +188,19 @@ export function FormattedRecommendationResponse({
                           </span>
                         )}
                       </div>
-                      
+
                       {card.reason && (
                         <p className="text-sm text-slate-300 leading-relaxed">
                           {card.reason}
                         </p>
                       )}
-                      
+
                       {card.synergy_score !== undefined && (
                         <div className="flex items-center gap-2 pt-1">
                           <TrendingUp className="h-4 w-4 text-cyan-400" />
-                          <span className={`text-sm font-medium ${getSynergyColor(card.synergy_score)}`}>
+                          <span
+                            className={`text-sm font-medium ${getSynergyColor(card.synergy_score)}`}
+                          >
                             Synergy: {card.synergy_score}/100
                           </span>
                         </div>
@@ -197,7 +223,7 @@ export function FormattedRecommendationResponse({
               Alternative Considerations
             </h3>
           </div>
-          
+
           <div className="space-y-3">
             {alternativeConsiderations.map((alt, index) => (
               <div
@@ -224,26 +250,29 @@ export function FormattedRecommendationResponse({
       )}
 
       {/* Meta Information */}
-      {meta && (meta.confidence !== undefined || meta.format_specific_notes) && (
-        <div className="rounded-lg border border-slate-700/50 bg-slate-800/30 p-4 backdrop-blur-sm">
-          <div className="space-y-2">
-            {meta.confidence !== undefined && (
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-green-400" />
-                <span className="text-sm text-slate-300">
-                  Confidence: <span className="font-semibold text-green-400">{meta.confidence}%</span>
-                </span>
-              </div>
-            )}
-            {meta.format_specific_notes && (
-              <p className="text-sm text-slate-400 italic">
-                {meta.format_specific_notes}
-              </p>
-            )}
+      {meta &&
+        (meta.confidence !== undefined || meta.format_specific_notes) && (
+          <div className="rounded-lg border border-slate-700/50 bg-slate-800/30 p-4 backdrop-blur-sm">
+            <div className="space-y-2">
+              {meta.confidence !== undefined && (
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-green-400" />
+                  <span className="text-sm text-slate-300">
+                    Confidence:{" "}
+                    <span className="font-semibold text-green-400">
+                      {meta.confidence}%
+                    </span>
+                  </span>
+                </div>
+              )}
+              {meta.format_specific_notes && (
+                <p className="text-sm text-slate-400 italic">
+                  {meta.format_specific_notes}
+                </p>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        )}
     </div>
   );
 }
-

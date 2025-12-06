@@ -18,7 +18,7 @@ type LoginFormProps = {
 };
 
 export function LoginForm({ onSignupClick }: LoginFormProps) {
-  const { setUser } = useUserStore.getState()
+  const { setUser } = useUserStore.getState();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -26,23 +26,23 @@ export function LoginForm({ onSignupClick }: LoginFormProps) {
   const { closeLoginModal } = useLoginModalStore();
 
   const handleSubmit = async (e: FormEvent) => {
-  e.preventDefault()
-  setSubmitting(true)
-  const formData = new FormData()
-  formData.append("email", email)
-  formData.append("password", password)
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  })
-  setSubmitting(false)
-  if (!error && data?.user) {
-    setUser(data.user) // Update Zustand immediately!
-    closeLoginModal()
-  } else {
-    setError(error?.message || "Login failed")
-  }
-}
+    e.preventDefault();
+    setSubmitting(true);
+    const formData = new FormData();
+    formData.append("email", email);
+    formData.append("password", password);
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    setSubmitting(false);
+    if (!error && data?.user) {
+      setUser(data.user); // Update Zustand immediately!
+      closeLoginModal();
+    } else {
+      setError(error?.message || "Login failed");
+    }
+  };
 
   // @TODO: Add social login buttons when backend is ready
   return (
@@ -196,7 +196,7 @@ export function LoginForm({ onSignupClick }: LoginFormProps) {
           </CutCornerWrapper>
         </div>
         {error && (
-          <div 
+          <div
             id="login-email-error"
             role="alert"
             aria-live="polite"

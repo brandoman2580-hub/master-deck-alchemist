@@ -1,4 +1,4 @@
-import type { Config } from "tailwindcss"
+import type { Config } from "tailwindcss";
 
 const config = {
   darkMode: ["class"],
@@ -21,11 +21,17 @@ const config = {
     extend: {
       fontFamily: {
         japanese: ["var(--font-japanese)", "sans-serif"],
-        cinzel: ["var(--font-cinzel)", "serif", "Times New Roman", "Times", "serif"],
+        cinzel: [
+          "var(--font-cinzel)",
+          "serif",
+          "Times New Roman",
+          "Times",
+          "serif",
+        ],
         heading: ["var(--font-heading)", "system-ui", "sans-serif"],
         hud: ["var(--font-heading)", "system-ui", "sans-serif"],
-        display: ['"Orbitron"', 'sans-serif'],
-        ui: ['"Inter"', 'system-ui', 'sans-serif'],
+        display: ['"Orbitron"', "sans-serif"],
+        ui: ['"Inter"', "system-ui", "sans-serif"],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -82,42 +88,45 @@ const config = {
           "glow-focus": "rgba(34, 211, 238, 0.6)", // cyan-400/60
         },
         // Cyberpunk theme colors
-        'cyb-900': '#06121a',
-        'cyb-800': '#0b2633',
-        'cyb-700': '#122a3a',
-        'accent-cyan': '#14EFFF',
-        'muted-50': '#B7C6D6',
+        "cyb-900": "#06121a",
+        "cyb-800": "#0b2633",
+        "cyb-700": "#122a3a",
+        "accent-cyan": "#14EFFF",
+        "muted-50": "#B7C6D6",
       },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
-        "hud": "0.75rem", // rounded-xl
+        hud: "0.75rem", // rounded-xl
         "hud-lg": "1rem", // rounded-2xl
       },
       backdropBlur: {
-        xs: '2px',
-        sm: '6px',
-        md: '12px',
+        xs: "2px",
+        sm: "6px",
+        md: "12px",
       },
       borderWidth: {
-        '1.5': '1.5px'
+        "1.5": "1.5px",
       },
       transitionTimingFunction: {
-        'cyb-ease': 'cubic-bezier(.2,.9,.35,1)'
+        "cyb-ease": "cubic-bezier(.2,.9,.35,1)",
       },
       boxShadow: {
         "hud-glow": "0 0 20px rgba(56, 189, 248, 0.25)",
         "hud-glow-strong": "0 0 40px rgba(56, 189, 248, 0.4)",
-        "hud-glow-focus": "0 0 0 2px rgba(34, 211, 238, 0.6), 0 0 30px rgba(56, 189, 248, 0.3)",
+        "hud-glow-focus":
+          "0 0 0 2px rgba(34, 211, 238, 0.6), 0 0 30px rgba(56, 189, 248, 0.3)",
         "hud-border": "inset 0 0 0 1px rgba(6, 182, 212, 0.3)",
         "hud-border-strong": "inset 0 0 0 1px rgba(34, 211, 238, 0.5)",
-        'neon-cyan': '0 4px 24px rgba(20,239,255,0.06), inset 0 1px 0 rgba(20,239,255,0.03)',
-        'glass-soft': '0 6px 30px rgba(2,6,23,0.6)',
+        "neon-cyan":
+          "0 4px 24px rgba(20,239,255,0.06), inset 0 1px 0 rgba(20,239,255,0.03)",
+        "glass-soft": "0 6px 30px rgba(2,6,23,0.6)",
       },
       clipPath: {
         "hud-cut": "polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)",
-        "hud-cut-sm": "polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%)",
+        "hud-cut-sm":
+          "polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%)",
       },
       keyframes: {
         "accordion-down": {
@@ -133,11 +142,11 @@ const config = {
           "50%": { opacity: "0.6" },
         },
         "hud-glow": {
-          "0%, 100%": { 
+          "0%, 100%": {
             boxShadow: "0 0 20px rgba(56, 189, 248, 0.25)",
             borderColor: "rgba(6, 182, 212, 0.3)",
           },
-          "50%": { 
+          "50%": {
             boxShadow: "0 0 30px rgba(56, 189, 248, 0.4)",
             borderColor: "rgba(34, 211, 238, 0.5)",
           },
@@ -158,6 +167,6 @@ const config = {
     },
   },
   plugins: [require("tailwindcss-animate")],
-} satisfies Config
+} satisfies Config;
 
-export default config
+export default config;

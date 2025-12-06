@@ -20,8 +20,9 @@ function formatRelativeTime(dateString: string): string {
   if (diffInSeconds < 60) return "Just now";
   if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
   if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
-  if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d ago`;
-  
+  if (diffInSeconds < 604800)
+    return `${Math.floor(diffInSeconds / 86400)}d ago`;
+
   return new Intl.DateTimeFormat("en-US", {
     month: "short",
     day: "numeric",
@@ -29,7 +30,10 @@ function formatRelativeTime(dateString: string): string {
   }).format(date);
 }
 
-export function DeckSearchAutocomplete({ decks, onDeckSelect }: DeckSearchAutocompleteProps) {
+export function DeckSearchAutocomplete({
+  decks,
+  onDeckSelect,
+}: DeckSearchAutocompleteProps) {
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
@@ -42,7 +46,7 @@ export function DeckSearchAutocomplete({ decks, onDeckSelect }: DeckSearchAutoco
   const latestDecks = useMemo(() => {
     const decksWithDate = decks.filter((deck) => deck.updated_at);
     if (decksWithDate.length === 0) return [];
-    
+
     return [...decksWithDate]
       .sort((a, b) => {
         const dateA = new Date(a.updated_at!).getTime();
@@ -55,7 +59,7 @@ export function DeckSearchAutocomplete({ decks, onDeckSelect }: DeckSearchAutoco
   // Filter decks by search query
   const filteredDecks = useMemo(() => {
     if (!search.trim()) return latestDecks;
-    
+
     const query = search.toLowerCase();
     return decks
       .filter((deck) => deck.name.toLowerCase().includes(query))
@@ -66,7 +70,7 @@ export function DeckSearchAutocomplete({ decks, onDeckSelect }: DeckSearchAutoco
     setSearch("");
     setOpen(false);
     setSelectedIndex(-1);
-    
+
     if (onDeckSelect) {
       onDeckSelect(deck.id);
     } else {
@@ -85,8 +89,8 @@ export function DeckSearchAutocomplete({ decks, onDeckSelect }: DeckSearchAutoco
     switch (e.key) {
       case "ArrowDown":
         e.preventDefault();
-        setSelectedIndex((prev) => 
-          prev < filteredDecks.length - 1 ? prev + 1 : prev
+        setSelectedIndex((prev) =>
+          prev < filteredDecks.length - 1 ? prev + 1 : prev,
         );
         break;
       case "ArrowUp":
@@ -163,7 +167,9 @@ export function DeckSearchAutocomplete({ decks, onDeckSelect }: DeckSearchAutoco
               <div className="flex items-center justify-between gap-2">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <p className="font-medium text-slate-50 truncate">{deck.name}</p>
+                    <p className="font-medium text-slate-50 truncate">
+                      {deck.name}
+                    </p>
                     <span className="text-xs px-2 py-0.5 rounded bg-cyan-500/40 border border-cyan-400/60 text-cyan-100 whitespace-nowrap">
                       {deck.mode}
                     </span>
@@ -171,7 +177,9 @@ export function DeckSearchAutocomplete({ decks, onDeckSelect }: DeckSearchAutoco
                   {deck.updated_at && (
                     <div className="flex items-center gap-1 text-xs text-slate-400">
                       <Clock className="h-3 w-3" />
-                      <span>Last edited {formatRelativeTime(deck.updated_at)}</span>
+                      <span>
+                        Last edited {formatRelativeTime(deck.updated_at)}
+                      </span>
                     </div>
                   )}
                 </div>
@@ -183,4 +191,3 @@ export function DeckSearchAutocomplete({ decks, onDeckSelect }: DeckSearchAutoco
     </div>
   );
 }
-

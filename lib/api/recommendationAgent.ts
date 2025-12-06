@@ -5,7 +5,12 @@ export interface RecommendationRequest {
   question: string;
   current_deck?: DeckType;
   format?: "MASTER_DUEL" | "TCG";
-  recommendation_type?: "personalized" | "archetype" | "engine" | "tech" | "simple";
+  recommendation_type?:
+    | "personalized"
+    | "archetype"
+    | "engine"
+    | "tech"
+    | "simple";
   use_hybrid_search?: boolean; // Enable hybrid RAG (default: true)
 }
 
@@ -47,22 +52,28 @@ export interface RecommendationResponse {
  * Get recommendations from the AI agent
  */
 export async function getRecommendations(
-  request: RecommendationRequest
+  request: RecommendationRequest,
 ): Promise<RecommendationResponse> {
   const accessToken = await getAccessToken();
 
   if (!accessToken) {
     console.error("❌ No access token available - user may not be logged in");
-    throw new Error("Authentication required. Please log in to use recommendations.");
+    throw new Error(
+      "Authentication required. Please log in to use recommendations.",
+    );
   }
 
-  console.log("🔐 Making recommendation request with token (length:", accessToken.length, ")");
+  console.log(
+    "🔐 Making recommendation request with token (length:",
+    accessToken.length,
+    ")",
+  );
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   if (!supabaseUrl) {
-    throw new Error('Missing env.NEXT_PUBLIC_SUPABASE_URL');
+    throw new Error("Missing env.NEXT_PUBLIC_SUPABASE_URL");
   }
-  
+
   const url = `${supabaseUrl}/functions/v1/recommendation-agent`;
   const body = JSON.stringify({
     question: request.question,
@@ -91,7 +102,7 @@ export async function getRecommendations(
   if (!response.ok) {
     let errorText = "";
     let errorData: Record<string, unknown> = {};
-    
+
     try {
       errorText = await response.text();
       if (errorText) {
@@ -107,47 +118,52 @@ export async function getRecommendations(
       errorText = "Failed to read error response";
       errorData = { error: "Unknown error", status: response.status };
     }
-    
+
     // Log more detailed error information
     console.error("❌ Recommendation request failed:", {
       status: response.status,
       statusText: response.statusText,
       url,
       errorText: errorText || "No error text",
-      errorData: Object.keys(errorData).length > 0 ? errorData : "Empty error object",
+      errorData:
+        Object.keys(errorData).length > 0 ? errorData : "Empty error object",
       hasAccessToken: !!accessToken,
       accessTokenLength: accessToken?.length || 0,
     });
-    
+
     if (response.status === 401) {
       throw new Error(
-        (errorData.details as string) || (errorData.error as string) || (errorData.message as string) || 
-        "Authentication failed. Please log in again."
+        (errorData.details as string) ||
+          (errorData.error as string) ||
+          (errorData.message as string) ||
+          "Authentication failed. Please log in again.",
       );
     }
-    
+
     if (response.status === 404) {
       throw new Error(
-        (errorData.details as string) || (errorData.error as string) || (errorData.message as string) ||
-        "Recommendation service not found. Please check your Supabase configuration."
+        (errorData.details as string) ||
+          (errorData.error as string) ||
+          (errorData.message as string) ||
+          "Recommendation service not found. Please check your Supabase configuration.",
       );
     }
-    
-    const errorMessage = (errorData.details as string) || 
-                        (errorData.error as string) || 
-                        (errorData.message as string) || 
-                        errorText ||
-                        `Failed to get recommendations (${response.status}: ${response.statusText})`;
-    
+
+    const errorMessage =
+      (errorData.details as string) ||
+      (errorData.error as string) ||
+      (errorData.message as string) ||
+      errorText ||
+      `Failed to get recommendations (${response.status}: ${response.statusText})`;
+
     throw new Error(errorMessage);
   }
 
-  const result = await response.json() as RecommendationResponse;
+  const result = (await response.json()) as RecommendationResponse;
   console.log("✅ Recommendation received:", {
     answerLength: result.answer?.length || 0,
     cardsCount: result.validated_cards?.length || 0,
   });
-  
+
   return result;
 }
-

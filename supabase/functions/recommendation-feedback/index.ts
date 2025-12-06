@@ -14,16 +14,19 @@ const rateLimitStore = new Map<string, { count: number; resetAt: number }>();
 function checkRateLimit(userId: string): boolean {
   const now = Date.now();
   const userLimit = rateLimitStore.get(userId);
-  
+
   if (!userLimit || now > userLimit.resetAt) {
-    rateLimitStore.set(userId, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+    rateLimitStore.set(userId, {
+      count: 1,
+      resetAt: now + RATE_LIMIT_WINDOW_MS,
+    });
     return true;
   }
-  
+
   if (userLimit.count >= RATE_LIMIT_MAX_REQUESTS) {
     return false;
   }
-  
+
   userLimit.count++;
   return true;
 }
@@ -31,7 +34,7 @@ function checkRateLimit(userId: string): boolean {
 // Basic spam detection: Check for suspicious patterns
 function detectSpam(feedbackText: string | null): boolean {
   if (!feedbackText) return false;
-  
+
   const text = feedbackText.toLowerCase();
   const spamPatterns = [
     /(.)\1{10,}/, // Repeated characters (e.g., "aaaaaaaaaa")
@@ -39,8 +42,8 @@ function detectSpam(feedbackText: string | null): boolean {
     /(http|www\.|\.com|\.net)/i, // URLs
     /(buy|sell|cheap|discount|offer)/i, // Commercial keywords
   ];
-  
-  return spamPatterns.some(pattern => pattern.test(text));
+
+  return spamPatterns.some((pattern) => pattern.test(text));
 }
 
 Deno.serve(async (req) => {
@@ -58,7 +61,7 @@ Deno.serve(async (req) => {
         {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        },
       );
     }
 
@@ -72,7 +75,7 @@ Deno.serve(async (req) => {
         {
           status: 401,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        },
       );
     }
 
@@ -83,7 +86,7 @@ Deno.serve(async (req) => {
         {
           status: 401,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        },
       );
     }
 
@@ -94,51 +97,54 @@ Deno.serve(async (req) => {
     } = await supabase.auth.getUser(token);
 
     if (authError || !user) {
-      return new Response(
-        JSON.stringify({ error: "Authentication failed." }),
-        {
-          status: 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
+      return new Response(JSON.stringify({ error: "Authentication failed." }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // Check rate limit
     if (!checkRateLimit(user.id)) {
       return new Response(
-        JSON.stringify({ error: "Rate limit exceeded. Please try again later." }),
+        JSON.stringify({
+          error: "Rate limit exceeded. Please try again later.",
+        }),
         {
           status: 429,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        },
       );
     }
 
     // Parse request body
-    const {
-      recommendation_id,
-      feedback_type,
-      feedback_text,
-    } = await req.json();
+    const { recommendation_id, feedback_type, feedback_text } =
+      await req.json();
 
     // Validate input
     if (!recommendation_id || typeof recommendation_id !== "string") {
       return new Response(
-        JSON.stringify({ error: "recommendation_id is required and must be a string." }),
+        JSON.stringify({
+          error: "recommendation_id is required and must be a string.",
+        }),
         {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        },
       );
     }
 
-    if (!feedback_type || !["approved", "disapproved"].includes(feedback_type)) {
+    if (
+      !feedback_type ||
+      !["approved", "disapproved"].includes(feedback_type)
+    ) {
       return new Response(
-        JSON.stringify({ error: "feedback_type must be 'approved' or 'disapproved'." }),
+        JSON.stringify({
+          error: "feedback_type must be 'approved' or 'disapproved'.",
+        }),
         {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        },
       );
     }
 
@@ -149,7 +155,7 @@ Deno.serve(async (req) => {
         {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        },
       );
     }
 
@@ -166,7 +172,7 @@ Deno.serve(async (req) => {
         },
         {
           onConflict: "recommendation_id,user_id",
-        }
+        },
       )
       .select()
       .single();
@@ -178,7 +184,7 @@ Deno.serve(async (req) => {
         {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        },
       );
     }
 
@@ -199,18 +205,15 @@ Deno.serve(async (req) => {
       {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+      },
     );
   } catch (error: unknown) {
     console.error("Feedback endpoint error:", error);
-    const errorMessage = error instanceof Error ? error.message : "Internal server error.";
-    return new Response(
-      JSON.stringify({ error: errorMessage }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
-    );
+    const errorMessage =
+      error instanceof Error ? error.message : "Internal server error.";
+    return new Response(JSON.stringify({ error: errorMessage }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });
-

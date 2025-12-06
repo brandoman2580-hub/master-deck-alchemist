@@ -28,7 +28,7 @@ export interface MMRCandidate {
 /**
  * MMR (Maximal Marginal Relevance) reranker
  * Balances relevance to query with diversity among results
- * 
+ *
  * @param candidates - Array of candidates with embeddings and similarity scores
  * @param qEmb - Query embedding vector
  * @param k - Number of items to select
@@ -39,7 +39,7 @@ export function mmrSelect(
   candidates: MMRCandidate[],
   qEmb: number[],
   k: number,
-  lambda = 0.65
+  lambda = 0.65,
 ): MMRCandidate[] {
   // Compute similarity to query for all candidates
   candidates.forEach((c) => {
@@ -74,8 +74,8 @@ export function mmrSelect(
               ...selected.map((s) =>
                 s.embedding && cand.embedding
                   ? cosine(s.embedding, cand.embedding)
-                  : 0
-              )
+                  : 0,
+              ),
             )
           : 0;
 
@@ -94,5 +94,3 @@ export function mmrSelect(
 
   return selected;
 }
-
-

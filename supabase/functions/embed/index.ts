@@ -11,7 +11,7 @@ declare const Supabase: {
     Session: new (model: string) => {
       run: (
         input: string,
-        options?: { mean_pool?: boolean; normalize?: boolean }
+        options?: { mean_pool?: boolean; normalize?: boolean },
       ) => Promise<number[]>;
     };
   };
@@ -87,7 +87,7 @@ async function generateEmbedding(text: string): Promise<number[]> {
     throw new Error(
       `Invalid embedding format: expected non-empty array, got length=${
         embedding?.length ?? 0
-      }`
+      }`,
     );
   }
 
@@ -138,7 +138,7 @@ Deno.serve(async (req: Request) => {
       {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+      },
     );
   }
 
@@ -152,7 +152,7 @@ Deno.serve(async (req: Request) => {
     try {
       // === NEW DEBUG: log the identifiers and contentFunction the function will use ===
       console.info(
-        `processJob: jobId=${jobId}, id=${job.id}, schema='${job.schema}', table='${job.table}', contentFunction='${job.contentFunction}', embeddingColumn='${job.embeddingColumn}'`
+        `processJob: jobId=${jobId}, id=${job.id}, schema='${job.schema}', table='${job.table}', contentFunction='${job.contentFunction}', embeddingColumn='${job.embeddingColumn}'`,
       );
       // ============================================================================
 
@@ -184,7 +184,7 @@ Deno.serve(async (req: Request) => {
 
       if (typeof row.content !== "string") {
         throw new Error(
-          `invalid content - expected string: ${schema}.${table}/${job.id}`
+          `invalid content - expected string: ${schema}.${table}/${job.id}`,
         );
       }
 
@@ -200,12 +200,12 @@ Deno.serve(async (req: Request) => {
   SET ${embeddingColumn} = $1::vector
   WHERE id = $2
   `,
-        [embeddingJson, job.id]
+        [embeddingJson, job.id],
       );
 
       // delete the message from the queue
       console.info(
-        `processJob: deleting jobId=${jobId} from queue ${QUEUE_NAME}`
+        `processJob: deleting jobId=${jobId} from queue ${QUEUE_NAME}`,
       );
       await sql`
         select pgmq.delete(${QUEUE_NAME}, ${jobId}::bigint)
@@ -245,6 +245,6 @@ Deno.serve(async (req: Request) => {
         "x-completed-jobs": String(completedJobs.length),
         "x-failed-jobs": String(failedJobs.length),
       },
-    }
+    },
   );
 });

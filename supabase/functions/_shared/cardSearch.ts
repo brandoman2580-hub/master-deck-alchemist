@@ -120,7 +120,15 @@ const RACES = [
 ];
 
 // Attributes
-const ATTRIBUTES = ["DARK", "LIGHT", "EARTH", "WATER", "FIRE", "WIND", "DIVINE"];
+const ATTRIBUTES = [
+  "DARK",
+  "LIGHT",
+  "EARTH",
+  "WATER",
+  "FIRE",
+  "WIND",
+  "DIVINE",
+];
 
 /**
  * Analyze user question to extract structured filters
@@ -138,7 +146,11 @@ export function analyzeQuestionForFilters(question: string): StructuredFilters {
   if (lowerQuestion.includes("trap") || lowerQuestion.includes("trap card")) {
     detectedTypes.push(...TRAP_TYPES);
   }
-  if (lowerQuestion.includes("monster") && !lowerQuestion.includes("spell") && !lowerQuestion.includes("trap")) {
+  if (
+    lowerQuestion.includes("monster") &&
+    !lowerQuestion.includes("spell") &&
+    !lowerQuestion.includes("trap")
+  ) {
     detectedTypes.push(...MONSTER_TYPES);
   }
   if (lowerQuestion.includes("fusion")) {
@@ -197,42 +209,61 @@ export function analyzeQuestionForFilters(question: string): StructuredFilters {
 
   // Strategy 2: Look for "explore X", "find X", "recommend X" patterns (BEFORE other patterns)
   // This catches "Explore Toy cards" -> "Toy"
-  const explorePattern = /\b(?:explore|find|recommend|suggest|show|list|search|look\s+for)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+(?:cards?|archetype|monsters?|spells?|traps?)/gi;
+  const explorePattern =
+    /\b(?:explore|find|recommend|suggest|show|list|search|look\s+for)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+(?:cards?|archetype|monsters?|spells?|traps?)/gi;
   const exploreMatches = question.match(explorePattern) || [];
-  const extractedExplore = exploreMatches.map(m => {
-    const match = m.match(/\b(?:explore|find|recommend|suggest|show|list|search|look\s+for)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+/);
-    return match ? match[1] : null;
-  }).filter(Boolean) as string[];
+  const extractedExplore = exploreMatches
+    .map((m) => {
+      const match = m.match(
+        /\b(?:explore|find|recommend|suggest|show|list|search|look\s+for)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+/,
+      );
+      return match ? match[1] : null;
+    })
+    .filter(Boolean) as string[];
 
   // Strategy 3: Single capitalized words that might be archetypes (e.g., "Toy", "Blue-Eyes")
   // Look for patterns like "Toy cards", "Toy archetype", etc.
-  const singleWordArchetypePattern = /\b([A-Z][a-z]+)\s+(?:cards?|archetype|deck|monsters?|spells?|traps?|support)/gi;
+  const singleWordArchetypePattern =
+    /\b([A-Z][a-z]+)\s+(?:cards?|archetype|deck|monsters?|spells?|traps?|support)/gi;
   const singleWordMatches = question.match(singleWordArchetypePattern) || [];
-  const extractedSingleWords = singleWordMatches.map(m => {
-    const match = m.match(/\b([A-Z][a-z]+)\s+/);
-    return match ? match[1] : null;
-  }).filter(Boolean) as string[];
+  const extractedSingleWords = singleWordMatches
+    .map((m) => {
+      const match = m.match(/\b([A-Z][a-z]+)\s+/);
+      return match ? match[1] : null;
+    })
+    .filter(Boolean) as string[];
 
   // Strategy 4: Capitalized words (case-insensitive regex) - multi-word archetypes
   const archetypePattern = /\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\b/gi;
   const archetypeMatches = question.match(archetypePattern) || [];
 
   // Strategy 5: Common archetype keywords followed by a word
-  const archetypeKeywords = ['archetype', 'cards', 'deck'];
+  const archetypeKeywords = ["archetype", "cards", "deck"];
   const keywordMatches: string[] = [];
   for (const keyword of archetypeKeywords) {
-    const keywordPattern = new RegExp(`\\b${keyword}\\s+([A-Z][a-z]+(?:\\s+[A-Z][a-z]+)*)`, 'gi');
+    const keywordPattern = new RegExp(
+      `\\b${keyword}\\s+([A-Z][a-z]+(?:\\s+[A-Z][a-z]+)*)`,
+      "gi",
+    );
     const matches = question.match(keywordPattern);
     if (matches) {
-      matches.forEach(match => {
-        const extracted = match.replace(new RegExp(`\\b${keyword}\\s+`, 'gi'), '').trim();
+      matches.forEach((match) => {
+        const extracted = match
+          .replace(new RegExp(`\\b${keyword}\\s+`, "gi"), "")
+          .trim();
         if (extracted) keywordMatches.push(extracted);
       });
     }
   }
 
   // Combine all matches (prioritize explore/find patterns)
-  const allMatches = [...quotedMatches, ...extractedExplore, ...extractedSingleWords, ...archetypeMatches, ...keywordMatches];
+  const allMatches = [
+    ...quotedMatches,
+    ...extractedExplore,
+    ...extractedSingleWords,
+    ...archetypeMatches,
+    ...keywordMatches,
+  ];
 
   if (allMatches.length > 0) {
     // Filter out common false positives
@@ -253,10 +284,15 @@ export function analyzeQuestionForFilters(question: string): StructuredFilters {
       "Cards",
     ];
     const potentialArchetypes = allMatches
-      .map(m => m.trim())
-      .filter(m => m.length > 0)
-      .filter((match) => !falsePositives.some((fp) => match.toLowerCase().includes(fp.toLowerCase())));
-    
+      .map((m) => m.trim())
+      .filter((m) => m.length > 0)
+      .filter(
+        (match) =>
+          !falsePositives.some((fp) =>
+            match.toLowerCase().includes(fp.toLowerCase()),
+          ),
+      );
+
     if (potentialArchetypes.length > 0) {
       filters.archetypes = [...new Set(potentialArchetypes)];
     }
@@ -270,7 +306,12 @@ export function analyzeQuestionForFilters(question: string): StructuredFilters {
  * Creates a concise summary of the deck's strategy, archetypes, and key cards
  */
 export function buildDeckContextText(deck: {
-  mainDeck?: Array<{ name: string; type?: string; desc?: string; archetype?: any }>;
+  mainDeck?: Array<{
+    name: string;
+    type?: string;
+    desc?: string;
+    archetype?: any;
+  }>;
   extraDeck?: Array<{ name: string; type?: string; desc?: string }>;
   sideDeck?: Array<{ name: string; type?: string; desc?: string }>;
 }): string {
@@ -310,7 +351,10 @@ export function buildDeckContextText(deck: {
   }
 
   // Include top 10 card names
-  const topCards = allCards.slice(0, 10).map((c) => c.name).join(", ");
+  const topCards = allCards
+    .slice(0, 10)
+    .map((c) => c.name)
+    .join(", ");
   parts.push(`Key cards: ${topCards}`);
 
   // Include brief effect descriptions (truncated)
@@ -351,7 +395,7 @@ declare const Supabase: {
     Session: new (model: string) => {
       run: (
         input: string,
-        options?: { mean_pool?: boolean; normalize?: boolean }
+        options?: { mean_pool?: boolean; normalize?: boolean },
       ) => Promise<number[]>;
     };
   };
@@ -369,7 +413,7 @@ export async function getQueryEmbedding(text: string): Promise<number[]> {
   try {
     // Create an inference session using the built-in Supabase.ai API
     const session = new Supabase.ai.Session("gte-small");
-    
+
     const raw = await session.run(String(text).slice(0, 20000), {
       mean_pool: true,
       normalize: true,
@@ -384,14 +428,14 @@ export async function getQueryEmbedding(text: string): Promise<number[]> {
       throw new Error(
         `Invalid embedding format: expected non-empty array, got length=${
           embedding?.length ?? 0
-        }`
+        }`,
       );
     }
 
     return embedding;
   } catch (error) {
     throw new Error(
-      `Failed to generate embedding: ${error instanceof Error ? error.message : String(error)}`
+      `Failed to generate embedding: ${error instanceof Error ? error.message : String(error)}`,
     );
   }
 }
@@ -402,7 +446,7 @@ export async function getQueryEmbedding(text: string): Promise<number[]> {
  */
 export async function hybridSearch(
   params: HybridSearchParams,
-  supabaseClient: any
+  supabaseClient: any,
 ): Promise<CardCandidate[]> {
   const {
     queryEmbedding,
@@ -427,7 +471,7 @@ export async function hybridSearch(
       excludeRaces: excludeRaces.length,
       matchCount,
     });
-    
+
     const { data, error } = await supabaseClient.rpc("hybrid_card_search", {
       query_embedding: queryEmbedding,
       query_text: queryText || "card",
@@ -442,7 +486,12 @@ export async function hybridSearch(
     });
 
     if (error) {
-      console.error("❌ Hybrid search RPC error:", error.message, error.code, error.details);
+      console.error(
+        "❌ Hybrid search RPC error:",
+        error.message,
+        error.code,
+        error.details,
+      );
     } else if (data && data.length > 0) {
       console.log(`✅ Hybrid search RPC returned ${data.length} results`);
       return data.map((row: any) => ({
@@ -459,18 +508,26 @@ export async function hybridSearch(
       console.warn("⚠️ Hybrid search RPC returned empty result (no error)");
     }
   } catch (err) {
-    console.error("❌ Hybrid search RPC exception:", err instanceof Error ? err.message : String(err));
+    console.error(
+      "❌ Hybrid search RPC exception:",
+      err instanceof Error ? err.message : String(err),
+    );
   }
 
   // Fallback 1: Try vector search only
   try {
-    console.log("🔍 Attempting vector-only search (match_cards_with_exclusions)...");
-    const { data, error } = await supabaseClient.rpc("match_cards_with_exclusions", {
-      query_embedding: queryEmbedding,
-      exclude_archetypes: excludeArchetypes,
-      exclude_ids: excludeIds,
-      match_count: matchCount,
-    });
+    console.log(
+      "🔍 Attempting vector-only search (match_cards_with_exclusions)...",
+    );
+    const { data, error } = await supabaseClient.rpc(
+      "match_cards_with_exclusions",
+      {
+        query_embedding: queryEmbedding,
+        exclude_archetypes: excludeArchetypes,
+        exclude_ids: excludeIds,
+        match_count: matchCount,
+      },
+    );
 
     if (error) {
       console.error("❌ Vector search RPC error:", error.message, error.code);
@@ -488,7 +545,10 @@ export async function hybridSearch(
       console.warn("⚠️ Vector search returned empty result");
     }
   } catch (err) {
-    console.error("❌ Vector search RPC exception:", err instanceof Error ? err.message : String(err));
+    console.error(
+      "❌ Vector search RPC exception:",
+      err instanceof Error ? err.message : String(err),
+    );
   }
 
   // Fallback 2: Try FTS search only
@@ -518,7 +578,10 @@ export async function hybridSearch(
         console.warn("⚠️ FTS search returned empty result");
       }
     } catch (err) {
-      console.error("❌ FTS search RPC exception:", err instanceof Error ? err.message : String(err));
+      console.error(
+        "❌ FTS search RPC exception:",
+        err instanceof Error ? err.message : String(err),
+      );
     }
   }
 
@@ -527,12 +590,15 @@ export async function hybridSearch(
     console.log("🔄 Last resort: Trying search with reduced exclusions...");
     try {
       // Try with only ID exclusions (no archetype exclusions)
-      const { data, error } = await supabaseClient.rpc("match_cards_with_exclusions", {
-        query_embedding: queryEmbedding,
-        exclude_archetypes: [],
-        exclude_ids: excludeIds.slice(0, 20), // Only exclude first 20 IDs
-        match_count: matchCount,
-      });
+      const { data, error } = await supabaseClient.rpc(
+        "match_cards_with_exclusions",
+        {
+          query_embedding: queryEmbedding,
+          exclude_archetypes: [],
+          exclude_ids: excludeIds.slice(0, 20), // Only exclude first 20 IDs
+          match_count: matchCount,
+        },
+      );
 
       if (!error && data && data.length > 0) {
         console.log(`✅ Last resort search returned ${data.length} results`);
@@ -554,4 +620,3 @@ export async function hybridSearch(
   console.error("❌ All search methods failed - no candidates found");
   return [];
 }
-

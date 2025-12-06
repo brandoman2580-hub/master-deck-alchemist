@@ -1,7 +1,14 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Loader2, Zap, Sparkles, CheckCircle2, AlertCircle, TrendingUp } from "lucide-react";
+import {
+  Loader2,
+  Zap,
+  Sparkles,
+  CheckCircle2,
+  AlertCircle,
+  TrendingUp,
+} from "lucide-react";
 import { Button } from "../ui/button";
 import {
   Card as CardUI,
@@ -28,19 +35,26 @@ const MILESTONE_CARD_COUNTS = [10, 20, 30, 40, 50]; // Auto-suggest at these car
 export default function DeckBuilderAgent() {
   const { currentDeck, addCardToDeck, getDeckStats } = useDeck();
   const deckMode = useModeStore((state) => state.deckMode);
-  
+
   const [isLoading, setIsLoading] = useState(false);
   const [analysis, setAnalysis] = useState<string>("");
   const [suggestions, setSuggestions] = useState<CardRecommendation[]>([]);
-  const [deckAssessment, setDeckAssessment] = useState<DeckAssessment | null>(null);
+  const [deckAssessment, setDeckAssessment] = useState<DeckAssessment | null>(
+    null,
+  );
   const [nextSteps, setNextSteps] = useState<string[]>([]);
   const [banlist, setBanlist] = useState<Record<string, BanStatus>>({});
   const [addingCardId, setAddingCardId] = useState<string | null>(null);
   const [addedCards, setAddedCards] = useState<Set<string>>(new Set());
-  const [usage, setUsage] = useState<{ tokens_used: number; cost_usd: number } | null>(null);
-  const [lastAnalyzedDeckId, setLastAnalyzedDeckId] = useState<string | null>(null);
+  const [usage, setUsage] = useState<{
+    tokens_used: number;
+    cost_usd: number;
+  } | null>(null);
+  const [lastAnalyzedDeckId, setLastAnalyzedDeckId] = useState<string | null>(
+    null,
+  );
   const [lastMilestone, setLastMilestone] = useState<number>(0);
-  
+
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const analysisCacheRef = useRef<Map<string, any>>(new Map());
 
@@ -64,7 +78,10 @@ export default function DeckBuilderAgent() {
   }, [deckMode]);
 
   // Determine context based on deck state
-  const getDeckContext = useCallback((): "initial_build" | "refining" | "completing" => {
+  const getDeckContext = useCallback(():
+    | "initial_build"
+    | "refining"
+    | "completing" => {
     const stats = getDeckStats();
     if (stats.mainCount === 0) return "initial_build";
     if (stats.mainCount >= 50) return "completing";
@@ -134,40 +151,48 @@ export default function DeckBuilderAgent() {
   }, [currentDeck, deckMode, getDeckContext]);
 
   // Debounced analysis function
-  const handleAnalyzeDeck = useCallback(async (trigger: "manual" | "auto" | "milestone" = "auto") => {
-    // Clear existing timer
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current);
-    }
+  const handleAnalyzeDeck = useCallback(
+    async (trigger: "manual" | "auto" | "milestone" = "auto") => {
+      // Clear existing timer
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
 
-    // For manual triggers, execute immediately
-    if (trigger === "manual") {
-      await performAnalysis();
-      return;
-    }
+      // For manual triggers, execute immediately
+      if (trigger === "manual") {
+        await performAnalysis();
+        return;
+      }
 
-    // For auto/milestone, debounce
-    debounceTimerRef.current = setTimeout(async () => {
-      await performAnalysis();
-    }, 2000);
-  }, [performAnalysis]);
+      // For auto/milestone, debounce
+      debounceTimerRef.current = setTimeout(async () => {
+        await performAnalysis();
+      }, 2000);
+    },
+    [performAnalysis],
+  );
 
   // Check if we should auto-suggest at milestone
   useEffect(() => {
     const stats = getDeckStats();
     const currentCount = stats.mainCount;
-    
+
     // Check if we've crossed a milestone
     const crossedMilestone = MILESTONE_CARD_COUNTS.find(
-      (milestone) => currentCount >= milestone && lastMilestone < milestone
+      (milestone) => currentCount >= milestone && lastMilestone < milestone,
     );
-    
+
     if (crossedMilestone) {
       setLastMilestone(crossedMilestone);
       // Auto-trigger analysis
       handleAnalyzeDeck("milestone");
     }
-  }, [currentDeck.mainDeck.length, lastMilestone, getDeckStats, handleAnalyzeDeck]);
+  }, [
+    currentDeck.mainDeck.length,
+    lastMilestone,
+    getDeckStats,
+    handleAnalyzeDeck,
+  ]);
 
   // Auto-analyze when deck changes (debounced)
   useEffect(() => {
@@ -175,7 +200,13 @@ export default function DeckBuilderAgent() {
     if (deckId && deckId !== lastAnalyzedDeckId) {
       handleAnalyzeDeck("auto");
     }
-  }, [currentDeck.id, currentDeck.mainDeck.length, currentDeck.extraDeck.length, lastAnalyzedDeckId, handleAnalyzeDeck]);
+  }, [
+    currentDeck.id,
+    currentDeck.mainDeck.length,
+    currentDeck.extraDeck.length,
+    lastAnalyzedDeckId,
+    handleAnalyzeDeck,
+  ]);
 
   // Cleanup debounce timer
   useEffect(() => {
@@ -223,7 +254,7 @@ export default function DeckBuilderAgent() {
 
   const handleAddCardToDeck = async (
     card: Card,
-    selectedDeckType?: DeckSection
+    selectedDeckType?: DeckSection,
   ) => {
     const deckType = selectedDeckType || getOptimalDeckType(card);
 
@@ -256,10 +287,10 @@ export default function DeckBuilderAgent() {
         return "bg-blue-500/20 border-blue-500/50 text-blue-300";
     }
   };
-  
+
   // Calculate token usage percentage (using 100k tokens as a reference max)
   const MAX_TOKENS_REFERENCE = 100000;
-  const tokenUsagePercent = usage 
+  const tokenUsagePercent = usage
     ? Math.min((usage.tokens_used / MAX_TOKENS_REFERENCE) * 100, 100)
     : 0;
 
@@ -270,7 +301,10 @@ export default function DeckBuilderAgent() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="flex items-center gap-2 min-w-0">
             <Sparkles className="h-5 w-5 text-cyan-400 flex-shrink-0" />
-            <CardTitle className="text-slate-50 truncate" style={{ fontFamily: "var(--font-heading)" }}>
+            <CardTitle
+              className="text-slate-50 truncate"
+              style={{ fontFamily: "var(--font-heading)" }}
+            >
               AI Builder Assistant
             </CardTitle>
           </div>
@@ -312,24 +346,33 @@ export default function DeckBuilderAgent() {
                   {usage.tokens_used.toLocaleString()}
                 </span>
                 <span className="text-slate-400">/</span>
-                <span className="tabular-nums">{MAX_TOKENS_REFERENCE.toLocaleString()}</span>
+                <span className="tabular-nums">
+                  {MAX_TOKENS_REFERENCE.toLocaleString()}
+                </span>
                 {usage.cost_usd > 0 && (
                   <>
                     <span className="text-slate-400">•</span>
-                    <span className="text-slate-300">${usage.cost_usd.toFixed(4)}</span>
+                    <span className="text-slate-300">
+                      ${usage.cost_usd.toFixed(4)}
+                    </span>
                   </>
                 )}
               </div>
             </div>
             <div className="relative">
-              <Progress 
-                value={tokenUsagePercent} 
+              <Progress
+                value={tokenUsagePercent}
                 className="h-2 bg-slate-900/60"
               />
-              <div 
+              <div
                 className="absolute inset-0 flex items-center justify-center text-[10px] font-semibold text-slate-200 pointer-events-none"
-                style={{ 
-                  color: tokenUsagePercent > 80 ? '#ef4444' : tokenUsagePercent > 50 ? '#facc15' : '#22c55e'
+                style={{
+                  color:
+                    tokenUsagePercent > 80
+                      ? "#ef4444"
+                      : tokenUsagePercent > 50
+                        ? "#facc15"
+                        : "#22c55e",
                 }}
               >
                 {tokenUsagePercent.toFixed(1)}%
@@ -349,18 +392,28 @@ export default function DeckBuilderAgent() {
                 </h3>
                 <div className="grid grid-cols-3 gap-3">
                   <div className="bg-slate-900/60 rounded-lg p-3 border border-cyan-500/20">
-                    <div className="text-xs text-slate-400 mb-1">Completeness</div>
+                    <div className="text-xs text-slate-400 mb-1">
+                      Completeness
+                    </div>
                     <div className="flex items-center gap-2">
-                      <Progress value={deckAssessment.completeness_score} className="flex-1 h-2" />
+                      <Progress
+                        value={deckAssessment.completeness_score}
+                        className="flex-1 h-2"
+                      />
                       <span className="text-sm font-semibold text-cyan-400">
                         {deckAssessment.completeness_score}%
                       </span>
                     </div>
                   </div>
                   <div className="bg-slate-900/60 rounded-lg p-3 border border-cyan-500/20">
-                    <div className="text-xs text-slate-400 mb-1">Archetype Coherence</div>
+                    <div className="text-xs text-slate-400 mb-1">
+                      Archetype Coherence
+                    </div>
                     <div className="flex items-center gap-2">
-                      <Progress value={deckAssessment.archetype_coherence} className="flex-1 h-2" />
+                      <Progress
+                        value={deckAssessment.archetype_coherence}
+                        className="flex-1 h-2"
+                      />
                       <span className="text-sm font-semibold text-cyan-400">
                         {deckAssessment.archetype_coherence}%
                       </span>
@@ -369,19 +422,24 @@ export default function DeckBuilderAgent() {
                   <div className="bg-slate-900/60 rounded-lg p-3 border border-cyan-500/20">
                     <div className="text-xs text-slate-400 mb-1">Balance</div>
                     <div className="flex items-center gap-2">
-                      <Progress value={deckAssessment.balance_score} className="flex-1 h-2" />
+                      <Progress
+                        value={deckAssessment.balance_score}
+                        className="flex-1 h-2"
+                      />
                       <span className="text-sm font-semibold text-cyan-400">
                         {deckAssessment.balance_score}%
                       </span>
                     </div>
                   </div>
                 </div>
-                
+
                 {deckAssessment.strengths.length > 0 && (
                   <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-3">
                     <div className="flex items-center gap-2 mb-2">
                       <CheckCircle2 className="h-4 w-4 text-green-400" />
-                      <span className="text-xs font-semibold text-green-400 uppercase">Strengths</span>
+                      <span className="text-xs font-semibold text-green-400 uppercase">
+                        Strengths
+                      </span>
                     </div>
                     <ul className="list-disc list-inside text-xs text-slate-300 space-y-1">
                       {deckAssessment.strengths.map((strength, i) => (
@@ -390,12 +448,14 @@ export default function DeckBuilderAgent() {
                     </ul>
                   </div>
                 )}
-                
+
                 {deckAssessment.issues.length > 0 && (
                   <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3">
                     <div className="flex items-center gap-2 mb-2">
                       <AlertCircle className="h-4 w-4 text-red-400" />
-                      <span className="text-xs font-semibold text-red-400 uppercase">Issues</span>
+                      <span className="text-xs font-semibold text-red-400 uppercase">
+                        Issues
+                      </span>
                     </div>
                     <ul className="list-disc list-inside text-xs text-slate-300 space-y-1">
                       {deckAssessment.issues.map((issue, i) => (
@@ -432,13 +492,17 @@ export default function DeckBuilderAgent() {
 
                     const isAdding = addingCardId === card.id.toString();
                     const wasAdded = addedCards.has(card.id.toString());
-                    const sectionMap: Record<"main" | "extra" | "side", DeckSection> = {
+                    const sectionMap: Record<
+                      "main" | "extra" | "side",
+                      DeckSection
+                    > = {
                       main: "mainDeck",
                       extra: "extraDeck",
                       side: "sideDeck",
                     };
-                    const section = suggestion.section 
-                      ? sectionMap[suggestion.section] || getOptimalDeckType(card)
+                    const section = suggestion.section
+                      ? sectionMap[suggestion.section] ||
+                        getOptimalDeckType(card)
                       : getOptimalDeckType(card);
                     const canAdd = canAddCardToDeck(card, section);
 
@@ -448,7 +512,10 @@ export default function DeckBuilderAgent() {
                         className="flex gap-3 rounded-lg border border-cyan-500/20 bg-slate-900/40 p-3"
                       >
                         {card.card_images?.[0]?.image_url_small && (
-                          <CardPreview card={card} banStatus={banlist[card.name] || "Unlimited"}>
+                          <CardPreview
+                            card={card}
+                            banStatus={banlist[card.name] || "Unlimited"}
+                          >
                             <div className="flex-shrink-0 cursor-pointer">
                               <Image
                                 width={60}
@@ -496,7 +563,12 @@ export default function DeckBuilderAgent() {
                             ) : (
                               <>
                                 <TrendingUp className="h-3 w-3 mr-1.5" />
-                                Add to {section === "mainDeck" ? "Main" : section === "extraDeck" ? "Extra" : "Side"}
+                                Add to{" "}
+                                {section === "mainDeck"
+                                  ? "Main"
+                                  : section === "extraDeck"
+                                    ? "Extra"
+                                    : "Side"}
                               </>
                             )}
                           </Button>
@@ -525,16 +597,21 @@ export default function DeckBuilderAgent() {
             {isLoading && (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="h-6 w-6 animate-spin text-cyan-400" />
-                <span className="ml-2 text-sm text-slate-300">Analyzing deck...</span>
+                <span className="ml-2 text-sm text-slate-300">
+                  Analyzing deck...
+                </span>
               </div>
             )}
 
-            {!isLoading && !analysis && !deckAssessment && suggestions.length === 0 && (
-              <div className="text-center py-8 text-slate-400 text-sm">
-                <Sparkles className="h-8 w-8 mx-auto mb-2 text-cyan-400/50" />
-                <p>Start building your deck to get AI-powered suggestions</p>
-              </div>
-            )}
+            {!isLoading &&
+              !analysis &&
+              !deckAssessment &&
+              suggestions.length === 0 && (
+                <div className="text-center py-8 text-slate-400 text-sm">
+                  <Sparkles className="h-8 w-8 mx-auto mb-2 text-cyan-400/50" />
+                  <p>Start building your deck to get AI-powered suggestions</p>
+                </div>
+              )}
           </div>
         </ScrollArea>
       </CardContent>

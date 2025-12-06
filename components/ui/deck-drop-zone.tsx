@@ -35,14 +35,8 @@ export const DeckDropZone: React.FC<DeckDropZoneProps> = ({
       ref={setNodeRef}
       id={id}
       className={`w-full h-full min-h-[300px] transition-all duration-150 ${
-        isEmpty
-          ? "flex items-center justify-center"
-          : "relative"
-      } ${
-        isOver 
-          ? "bg-cyan-500/10 scale-[1.01]" 
-          : "bg-cyb-800/20"
-      }`}
+        isEmpty ? "flex items-center justify-center" : "relative"
+      } ${isOver ? "bg-cyan-500/10 scale-[1.01]" : "bg-cyb-800/20"}`}
       style={{ position: "relative" }}
     >
       {children}

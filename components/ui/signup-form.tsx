@@ -1,14 +1,14 @@
-"use client"
-import { useState } from "react"
-import { useActionState } from "react"
-import { signup } from "../../app/login/actions"
-import { SignupFormState } from "../../types/types"
-import CutCornerWrapper from "../cut-corner-wrapper"
+"use client";
+import { useState } from "react";
+import { useActionState } from "react";
+import { signup } from "../../app/login/actions";
+import { SignupFormState } from "../../types/types";
+import CutCornerWrapper from "../cut-corner-wrapper";
 
-const initialState: SignupFormState = { success: false }
+const initialState: SignupFormState = { success: false };
 
 function validateEmail(email: string): boolean {
-  return /^[^@]+@[^@]+\.[^@]+$/.test(email)
+  return /^[^@]+@[^@]+\.[^@]+$/.test(email);
 }
 
 function getPasswordRequirements(password: string) {
@@ -18,42 +18,50 @@ function getPasswordRequirements(password: string) {
     { label: "Lowercase letter", valid: /[a-z]/.test(password) },
     { label: "Number", valid: /\d/.test(password) },
     { label: "Symbol", valid: /[!@#$%^&*(),.?":{}|<>]/.test(password) },
-  ]
+  ];
 }
 
 export function SignupForm({ onBack }: { onBack: () => void }) {
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [confirm, setConfirm] = useState("")
-  const [touched, setTouched] = useState({ email: false, password: false, confirm: false })
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [touched, setTouched] = useState({
+    email: false,
+    password: false,
+    confirm: false,
+  });
 
-  const [formState, formAction, isPending] = useActionState(signup, initialState)
+  const [formState, formAction, isPending] = useActionState(
+    signup,
+    initialState,
+  );
 
   // Validation checks
-  const emailValid = validateEmail(email)
-  const passwordReqs = getPasswordRequirements(password)
-  const passwordStrong = passwordReqs.every(r => r.valid)
-  const passwordsMatch = password === confirm && password.length > 0
+  const emailValid = validateEmail(email);
+  const passwordReqs = getPasswordRequirements(password);
+  const passwordStrong = passwordReqs.every((r) => r.valid);
+  const passwordsMatch = password === confirm && password.length > 0;
 
   // Only enable sign up if all conditions are met
-  const canSignUp = emailValid && passwordStrong && passwordsMatch && !isPending
+  const canSignUp =
+    emailValid && passwordStrong && passwordsMatch && !isPending;
 
   // Feedback helpers
-  const showEmailFeedback = touched.email && !emailValid
-  const showPasswordFeedback = touched.password && !passwordStrong
-  const showConfirmFeedback = touched.confirm && !passwordsMatch
+  const showEmailFeedback = touched.email && !emailValid;
+  const showPasswordFeedback = touched.password && !passwordStrong;
+  const showConfirmFeedback = touched.confirm && !passwordsMatch;
 
   if (formState.success) {
     return (
       <div className="space-y-6 w-full max-w-sm mx-auto">
-        <div className="text-lg font-semibold text-green-600">
-          Success! 🎉
-        </div>
+        <div className="text-lg font-semibold text-green-600">Success! 🎉</div>
         <div className="text-gray-700">
-          A confirmation email has been sent to <span className="font-medium">{formState.email || email}</span>.
+          A confirmation email has been sent to{" "}
+          <span className="font-medium">{formState.email || email}</span>.
         </div>
         <div className="text-gray-600 text-sm">
-          Please check your inbox and follow the instructions to confirm your account.
+          Please check your inbox and follow the instructions to confirm your
+          account.
         </div>
         <CutCornerWrapper
           size="sm"
@@ -73,13 +81,16 @@ export function SignupForm({ onBack }: { onBack: () => void }) {
           </button>
         </CutCornerWrapper>
       </div>
-    )
+    );
   }
 
   return (
     <form action={formAction} className="space-y-6 w-full max-w-sm mx-auto">
       <div>
-        <label htmlFor="signup-email" className="block text-sm font-medium text-gray-700 mb-1">
+        <label
+          htmlFor="signup-email"
+          className="block text-sm font-medium text-gray-700 mb-1"
+        >
           Email
         </label>
         <CutCornerWrapper
@@ -97,18 +108,23 @@ export function SignupForm({ onBack }: { onBack: () => void }) {
             type="email"
             autoComplete="email"
             value={email}
-            onChange={e => setEmail(e.target.value)}
-            onBlur={() => setTouched(t => ({ ...t, email: true }))}
+            onChange={(e) => setEmail(e.target.value)}
+            onBlur={() => setTouched((t) => ({ ...t, email: true }))}
             required
             className="w-full px-3 py-2 border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </CutCornerWrapper>
         {showEmailFeedback && (
-          <div className="text-xs text-red-600 mt-1">Please enter a valid email address.</div>
+          <div className="text-xs text-red-600 mt-1">
+            Please enter a valid email address.
+          </div>
         )}
       </div>
       <div>
-        <label htmlFor="signup-password" className="block text-sm font-medium text-gray-700 mb-1">
+        <label
+          htmlFor="signup-password"
+          className="block text-sm font-medium text-gray-700 mb-1"
+        >
           Password
         </label>
         <CutCornerWrapper
@@ -126,25 +142,33 @@ export function SignupForm({ onBack }: { onBack: () => void }) {
             type="password"
             autoComplete="new-password"
             value={password}
-            onChange={e => setPassword(e.target.value)}
-            onBlur={() => setTouched(t => ({ ...t, password: true }))}
+            onChange={(e) => setPassword(e.target.value)}
+            onBlur={() => setTouched((t) => ({ ...t, password: true }))}
             required
             className="w-full px-3 py-2 border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </CutCornerWrapper>
         <ul className="mt-2 space-y-0.5 text-xs">
           {passwordReqs.map((req, i) => (
-            <li key={i} className={req.valid ? "text-green-600" : "text-slate-400"}>
+            <li
+              key={i}
+              className={req.valid ? "text-green-600" : "text-slate-400"}
+            >
               {req.valid ? "✓" : "✗"} {req.label}
             </li>
           ))}
         </ul>
         {showPasswordFeedback && (
-          <div className="text-xs text-red-600 mt-1">Password does not meet all requirements.</div>
+          <div className="text-xs text-red-600 mt-1">
+            Password does not meet all requirements.
+          </div>
         )}
       </div>
       <div>
-        <label htmlFor="signup-confirm" className="block text-sm font-medium text-gray-700 mb-1">
+        <label
+          htmlFor="signup-confirm"
+          className="block text-sm font-medium text-gray-700 mb-1"
+        >
           Confirm Password
         </label>
         <CutCornerWrapper
@@ -162,17 +186,19 @@ export function SignupForm({ onBack }: { onBack: () => void }) {
             type="password"
             autoComplete="new-password"
             value={confirm}
-            onChange={e => setConfirm(e.target.value)}
-            onBlur={() => setTouched(t => ({ ...t, confirm: true }))}
+            onChange={(e) => setConfirm(e.target.value)}
+            onBlur={() => setTouched((t) => ({ ...t, confirm: true }))}
             required
             className="w-full px-3 py-2 border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </CutCornerWrapper>
         {showConfirmFeedback && (
-          <div className="text-xs text-red-600 mt-1">Passwords do not match.</div>
+          <div className="text-xs text-red-600 mt-1">
+            Passwords do not match.
+          </div>
         )}
       </div>
-      {(formState.error) && (
+      {formState.error && (
         <div className="text-red-600 text-sm">{formState.error}</div>
       )}
       <CutCornerWrapper
@@ -204,5 +230,5 @@ export function SignupForm({ onBack }: { onBack: () => void }) {
         Back to login
       </button>
     </form>
-  )
+  );
 }

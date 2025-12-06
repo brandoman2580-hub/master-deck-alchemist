@@ -57,11 +57,13 @@ export default function CutCornerWrapper({
     ["--cut-corner-stroke" as any]: stroke,
     ["--cut-corner-stroke-width" as any]: `${strokeWidth}`,
     ["--cut-corner-fill" as any]: fill,
-    ["--cut-corner-padding" as any]: padding ?? (size === "sm" ? "0.35rem" : size === "lg" ? "0.85rem" : "0.55rem"),
+    ["--cut-corner-padding" as any]:
+      padding ??
+      (size === "sm" ? "0.35rem" : size === "lg" ? "0.85rem" : "0.55rem"),
   };
 
   const { style: restStyle, ...restProps } = rest;
-  
+
   return (
     <div
       className={`cut-corner-wrapper ${hoverHighlight ? "hover-highlight" : ""} ${className}`}
@@ -94,9 +96,9 @@ export default function CutCornerWrapper({
       </svg>
 
       {/* Content wrapper — content sits above the SVG */}
-      <div 
-        className="cut-corner-content" 
-        style={{ 
+      <div
+        className="cut-corner-content"
+        style={{
           padding: styleVars["--cut-corner-padding"] as string,
           height: "100%",
           width: "100%",
@@ -110,4 +112,3 @@ export default function CutCornerWrapper({
     </div>
   );
 }
-

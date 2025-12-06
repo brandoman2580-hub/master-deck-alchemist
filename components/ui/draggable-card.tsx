@@ -11,14 +11,23 @@ interface DraggableCardProps {
   onDoubleClick?: () => void;
 }
 
-export const DraggableCard: React.FC<DraggableCardProps> = ({ id, card, onRemove, disabled, onDoubleClick }) => {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
-    id,
-    data: { type: "deck", deckInstanceId: id },
-    disabled,
-  });
+export const DraggableCard: React.FC<DraggableCardProps> = ({
+  id,
+  card,
+  onRemove,
+  disabled,
+  onDoubleClick,
+}) => {
+  const { attributes, listeners, setNodeRef, transform, isDragging } =
+    useDraggable({
+      id,
+      data: { type: "deck", deckInstanceId: id },
+      disabled,
+    });
 
-  const style = transform ? { transform: CSS.Transform.toString(transform) } : undefined;
+  const style = transform
+    ? { transform: CSS.Transform.toString(transform) }
+    : undefined;
 
   const handleDoubleClick = () => {
     if (onDoubleClick) {

@@ -33,4 +33,3 @@
   ],
   "notes": "Suppressions must include: component path, rule ID, tool, justification, owner, expiry date, and affected WCAG criteria. Review quarterly."
 }
-

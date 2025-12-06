@@ -1,6 +1,13 @@
 "use client";
 
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "../ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "../ui/card";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
 import {
@@ -41,7 +48,9 @@ export function DeckCard({
   formatDate,
 }: DeckCardProps) {
   const shouldTruncate = deck.name.length > 25;
-  const displayName = shouldTruncate ? `${deck.name.slice(0, 25)}...` : deck.name;
+  const displayName = shouldTruncate
+    ? `${deck.name.slice(0, 25)}...`
+    : deck.name;
 
   return (
     <Card className="hover:border-accent-cyan/25 transition-colors">
@@ -52,9 +61,7 @@ export function DeckCard({
               <TooltipProvider delayDuration={200}>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <CardTitle 
-                      className="text-white truncate cursor-help font-display" 
-                    >
+                    <CardTitle className="text-white truncate cursor-help font-display">
                       {displayName}
                     </CardTitle>
                   </TooltipTrigger>
@@ -67,9 +74,7 @@ export function DeckCard({
                 </Tooltip>
               </TooltipProvider>
             ) : (
-              <CardTitle 
-                className="text-white truncate font-display" 
-              >
+              <CardTitle className="text-white truncate font-display">
                 {displayName}
               </CardTitle>
             )}
@@ -97,22 +102,29 @@ export function DeckCard({
         </div>
         <CardDescription className="flex items-center text-muted-50">
           <Clock className="h-3 w-3 mr-1 text-accent-cyan" />
-          Last updated: {deck.updated_at ? formatDate(deck.updated_at) : "Unknown"}
+          Last updated:{" "}
+          {deck.updated_at ? formatDate(deck.updated_at) : "Unknown"}
         </CardDescription>
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-3 gap-2 text-sm">
           <div className="bg-cyb-800/40 border border-accent-cyan/18 p-2 rounded-md text-center">
             <p className="text-xs text-muted-50">Main</p>
-            <p className="font-bold text-accent-cyan/90 font-display">{deck.mainDeck.length}</p>
+            <p className="font-bold text-accent-cyan/90 font-display">
+              {deck.mainDeck.length}
+            </p>
           </div>
           <div className="bg-cyb-800/40 border border-accent-cyan/18 p-2 rounded-md text-center">
             <p className="text-xs text-muted-50">Extra</p>
-            <p className="font-bold text-accent-cyan/90 font-display">{deck.extraDeck.length}</p>
+            <p className="font-bold text-accent-cyan/90 font-display">
+              {deck.extraDeck.length}
+            </p>
           </div>
           <div className="bg-cyb-800/40 border border-accent-cyan/18 p-2 rounded-md text-center">
             <p className="text-xs text-muted-50">Side</p>
-            <p className="font-bold text-accent-cyan/90 font-display">{deck.sideDeck.length}</p>
+            <p className="font-bold text-accent-cyan/90 font-display">
+              {deck.sideDeck.length}
+            </p>
           </div>
         </div>
       </CardContent>
@@ -129,11 +141,7 @@ export function DeckCard({
           </Button>
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button
-                variant="destructive"
-                size="sm"
-                disabled={loading}
-              >
+              <Button variant="destructive" size="sm" disabled={loading}>
                 <Trash2 className="h-4 w-4" />
               </Button>
             </AlertDialogTrigger>
@@ -143,7 +151,8 @@ export function DeckCard({
                   Delete Deck
                 </AlertDialogTitle>
                 <AlertDialogDescription className="text-muted-50">
-                  Are you sure you want to delete {deck.name}? This action cannot be undone.
+                  Are you sure you want to delete {deck.name}? This action
+                  cannot be undone.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -165,4 +174,3 @@ export function DeckCard({
     </Card>
   );
 }
-

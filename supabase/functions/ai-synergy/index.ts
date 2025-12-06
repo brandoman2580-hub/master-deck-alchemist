@@ -79,7 +79,10 @@ function getArchetypeNameServer(card: { archetype?: any }): string {
  *
  * allowedCardNames must be full, real card names (deck + candidate pool).
  */
-function sanitizeAiCardText(content: string, allowedCardNames: string[]): string {
+function sanitizeAiCardText(
+  content: string,
+  allowedCardNames: string[],
+): string {
   // 1) Remove raw [object Object] artifacts
   let cleaned = content.replace(/\[object Object\]/g, "this archetype");
 
@@ -91,7 +94,8 @@ function sanitizeAiCardText(content: string, allowedCardNames: string[]): string
 
   // 2) Replace invented multi-word card-like names.
   // Pattern: Two or more capitalized words in a row (e.g. "Mystic Tomahawk")
-  const cardLikeRegex = /\b([A-Z][A-Za-z0-9'&-]+(?:\s+[A-Z][A-Za-z0-9'&-]+)+)\b/g;
+  const cardLikeRegex =
+    /\b([A-Z][A-Za-z0-9'&-]+(?:\s+[A-Z][A-Za-z0-9'&-]+)+)\b/g;
 
   cleaned = cleaned.replace(cardLikeRegex, (match) => {
     const normalized = match.trim().toLowerCase();
@@ -104,7 +108,9 @@ function sanitizeAiCardText(content: string, allowedCardNames: string[]): string
 }
 
 // Load Master Duel banlist from Supabase
-async function loadMasterDuelBanlist(supabaseClient: any): Promise<Record<string, string>> {
+async function loadMasterDuelBanlist(
+  supabaseClient: any,
+): Promise<Record<string, string>> {
   try {
     const { data, error } = await supabaseClient
       .from("master_duel_banlist")
@@ -133,18 +139,17 @@ async function loadMasterDuelBanlist(supabaseClient: any): Promise<Record<string
   }
 }
 
-
 // Find related cards by archetype match
 async function findRelatedByArchetype(
   supabaseClient: any,
   selectedCards: Card[],
-  excludeIds: number[]
+  excludeIds: number[],
 ): Promise<Card[]> {
   // CRITICAL: Use getArchetypeNameServer to normalize archetypes before querying
   const archetypes = new Set(
     selectedCards
       .map((c) => getArchetypeNameServer(c))
-      .filter((a): a is string => Boolean(a))
+      .filter((a): a is string => Boolean(a)),
   );
 
   if (archetypes.size === 0) return [];
@@ -175,13 +180,13 @@ async function findRelatedByArchetype(
 async function findRelatedByType(
   supabaseClient: any,
   selectedCards: Card[],
-  excludeIds: number[]
+  excludeIds: number[],
 ): Promise<Card[]> {
   const types = new Set(
-    selectedCards.map((c) => c.type).filter((t): t is string => Boolean(t))
+    selectedCards.map((c) => c.type).filter((t): t is string => Boolean(t)),
   );
   const races = new Set(
-    selectedCards.map((c) => c.race).filter((r): r is string => Boolean(r))
+    selectedCards.map((c) => c.race).filter((r): r is string => Boolean(r)),
   );
 
   if (types.size === 0 && races.size === 0) return [];
@@ -223,7 +228,7 @@ async function findRelatedByType(
 async function findRelatedByKeywords(
   supabaseClient: any,
   selectedCards: Card[],
-  excludeIds: number[]
+  excludeIds: number[],
 ): Promise<Card[]> {
   // Extract keywords from selected card descriptions
   const keywords = new Set<string>();
@@ -232,9 +237,25 @@ async function findRelatedByKeywords(
       // Extract common effect keywords
       const desc = card.desc.toLowerCase();
       const effectWords = [
-        "banish", "negate", "destroy", "draw", "search", "special summon",
-        "tribute", "discard", "add", "send", "reveal", "target", "activate",
-        "fusion", "synchro", "xyz", "link", "ritual", "pendulum"
+        "banish",
+        "negate",
+        "destroy",
+        "draw",
+        "search",
+        "special summon",
+        "tribute",
+        "discard",
+        "add",
+        "send",
+        "reveal",
+        "target",
+        "activate",
+        "fusion",
+        "synchro",
+        "xyz",
+        "link",
+        "ritual",
+        "pendulum",
       ];
       effectWords.forEach((word) => {
         if (desc.includes(word)) {
@@ -258,7 +279,7 @@ async function findRelatedByKeywords(
         match_count: 50,
         excluded_ids: excludeIds.length > 0 ? excludeIds : [0],
         banlist_format: "MASTER_DUEL", // Default, can be made configurable
-      }
+      },
     );
 
     if (matchError) {
@@ -305,7 +326,7 @@ Deno.serve(async (req) => {
         {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        },
       );
     }
 
@@ -314,22 +335,30 @@ Deno.serve(async (req) => {
     // Parse request body
     const { selectedCards, userGoal } = await req.json();
 
-    if (!selectedCards || !Array.isArray(selectedCards) || selectedCards.length === 0) {
+    if (
+      !selectedCards ||
+      !Array.isArray(selectedCards) ||
+      selectedCards.length === 0
+    ) {
       return new Response(
         JSON.stringify({ error: "selectedCards must be a non-empty array." }),
         {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        },
       );
     }
 
     // Fetch selected card entries from cards table
     const cardIds = selectedCards
-      .filter((item: string | number): item is number => typeof item === "number")
+      .filter(
+        (item: string | number): item is number => typeof item === "number",
+      )
       .map((id: number) => id);
 
-    const cardNames = selectedCards.filter((item: string | number): item is string => typeof item === "string");
+    const cardNames = selectedCards.filter(
+      (item: string | number): item is string => typeof item === "string",
+    );
 
     let selectedCardData: Card[] = [];
 
@@ -353,7 +382,7 @@ Deno.serve(async (req) => {
       // Build OR conditions for name matching
       const nameConditions = cardNames
         .map((name: string) => {
-          const escapedName = name.replace(/[%_\\]/g, '\\$&');
+          const escapedName = name.replace(/[%_\\]/g, "\\$&");
           return `name.ilike.${escapedName}`;
         })
         .join(",");
@@ -386,18 +415,19 @@ Deno.serve(async (req) => {
         {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        },
       );
     }
 
     const excludeIds = selectedCardData.map((c) => c.id);
 
     // Fetch related cards using multiple strategies
-    const [relatedByArchetype, relatedByType, relatedByKeywords] = await Promise.all([
-      findRelatedByArchetype(supabase, selectedCardData, excludeIds),
-      findRelatedByType(supabase, selectedCardData, excludeIds),
-      findRelatedByKeywords(supabase, selectedCardData, excludeIds),
-    ]);
+    const [relatedByArchetype, relatedByType, relatedByKeywords] =
+      await Promise.all([
+        findRelatedByArchetype(supabase, selectedCardData, excludeIds),
+        findRelatedByType(supabase, selectedCardData, excludeIds),
+        findRelatedByKeywords(supabase, selectedCardData, excludeIds),
+      ]);
 
     // Combine and deduplicate related cards
     const allRelated = [
@@ -405,36 +435,32 @@ Deno.serve(async (req) => {
       ...relatedByType,
       ...relatedByKeywords,
     ];
-    
+
     // Load banlist data
     const banlist = await loadMasterDuelBanlist(supabase);
-    
+
     // CRITICAL: Filter forbidden cards from related cards
     const banlistMap = new Map<string, string>(Object.entries(banlist));
     const filteredRelated = allRelated.filter((card: Card) => {
       const ban = banlistMap.get(card.name) || "Unlimited";
       return ban !== "Forbidden";
     });
-    
+
     const relatedCards = onlyUniqueByName(filteredRelated).slice(0, 60);
 
     // Build structured prompt
     const selectedCardsText = selectedCardData
-      .map(
-        (card) => {
-          const archetypeName = getArchetypeNameServer(card);
-          return `${card.name} (${card.type}${archetypeName ? ", " + archetypeName : ""}): ${truncateDesc(card.desc)}`;
-        }
-      )
+      .map((card) => {
+        const archetypeName = getArchetypeNameServer(card);
+        return `${card.name} (${card.type}${archetypeName ? ", " + archetypeName : ""}): ${truncateDesc(card.desc)}`;
+      })
       .join("\n\n");
 
     const relatedCardsText = relatedCards
-      .map(
-        (card) => {
-          const archetypeName = getArchetypeNameServer(card);
-          return `${card.name} (${card.type}${archetypeName ? ", " + archetypeName : ""}): ${truncateDesc(card.desc)}`;
-        }
-      )
+      .map((card) => {
+        const archetypeName = getArchetypeNameServer(card);
+        return `${card.name} (${card.type}${archetypeName ? ", " + archetypeName : ""}): ${truncateDesc(card.desc)}`;
+      })
       .join("\n\n");
 
     const banlistText = Object.entries(banlist)
@@ -447,7 +473,7 @@ Deno.serve(async (req) => {
     const selectedCardNames = selectedCardData.map((card) => card.name);
     const relatedCardNames = relatedCards.map((card) => card.name);
     const allowedCardNames = Array.from(
-      new Set([...selectedCardNames, ...relatedCardNames].map((n) => n.trim()))
+      new Set([...selectedCardNames, ...relatedCardNames].map((n) => n.trim())),
     );
 
     const prompt = `You are an expert Yu-Gi-Oh! Master Duel synergy analyst. Analyze the selected cards and identify synergies, combos, and strategic interactions.
@@ -510,7 +536,7 @@ STRONG RULES (MUST FOLLOW):
         {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        },
       );
     }
 
@@ -520,7 +546,7 @@ STRONG RULES (MUST FOLLOW):
         {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        },
       );
     }
 
@@ -539,7 +565,7 @@ STRONG RULES (MUST FOLLOW):
           max_tokens: 2048,
           response_format: { type: "json_object" },
         }),
-      }
+      },
     );
 
     if (!groqResponse.ok) {
@@ -553,7 +579,7 @@ STRONG RULES (MUST FOLLOW):
     const result = await groqResponse.json();
     const rawContent =
       result.choices?.[0]?.message?.content || "No response from AI.";
-    
+
     // Sanitize AI text: remove [object Object] and replace invented card names
     const aiContent = sanitizeAiCardText(rawContent, allowedCardNames);
 
@@ -571,40 +597,44 @@ STRONG RULES (MUST FOLLOW):
         jsonContent = lines.join("\n");
       }
       parsedSynergy = JSON.parse(jsonContent);
-      
+
       // Sanitize text fields in parsedSynergy
       if (parsedSynergy?.synergy_analysis) {
         if (parsedSynergy.synergy_analysis.overview) {
           parsedSynergy.synergy_analysis.overview = sanitizeAiCardText(
             parsedSynergy.synergy_analysis.overview,
-            allowedCardNames
+            allowedCardNames,
           );
         }
         if (Array.isArray(parsedSynergy.synergy_analysis.key_interactions)) {
-          parsedSynergy.synergy_analysis.key_interactions = parsedSynergy.synergy_analysis.key_interactions.map(
-            (text: string) => sanitizeAiCardText(text, allowedCardNames)
-          );
+          parsedSynergy.synergy_analysis.key_interactions =
+            parsedSynergy.synergy_analysis.key_interactions.map(
+              (text: string) => sanitizeAiCardText(text, allowedCardNames),
+            );
         }
         if (Array.isArray(parsedSynergy.synergy_analysis.combo_opportunities)) {
-          parsedSynergy.synergy_analysis.combo_opportunities = parsedSynergy.synergy_analysis.combo_opportunities.map(
-            (text: string) => sanitizeAiCardText(text, allowedCardNames)
-          );
+          parsedSynergy.synergy_analysis.combo_opportunities =
+            parsedSynergy.synergy_analysis.combo_opportunities.map(
+              (text: string) => sanitizeAiCardText(text, allowedCardNames),
+            );
         }
         if (Array.isArray(parsedSynergy.synergy_analysis.strengths)) {
-          parsedSynergy.synergy_analysis.strengths = parsedSynergy.synergy_analysis.strengths.map(
-            (text: string) => sanitizeAiCardText(text, allowedCardNames)
-          );
+          parsedSynergy.synergy_analysis.strengths =
+            parsedSynergy.synergy_analysis.strengths.map((text: string) =>
+              sanitizeAiCardText(text, allowedCardNames),
+            );
         }
         if (Array.isArray(parsedSynergy.synergy_analysis.weaknesses)) {
-          parsedSynergy.synergy_analysis.weaknesses = parsedSynergy.synergy_analysis.weaknesses.map(
-            (text: string) => sanitizeAiCardText(text, allowedCardNames)
-          );
+          parsedSynergy.synergy_analysis.weaknesses =
+            parsedSynergy.synergy_analysis.weaknesses.map((text: string) =>
+              sanitizeAiCardText(text, allowedCardNames),
+            );
         }
       }
       if (parsedSynergy?.strategic_notes) {
         parsedSynergy.strategic_notes = sanitizeAiCardText(
           parsedSynergy.strategic_notes,
-          allowedCardNames
+          allowedCardNames,
         );
       }
       if (Array.isArray(parsedSynergy?.recommended_cards)) {
@@ -612,7 +642,7 @@ STRONG RULES (MUST FOLLOW):
           (rec: any) => ({
             ...rec,
             reason: sanitizeAiCardText(rec.reason || "", allowedCardNames),
-          })
+          }),
         );
       }
     } catch (parseError) {
@@ -625,26 +655,32 @@ STRONG RULES (MUST FOLLOW):
         {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        },
       );
     }
 
     // Validate recommended card names against database
-    if (parsedSynergy && parsedSynergy.recommended_cards && Array.isArray(parsedSynergy.recommended_cards)) {
+    if (
+      parsedSynergy &&
+      parsedSynergy.recommended_cards &&
+      Array.isArray(parsedSynergy.recommended_cards)
+    ) {
       const recommendedNames = parsedSynergy.recommended_cards.map(
-        (rec: any) => rec.card_name
+        (rec: any) => rec.card_name,
       );
-      
+
       const nameConditions = recommendedNames
         .map((name: string) => {
-          const escapedName = name.replace(/[%_\\]/g, '\\$&');
+          const escapedName = name.replace(/[%_\\]/g, "\\$&");
           return `name.ilike.${escapedName}`;
         })
         .join(",");
 
       const { data: validatedCards } = await supabase
         .from("cards")
-        .select("id, name, type, desc, level, race, attribute, archetype, card_images, atk, def, misc_info, card_sets, card_prices")
+        .select(
+          "id, name, type, desc, level, race, attribute, archetype, card_images, atk, def, misc_info, card_sets, card_prices",
+        )
         .or(nameConditions)
         .limit(recommendedNames.length * 2);
 
@@ -655,11 +691,14 @@ STRONG RULES (MUST FOLLOW):
           ...card,
           archetype: getArchetypeNameServer(card), // Normalize archetype
         }));
-        
+
         const nameMap = new Map(
-          normalizedValidatedCards.map((card: Card) => [card.name.toLowerCase(), card])
+          normalizedValidatedCards.map((card: Card) => [
+            card.name.toLowerCase(),
+            card,
+          ]),
         );
-        
+
         parsedSynergy.recommended_cards = parsedSynergy.recommended_cards.map(
           (rec: any) => {
             const card = nameMap.get(rec.card_name.toLowerCase());
@@ -667,7 +706,7 @@ STRONG RULES (MUST FOLLOW):
               ...rec,
               card_data: card || null,
             };
-          }
+          },
         );
       }
     }
@@ -682,7 +721,7 @@ STRONG RULES (MUST FOLLOW):
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
-      }
+      },
     );
   } catch (error: any) {
     return new Response(JSON.stringify({ error: error.message }), {
@@ -691,4 +730,3 @@ STRONG RULES (MUST FOLLOW):
     });
   }
 });
-

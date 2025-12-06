@@ -1,12 +1,12 @@
 import { DeckMode } from "../types/types";
-import { create } from "zustand"
+import { create } from "zustand";
 
 type ModeStore = {
-    deckMode: "TCG" | "Master Duel"
-    setDeckMode: (deckMode: DeckMode) => void
-}
+  deckMode: "TCG" | "Master Duel";
+  setDeckMode: (deckMode: DeckMode) => void;
+};
 
 export const useModeStore = create<ModeStore>((set) => ({
-    deckMode: "Master Duel",
-    setDeckMode: (deckMode) => set({ deckMode })
-}))
+  deckMode: "Master Duel",
+  setDeckMode: (deckMode) => set({ deckMode }),
+}));

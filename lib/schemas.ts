@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 // Schema for card candidate returned from Supabase (truncated effect text)
 export const CardCandidateSchema = z.object({
@@ -16,8 +16,8 @@ export const LlmPickSchema = z.object({
   name: z.string(),
   // ideally include the card ID to make matching unambiguous
   id: z.number().optional(),
-  reason: z.string(),  // <= 40 words (enforced by prompt; not by Zod)
-  combo: z.string(),   // <= 20 words (enforced by prompt)
+  reason: z.string(), // <= 40 words (enforced by prompt; not by Zod)
+  combo: z.string(), // <= 20 words (enforced by prompt)
   risk: z.string().optional(),
 });
 

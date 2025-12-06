@@ -1,6 +1,6 @@
 /**
  * Card Recommendation Pipeline using Embeddings + MMR Reranking + LLM
- * 
+ *
  * This module provides a sophisticated recommendation system that:
  * 1. Embeds deck context using Supabase AI embeddings
  * 2. Performs vector similarity search to find candidate cards
@@ -9,9 +9,9 @@
  * 5. Calls LLM (Groq) to generate structured recommendations
  */
 
-import { createClient } from '@supabase/supabase-js';
-import { CardCandidateSchema, LlmResponseSchema } from '../lib/schemas';
-import { toTOON } from '../lib/toon';
+import { createClient } from "@supabase/supabase-js";
+import { CardCandidateSchema, LlmResponseSchema } from "../lib/schemas";
+import { toTOON } from "../lib/toon";
 
 // Helper functions for vector similarity
 function dot(a: number[], b: number[]): number {
@@ -34,28 +34,28 @@ function cosine(a: number[], b: number[]): number {
 async function getEmbedding(
   text: string,
   supabaseUrl: string,
-  serviceRoleKey: string
+  serviceRoleKey: string,
 ): Promise<number[]> {
   const embedFn = `${supabaseUrl}/functions/v1/embed`;
   const res = await fetch(embedFn, {
-    method: 'POST',
+    method: "POST",
     headers: {
       Authorization: `Bearer ${serviceRoleKey}`,
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
     },
     body: JSON.stringify({ input: text }),
   });
-  
+
   if (!res.ok) {
     const errorText = await res.text();
     throw new Error(`Embed call failed: ${res.status} - ${errorText}`);
   }
-  
+
   const j = await res.json();
   if (!j.embedding || !Array.isArray(j.embedding)) {
-    throw new Error('Invalid embedding response format');
+    throw new Error("Invalid embedding response format");
   }
-  
+
   return j.embedding as number[];
 }
 
@@ -69,41 +69,44 @@ async function fetchCandidates(
   excludeArchetypes: string[],
   excludeIds: number[],
   candidatePool = 200,
-  deckContextText?: string
+  deckContextText?: string,
 ): Promise<any[]> {
   // Try vector search RPC first
   try {
-    const { data, error } = await supabase.rpc('match_cards_with_exclusions', {
+    const { data, error } = await supabase.rpc("match_cards_with_exclusions", {
       query_embedding: queryEmb,
       exclude_archetypes: excludeArchetypes,
       exclude_ids: excludeIds,
       match_count: candidatePool,
     });
-    
+
     if (!error && data) {
       return data;
     }
   } catch (err) {
-    console.warn('Vector search RPC not available, falling back to text search:', err);
+    console.warn(
+      "Vector search RPC not available, falling back to text search:",
+      err,
+    );
   }
-  
+
   // Fallback: Use text-based search if vector RPC doesn't exist
   if (deckContextText) {
     try {
       // Extract key terms from deck context for text search
       const searchTerms = deckContextText
         .split(/\s+/)
-        .filter(term => term.length > 3)
+        .filter((term) => term.length > 3)
         .slice(0, 5)
-        .join(' ');
-      
-      const { data, error } = await supabase.rpc('match_cards_by_text', {
-        query: searchTerms || 'effect',
+        .join(" ");
+
+      const { data, error } = await supabase.rpc("match_cards_by_text", {
+        query: searchTerms || "effect",
         match_count: candidatePool,
         excluded_ids: excludeIds.length > 0 ? excludeIds : [0],
-        banlist_format: 'MASTER_DUEL',
+        banlist_format: "MASTER_DUEL",
       });
-      
+
       if (!error && data) {
         // Transform to match expected format
         return data.map((row: any) => ({
@@ -111,105 +114,113 @@ async function fetchCandidates(
           name: row.name,
           archetype: row.archetype,
           type: row.type,
-          desc: row.desc || row.effecttext || '',
+          desc: row.desc || row.effecttext || "",
         }));
       }
     } catch (fallbackErr) {
-      console.warn('Text search fallback also failed:', fallbackErr);
+      console.warn("Text search fallback also failed:", fallbackErr);
     }
   }
-  
+
   // Last resort: simple query excluding archetypes and IDs
   try {
     let query = supabase
-      .from('cards')
-      .select('id, name, archetype, type, desc, effect_embedding')
+      .from("cards")
+      .select("id, name, archetype, type, desc, effect_embedding")
       .limit(candidatePool);
-    
+
     if (excludeIds.length > 0) {
-      query = query.not('id', 'in', `(${excludeIds.join(',')})`);
+      query = query.not("id", "in", `(${excludeIds.join(",")})`);
     }
-    
+
     if (excludeArchetypes.length > 0) {
       for (const arch of excludeArchetypes) {
-        query = query.not('archetype', 'ilike', `%${arch}%`);
+        query = query.not("archetype", "ilike", `%${arch}%`);
       }
     }
-    
+
     const { data, error } = await query;
     if (!error && data) {
       return data;
     }
   } catch (err) {
-    console.error('Final fallback query failed:', err);
+    console.error("Final fallback query failed:", err);
   }
-  
+
   return [];
 }
 
 /**
  * MMR (Maximal Marginal Relevance) reranker
  * Balances relevance to query with diversity among results
- * 
+ *
  * @param candidates - Array of candidates with embeddings
  * @param qEmb - Query embedding vector
  * @param k - Number of items to select
  * @param lambda - Balance between relevance (1.0) and diversity (0.0). Default 0.65
  */
 function mmrSelect(
-  candidates: { id: number; embedding: number[] | null; sim: number; row: any }[],
+  candidates: {
+    id: number;
+    embedding: number[] | null;
+    sim: number;
+    row: any;
+  }[],
   qEmb: number[],
   k: number,
-  lambda = 0.65
+  lambda = 0.65,
 ): { id: number; embedding: number[] | null; sim: number; row: any }[] {
   // Compute similarity to query for all candidates
-  candidates.forEach(c => {
+  candidates.forEach((c) => {
     if (c.embedding && c.sim === 0) {
       c.sim = cosine(c.embedding, qEmb);
     }
   });
-  
+
   const selected: typeof candidates = [];
   const pool = candidates.slice();
-  
+
   // Sort by similarity (descending)
   pool.sort((a, b) => (b.sim ?? 0) - (a.sim ?? 0));
-  
+
   // Select first item (most relevant)
   if (pool.length === 0) return selected;
   selected.push(pool.shift()!);
-  
+
   // MMR selection: balance relevance and diversity
   while (selected.length < k && pool.length > 0) {
     let bestIdx = -1;
     let bestScore = -Infinity;
-    
+
     for (let i = 0; i < pool.length; i++) {
       const cand = pool[i];
       const rel = cand.sim ?? 0;
-      
+
       // Diversity penalty = max similarity to any already selected item
-      const diversity = selected.length > 0
-        ? Math.max(...selected.map(s => 
-            s.embedding && cand.embedding 
-              ? cosine(s.embedding, cand.embedding) 
-              : 0
-          ))
-        : 0;
-      
+      const diversity =
+        selected.length > 0
+          ? Math.max(
+              ...selected.map((s) =>
+                s.embedding && cand.embedding
+                  ? cosine(s.embedding, cand.embedding)
+                  : 0,
+              ),
+            )
+          : 0;
+
       // MMR score: higher is better
       const mmrScore = lambda * rel - (1 - lambda) * diversity;
-      
+
       if (mmrScore > bestScore) {
         bestScore = mmrScore;
         bestIdx = i;
       }
     }
-    
+
     if (bestIdx === -1) break;
     selected.push(pool.splice(bestIdx, 1)[0]);
   }
-  
+
   return selected;
 }
 
@@ -221,7 +232,7 @@ async function callLLM({
   user,
   max_tokens = 400,
   groqApiKey,
-  modelName = 'llama-3.3-70b-versatile',
+  modelName = "llama-3.3-70b-versatile",
 }: {
   system: string;
   user: string;
@@ -230,25 +241,28 @@ async function callLLM({
   modelName?: string;
 }): Promise<{ text: string }> {
   if (!groqApiKey) {
-    throw new Error('GROQ_API_KEY is required');
+    throw new Error("GROQ_API_KEY is required");
   }
 
-  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${groqApiKey}`,
-      'Content-Type': 'application/json',
+  const response = await fetch(
+    "https://api.groq.com/openai/v1/chat/completions",
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${groqApiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: modelName,
+        messages: [
+          { role: "system", content: system },
+          { role: "user", content: user },
+        ],
+        temperature: 0.7,
+        max_tokens,
+      }),
     },
-    body: JSON.stringify({
-      model: modelName,
-      messages: [
-        { role: 'system', content: system },
-        { role: 'user', content: user },
-      ],
-      temperature: 0.7,
-      max_tokens,
-    }),
-  });
+  );
 
   if (!response.ok) {
     const errorText = await response.text();
@@ -256,14 +270,14 @@ async function callLLM({
   }
 
   const result = await response.json();
-  const text = result.choices?.[0]?.message?.content || '';
-  
+  const text = result.choices?.[0]?.message?.content || "";
+
   return { text };
 }
 
 /**
  * Main recommendation function using embeddings + MMR + LLM
- * 
+ *
  * @param params - Configuration for recommendation
  * @returns LLM response with structured picks
  */
@@ -285,12 +299,24 @@ export async function recommendNonArchetypeCards({
   supabaseServiceKey: string;
   groqApiKey: string;
   modelName?: string;
-}): Promise<{ picks: Array<{ id?: number; name: string; reason: string; combo: string; risk?: string }> }> {
+}): Promise<{
+  picks: Array<{
+    id?: number;
+    name: string;
+    reason: string;
+    combo: string;
+    risk?: string;
+  }>;
+}> {
   // Initialize Supabase client
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
-  
+
   // 1) embed the deck context
-  const qEmb = await getEmbedding(deckContextText, supabaseUrl, supabaseServiceKey);
+  const qEmb = await getEmbedding(
+    deckContextText,
+    supabaseUrl,
+    supabaseServiceKey,
+  );
 
   // 2) fetch candidate rows from RPC (with fallback)
   const rows = await fetchCandidates(
@@ -299,7 +325,7 @@ export async function recommendNonArchetypeCards({
     excludeArchetypes,
     excludeIds,
     200,
-    deckContextText
+    deckContextText,
   );
 
   // 3) validate + transform rows using Zod
@@ -313,10 +339,14 @@ export async function recommendNonArchetypeCards({
   for (const r of rows) {
     // transform: some RPCs return "desc" field name `desc`; ensure it exists
     // Convert null to undefined to match schema expectations
-    const archetypeValue = r.archetype != null && r.archetype !== '' ? String(r.archetype) : undefined;
-    const typeValue = r.type != null && r.type !== '' ? String(r.type) : undefined;
-    const descValue = (r.desc ?? r.effecttext ?? '') as string;
-    
+    const archetypeValue =
+      r.archetype != null && r.archetype !== ""
+        ? String(r.archetype)
+        : undefined;
+    const typeValue =
+      r.type != null && r.type !== "" ? String(r.type) : undefined;
+    const descValue = (r.desc ?? r.effecttext ?? "") as string;
+
     const item = {
       id: Number(r.id),
       name: String(r.name),
@@ -324,7 +354,7 @@ export async function recommendNonArchetypeCards({
       type: typeValue,
       desc: descValue,
     };
-    
+
     const parsed = CardCandidateSchema.safeParse(item);
     if (parsed.success) {
       validated.push(parsed.data);
@@ -335,12 +365,12 @@ export async function recommendNonArchetypeCards({
   if (validated.length === 0) return { picks: [] };
 
   // 4) fetch candidate embeddings for MMR (small set)
-  const ids = validated.map(v => v.id);
+  const ids = validated.map((v) => v.id);
   const { data: embRows } = await supabase
-    .from('cards')
-    .select('id, effect_embedding')
-    .in('id', ids);
-  
+    .from("cards")
+    .select("id, effect_embedding")
+    .in("id", ids);
+
   const embMap = new Map<number, number[]>();
   for (const e of embRows || []) {
     if (e.effect_embedding && Array.isArray(e.effect_embedding)) {
@@ -348,7 +378,7 @@ export async function recommendNonArchetypeCards({
     }
   }
 
-  const candidatesWithEmb = validated.map(v => ({
+  const candidatesWithEmb = validated.map((v) => ({
     id: v.id,
     row: v,
     embedding: embMap.get(v.id) ?? null,
@@ -357,7 +387,7 @@ export async function recommendNonArchetypeCards({
 
   // Fill similarity scores using embeddings
   if (qEmb) {
-    candidatesWithEmb.forEach(c => {
+    candidatesWithEmb.forEach((c) => {
       if (c.embedding) {
         c.sim = cosine(c.embedding, qEmb);
       }
@@ -365,16 +395,18 @@ export async function recommendNonArchetypeCards({
   }
 
   // 5) MMR select top picks
-  const selected = mmrSelect(candidatesWithEmb, qEmb, picks, 0.65).map(s => s.row);
+  const selected = mmrSelect(candidatesWithEmb, qEmb, picks, 0.65).map(
+    (s) => s.row,
+  );
 
   // 6) convert to TOON with truncated descriptions for efficient token usage
   const toon = toTOON({
-    name: 'cards',
-    items: selected.map(s => ({
+    name: "cards",
+    items: selected.map((s) => ({
       ...s,
-      desc: (s.desc ?? '').slice(0, 320), // Truncate descriptions to save tokens
+      desc: (s.desc ?? "").slice(0, 320), // Truncate descriptions to save tokens
     })),
-    fields: ['id', 'name', 'archetype', 'type', 'desc'],
+    fields: ["id", "name", "archetype", "type", "desc"],
     truncate: { desc: 320 },
   });
 
@@ -415,7 +447,7 @@ Task: Analyze the deck context and candidate cards. Return the top ${picks} card
     user,
     max_tokens: 400,
     groqApiKey,
-    modelName: modelName || 'llama-3.3-70b-versatile',
+    modelName: modelName || "llama-3.3-70b-versatile",
   });
   const llmText = llmRaw?.text?.trim?.() ?? String(llmRaw);
 
@@ -427,7 +459,11 @@ Task: Analyze the deck context and candidate cards. Return the top ${picks} card
     // If parse fails, attempt to extract JSON substring heuristically
     const match = llmText.match(/\{[\s\S]*\}$/);
     if (match) {
-      try { parsedJson = JSON.parse(match[0]); } catch (_) { parsedJson = null; }
+      try {
+        parsedJson = JSON.parse(match[0]);
+      } catch (_) {
+        parsedJson = null;
+      }
     }
   }
 
@@ -449,7 +485,7 @@ Task: Return the top ${picks} picks as strict JSON: { "picks":[...] }`;
     user: fallbackUser,
     max_tokens: 600,
     groqApiKey,
-    modelName: modelName || 'llama-3.3-70b-versatile',
+    modelName: modelName || "llama-3.3-70b-versatile",
   });
   const fallbackText = fallbackRes?.text ?? String(fallbackRes);
   try {
@@ -458,7 +494,7 @@ Task: Return the top ${picks} picks as strict JSON: { "picks":[...] }`;
     return safe2;
   } catch (err) {
     // Give up and return empty with diagnostics
-    console.error('LLM parse failed twice', { llmText, fallbackText, err });
+    console.error("LLM parse failed twice", { llmText, fallbackText, err });
     return { picks: [] };
   }
 }

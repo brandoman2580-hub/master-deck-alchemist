@@ -1,22 +1,21 @@
-import { type NextRequest } from 'next/server'
+// proxy.ts — app-level Proxy detected by Next.js (file convention).
+// Next.js loads this file automatically (no import required).
+// NOTE: Do not delete — this handles session logic for API routes listed in `config.matcher`.
+
+import type { NextRequest } from 'next/server'
+import type { NextResponse } from 'next/server'
 import { updateSession } from './utils/supabase/middleware'
 
-export async function proxy(request: NextRequest) {
+// Keep the exported name 'proxy' (Next will load this entrypoint by convention).
+// Ensure updateSession returns a Response / NextResponse-compatible value.
+export async function proxy(request: NextRequest): Promise<Response | NextResponse> {
   return await updateSession(request)
 }
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * Feel free to modify this pattern to include more paths.
-     */
     '/api/save/:path*',
     '/api/export/:path*',
     '/api/import/:path*',
   ],
 }
-

@@ -49,7 +49,9 @@ export function ToggleFilter({
                 `}
                 aria-pressed={value.includes(option.value)}
                 style={{
-                  background: value.includes(option.value) ? "rgba(20,239,255,0.20)" : "transparent",
+                  background: value.includes(option.value)
+                    ? "rgba(20,239,255,0.20)"
+                    : "transparent",
                   position: "relative",
                 }}
               >

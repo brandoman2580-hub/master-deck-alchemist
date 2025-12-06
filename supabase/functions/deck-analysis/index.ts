@@ -83,7 +83,6 @@ type CardSuggestionLlmResult = {
   recommendations: CardSuggestionFromLlm[];
 };
 
-
 type AnalysisType =
   | "summary"
   | "power_level"
@@ -113,10 +112,48 @@ function extractSearchTerms(text: string): string[] {
   if (!text) return [];
 
   const STOP_WORDS = new Set([
-    "the", "a", "an", "and", "or", "of", "for", "with", "to", "in", "on", "this", "that", "it",
-    "my", "your", "their", "our", "is", "are", "be", "can", "could", "would", "should",
-    "deck", "cards", "card", "build", "add", "run", "good", "better", "more", "less",
-    "help", "support", "engine", "please", "need", "want", "like"
+    "the",
+    "a",
+    "an",
+    "and",
+    "or",
+    "of",
+    "for",
+    "with",
+    "to",
+    "in",
+    "on",
+    "this",
+    "that",
+    "it",
+    "my",
+    "your",
+    "their",
+    "our",
+    "is",
+    "are",
+    "be",
+    "can",
+    "could",
+    "would",
+    "should",
+    "deck",
+    "cards",
+    "card",
+    "build",
+    "add",
+    "run",
+    "good",
+    "better",
+    "more",
+    "less",
+    "help",
+    "support",
+    "engine",
+    "please",
+    "need",
+    "want",
+    "like",
   ]);
 
   const cleaned = text.toLowerCase().replace(/[^a-z0-9\s]/g, " ");
@@ -174,7 +211,11 @@ function getArchetypeNameServer(card: { archetype?: string | null }): string {
     return trimmed;
   }
 
-  if (typeof raw === "object" && raw !== null && typeof (raw as any).name === "string") {
+  if (
+    typeof raw === "object" &&
+    raw !== null &&
+    typeof (raw as any).name === "string"
+  ) {
     const name = (raw as any).name.trim();
     if (name === "[object Object]") return "";
     return name;
@@ -190,7 +231,10 @@ function getArchetypeNameServer(card: { archetype?: string | null }): string {
  *
  * allowedCardNames must be full, real card names (deck + candidate pool).
  */
-function sanitizeAiCardText(content: string, allowedCardNames: string[]): string {
+function sanitizeAiCardText(
+  content: string,
+  allowedCardNames: string[],
+): string {
   // 1) Remove raw [object Object] artifacts
   let cleaned = content.replace(/\[object Object\]/g, "this archetype");
 
@@ -202,7 +246,8 @@ function sanitizeAiCardText(content: string, allowedCardNames: string[]): string
 
   // 2) Replace invented multi-word card-like names.
   // Pattern: Two or more capitalized words in a row (e.g. "Mystic Tomahawk")
-  const cardLikeRegex = /\b([A-Z][A-Za-z0-9'&-]+(?:\s+[A-Z][A-Za-z0-9'&-]+)+)\b/g;
+  const cardLikeRegex =
+    /\b([A-Z][A-Za-z0-9'&-]+(?:\s+[A-Z][A-Za-z0-9'&-]+)+)\b/g;
 
   cleaned = cleaned.replace(cardLikeRegex, (match) => {
     const normalized = match.trim().toLowerCase();
@@ -218,7 +263,7 @@ function sanitizeAiCardText(content: string, allowedCardNames: string[]): string
 function extractCardNamesFromText(text: string): string[] {
   const cardNames: string[] = [];
   const seen = new Set<string>();
-  
+
   // Pattern 1: **Card Name** (bold markdown)
   const boldPattern = /\*\*([^*]+)\*\*/g;
   let match;
@@ -229,7 +274,7 @@ function extractCardNamesFromText(text: string): string[] {
       seen.add(name.toLowerCase());
     }
   }
-  
+
   // Pattern 2: "Card Name" (quoted)
   const quotedPattern = /"([^"]+)"/g;
   while ((match = quotedPattern.exec(text)) !== null) {
@@ -239,69 +284,72 @@ function extractCardNamesFromText(text: string): string[] {
       seen.add(name.toLowerCase());
     }
   }
-  
+
   // Pattern 3: Capitalized phrases that might be card names
   // This is more conservative - only match if it looks like a proper card name
-  const capitalizedPattern = /\b([A-Z][a-zA-Z\s\-']{2,}(?:\s+[A-Z][a-zA-Z\s\-']*)*)\b/g;
+  const capitalizedPattern =
+    /\b([A-Z][a-zA-Z\s\-']{2,}(?:\s+[A-Z][a-zA-Z\s\-']*)*)\b/g;
   while ((match = capitalizedPattern.exec(text)) !== null) {
     const name = match[1].trim();
     // Skip common words and short phrases
-    if (name.length >= 4 && 
-        name.length <= 50 && 
-        !seen.has(name.toLowerCase()) &&
-        !/^(The|A|An|And|Or|Of|In|On|At|To|For|With|From|By)\s/i.test(name)) {
+    if (
+      name.length >= 4 &&
+      name.length <= 50 &&
+      !seen.has(name.toLowerCase()) &&
+      !/^(The|A|An|And|Or|Of|In|On|At|To|For|With|From|By)\s/i.test(name)
+    ) {
       cardNames.push(name);
       seen.add(name.toLowerCase());
     }
   }
-  
+
   return cardNames;
 }
 
 // Helper: validate card names against database and return only valid ones
 async function validateCardNames(
   supabaseClient: any,
-  cardNames: string[]
+  cardNames: string[],
 ): Promise<Set<string>> {
   if (cardNames.length === 0) return new Set();
-  
+
   const validCardNames = new Set<string>();
-  
+
   // Query database for cards matching any of the input names (case-insensitive)
   // Use batch queries to avoid query size limits
   const batchSize = 20;
   const allMatchingCards: { name: string }[] = [];
-  
+
   for (let i = 0; i < cardNames.length; i += batchSize) {
     const batch = cardNames.slice(i, i + batchSize);
-    
+
     // Build OR conditions for this batch
     // Format: name.ilike.value1,name.ilike.value2,...
     // Use exact matching (case-insensitive) by not using wildcards
     const orConditions = batch
       .map((name) => {
         // Escape special characters for ilike
-        const escapedName = name.replace(/[%_\\]/g, '\\$&');
+        const escapedName = name.replace(/[%_\\]/g, "\\$&");
         return `name.ilike.${escapedName}`;
       })
       .join(",");
-    
+
     const { data: cards, error } = await supabaseClient
       .from("cards")
       .select("name")
       .or(orConditions)
       .limit(batchSize * 3); // Allow for multiple matches per name
-    
+
     if (error) {
       console.error("Error validating card names:", error);
       continue;
     }
-    
+
     if (cards) {
       allMatchingCards.push(...cards);
     }
   }
-  
+
   // Create a case-insensitive map of all matching cards
   const dbCardMap = new Map<string, string>();
   allMatchingCards.forEach((card: { name: string }) => {
@@ -310,7 +358,7 @@ async function validateCardNames(
       dbCardMap.set(lowerName, card.name);
     }
   });
-  
+
   // Match input names to database names (case-insensitive, exact match)
   for (const inputName of cardNames) {
     // Try exact match first
@@ -328,27 +376,27 @@ async function validateCardNames(
       }
     }
   }
-  
+
   return validCardNames;
 }
 
 // Helper: sanitize AI response by removing references to invalid card names
 function sanitizeResponseText(
   text: string,
-  validCardNames: Set<string>
+  validCardNames: Set<string>,
 ): string {
   if (validCardNames.size === 0) return text;
-  
+
   // Create a case-insensitive map
   const validNamesMap = new Map<string, string>();
   validCardNames.forEach((name) => {
     validNamesMap.set(name.toLowerCase(), name);
   });
-  
+
   // Extract all potential card names from the text
   const extractedNames = extractCardNamesFromText(text);
   let sanitized = text;
-  
+
   // For each extracted name, check if it's valid
   for (const extractedName of extractedNames) {
     const isValid = validNamesMap.has(extractedName.toLowerCase());
@@ -356,17 +404,23 @@ function sanitizeResponseText(
       // Remove or replace invalid card name references
       // Option 1: Remove bold formatting around invalid names
       sanitized = sanitized.replace(
-        new RegExp(`\\*\\*${extractedName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\*\\*`, 'gi'),
-        extractedName
+        new RegExp(
+          `\\*\\*${extractedName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\*\\*`,
+          "gi",
+        ),
+        extractedName,
       );
       // Option 2: Remove quoted invalid names (replace with just the name)
       sanitized = sanitized.replace(
-        new RegExp(`"${extractedName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`, 'gi'),
-        extractedName
+        new RegExp(
+          `"${extractedName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"`,
+          "gi",
+        ),
+        extractedName,
       );
     }
   }
-  
+
   return sanitized;
 }
 
@@ -400,7 +454,11 @@ function computeDeckStats(cards: CardWithCounts[]): DeckStats {
     }
 
     // Average level calculation (only for monsters with levels)
-    if (card.level !== undefined && card.level !== null && cardType.includes("monster")) {
+    if (
+      card.level !== undefined &&
+      card.level !== null &&
+      cardType.includes("monster")
+    ) {
       totalLevel += card.level * card.totalCount;
       levelCount += card.totalCount;
     }
@@ -408,7 +466,8 @@ function computeDeckStats(cards: CardWithCounts[]): DeckStats {
     // Archetype counts
     const archetypeName = getArchetypeNameServer(card);
     if (archetypeName) {
-      archetypeCounts[archetypeName] = (archetypeCounts[archetypeName] || 0) + card.totalCount;
+      archetypeCounts[archetypeName] =
+        (archetypeCounts[archetypeName] || 0) + card.totalCount;
     }
 
     // Type counts (race)
@@ -418,7 +477,8 @@ function computeDeckStats(cards: CardWithCounts[]): DeckStats {
 
     // Attribute counts
     if (card.attribute) {
-      attributeCounts[card.attribute] = (attributeCounts[card.attribute] || 0) + card.totalCount;
+      attributeCounts[card.attribute] =
+        (attributeCounts[card.attribute] || 0) + card.totalCount;
     }
   }
 
@@ -444,7 +504,9 @@ interface MasterDuelBanlistEntry {
 }
 
 // Master Duel - fetch from Supabase master_duel_banlist table
-async function loadMasterDuelBanlist(supabaseClient: any): Promise<Record<string, string>> {
+async function loadMasterDuelBanlist(
+  supabaseClient: any,
+): Promise<Record<string, string>> {
   try {
     const { data, error } = await supabaseClient
       .from("master_duel_banlist")
@@ -505,7 +567,7 @@ Deno.serve(async (req) => {
         global: {
           headers: { Authorization: req.headers.get("Authorization")! },
         },
-      }
+      },
     );
 
     const token = req.headers.get("Authorization")?.replace("Bearer ", "");
@@ -518,7 +580,7 @@ Deno.serve(async (req) => {
         {
           status: 401,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        },
       );
     }
 
@@ -542,13 +604,10 @@ Deno.serve(async (req) => {
       "custom",
     ];
     if (!validAnalysisTypes.includes(analysis_type as AnalysisType)) {
-      return new Response(
-        JSON.stringify({ error: "Invalid analysis_type." }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
+      return new Response(JSON.stringify({ error: "Invalid analysis_type." }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     if (!deck_id) {
@@ -571,7 +630,7 @@ Deno.serve(async (req) => {
         {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        },
       );
     }
 
@@ -605,12 +664,8 @@ Deno.serve(async (req) => {
     const mainCardIds = (deckCardsBySection.main || []).map(getCardId);
     const sideCardIds = (deckCardsBySection.side || []).map(getCardId);
     const extraCardIds = (deckCardsBySection.extra || []).map(getCardId);
-    
-    const allDeckCardIds = [
-      ...mainCardIds,
-      ...sideCardIds,
-      ...extraCardIds,
-    ];
+
+    const allDeckCardIds = [...mainCardIds, ...sideCardIds, ...extraCardIds];
 
     // --- Build idCounts map (card-copy tracking) ---
     const idCounts: IdCounts = {};
@@ -641,7 +696,7 @@ Deno.serve(async (req) => {
 
     // Remove forbidden cards from deck (optional: or just warn user in prompt)
     const deckCardsFiltered = (deckCardDetails ?? []).filter(
-      (card) => banlist[card.name] !== "Forbidden"
+      (card) => banlist[card.name] !== "Forbidden",
     );
 
     // --- Enrich cards with counts ---
@@ -662,13 +717,15 @@ Deno.serve(async (req) => {
     const deckArchetypes = new Set(
       safeDeckCards
         .map((c) => getArchetypeNameServer(c))
-        .filter((a): a is string => Boolean(a))
+        .filter((a): a is string => Boolean(a)),
     );
     const deckTypes = new Set(
-      safeDeckCards.map((c) => c.type).filter((t): t is string => Boolean(t))
+      safeDeckCards.map((c) => c.type).filter((t): t is string => Boolean(t)),
     );
     const deckAttributes = new Set(
-      safeDeckCards.map((c) => c.attribute).filter((a): a is string => Boolean(a))
+      safeDeckCards
+        .map((c) => c.attribute)
+        .filter((a): a is string => Boolean(a)),
     );
 
     // --- Card pool selection: FTS for card_suggestions (quick prompt only), filters for others ---
@@ -694,7 +751,7 @@ Deno.serve(async (req) => {
           match_count: matchCount,
           excluded_ids: excludedIds,
           banlist_format,
-        }
+        },
       );
 
       if (matchError) {
@@ -728,7 +785,7 @@ Deno.serve(async (req) => {
       });
 
       const uniqueFiltered = onlyUniqueByName(allowedCandidates).slice(0, 60); // Limit to 60 candidates
-      
+
       // Map to candidate cards with candidateId (index starting at 1)
       // CRITICAL: Normalize archetype to string or null for CandidateCard
       candidateCards = uniqueFiltered.map((card, index) => {
@@ -742,7 +799,7 @@ Deno.serve(async (req) => {
           archetype: archetypeName || null,
         } as Card & { candidateId: number };
       });
-      
+
       relevantCards = candidateCards; // Also set for backward compatibility
     } else if (analysis_type === "custom") {
       // Custom analysis: use enhanced search with broader context
@@ -763,7 +820,7 @@ Deno.serve(async (req) => {
           match_count: matchCount,
           excluded_ids: excludedIds,
           banlist_format,
-        }
+        },
       );
 
       if (matchError) {
@@ -824,13 +881,15 @@ Deno.serve(async (req) => {
 
       // CRITICAL: Filter forbidden cards and normalize archetype
       const banlistMap = new Map<string, string>(Object.entries(banlist));
-      relevantPoolCards = (relevantPoolCards ?? []).map((card) => ({
-        ...card,
-        archetype: getArchetypeNameServer(card), // Normalize archetype
-      })).filter((card) => {
-        const ban = banlistMap.get(card.name) || "Unlimited";
-        return ban !== "Forbidden";
-      });
+      relevantPoolCards = (relevantPoolCards ?? [])
+        .map((card) => ({
+          ...card,
+          archetype: getArchetypeNameServer(card), // Normalize archetype
+        }))
+        .filter((card) => {
+          const ban = banlistMap.get(card.name) || "Unlimited";
+          return ban !== "Forbidden";
+        });
 
       relevantCards = onlyUniqueByName(relevantPoolCards).slice(0, 50);
     }
@@ -883,7 +942,7 @@ Deck stats:
     // --- Prompt context assembly ---
     // For card_suggestions, use shorter context (quick prompt only)
     const isQuickPrompt = analysis_type === "card_suggestions";
-    
+
     const deckSummary = `
 Format: ${banlist_format}
 Deck Name: ${deckData.name}
@@ -898,14 +957,12 @@ Attributes: ${[...deckAttributes].join(", ")}
 
     const deckDetailContext = safeDeckCards
       .slice(0, isQuickPrompt ? 6 : 10)
-      .map(
-        (card) => {
-          const archetypeName = getArchetypeNameServer(card);
-          return `${card.name} (x${card.totalCount}) [Main: ${card.main}, Side: ${card.side}, Extra: ${card.extra}] (${card.type}${
-            archetypeName ? ", " + archetypeName : ""
-          }): ${isQuickPrompt ? truncateDesc(card.desc, 150) : card.desc}`;
-        }
-      )
+      .map((card) => {
+        const archetypeName = getArchetypeNameServer(card);
+        return `${card.name} (x${card.totalCount}) [Main: ${card.main}, Side: ${card.side}, Extra: ${card.extra}] (${card.type}${
+          archetypeName ? ", " + archetypeName : ""
+        }): ${isQuickPrompt ? truncateDesc(card.desc, 150) : card.desc}`;
+      })
       .join("\n\n");
 
     // Build candidate cards section for card_suggestions (numbered format)
@@ -923,14 +980,12 @@ Attributes: ${[...deckAttributes].join(", ")}
 
     const relevantCardsContext = relevantCards
       .slice(0, isQuickPrompt ? 30 : relevantCards.length)
-      .map(
-        (card: Card) => {
-          const archetypeName = getArchetypeNameServer(card);
-          return `${card.name} (${card.type}${
-            archetypeName ? ", " + archetypeName : ""
-          }): ${truncateDesc(card.desc, isQuickPrompt ? 150 : 220)}`;
-        }
-      )
+      .map((card: Card) => {
+        const archetypeName = getArchetypeNameServer(card);
+        return `${card.name} (${card.type}${
+          archetypeName ? ", " + archetypeName : ""
+        }): ${truncateDesc(card.desc, isQuickPrompt ? 150 : 220)}`;
+      })
       .join("\n\n");
 
     // --- Mode-aware analysis instructions ---
@@ -1074,23 +1129,42 @@ For ALL analysis_type values:
     if (analysis_type === "custom") {
       // Detect request type and add relevant context
       const questionLower = (question || "").toLowerCase();
-      
+
       // Detect boss monster types
       const bossTypes: string[] = [];
-      if (questionLower.includes("xyz") || questionLower.includes("xyz")) bossTypes.push("XYZ");
+      if (questionLower.includes("xyz") || questionLower.includes("xyz"))
+        bossTypes.push("XYZ");
       if (questionLower.includes("link")) bossTypes.push("Link");
       if (questionLower.includes("fusion")) bossTypes.push("Fusion");
       if (questionLower.includes("synchro")) bossTypes.push("Synchro");
       if (questionLower.includes("ritual")) bossTypes.push("Ritual");
-      
+
       // Detect going first/second
-      const goingFirst = questionLower.includes("going first") || questionLower.includes("go first") || questionLower.includes("1st");
-      const goingSecond = questionLower.includes("going second") || questionLower.includes("go second") || questionLower.includes("2nd");
-      
+      const goingFirst =
+        questionLower.includes("going first") ||
+        questionLower.includes("go first") ||
+        questionLower.includes("1st");
+      const goingSecond =
+        questionLower.includes("going second") ||
+        questionLower.includes("go second") ||
+        questionLower.includes("2nd");
+
       // Detect meta archetypes
-      const metaArchetypes = ["branded", "spright", "tearlament", "kash", "kashtira", "purrely", "labrynth", "dlink", "dragon link"];
-      const mentionedMeta = metaArchetypes.filter(meta => questionLower.includes(meta));
-      
+      const metaArchetypes = [
+        "branded",
+        "spright",
+        "tearlament",
+        "kash",
+        "kashtira",
+        "purrely",
+        "labrynth",
+        "dlink",
+        "dragon link",
+      ];
+      const mentionedMeta = metaArchetypes.filter((meta) =>
+        questionLower.includes(meta),
+      );
+
       customContext = `
 Additional Context for Custom Analysis:
 ${bossTypes.length > 0 ? `- User is asking about ${bossTypes.join(", ")} boss monsters. Focus on enabling cards, materials, and support.` : ""}
@@ -1119,14 +1193,18 @@ Deck Name Rule:
 Deck summary:
 ${deckSummary}
 
-${!isQuickPrompt ? `Computed stats:
+${
+  !isQuickPrompt
+    ? `Computed stats:
 ${featureSummary}
 
 Deck capacity:
 ${suggestionConstraints}
-` : `Deck capacity:
+`
+    : `Deck capacity:
 ${suggestionConstraints}
-`}
+`
+}
 
 Key deck cards (with copies and effects):
 ${deckDetailContext}
@@ -1183,10 +1261,14 @@ ${analysisInstructions}
     const deckCardNames = safeDeckCards.map((card) => card.name);
     const candidateNames = candidateCards.map((c) => c.name);
     const relevantCardNames = relevantCards.map((c) => c.name);
-    
+
     // Unique allowed card names (deck + candidates + relevant pool)
     const allowedCardNames = Array.from(
-      new Set([...deckCardNames, ...candidateNames, ...relevantCardNames].map((n) => n.trim()))
+      new Set(
+        [...deckCardNames, ...candidateNames, ...relevantCardNames].map((n) =>
+          n.trim(),
+        ),
+      ),
     );
 
     // --- LLM call ---
@@ -1204,7 +1286,7 @@ ${analysisInstructions}
           temperature: 0.5,
           max_tokens: 2048,
         }),
-      }
+      },
     );
 
     if (!groqResponse.ok) {
@@ -1218,14 +1300,14 @@ ${analysisInstructions}
     const result = await groqResponse.json();
     const rawContent =
       result.choices?.[0]?.message?.content || "No response from AI.";
-    
+
     // Sanitize AI text: remove [object Object] and replace invented card names
     let aiContent = sanitizeAiCardText(rawContent, allowedCardNames);
     const requestsLeft = Number(
-      groqResponse.headers.get("x-ratelimit-remaining-requests")
+      groqResponse.headers.get("x-ratelimit-remaining-requests"),
     );
     const maxRequests = Number(
-      groqResponse.headers.get("x-ratelimit-limit-requests")
+      groqResponse.headers.get("x-ratelimit-limit-requests"),
     );
 
     // --- For "custom" analysis type: validate and sanitize card names ---
@@ -1233,30 +1315,35 @@ ${analysisInstructions}
     if (analysis_type === "custom") {
       const extractedCardNames = extractCardNamesFromText(aiContent);
       if (extractedCardNames.length > 0) {
-        const validCardNames = await validateCardNames(supabase, extractedCardNames);
+        const validCardNames = await validateCardNames(
+          supabase,
+          extractedCardNames,
+        );
         // Sanitize the response to remove emphasis from invalid card names
         // Also apply full sanitization with allowedCardNames
         aiContent = sanitizeResponseText(aiContent, validCardNames);
         aiContent = sanitizeAiCardText(aiContent, allowedCardNames);
         // Log warning if invalid cards were found
         const invalidCards = extractedCardNames.filter(
-          (name) => !validCardNames.has(name.toLowerCase())
+          (name) => !validCardNames.has(name.toLowerCase()),
         );
         if (invalidCards.length > 0) {
           console.warn(
-            `Invalid card names found in custom response: ${invalidCards.join(", ")}`
+            `Invalid card names found in custom response: ${invalidCards.join(", ")}`,
           );
         }
-        
+
         // Fetch full card data for validated card names
         if (validCardNames.size > 0) {
           const validNamesArray = Array.from(validCardNames);
           const { data: cardData, error: cardError } = await supabase
             .from("cards")
-            .select("id, name, type, desc, level, race, attribute, archetype, card_images, atk, def, misc_info, card_sets, card_prices")
+            .select(
+              "id, name, type, desc, level, race, attribute, archetype, card_images, atk, def, misc_info, card_sets, card_prices",
+            )
             .in("name", validNamesArray)
             .limit(validNamesArray.length);
-          
+
           if (!cardError && cardData) {
             validatedCards = cardData.map((card: any) => ({
               id: card.id,
@@ -1307,8 +1394,11 @@ ${analysisInstructions}
         // For card_suggestions, extract strategy and validate candidateId recommendations
         if (analysis_type === "card_suggestions") {
           // Extract strategy text if present and sanitize it
-          strategyText = sanitizeAiCardText(parsedAnalysis?.strategy || "", allowedCardNames);
-          
+          strategyText = sanitizeAiCardText(
+            parsedAnalysis?.strategy || "",
+            allowedCardNames,
+          );
+
           if (parsedAnalysis?.suggestions) {
             const rawSuggestions = Array.isArray(parsedAnalysis.suggestions)
               ? parsedAnalysis.suggestions
@@ -1318,11 +1408,15 @@ ${analysisInstructions}
             // Drop invalid IDs - candidateId must be a valid integer within range
             const maxId = candidateCards.length;
             const validSuggestions = rawSuggestions.filter((s: any) => {
-            const candidateId = s.candidateId;
-            // Must be integer, within valid range, and candidate must exist
-            if (!Number.isInteger(candidateId) || candidateId < 1 || candidateId > maxId) {
-              return false;
-            }
+              const candidateId = s.candidateId;
+              // Must be integer, within valid range, and candidate must exist
+              if (
+                !Number.isInteger(candidateId) ||
+                candidateId < 1 ||
+                candidateId > maxId
+              ) {
+                return false;
+              }
               // Verify the candidate actually exists in candidateCards
               const candidate = candidateCards[candidateId - 1];
               return candidate !== undefined;
@@ -1333,7 +1427,9 @@ ${analysisInstructions}
               cardSuggestions = [];
               recommendedCards = [];
               // Set a message in raw_answer for the frontend (use strategy if available)
-              aiContent = strategyText || "No additional legal card recommendations were found for this deck from the current candidate pool.";
+              aiContent =
+                strategyText ||
+                "No additional legal card recommendations were found for this deck from the current candidate pool.";
             } else {
               // Sanitize reason fields in suggestions
               cardSuggestions = validSuggestions.map((s: any) => ({
@@ -1346,7 +1442,10 @@ ${analysisInstructions}
               const recommendedCandidates = validSuggestions
                 .map((s: any) => {
                   const candidateId = s.candidateId;
-                  if (candidateId >= 1 && candidateId <= candidateCards.length) {
+                  if (
+                    candidateId >= 1 &&
+                    candidateId <= candidateCards.length
+                  ) {
                     return candidateCards[candidateId - 1];
                   }
                   return undefined;
@@ -1355,19 +1454,23 @@ ${analysisInstructions}
 
               if (recommendedCandidates.length > 0) {
                 // Get unique card names from recommended candidates
-                const recommendedNames = recommendedCandidates.map((c) => c.name);
+                const recommendedNames = recommendedCandidates.map(
+                  (c) => c.name,
+                );
 
                 // Fetch full card data from database
                 const nameConditions = recommendedNames
                   .map((name: string) => {
-                    const escapedName = name.replace(/[%_\\]/g, '\\$&');
+                    const escapedName = name.replace(/[%_\\]/g, "\\$&");
                     return `name.ilike.${escapedName}`;
                   })
                   .join(",");
 
                 const { data: cardData, error: cardError } = await supabase
                   .from("cards")
-                  .select("id, name, type, desc, level, race, attribute, archetype, card_images, atk, def, misc_info, card_sets, card_prices")
+                  .select(
+                    "id, name, type, desc, level, race, attribute, archetype, card_images, atk, def, misc_info, card_sets, card_prices",
+                  )
                   .or(nameConditions)
                   .limit(recommendedNames.length * 2);
 
@@ -1377,10 +1480,13 @@ ${analysisInstructions}
                     ...card,
                     archetype: getArchetypeNameServer(card), // Normalize archetype
                   }));
-                  
+
                   // Filter to exact matches (case-insensitive)
                   const nameMap = new Map(
-                    normalizedCardData.map((card: Card) => [card.name.toLowerCase(), card])
+                    normalizedCardData.map((card: Card) => [
+                      card.name.toLowerCase(),
+                      card,
+                    ]),
                   );
 
                   recommendedCards = recommendedNames
@@ -1388,7 +1494,9 @@ ${analysisInstructions}
                     .filter((card): card is Card => card !== undefined);
 
                   // Final validation: ensure all recommended cards are not forbidden
-                  const banlistMap = new Map<string, string>(Object.entries(banlist));
+                  const banlistMap = new Map<string, string>(
+                    Object.entries(banlist),
+                  );
                   recommendedCards = recommendedCards.filter((card) => {
                     const ban = banlistMap.get(card.name) || "Unlimited";
                     return ban !== "Forbidden";
@@ -1399,7 +1507,8 @@ ${analysisInstructions}
                     const candidate = candidateCards[s.candidateId - 1];
                     if (!candidate) return false;
                     const card = recommendedCards.find(
-                      (c) => c.name.toLowerCase() === candidate.name.toLowerCase()
+                      (c) =>
+                        c.name.toLowerCase() === candidate.name.toLowerCase(),
                     );
                     return card !== undefined;
                   });
@@ -1435,11 +1544,14 @@ ${analysisInstructions}
         analysis_type,
         raw_answer: aiContent,
         structured_analysis: parsedAnalysis,
-        suggestions: analysis_type === "card_suggestions" ? cardSuggestions : undefined,
-        recommendedCards: analysis_type === "card_suggestions" ? recommendedCards : undefined,
+        suggestions:
+          analysis_type === "card_suggestions" ? cardSuggestions : undefined,
+        recommendedCards:
+          analysis_type === "card_suggestions" ? recommendedCards : undefined,
         deck_cards: safeDeckCards,
         relevant_card_pool: relevantCards,
-        validated_cards: analysis_type === "custom" ? validatedCards : undefined, // Return validated cards for custom responses
+        validated_cards:
+          analysis_type === "custom" ? validatedCards : undefined, // Return validated cards for custom responses
         banned_in_deck:
           deckCardDetails &&
           deckCardDetails
@@ -1452,7 +1564,7 @@ ${analysisInstructions}
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
-      }
+      },
     );
   } catch (error: any) {
     return new Response(JSON.stringify({ error: error.message }), {

@@ -5,7 +5,11 @@ import { Button } from "../../components/ui/button";
 import { Card, CardContent } from "../../components/ui/card";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { getUserDecks, deleteDeck, toggleDeckPin } from "../../lib/supabaseDecks";
+import {
+  getUserDecks,
+  deleteDeck,
+  toggleDeckPin,
+} from "../../lib/supabaseDecks";
 import { useUserStore } from "../../store/useUserStore";
 import { useDeck } from "../../context/deck-context";
 import { DeckType } from "../../types/types";
@@ -75,9 +79,7 @@ export default function SavedDecks() {
     try {
       await toggleDeckPin(id, user.id, isPinned);
       setDecks((prev) =>
-        prev.map((deck) =>
-          deck.id === id ? { ...deck, isPinned } : deck
-        )
+        prev.map((deck) => (deck.id === id ? { ...deck, isPinned } : deck)),
       );
     } catch (err: any) {
       setError(err.message || "Failed to toggle pin");

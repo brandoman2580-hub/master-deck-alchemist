@@ -1,7 +1,7 @@
 // Utility to sanitize strings for token-efficiency
 function safeStr(v: any) {
-  if (v === null || v === undefined) return '';
-  return String(v).replace(/\s+/g, ' ').trim();
+  if (v === null || v === undefined) return "";
+  return String(v).replace(/\s+/g, " ").trim();
 }
 
 /**
@@ -21,8 +21,8 @@ export function toTOON({
   fields: string[];
   truncate?: Record<string, number>;
 }) {
-  const header = `${name} (${items.length}) | fields: ${fields.join(',')}`;
-  const tableHeader = fields.join(' | ');
+  const header = `${name} (${items.length}) | fields: ${fields.join(",")}`;
+  const tableHeader = fields.join(" | ");
 
   const rows = items.map((it) =>
     fields
@@ -30,15 +30,15 @@ export function toTOON({
         const raw = it[f];
         let s = safeStr(raw);
         const max = truncate[f];
-        if (max && s.length > max) s = s.slice(0, max) + '…';
+        if (max && s.length > max) s = s.slice(0, max) + "…";
         // wrap when necessary
-        if (s.includes('|') || s.includes('"') || s.includes('\n')) {
+        if (s.includes("|") || s.includes('"') || s.includes("\n")) {
           s = `"${s.replace(/"/g, '\\"')}"`;
         }
         return s;
       })
-      .join(' | ')
+      .join(" | "),
   );
 
-  return [header, '', tableHeader, ...rows, ''].join('\n');
+  return [header, "", tableHeader, ...rows, ""].join("\n");
 }

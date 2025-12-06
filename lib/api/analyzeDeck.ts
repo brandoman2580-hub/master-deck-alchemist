@@ -30,7 +30,7 @@ export interface AnalyzeDeckResult {
 }
 
 export async function analyzeDeck(
-  request: AnalyzeDeckRequest
+  request: AnalyzeDeckRequest,
 ): Promise<AnalyzeDeckResult> {
   const accessToken = await getAccessToken();
 
@@ -49,7 +49,7 @@ export async function analyzeDeck(
         quick_prompt: request.quick_prompt,
         custom_prompt: request.custom_prompt,
       }),
-    }
+    },
   );
 
   if (!response.ok) {

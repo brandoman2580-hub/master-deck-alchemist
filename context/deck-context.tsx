@@ -60,7 +60,7 @@ export function DeckProvider({ children }: { children: ReactNode }) {
     mainDeck: [],
     extraDeck: [],
     sideDeck: [],
-    mode: 'Master Duel' as DeckMode,
+    mode: "Master Duel" as DeckMode,
   });
   const [savedDecks, setSavedDecks] = useState<Deck[]>([]);
   const [banlist, setBanlist] = useState<Record<string, BanStatus>>({});
@@ -106,7 +106,7 @@ export function DeckProvider({ children }: { children: ReactNode }) {
         };
       });
     },
-    [banlist]
+    [banlist],
   );
 
   const removeCardFromDeck = useCallback(
@@ -114,11 +114,11 @@ export function DeckProvider({ children }: { children: ReactNode }) {
       setCurrentDeck((prev) => ({
         ...prev,
         [deckType]: prev[deckType].filter(
-          (card) => card.deckInstanceId !== deckInstanceId
+          (card) => card.deckInstanceId !== deckInstanceId,
         ),
       }));
     },
-    []
+    [],
   );
 
   const clearDeck = useCallback(() => {
@@ -187,14 +187,18 @@ export function DeckProvider({ children }: { children: ReactNode }) {
 
         await getUserDecks();
       } catch (err: any) {
-        const errorMessage = err?.message || err?.error_description || err?.details || "Failed to save deck";
+        const errorMessage =
+          err?.message ||
+          err?.error_description ||
+          err?.details ||
+          "Failed to save deck";
         setError(errorMessage);
         console.error("saveDeck error:", err);
       } finally {
         setLoading(false);
       }
     },
-    [currentDeck, getUserDecks]
+    [currentDeck, getUserDecks],
   );
 
   const loadDeck = useCallback(async (id: string) => {
@@ -235,7 +239,7 @@ export function DeckProvider({ children }: { children: ReactNode }) {
         setLoading(false);
       }
     },
-    [getUserDecks]
+    [getUserDecks],
   );
 
   // Debounced auto-save effect
@@ -250,7 +254,7 @@ export function DeckProvider({ children }: { children: ReactNode }) {
     ) {
       return;
     }
-    
+
     // Check if user is authenticated before auto-saving
     const checkUserAndSave = async () => {
       try {
@@ -265,7 +269,7 @@ export function DeckProvider({ children }: { children: ReactNode }) {
         console.log("Auto-save skipped: user not authenticated");
       }
     };
-    
+
     saveTimeout.current = setTimeout(checkUserAndSave, 1000); // Increased delay to 1000ms to reduce interference with drag operations
     return () => {
       if (saveTimeout.current) clearTimeout(saveTimeout.current);
@@ -282,7 +286,7 @@ export function DeckProvider({ children }: { children: ReactNode }) {
       // Ensure the imported deck has a mode property, default to "Master Duel" if missing
       const deckWithMode = {
         ...importedDeck,
-        mode: importedDeck.mode || "Master Duel" as const,
+        mode: importedDeck.mode || ("Master Duel" as const),
       };
       setCurrentDeck(deckWithMode);
     } catch (error) {
@@ -311,13 +315,13 @@ export function DeckProvider({ children }: { children: ReactNode }) {
     const sideCount = sideDeck?.length ?? 0;
 
     const monsterCount = mainDeck.filter((card) =>
-      card.type.includes("Monster")
+      card.type.includes("Monster"),
     ).length;
     const spellCount = mainDeck.filter((card) =>
-      card.type.includes("Spell")
+      card.type.includes("Spell"),
     ).length;
     const trapCount = mainDeck.filter((card) =>
-      card.type.includes("Trap")
+      card.type.includes("Trap"),
     ).length;
 
     return {
@@ -336,7 +340,7 @@ export function DeckProvider({ children }: { children: ReactNode }) {
 
     if (stats.monsterCount > 25) {
       tips.push(
-        "Your deck has too many monsters. Consider adding more Spell cards for balance."
+        "Your deck has too many monsters. Consider adding more Spell cards for balance.",
       );
     }
     if (stats.spellCount < 8 && stats.mainCount > 30) {
@@ -349,30 +353,27 @@ export function DeckProvider({ children }: { children: ReactNode }) {
     currentDeck.mainDeck.forEach((card) => {
       const archetypeName = getArchetypeName(card);
       if (archetypeName) {
-        archetypes.set(
-          archetypeName,
-          (archetypes.get(archetypeName) || 0) + 1
-        );
+        archetypes.set(archetypeName, (archetypes.get(archetypeName) || 0) + 1);
       }
     });
     const hasDarkMagician = currentDeck.mainDeck.some(
-      (card) => card.name === "Dark Magician"
+      (card) => card.name === "Dark Magician",
     );
     const hasDarkMagicalCircle = currentDeck.mainDeck.some(
-      (card) => card.name === "Dark Magical Circle"
+      (card) => card.name === "Dark Magical Circle",
     );
     if (hasDarkMagician && !hasDarkMagicalCircle) {
       tips.push(
-        "Consider adding Dark Magical Circle to synergize with your Dark Magician."
+        "Consider adding Dark Magical Circle to synergize with your Dark Magician.",
       );
     }
     if (stats.mainCount < 40) {
       tips.push(
-        `Your Main Deck has ${stats.mainCount} cards. The minimum required is 40.`
+        `Your Main Deck has ${stats.mainCount} cards. The minimum required is 40.`,
       );
     } else if (stats.mainCount > 50) {
       tips.push(
-        "Your Main Deck exceeds 50 cards. Consider reducing it for better consistency."
+        "Your Main Deck exceeds 50 cards. Consider reducing it for better consistency.",
       );
     }
     return tips;

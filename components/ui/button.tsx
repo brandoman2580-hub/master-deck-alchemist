@@ -27,8 +27,7 @@ const buttonVariants = cva(
         ghost:
           "text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10 uppercase tracking-wider font-heading focus-visible:ring-0 focus:ring-0",
         // HUD link: Underlined with cyan accent
-        link:
-          "text-cyan-400 hover:text-cyan-300 underline-offset-4 hover:underline font-heading focus-visible:ring-2 focus-visible:ring-cyan-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950",
+        link: "text-cyan-400 hover:text-cyan-300 underline-offset-4 hover:underline font-heading focus-visible:ring-2 focus-visible:ring-cyan-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950",
       },
       size: {
         default: "h-9 px-4 py-2",
@@ -42,11 +41,12 @@ const buttonVariants = cva(
       variant: "default",
       size: "default",
     },
-  }
+  },
 );
 
 export interface ButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
+  extends
+    React.ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof buttonVariants> {
   asChild?: boolean;
   startIcon?: React.ReactNode;
@@ -65,7 +65,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       children,
       ...props
     },
-    ref
+    ref,
   ) => {
     const Comp = asChild ? Slot : "button";
     const content = (
@@ -89,7 +89,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         {asChild ? <span>{content}</span> : content}
       </Comp>
     );
-  }
+  },
 );
 
 Button.displayName = "Button";

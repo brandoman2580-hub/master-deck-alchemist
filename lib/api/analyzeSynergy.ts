@@ -20,7 +20,7 @@ export interface SynergyAnalysisResponse {
 }
 
 export async function analyzeSynergy(
-  request: SynergyAnalysisRequest
+  request: SynergyAnalysisRequest,
 ): Promise<SynergyAnalysisResponse> {
   const accessToken = await getAccessToken();
 
@@ -33,7 +33,7 @@ export async function analyzeSynergy(
         ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
       },
       body: JSON.stringify(request),
-    }
+    },
   );
 
   if (!response.ok) {

@@ -48,10 +48,10 @@ Think freely and deeply - this is your analysis space. No constraints on format 
 
 export function buildFinalOutputTemplate(
   candidateCount: number,
-  intent: "discovery" | "explanation" | "improvement" | "meta" = "discovery"
+  intent: "discovery" | "explanation" | "improvement" | "meta" = "discovery",
 ): string {
   const isExplanation = intent === "explanation";
-  
+
   return `OUTPUT PHASE (Strict JSON Schema):
 
 After your freeform analysis, you MUST output a JSON object conforming to this exact schema:
@@ -59,7 +59,10 @@ After your freeform analysis, you MUST output a JSON object conforming to this e
 {
   "response_version": "1.0",
   "answer": "Markdown-formatted explanation with **bold** card names",
-  ${isExplanation ? `"recommended_cards": [], // Optional for explanation questions - only include if relevant` : `"recommended_cards": [
+  ${
+    isExplanation
+      ? `"recommended_cards": [], // Optional for explanation questions - only include if relevant`
+      : `"recommended_cards": [
     {
       "id": <card_id_number>,
       "name": "<exact_card_name>",
@@ -67,7 +70,8 @@ After your freeform analysis, you MUST output a JSON object conforming to this e
       "synergy_score": <0-100>,
       "risk_assessment": "low|medium|high"
     }
-  ],`}
+  ],`
+  }
   "alternative_considerations": [
     {
       "name": "<card_name>",
@@ -82,8 +86,9 @@ After your freeform analysis, you MUST output a JSON object conforming to this e
 }
 
 CRITICAL REQUIREMENTS:
-${isExplanation 
-  ? `- For EXPLANATION questions: Focus on explaining the cards mentioned in the user's question
+${
+  isExplanation
+    ? `- For EXPLANATION questions: Focus on explaining the cards mentioned in the user's question
 - If the user asks about specific cards (e.g., "Neo Space Connector"), explain those cards' purpose, benefits, and strategic value
 - Reference cards from the "CARDS IN USER'S DECK" section above when explaining
 - DO NOT mention "candidate table", "candidate cards", or any technical implementation details
@@ -92,7 +97,7 @@ ${isExplanation
 - If unsure about something, be honest and say "I'm not certain" or "I don't have enough information"
 - Format card names in **bold** markdown in the answer text
 - Provide strategic insight and reasoning, not just card effects`
-  : `- Use EXACT card names from the candidate table (${candidateCount} cards available)
+    : `- Use EXACT card names from the candidate table (${candidateCount} cards available)
 - Format card names in **bold** markdown in the answer text
 - Include at least 3-5 recommended cards from the candidate table
 - Provide clear reasoning for each recommendation
@@ -104,7 +109,8 @@ ${isExplanation
   * DO NOT mix random numbers (like "5." then "2.") - keep numbering sequential or don't number at all
   * DO NOT use excessive markdown (e.g., avoid \`****text****\` or \`*************text*************\` - use only \`**text**\` for bold)
   * DO NOT use backticks around regular words (e.g., avoid \`add\`, \`destroy\` - just write "add", "destroy")
-  * Keep formatting simple and readable`}
+  * Keep formatting simple and readable`
+}
 - Write in clear, readable prose with proper sentence structure
 - Use simple markdown: only \`**card names**\` for bold, no excessive asterisks or backticks
 - Output valid JSON (no markdown code blocks, just raw JSON)`;
@@ -119,29 +125,38 @@ export function buildHybridUserPrompt(
   banlistText: string,
   profileText: string,
   intent: "discovery" | "explanation" | "improvement" | "meta" = "discovery",
-  deckCards?: Array<{ name: string; type?: string; desc?: string; archetype?: string | null }>
+  deckCards?: Array<{
+    name: string;
+    type?: string;
+    desc?: string;
+    archetype?: string | null;
+  }>,
 ): string {
   const isExplanation = intent === "explanation";
-  
+
   // For explanation questions, include deck cards so LLM can explain them
   let deckCardsSection = "";
   if (isExplanation && deckCards && deckCards.length > 0) {
     const deckCardsList = deckCards
       .slice(0, 50) // Limit to prevent token bloat
-      .map((c, i) => `${i + 1}. **${c.name}**${c.type ? ` (${c.type})` : ""}${c.desc ? ` - ${c.desc.slice(0, 150)}` : ""}`)
+      .map(
+        (c, i) =>
+          `${i + 1}. **${c.name}**${c.type ? ` (${c.type})` : ""}${c.desc ? ` - ${c.desc.slice(0, 150)}` : ""}`,
+      )
       .join("\n");
     deckCardsSection = `\n\nCARDS IN USER'S DECK (use these for explanations):
 ${deckCardsList}`;
   }
-  
+
   // For explanation questions, provide context but don't emphasize candidate table
-  const candidateSection = isExplanation && candidateCount > 0
-    ? `\n\nOPTIONAL: Additional cards that might be relevant (only mention if directly relevant to the question):
+  const candidateSection =
+    isExplanation && candidateCount > 0
+      ? `\n\nOPTIONAL: Additional cards that might be relevant (only mention if directly relevant to the question):
 ${toonTable}`
-    : candidateCount > 0
-    ? `\n\nCANDIDATE CARDS FOR RECOMMENDATIONS (${candidateCount} cards available):
+      : candidateCount > 0
+        ? `\n\nCANDIDATE CARDS FOR RECOMMENDATIONS (${candidateCount} cards available):
 ${toonTable}`
-    : "";
+        : "";
 
   return `${FREEFORM_ANALYSIS_INSTRUCTION}
 
@@ -161,9 +176,11 @@ ${buildFinalOutputTemplate(candidateCount, intent)}`;
 }
 
 // Intent classifier (lightweight pattern matching)
-export function classifyIntent(question: string): "discovery" | "explanation" | "improvement" | "meta" {
+export function classifyIntent(
+  question: string,
+): "discovery" | "explanation" | "improvement" | "meta" {
   const lower = question.toLowerCase();
-  
+
   // Check for explanation patterns first (more specific)
   // Look for questions about specific cards or "purpose/benefit" patterns
   const explanationPatterns = [
@@ -176,27 +193,30 @@ export function classifyIntent(question: string): "discovery" | "explanation" | 
     /what\s+(does|is|are)\s+.*\s+(do|for|in|with)/, // "what does X do"
     /what\s+.*\s+(for|in|with)\s+this\s+deck/, // "what is X for in this deck"
   ];
-  
-  if (explanationPatterns.some(pattern => pattern.test(lower))) {
+
+  if (explanationPatterns.some((pattern) => pattern.test(lower))) {
     return "explanation";
   }
-  
+
   // Check for discovery patterns (finding new cards)
-  if (lower.match(/(find|recommend|suggest|show|list|search|look\s+for|explore)\s+(cards?|options?|alternatives?)/)) {
+  if (
+    lower.match(
+      /(find|recommend|suggest|show|list|search|look\s+for|explore)\s+(cards?|options?|alternatives?)/,
+    )
+  ) {
     return "discovery";
   }
-  
+
   // Check for improvement patterns
   if (lower.match(/(improve|better|replace|add|remove|upgrade|optimize)/)) {
     return "improvement";
   }
-  
+
   // Check for meta analysis patterns
   if (lower.match(/(counter|tech|meta|tier|competitive|viability)/)) {
     return "meta";
   }
-  
+
   // Default to discovery for card-finding questions
   return "discovery";
 }
-

@@ -81,10 +81,20 @@ export function FilterMenu({
           Filters
         </Button>
       </SheetTrigger>
-      <SheetContent side="right" className="bg-[rgba(10,20,30,0.92)] backdrop-blur-md border-l border-cyan-500/30 [&>button]:text-cyan-400 [&>button]:hover:text-cyan-300 [&>button]:hover:bg-cyan-500/10">
+      <SheetContent
+        side="right"
+        className="bg-[rgba(10,20,30,0.92)] backdrop-blur-md border-l border-cyan-500/30 [&>button]:text-cyan-400 [&>button]:hover:text-cyan-300 [&>button]:hover:bg-cyan-500/10"
+      >
         <SheetHeader>
-          <SheetTitle className="text-slate-50" style={{ fontFamily: "var(--font-heading)" }}>Filter Cards</SheetTitle>
-          <SheetDescription className="text-slate-300">Refine your card search</SheetDescription>
+          <SheetTitle
+            className="text-slate-50"
+            style={{ fontFamily: "var(--font-heading)" }}
+          >
+            Filter Cards
+          </SheetTitle>
+          <SheetDescription className="text-slate-300">
+            Refine your card search
+          </SheetDescription>
         </SheetHeader>
         <div className="grid gap-4 py-4">
           {/* Render all filter sections */}
@@ -109,21 +119,23 @@ export function FilterMenu({
             values={
               searchParams.archetype
                 ? CARD_ARCHETYPE_FILTERS.filter((opt: ArchetypeOption) =>
-                    searchParams.archetype?.split(",").includes(opt.value)
+                    searchParams.archetype?.split(",").includes(opt.value),
                   )
                 : []
             }
             onChange={(archetypes: ArchetypeOption[]) =>
               handleSelectChange(
                 "archetype",
-                archetypes.map((a: ArchetypeOption) => a.value).join(",")
+                archetypes.map((a: ArchetypeOption) => a.value).join(","),
               )
             }
           />
 
           {/* Effect Text as Input */}
           <div className="space-y-2">
-            <Label htmlFor="effect" className="text-cyan-300 font-medium">Effect Text</Label>
+            <Label htmlFor="effect" className="text-cyan-300 font-medium">
+              Effect Text
+            </Label>
             <Input
               id="effect"
               name="effect"
