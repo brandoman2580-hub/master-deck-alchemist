@@ -40,3 +40,12 @@ next-env.d.ts
 
 # cursor
 .cursor
+
+# Ignore all markdown files except README.md at repo root and any README.md files in subfolders
+# Ignore top-level markdown
+*.md
+!README.md
+
+# Ignore nested markdown files but keep any README.md
+**/*.md
+!**/README.md

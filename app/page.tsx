@@ -18,8 +18,6 @@ export default function Home() {
       >
         {/* Hero Section with Parallax Background */}
         <ParallaxHero>
-          {/* Dark gradient overlay - minimal to show all parallax layers */}
-          {/* <div className="absolute inset-0 bg-gradient-to-b from-transparent via-slate-950/10 to-slate-950/30 z-[3] pointer-events-none"></div> */}
 
           {/* Content */}
           <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-32 pt-40 w-full">
@@ -157,9 +155,9 @@ function Features() {
               hoverHighlight
               padding="1.5rem"
               style={{
-                ["--cut-corner-stroke" as any]: "rgba(20,239,255,0.38)",
-                ["--cut-corner-stroke-hover" as any]: "rgba(20,239,255,0.52)",
-                ["--cut-corner-fill" as any]: "transparent",
+                ["--cut-corner-stroke" as string]: "rgba(20,239,255,0.38)",
+                ["--cut-corner-stroke-hover" as string]: "rgba(20,239,255,0.52)",
+                ["--cut-corner-fill" as string]: "transparent",
                 backdropFilter: "blur(6px) saturate(120%)",
                 WebkitBackdropFilter: "blur(6px) saturate(120%)",
               }}

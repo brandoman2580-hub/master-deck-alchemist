@@ -20,14 +20,6 @@ const config = {
     },
     extend: {
       fontFamily: {
-        japanese: ["var(--font-japanese)", "sans-serif"],
-        cinzel: [
-          "var(--font-cinzel)",
-          "serif",
-          "Times New Roman",
-          "Times",
-          "serif",
-        ],
         heading: ["var(--font-heading)", "system-ui", "sans-serif"],
         hud: ["var(--font-heading)", "system-ui", "sans-serif"],
         display: ['"Orbitron"', "sans-serif"],

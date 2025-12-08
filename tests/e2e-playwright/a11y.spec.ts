@@ -5,7 +5,7 @@
  *   - @playwright/test
  *   - axe-playwright
  *
- * Run: npx playwright test e2e/a11y.spec.ts
+ * Run: npx playwright test tests/e2e-playwright/a11y.spec.ts
  */
 
 import { test, expect } from "@playwright/test";
