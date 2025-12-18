@@ -4,7 +4,6 @@ import { useMemo, memo } from "react";
 import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/types/card";
 import { BanStatus, DeckSection } from "@/types/types";
 import { CardPreview } from "@/components/ui/card-preview";

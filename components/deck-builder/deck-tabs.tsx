@@ -31,7 +31,6 @@ export function DeckTabs({
   deckMode,
   activeDragId,
   removeCardFromDeck,
-  addCardToDeck,
 }: DeckTabsProps) {
   // Internal state for active tab
   const [activeTab, setActiveTab] = useState("main");

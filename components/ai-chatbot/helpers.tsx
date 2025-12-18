@@ -1,4 +1,3 @@
-import React from "react";
 import Image from "next/image";
 import { Aperture, Loader2, Check, Plus } from "lucide-react";
 import { Button } from "../ui/button";
@@ -9,7 +8,6 @@ import type {
   DeckAnalysisStructured,
   DeckStats,
   CategoryRecommendationResponseType,
-  AnalysisType,
 } from "./types";
 import { getCategoryRecommendations } from "../../lib/api/recommendationAgent";
 import type { CategoryRecommendationRequestLocal } from "./types";
