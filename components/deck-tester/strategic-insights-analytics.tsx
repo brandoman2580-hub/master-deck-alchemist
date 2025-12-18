@@ -22,7 +22,7 @@ export function StrategicInsightsAnalytics({
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {/* Key Card Synergies */}
       {analytics.key_card_synergies.length > 0 && (
-        <Card className="bg-gradient-to-b from-cyan-400/20 via-cyan-500/15 to-cyan-600/5 backdrop-blur-md border border-accent-cyan/18">
+        <Card className="rounded-xl bg-white/10 border border-white/20 backdrop-blur-xl shadow-lg">
           <CardHeader>
             <CardTitle className="text-white text-base font-display">
               Key Card Synergies
@@ -34,7 +34,7 @@ export function StrategicInsightsAnalytics({
                 {analytics.key_card_synergies.slice(0, 5).map((synergy, i) => (
                   <div
                     key={i}
-                    className="bg-cyb-800/40 p-2 border border-cyan-500/20"
+                    className="bg-white/5 p-2 border border-white/10 rounded-md backdrop-blur-sm"
                   >
                     <div className="flex items-center justify-between mb-1 gap-2">
                       <span className="text-xs font-semibold text-white break-words">
@@ -47,7 +47,7 @@ export function StrategicInsightsAnalytics({
                         {synergy.synergy_score}%
                       </Badge>
                     </div>
-                    <p className="text-xs text-muted-50/70 break-words">
+                    <p className="text-xs text-white/70 break-words">
                       {synergy.description}
                     </p>
                   </div>
@@ -60,7 +60,7 @@ export function StrategicInsightsAnalytics({
 
       {/* Vulnerabilities & Counters */}
       {analytics.vulnerabilities.length > 0 && (
-        <Card className="bg-gradient-to-b from-cyan-400/20 via-cyan-500/15 to-cyan-600/5 backdrop-blur-md border border-accent-cyan/18">
+        <Card className="rounded-xl bg-white/10 border border-white/20 backdrop-blur-xl shadow-lg">
           <CardHeader>
             <CardTitle className="text-white text-base font-display">
               Vulnerabilities & Counters
@@ -85,7 +85,7 @@ export function StrategicInsightsAnalytics({
                             ? "border-red-500/50 text-red-400"
                             : vuln.exploitability_level === "medium"
                               ? "border-yellow-500/50 text-yellow-400"
-                              : "border-slate-500/50 text-muted-50/70"
+                              : "border-white/20 text-white/60"
                         }`}
                       >
                         {vuln.exploitability_level}
@@ -93,10 +93,10 @@ export function StrategicInsightsAnalytics({
                     </div>
                     {vuln.countermeasures.length > 0 && (
                       <>
-                        <p className="text-xs text-muted-50/70 mb-1 break-words">
+                        <p className="text-xs text-white/70 mb-1 break-words">
                           Countermeasures:
                         </p>
-                        <ul className="list-disc list-inside text-xs text-muted-50 space-y-0.5">
+                        <ul className="list-disc list-inside text-xs text-white/70 space-y-0.5">
                           {vuln.countermeasures.slice(0, 2).map((cm, j) => (
                             <li key={j}>{cm}</li>
                           ))}
@@ -113,7 +113,7 @@ export function StrategicInsightsAnalytics({
 
       {/* Playstyle Profile */}
       {analytics.playstyle_profile && (
-        <Card className="bg-gradient-to-b from-cyan-400/20 via-cyan-500/15 to-cyan-600/5 backdrop-blur-md border border-accent-cyan/18">
+        <Card className="rounded-xl bg-white/10 border border-white/20 backdrop-blur-xl shadow-lg">
           <CardHeader>
             <CardTitle className="text-white text-base font-display">
               Playstyle Profile
@@ -127,19 +127,19 @@ export function StrategicInsightsAnalytics({
               >
                 {analytics.playstyle_profile.primary_style}
               </Badge>
-              <div className="text-xs text-muted-50/70 mt-1 text-center">
+              <div className="text-xs text-white/70 mt-1 text-center">
                 Confidence: {analytics.playstyle_profile.style_confidence}%
               </div>
             </div>
-            <p className="text-xs text-muted-50 break-words">
+            <p className="text-xs text-white/80 break-words">
               {analytics.playstyle_profile.description}
             </p>
             {analytics.playstyle_profile.evidence.length > 0 && (
               <div>
-                <div className="text-xs font-semibold text-accent-cyan mb-1">
+                <div className="text-xs font-semibold text-white/90 mb-1">
                   Evidence:
                 </div>
-                <ul className="list-disc list-inside text-xs text-muted-50/70 space-y-0.5">
+                <ul className="list-disc list-inside text-xs text-white/70 space-y-0.5">
                   {analytics.playstyle_profile.evidence
                     .slice(0, 3)
                     .map((ev, i) => (
@@ -163,14 +163,14 @@ export function StrategicInsightsAnalytics({
           <CardContent>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-xs text-muted-50/70">Current Meta Fit</span>
-                <span className="text-lg font-bold text-accent-cyan">
+                <span className="text-xs text-white/70">Current Meta Fit</span>
+                <span className="text-lg font-bold text-white">
                   {analytics.meta_adaptation.current_meta_fit.toFixed(0)}%
                 </span>
               </div>
               {analytics.meta_adaptation.recommended_changes.length > 0 && (
                 <div>
-                  <div className="text-xs font-semibold text-accent-cyan mb-2">
+                  <div className="text-xs font-semibold text-white/90 mb-2">
                     Recommended Changes:
                   </div>
                   <div className="space-y-2">
@@ -179,7 +179,7 @@ export function StrategicInsightsAnalytics({
                       .map((change, i) => (
                         <div
                           key={i}
-                          className="bg-cyb-800/40 p-2 border border-cyan-500/20"
+                          className="bg-white/5 p-2 border border-white/10 rounded-md backdrop-blur-sm"
                         >
                           <div className="flex items-center justify-between mb-1 gap-2">
                             <span className="text-xs font-medium text-white break-words">
@@ -194,7 +194,7 @@ export function StrategicInsightsAnalytics({
                               +{change.expected_improvement}%
                             </Badge>
                           </div>
-                          <p className="text-xs text-muted-50/70 break-words">
+                          <p className="text-xs text-white/70 break-words">
                             {change.reason}
                           </p>
                         </div>
@@ -204,10 +204,10 @@ export function StrategicInsightsAnalytics({
               )}
               {analytics.meta_adaptation.meta_trends.length > 0 && (
                 <div>
-                  <div className="text-xs font-semibold text-accent-cyan mb-1">
+                  <div className="text-xs font-semibold text-white/90 mb-1">
                     Meta Trends:
                   </div>
-                  <ul className="list-disc list-inside text-xs text-muted-50/70 space-y-0.5">
+                  <ul className="list-disc list-inside text-xs text-white/70 space-y-0.5">
                     {analytics.meta_adaptation.meta_trends
                       .slice(0, 3)
                       .map((trend, i) => (
@@ -228,7 +228,7 @@ export function StrategicInsightsAnalytics({
             <CardTitle className="text-white text-base font-display">
               Risk vs Reward Analysis
             </CardTitle>
-            <CardDescription className="text-muted-50 text-xs">
+            <CardDescription className="text-white/70 text-xs">
               Evaluation of high-risk/high-reward plays and their success
               likelihood
             </CardDescription>
@@ -238,7 +238,7 @@ export function StrategicInsightsAnalytics({
               {analytics.risk_reward_analysis.slice(0, 6).map((analysis, i) => (
                 <div
                   key={i}
-                  className="bg-cyb-800/40 p-4 border border-cyan-500/20 hover:border-cyan-500/40 transition-colors"
+                  className="bg-white/5 p-4 border border-white/10 rounded-md hover:border-white/20 transition-colors backdrop-blur-sm"
                 >
                   <div className="space-y-3">
                     <h4 className="text-sm font-semibold text-white break-words leading-tight">
@@ -248,7 +248,7 @@ export function StrategicInsightsAnalytics({
                     <div className="grid grid-cols-3 gap-2">
                       {/* Risk Level */}
                       <div className="space-y-1">
-                        <div className="text-xs text-muted-50/70">Risk</div>
+                        <div className="text-xs text-white/70">Risk</div>
                         <Badge
                           variant="outline"
                           className={`w-full justify-center text-xs capitalize ${
@@ -256,7 +256,7 @@ export function StrategicInsightsAnalytics({
                               ? "border-red-500/50 text-red-400 bg-red-500/10"
                               : analysis.risk_level === "medium"
                                 ? "border-yellow-500/50 text-yellow-400 bg-yellow-500/10"
-                                : "border-slate-500/50 text-muted-50/70 bg-slate-500/10"
+                                : "border-white/20 text-white/60 bg-white/5"
                           }`}
                         >
                           {analysis.risk_level}
@@ -265,7 +265,7 @@ export function StrategicInsightsAnalytics({
 
                       {/* Reward Potential */}
                       <div className="space-y-1">
-                        <div className="text-xs text-muted-50/70">Reward</div>
+                        <div className="text-xs text-white/70">Reward</div>
                         <Badge
                           variant="outline"
                           className={`w-full justify-center text-xs capitalize ${
@@ -273,7 +273,7 @@ export function StrategicInsightsAnalytics({
                               ? "border-green-500/50 text-green-400 bg-green-500/10"
                               : analysis.reward_potential === "medium"
                                 ? "border-yellow-500/50 text-yellow-400 bg-yellow-500/10"
-                                : "border-slate-500/50 text-muted-50/70 bg-slate-500/10"
+                                : "border-white/20 text-white/60 bg-white/5"
                           }`}
                         >
                           {analysis.reward_potential}
@@ -282,14 +282,14 @@ export function StrategicInsightsAnalytics({
 
                       {/* Success Rate */}
                       <div className="space-y-1">
-                        <div className="text-xs text-muted-50/70">Success</div>
-                        <div className="text-sm font-bold text-accent-cyan text-center">
+                        <div className="text-xs text-white/70">Success</div>
+                        <div className="text-sm font-bold text-white text-center">
                           {analysis.success_rate}%
                         </div>
                       </div>
                     </div>
 
-                    <p className="text-xs text-muted-50/70 break-words leading-relaxed">
+                    <p className="text-xs text-white/70 break-words leading-relaxed">
                       {analysis.description}
                     </p>
                   </div>

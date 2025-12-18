@@ -16,7 +16,6 @@ import { DeckType } from "../../types/types";
 import { DeckSearchAutocomplete } from "../../components/saved-decks/deck-search-autocomplete";
 import { PinnedDecksSection } from "../../components/saved-decks/pinned-decks-section";
 import { ModeDecksSection } from "../../components/saved-decks/mode-decks-section";
-import CutCornerWrapper from "../../components/cut-corner-wrapper";
 
 export default function SavedDecks() {
   const [decks, setDecks] = useState<DeckType[]>([]);
@@ -98,11 +97,11 @@ export default function SavedDecks() {
   };
 
   return (
-    <div className="min-h-screen bg-cyb-900 px-8 pt-8 pb-10 relative">
+    <div className="min-h-screen bg-transparent px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8 pb-8 sm:pb-10 relative">
       <div className="max-w-7xl mx-auto relative z-10">
-        <div className="flex flex-col space-y-6">
+        <div className="flex flex-col space-y-4 sm:space-y-6">
           <div className="flex items-center justify-between">
-            <h1 className="text-3xl font-bold text-white font-display tracking-wider">
+            <h1 className="text-2xl sm:text-3xl font-bold text-white font-display tracking-wider">
               SAVED DECKS
             </h1>
             <Button asChild>
@@ -111,27 +110,20 @@ export default function SavedDecks() {
           </div>
 
           {error && (
-            <CutCornerWrapper
-              size="md"
-              padding="0.75rem 1rem"
-              style={{
-                ["--cut-corner-stroke" as any]: "rgba(20,239,255,0.38)",
-                ["--cut-corner-fill" as any]: "transparent",
-              }}
-            >
-              <div className="bg-accent-cyan/10 border border-accent-cyan/30 text-accent-cyan backdrop-blur-sm glass-panel">
+            <div className="rounded-lg bg-white/10 border border-white/20 backdrop-blur-xl shadow-lg p-3 sm:p-4">
+              <div className="text-white/90 text-sm sm:text-base">
                 {error}
               </div>
-            </CutCornerWrapper>
+            </div>
           )}
 
           {loading ? (
-            <p className="text-muted-50">Loading decks...</p>
+            <p className="text-white/70">Loading decks...</p>
           ) : decks.length === 0 ? (
-            <Card className="p-8 text-center glass-panel border-thin-neon">
+            <Card className="p-6 sm:p-8 text-center rounded-xl bg-white/5 border border-white/10 backdrop-blur-xl shadow-lg">
               <CardContent className="pt-6">
-                <p className="text-muted-50">No saved decks found</p>
-                <p className="text-sm text-muted-50/70 mt-2">
+                <p className="text-white/80">No saved decks found</p>
+                <p className="text-sm text-white/60 mt-2">
                   Start building a deck and save it to see it here
                 </p>
                 <Button className="mt-4" asChild>

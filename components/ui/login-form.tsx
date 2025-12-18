@@ -11,7 +11,6 @@ import {
 import { useLoginModalStore } from "../../store/useLoginModalStore";
 import { useUserStore } from "../../store/useUserStore";
 import { supabase } from "../../lib/supabaseClient";
-import CutCornerWrapper from "../cut-corner-wrapper";
 
 type LoginFormProps = {
   onSignupClick: () => void;
@@ -49,15 +48,7 @@ export function LoginForm({ onSignupClick }: LoginFormProps) {
     <div className="space-y-6 w-full max-w-sm mx-auto">
       {/* Social Login Buttons */}
       <form action={signInWithGoogle}>
-        <CutCornerWrapper
-          size="sm"
-          padding="0"
-          className="w-full mb-2"
-          style={{
-            ["--cut-corner-stroke" as any]: "rgba(20,239,255,0.38)",
-            ["--cut-corner-fill" as any]: "transparent",
-          }}
-        >
+        <div className="w-full mb-2 bg-white/5 border border-white/10 backdrop-blur-xl shadow-lg rounded-lg">
           <button
             disabled
             type="submit"
@@ -65,18 +56,10 @@ export function LoginForm({ onSignupClick }: LoginFormProps) {
           >
             Continue with Google
           </button>
-        </CutCornerWrapper>
+        </div>
       </form>
       <form action={signInWithFacebook}>
-        <CutCornerWrapper
-          size="sm"
-          padding="0"
-          className="w-full mb-2"
-          style={{
-            ["--cut-corner-stroke" as any]: "rgba(20,239,255,0.38)",
-            ["--cut-corner-fill" as any]: "transparent",
-          }}
-        >
+        <div className="w-full mb-2 bg-white/5 border border-white/10 backdrop-blur-xl shadow-lg rounded-lg">
           <button
             disabled
             type="submit"
@@ -84,18 +67,10 @@ export function LoginForm({ onSignupClick }: LoginFormProps) {
           >
             Continue with Facebook
           </button>
-        </CutCornerWrapper>
+        </div>
       </form>
       <form action={signInWithDiscord}>
-        <CutCornerWrapper
-          size="sm"
-          padding="0"
-          className="w-full mb-2"
-          style={{
-            ["--cut-corner-stroke" as any]: "rgba(20,239,255,0.38)",
-            ["--cut-corner-fill" as any]: "transparent",
-          }}
-        >
+        <div className="w-full mb-2 bg-white/5 border border-white/10 backdrop-blur-xl shadow-lg rounded-lg">
           <button
             disabled
             type="submit"
@@ -103,18 +78,10 @@ export function LoginForm({ onSignupClick }: LoginFormProps) {
           >
             Continue with Discord
           </button>
-        </CutCornerWrapper>
+        </div>
       </form>
       <form action={signInWithApple}>
-        <CutCornerWrapper
-          size="sm"
-          padding="0"
-          className="w-full mb-2"
-          style={{
-            ["--cut-corner-stroke" as any]: "rgba(20,239,255,0.38)",
-            ["--cut-corner-fill" as any]: "transparent",
-          }}
-        >
+        <div className="w-full mb-2 bg-white/5 border border-white/10 backdrop-blur-xl shadow-lg rounded-lg">
           <button
             disabled
             type="submit"
@@ -122,7 +89,7 @@ export function LoginForm({ onSignupClick }: LoginFormProps) {
           >
             Continue with Apple
           </button>
-        </CutCornerWrapper>
+        </div>
       </form>
 
       <div className="flex items-center my-4">
@@ -140,15 +107,7 @@ export function LoginForm({ onSignupClick }: LoginFormProps) {
           >
             Email
           </label>
-          <CutCornerWrapper
-            size="sm"
-            padding="0"
-            className="w-full"
-            style={{
-              ["--cut-corner-stroke" as any]: "rgba(20,239,255,0.38)",
-              ["--cut-corner-fill" as any]: "transparent",
-            }}
-          >
+          <div className="w-full bg-white/5 border border-white/10 backdrop-blur-xl shadow-lg rounded-lg">
             <input
               id="login-email"
               name="email"
@@ -160,9 +119,9 @@ export function LoginForm({ onSignupClick }: LoginFormProps) {
               aria-required="true"
               aria-invalid={!!error}
               aria-describedby={error ? "login-email-error" : undefined}
-              className="w-full px-3 py-2 border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 shadow-sm focus:outline-none"
             />
-          </CutCornerWrapper>
+          </div>
         </div>
         <div>
           <label
@@ -171,15 +130,7 @@ export function LoginForm({ onSignupClick }: LoginFormProps) {
           >
             Password
           </label>
-          <CutCornerWrapper
-            size="sm"
-            padding="0"
-            className="w-full"
-            style={{
-              ["--cut-corner-stroke" as any]: "rgba(20,239,255,0.38)",
-              ["--cut-corner-fill" as any]: "transparent",
-            }}
-          >
+          <div className="w-full bg-white/5 border border-white/10 backdrop-blur-xl shadow-lg rounded-lg">
             <input
               id="login-password"
               name="password"
@@ -191,9 +142,9 @@ export function LoginForm({ onSignupClick }: LoginFormProps) {
               aria-required="true"
               aria-invalid={!!error}
               aria-describedby={error ? "login-password-error" : undefined}
-              className="w-full px-3 py-2 border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 shadow-sm focus:outline-none"
             />
-          </CutCornerWrapper>
+          </div>
         </div>
         {error && (
           <div
@@ -205,15 +156,7 @@ export function LoginForm({ onSignupClick }: LoginFormProps) {
             {error}
           </div>
         )}
-        <CutCornerWrapper
-          size="sm"
-          padding="0"
-          className="w-full"
-          style={{
-            ["--cut-corner-stroke" as any]: "rgba(20,239,255,0.38)",
-            ["--cut-corner-fill" as any]: "transparent",
-          }}
-        >
+        <div className="w-full bg-white/5 border border-white/10 backdrop-blur-xl shadow-lg rounded-lg">
           <button
             type="submit"
             disabled={submitting}
@@ -221,7 +164,7 @@ export function LoginForm({ onSignupClick }: LoginFormProps) {
           >
             {submitting ? "Logging in..." : "Log in"}
           </button>
-        </CutCornerWrapper>
+        </div>
       </form>
 
       {/* Sign Up Link */}

@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 
-interface CyberpunkLoaderProps {
+interface LoaderProps {
   size?: "sm" | "md" | "lg";
   className?: string;
 }
@@ -13,15 +13,15 @@ const sizeMap = {
   lg: "w-24 h-24",
 };
 
-export function CyberpunkLoader({
+export function Loader({
   size = "md",
   className = "",
-}: CyberpunkLoaderProps) {
+}: LoaderProps) {
   return (
     <div className={`relative ${sizeMap[size]} ${className}`}>
       {/* Outer rotating ring */}
       <motion.div
-        className="absolute inset-0 rounded-full border-2 border-cyan-400/30"
+        className="absolute inset-0 rounded-full border-2 border-white/20 backdrop-blur-sm"
         animate={{ rotate: 360 }}
         transition={{
           duration: 2,
@@ -32,10 +32,10 @@ export function CyberpunkLoader({
 
       {/* Middle pulsing ring */}
       <motion.div
-        className="absolute inset-2 rounded-full border-2 border-cyan-500/50"
+        className="absolute inset-2 rounded-full border-2 border-white/30 backdrop-blur-sm"
         animate={{
           scale: [1, 1.2, 1],
-          opacity: [0.5, 1, 0.5],
+          opacity: [0.4, 0.8, 0.4],
         }}
         transition={{
           duration: 1.5,
@@ -44,15 +44,15 @@ export function CyberpunkLoader({
         }}
       />
 
-      {/* Inner core with glow */}
+      {/* Inner core with glassmorphic glow */}
       <motion.div
-        className="absolute inset-4 rounded-full bg-gradient-to-br from-cyan-400 to-cyan-600"
+        className="absolute inset-4 rounded-full bg-white/20 backdrop-blur-md border border-white/30"
         animate={{
           scale: [1, 1.1, 1],
           boxShadow: [
-            "0 0 10px rgba(56, 189, 248, 0.5)",
-            "0 0 20px rgba(56, 189, 248, 0.8)",
-            "0 0 10px rgba(56, 189, 248, 0.5)",
+            "0 0 10px rgba(255, 255, 255, 0.2)",
+            "0 0 20px rgba(255, 255, 255, 0.3)",
+            "0 0 10px rgba(255, 255, 255, 0.2)",
           ],
         }}
         transition={{
@@ -67,7 +67,7 @@ export function CyberpunkLoader({
         className="absolute inset-0 rounded-full"
         style={{
           background:
-            "conic-gradient(from 0deg, transparent, cyan-400, transparent)",
+            "conic-gradient(from 0deg, transparent, rgba(255, 255, 255, 0.3), transparent)",
           maskImage: "radial-gradient(circle, transparent 30%, black 50%)",
           WebkitMaskImage:
             "radial-gradient(circle, transparent 30%, black 50%)",
@@ -83,10 +83,10 @@ export function CyberpunkLoader({
       {/* Center dot */}
       <div className="absolute inset-0 flex items-center justify-center">
         <motion.div
-          className="w-1 h-1 rounded-full bg-cyan-400"
+          className="w-1 h-1 rounded-full bg-white/80 backdrop-blur-sm"
           animate={{
             scale: [1, 1.5, 1],
-            opacity: [0.8, 1, 0.8],
+            opacity: [0.6, 1, 0.6],
           }}
           transition={{
             duration: 0.8,
@@ -100,19 +100,19 @@ export function CyberpunkLoader({
 }
 
 // Full-screen loader variant
-export function CyberpunkLoaderFullScreen({
+export function LoaderFullScreen({
   message = "Loading...",
 }: {
   message?: string;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-950/95 backdrop-blur-sm">
-      <CyberpunkLoader size="lg" />
+    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-950/80 backdrop-blur-md">
+      <Loader size="lg" />
       <motion.p
-        className="mt-8 text-cyan-400 text-lg font-display tracking-wider uppercase"
+        className="mt-8 text-white/80 text-lg font-display tracking-wider"
         style={{ fontFamily: "var(--font-heading)" }}
         animate={{
-          opacity: [0.5, 1, 0.5],
+          opacity: [0.6, 1, 0.6],
         }}
         transition={{
           duration: 1.5,
@@ -127,16 +127,16 @@ export function CyberpunkLoaderFullScreen({
 }
 
 // Inline loader variant
-export function CyberpunkLoaderInline({ message }: { message?: string }) {
+export function LoaderInline({ message }: { message?: string }) {
   return (
     <div className="flex flex-col items-center justify-center py-8">
-      <CyberpunkLoader size="md" />
+      <Loader size="md" />
       {message && (
         <motion.p
-          className="mt-4 text-cyan-400 text-sm font-display tracking-wider uppercase"
+          className="mt-4 text-white/70 text-sm font-display tracking-wider"
           style={{ fontFamily: "var(--font-heading)" }}
           animate={{
-            opacity: [0.5, 1, 0.5],
+            opacity: [0.6, 1, 0.6],
           }}
           transition={{
             duration: 1.5,
@@ -150,3 +150,8 @@ export function CyberpunkLoaderInline({ message }: { message?: string }) {
     </div>
   );
 }
+
+// Legacy exports for backward compatibility
+export const CyberpunkLoader = Loader;
+export const CyberpunkLoaderFullScreen = LoaderFullScreen;
+export const CyberpunkLoaderInline = LoaderInline;

@@ -1,8 +1,11 @@
 import { getAccessToken } from "../supabaseClient";
 import { DeckType } from "../../types/types";
+import type { RecommenderResponse } from "../../types/recommender";
+import { extractNumberConstraint } from "../utils/prompt-utils";
 
+// Phase 3: Updated to use types from types/recommender.ts
 export interface RecommendationRequest {
-  question: string;
+  question?: string;
   current_deck?: DeckType;
   format?: "MASTER_DUEL" | "TCG";
   recommendation_type?:
@@ -11,9 +14,25 @@ export interface RecommendationRequest {
     | "engine"
     | "tech"
     | "simple";
-  use_hybrid_search?: boolean; // Enable hybrid RAG (default: true)
+  use_hybrid_search?: boolean;
+  explainTo?: "novice" | "intermediate" | "advanced";
+  userPrefs?: {
+    playstyle?: "aggro" | "control" | "combo" | "stall" | "hybrid";
+    budget?: "low" | "mid" | "high";
+  };
+  maxOutputTokens?: number;
+  // Number constraint extracted from user prompt
+  numberConstraint?: {
+    exact?: number;
+    min?: number;
+    max?: number;
+  };
 }
 
+// Phase 3: Use the new RecommenderResponse type from types/recommender.ts
+export type RecommendationResponse = RecommenderResponse;
+
+// Legacy types for backward compatibility (deprecated, use RecommenderResponse)
 export interface RecommendedCard {
   id?: number;
   name: string;
@@ -33,20 +52,66 @@ export interface RecommendationMeta {
   format_specific_notes?: string;
 }
 
-export interface RecommendationResponse {
-  answer: string;
-  validated_cards: any[];
-  recommendation_id?: string; // NEW: For feedback tracking
-  response_version?: string; // NEW: For schema versioning (defaults to "1.0")
-  estimated_cost?: {
-    tokens_used: number;
-    cost_usd: number;
-  };
-  // Full JSON response structure (if LLM returns structured JSON)
-  recommended_cards?: RecommendedCard[];
-  alternative_considerations?: AlternativeConsideration[];
-  meta?: RecommendationMeta;
+export type AnalysisCategory = "consistency" | "power" | "interaction" | "meta";
+
+export interface CategoryRecommendationRequest {
+  deckId: string;
+  category: AnalysisCategory;
+  prompt: string;
 }
+
+export interface CategoryAnalysisBlock {
+  category: string;
+  mode: string;
+  score?: number;
+  summary?: string;
+  specificIssues?: string[];
+  opportunities?: string[];
+  formatSpecificNotes?: string;
+}
+
+export interface CategoryRecommendation {
+  categoryAnalysis?: CategoryAnalysisBlock;
+  recommendations?: Array<{
+    cardName: string;
+    reason: string;
+    location: "main" | "extra" | "side";
+    priority: "critical" | "high" | "medium" | "low";
+    quantity?: number;
+    replacesCards?: string[];
+    synergies?: string[];
+    impact?: string;
+    banlistLegal?: boolean;
+  }>;
+  comboLines?: Array<{
+    name: string;
+    relevance?: string;
+    cards?: string[];
+    steps?: string[];
+    outcome?: string;
+    consistency?: string;
+  }>;
+  cutsRecommendations?: Array<{
+    cardName: string;
+    reason?: string;
+    quantity?: number;
+  }>;
+  ratioAdjustments?: Array<{
+    cardName: string;
+    currentQuantity?: number;
+    recommendedQuantity?: number;
+    reason?: string;
+  }>;
+}
+
+export interface CategoryRecommendationResponse {
+  category: AnalysisCategory;
+  mode: string;
+  recommendations: CategoryRecommendation;
+  sessionId?: string | null;
+  error?: string;
+}
+
 
 /**
  * Get recommendations from the AI agent
@@ -75,12 +140,43 @@ export async function getRecommendations(
   }
 
   const url = `${supabaseUrl}/functions/v1/recommendation-agent`;
+  
+  // Phase 3: Convert DeckType to new format (main/extra/side with cardId/count)
+  const current_deck = request.current_deck
+    ? {
+        main:
+          request.current_deck.mainDeck?.map((c) => ({
+            cardId: c.id,
+            count: 1, // TODO: Track actual count if available
+          })) || [],
+        extra:
+          request.current_deck.extraDeck?.map((c) => ({
+            cardId: c.id,
+            count: 1,
+          })) || [],
+        side:
+          request.current_deck.sideDeck?.map((c) => ({
+            cardId: c.id,
+            count: 1,
+          })) || [],
+      }
+    : undefined;
+
+  // Extract number constraint from question if not already provided
+  const numberConstraint =
+    request.numberConstraint ||
+    (request.question ? extractNumberConstraint(request.question) : null);
+
   const body = JSON.stringify({
     question: request.question,
-    current_deck: request.current_deck,
+    current_deck,
     format: request.format || "MASTER_DUEL",
     recommendation_type: request.recommendation_type || "personalized",
-    use_hybrid_search: request.use_hybrid_search !== false, // Default to true
+    use_hybrid_search: request.use_hybrid_search !== false,
+    explainTo: request.explainTo || "novice",
+    userPrefs: request.userPrefs,
+    maxOutputTokens: request.maxOutputTokens,
+    numberConstraint: numberConstraint || undefined,
   });
 
   console.log("📤 Request:", {
@@ -159,11 +255,73 @@ export async function getRecommendations(
     throw new Error(errorMessage);
   }
 
-  const result = (await response.json()) as RecommendationResponse;
+  const result = (await response.json()) as RecommenderResponse;
+  
+  // Phase 3: Validate response structure
+  if (!result.schemaVersion) {
+    console.warn("⚠️ Response missing schemaVersion, may be legacy format");
+  }
+
   console.log("✅ Recommendation received:", {
-    answerLength: result.answer?.length || 0,
-    cardsCount: result.validated_cards?.length || 0,
+    schemaVersion: result.schemaVersion,
+    confidence: result.confidence,
+    recommendationsCount: result.recommendations?.length || 0,
+    uiBlocksCount: result.ui?.length || 0,
+    summary: result.summary?.substring(0, 100),
+    hasDeckFingerprint: !!result.meta?.deckFingerprint,
   });
 
   return result;
 }
+
+export async function getCategoryRecommendations(
+  payload: CategoryRecommendationRequest,
+): Promise<CategoryRecommendationResponse> {
+  const accessToken = await getAccessToken();
+
+  if (!accessToken) {
+    throw new Error("Authentication required. Please log in to use recommendations.");
+  }
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!supabaseUrl) {
+    throw new Error("Missing env.NEXT_PUBLIC_SUPABASE_URL");
+  }
+
+  const url = `${supabaseUrl}/functions/v1/recommend-cards`;
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({
+      deckId: payload.deckId,
+      category: payload.category,
+      prompt: payload.prompt,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    let errorMessage = errorText;
+    try {
+      const parsed = JSON.parse(errorText);
+      errorMessage =
+        (parsed.error as string) ||
+        (parsed.message as string) ||
+        (parsed.details as string) ||
+        errorText;
+    } catch {
+      // ignore parse failure
+    }
+    throw new Error(errorMessage || "Failed to fetch recommendations");
+  }
+
+  const result = (await response.json()) as CategoryRecommendationResponse;
+  return result;
+}
+
+export type AnalysisCategoryType = AnalysisCategory;
+export type CategoryRecommendationResponseType = CategoryRecommendationResponse;

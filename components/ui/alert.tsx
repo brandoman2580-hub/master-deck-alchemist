@@ -4,7 +4,6 @@ import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 
 import { cn } from "../../lib/utils";
-import CutCornerWrapper from "../cut-corner-wrapper";
 
 const alertVariants = cva(
   "relative w-full border px-4 py-3 text-sm [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 [&>svg]:text-foreground [&>svg~*]:pl-7",
@@ -26,14 +25,11 @@ const Alert = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement> & VariantProps<typeof alertVariants>
 >(({ className, variant, ...props }, ref) => (
-  <CutCornerWrapper
-    size="md"
-    hoverHighlight
-    style={{
-      ["--cut-corner-stroke" as any]: "rgba(20,239,255,0.38)",
-      ["--cut-corner-stroke-hover" as any]: "rgba(20,239,255,0.52)",
-      ["--cut-corner-fill" as any]: "transparent",
-    }}
+  <div
+    className={cn(
+      "bg-white/5 border border-white/10 backdrop-blur-xl shadow-lg rounded-xl p-4 hover:bg-white/10 hover:border-white/20 transition-all duration-300",
+      className
+    )}
   >
     <div
       ref={ref}
@@ -41,7 +37,7 @@ const Alert = React.forwardRef<
       className={cn(alertVariants({ variant }), className)}
       {...props}
     />
-  </CutCornerWrapper>
+  </div>
 ));
 Alert.displayName = "Alert";
 

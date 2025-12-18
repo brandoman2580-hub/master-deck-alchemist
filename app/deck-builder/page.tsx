@@ -1,7 +1,5 @@
 "use client";
 
-import type React from "react";
-
 import { useState, useEffect, useCallback } from "react";
 import { useDeck } from "../../context/deck-context";
 import {
@@ -15,13 +13,12 @@ import {
 } from "@dnd-kit/core";
 import { Button } from "../../components/ui/button";
 import { Card as CardUI } from "../../components/ui/card";
-import CutCornerWrapper from "../../components/cut-corner-wrapper";
 import { Badge } from "../../components/ui/badge";
-import { MessageSquare } from "lucide-react";
-import AIChatbot from "../../components/ai-chatbot";
+import { Sparkles } from "lucide-react";
+import AIChatbot from "../../components/ai-chatbot/ai-chatbot";
 import { Card } from "../../types/card";
 import { openLoginModal } from "../../lib/helpers";
-import { DeckMode } from "../../types/types";
+import { DeckMode, DeckSection } from "../../types/types";
 import { useCardStore } from "../../store/cardStore";
 import { useUserStore } from "../../store/useUserStore";
 import { useModeStore } from "../../store/modeStore";
@@ -38,6 +35,7 @@ import { DeckHeader } from "../../components/deck-builder/deck-header";
 import { DeckTabs } from "../../components/deck-builder/deck-tabs";
 import { CardBrowser } from "../../components/deck-builder/card-browser";
 import { DragOverlayComponent } from "../../components/deck-builder/drag-overlay";
+import { useAnalytics } from "../../lib/hooks/useAnalytics";
 
 export default function DeckBuilder() {
   const {
@@ -66,6 +64,9 @@ export default function DeckBuilder() {
   const user = useUserStore((state) => state.user);
   const deckMode = useModeStore((state) => state.deckMode);
   const setDeckMode = useModeStore((state) => state.setDeckMode);
+  
+  // Phase 6: Analytics
+  const { track } = useAnalytics();
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -99,6 +100,40 @@ export default function DeckBuilder() {
     exportDeckAsFile(jsonData, currentDeck.name || "");
   };
 
+  // Phase 6: Wrapper for addCardToDeck with analytics
+  const handleAddCardToDeck = useCallback(
+    (card: Card, section: DeckSection) => {
+      addCardToDeck(card, section);
+      track({
+        type: "card_added",
+        cardId: card.id,
+        cardName: card.name,
+        section,
+      });
+    },
+    [addCardToDeck, track],
+  );
+
+  // Phase 6: Wrapper for removeCardFromDeck with analytics
+  const handleRemoveCardFromDeck = useCallback(
+    (deckInstanceId: string, section: DeckSection) => {
+      // Find card before removing for analytics
+      const cardInstance = currentDeck[section].find(
+        (c) => c.deckInstanceId === deckInstanceId,
+      );
+      if (cardInstance) {
+        track({
+          type: "card_removed",
+          cardId: cardInstance.id,
+          cardName: cardInstance.name,
+          section,
+        });
+      }
+      removeCardFromDeck(deckInstanceId, section);
+    },
+    [currentDeck, removeCardFromDeck, track],
+  );
+
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;
     setActiveDragId(active.id);
@@ -124,7 +159,7 @@ export default function DeckBuilder() {
     }
   };
 
-  const handleDragEnd = (event: DragEndEvent) => {
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event;
     setActiveDragId(null);
     setActiveDragCard(null);
@@ -145,14 +180,14 @@ export default function DeckBuilder() {
       const targetSection = getDeckSectionFromTarget(targetId, currentDeck);
 
       if (targetSection === "mainDeck" && !isExtraDeckCard(browserCard)) {
-        addCardToDeck(browserCard, "mainDeck");
+        handleAddCardToDeck(browserCard, "mainDeck");
       } else if (
         targetSection === "extraDeck" &&
         isExtraDeckCard(browserCard)
       ) {
-        addCardToDeck(browserCard, "extraDeck");
+        handleAddCardToDeck(browserCard, "extraDeck");
       } else if (targetSection === "sideDeck") {
-        addCardToDeck(browserCard, "sideDeck");
+        handleAddCardToDeck(browserCard, "sideDeck");
       }
       return;
     }
@@ -182,7 +217,7 @@ export default function DeckBuilder() {
 
       // Deck -> Card Browser: remove card from deck
       if (targetId === "card-browser") {
-        removeCardFromDeck(deckInstanceId, currentSection);
+        handleRemoveCardFromDeck(deckInstanceId, currentSection);
         return;
       }
 
@@ -192,37 +227,31 @@ export default function DeckBuilder() {
       if (targetSection === currentSection) return;
 
       // Deck section moves (remove from current, add to new)
-      removeCardFromDeck(deckInstanceId, currentSection);
+      handleRemoveCardFromDeck(deckInstanceId, currentSection);
 
       if (targetSection === "mainDeck" && !isExtraDeckCard(deckCard)) {
-        addCardToDeck(deckCard, "mainDeck");
+        handleAddCardToDeck(deckCard, "mainDeck");
       } else if (targetSection === "extraDeck" && isExtraDeckCard(deckCard)) {
-        addCardToDeck(deckCard, "extraDeck");
+        handleAddCardToDeck(deckCard, "extraDeck");
       } else if (targetSection === "sideDeck") {
-        addCardToDeck(deckCard, "sideDeck");
+        handleAddCardToDeck(deckCard, "sideDeck");
       } else {
         // Restore if dropped on invalid target
-        addCardToDeck(deckCard, currentSection);
+        handleAddCardToDeck(deckCard, currentSection);
       }
       return;
     }
-  };
+  }, [currentDeck, cardList, handleAddCardToDeck, handleRemoveCardFromDeck]);
 
   // Double-click handlers
-  const handleCardDoubleClick = (card: Card) => {
-    if (isExtraDeckCard(card)) {
-      addCardToDeck(card, "extraDeck");
-    } else {
-      addCardToDeck(card, "mainDeck");
-    }
-  };
+  const handleCardDoubleClick = useCallback(
+    (card: Card) => {
+      const section = isExtraDeckCard(card) ? "extraDeck" : "mainDeck";
+      handleAddCardToDeck(card, section);
+    },
+    [handleAddCardToDeck],
+  );
 
-  const handleDeckCardDoubleClick = (
-    deckInstanceId: string,
-    section: "mainDeck" | "extraDeck" | "sideDeck",
-  ) => {
-    removeCardFromDeck(deckInstanceId, section);
-  };
 
   const stats = getDeckStats();
 
@@ -232,13 +261,13 @@ export default function DeckBuilder() {
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      {/* Cyberpunk-styled deck builder layout */}
-      <div className="min-h-screen bg-cyb-900 px-8 pt-8 pb-10 relative">
-        <div className="max-w-7xl mx-auto relative z-10">
-          <div className="flex flex-col space-y-6">
+      {/* Glassmorphic deck builder layout */}
+      <div className="h-[calc(100vh-3.75rem)] bg-transparent flex flex-col overflow-hidden">
+        <div className="flex-shrink-0 px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 pb-4">
+          <div className="max-w-7xl mx-auto">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
-                <h1 className="text-3xl font-bold text-white font-display tracking-wider">
+                <h1 className="text-2xl sm:text-3xl font-bold text-white font-display tracking-wider">
                   DECK BUILDER
                 </h1>
                 <div className="flex flex-wrap gap-2 mt-2">
@@ -262,7 +291,8 @@ export default function DeckBuilder() {
               <div className="flex flex-wrap gap-2 items-center">
                 <DeckBuilderTips />
                 <Button
-                  variant="default"
+                  variant="ghost"
+                  size="icon"
                   onClick={() => {
                     if (!user) {
                       openLoginModal();
@@ -270,59 +300,58 @@ export default function DeckBuilder() {
                       setIsChatOpen(true);
                     }
                   }}
+                  className="text-white/80 hover:text-white hover:bg-white/10"
+                  aria-label="Ask AI Assistant"
                 >
-                  <MessageSquare className="h-4 w-4 mr-2" />
-                  Ask AI Assistant
+                  <Sparkles className="h-5 w-5" />
                 </Button>
               </div>
             </div>
+          </div>
+        </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-6">
-              {/* Left side - Deck Building Area (Primary Drop/Upload Panel) */}
-              <div className="space-y-6">
-                <CutCornerWrapper
-                  size="md"
-                  hoverHighlight
-                  padding="0"
-                  style={{
-                    ["--cut-corner-stroke" as string]: "rgba(20,239,255,0.38)",
-                    ["--cut-corner-stroke-hover" as string]:
-                      "rgba(20,239,255,0.52)",
-                    ["--cut-corner-fill" as string]: "transparent",
-                    backdropFilter: "blur(6px) saturate(120%)",
-                    WebkitBackdropFilter: "blur(6px) saturate(120%)",
-                  } as React.CSSProperties}
-                >
-                  <CardUI className="bg-transparent">
-                    <DeckHeader
-                      currentDeckName={currentDeck.name || ""}
-                      user={user}
-                      deckMode={deckMode}
-                      setDeckMode={setDeckMode}
-                      updateDeckMode={updateDeckMode}
-                      handleExportDeck={handleExportDeck}
-                      importDeck={importDeck}
-                      clearDeck={clearDeck}
-                      renameDeck={renameDeck}
-                    />
-                    <DeckTabs
-                      stats={stats}
-                      currentDeck={currentDeck}
-                      deckMode={deckMode}
-                      removeCardFromDeck={removeCardFromDeck}
-                      handleDeckCardDoubleClick={handleDeckCardDoubleClick}
-                    />
-                  </CardUI>
-                </CutCornerWrapper>
+        <div className="flex-1 min-h-0 px-4 sm:px-6 lg:px-8 pb-4 sm:pb-6">
+          <div className="max-w-7xl mx-auto h-full">
+            <div className="h-full grid grid-cols-1 lg:grid-cols-[1.2fr_0.8fr] gap-4 sm:gap-6">
+              {/* Left side - Deck Building Area (Primary Drop/Upload Panel) - Visually Dominant */}
+              <div className="h-full flex flex-col min-h-0">
+                <div className="h-full rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl shadow-lg flex flex-col min-h-0 overflow-hidden">
+                  <div className="p-4 sm:p-6 flex-1 min-h-0 flex flex-col overflow-y-auto">
+                    <CardUI className="bg-transparent h-full flex flex-col">
+                      <DeckHeader
+                        currentDeckName={currentDeck.name || ""}
+                        user={user}
+                        deckMode={deckMode}
+                        setDeckMode={setDeckMode}
+                        updateDeckMode={updateDeckMode}
+                        handleExportDeck={handleExportDeck}
+                        importDeck={importDeck}
+                        clearDeck={clearDeck}
+                        renameDeck={renameDeck}
+                      />
+                      <DeckTabs
+                        stats={stats}
+                        currentDeck={currentDeck}
+                        deckMode={deckMode}
+                        activeDragId={activeDragId}
+                        removeCardFromDeck={handleRemoveCardFromDeck}
+                        addCardToDeck={handleAddCardToDeck}
+                      />
+                    </CardUI>
+                  </div>
+                </div>
               </div>
 
-              {/* Right side - Card Browser (File List / Library) */}
-              <CardBrowser
-                currentDeck={currentDeck}
-                deckMode={deckMode}
-                activeDragId={activeDragId}
-                handleCardDoubleClick={handleCardDoubleClick}
-              />
+              {/* Right side - Card Browser (Shopping-style) */}
+              <div className="h-full flex flex-col min-h-0">
+                <CardBrowser
+                  currentDeck={currentDeck}
+                  deckMode={deckMode}
+                  activeDragId={activeDragId}
+                  handleCardDoubleClick={handleCardDoubleClick}
+                  addCardToDeck={handleAddCardToDeck}
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -330,6 +359,7 @@ export default function DeckBuilder() {
 
       <DragOverlayComponent activeDragCard={activeDragCard} />
 
+      {/* AI Assistant Modal */}
       <AIChatbot isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
     </DndContext>
   );

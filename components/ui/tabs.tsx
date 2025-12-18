@@ -4,7 +4,6 @@ import * as React from "react";
 import * as TabsPrimitive from "@radix-ui/react-tabs";
 
 import { cn } from "../../lib/utils";
-import CutCornerWrapper from "../cut-corner-wrapper";
 
 const Tabs = TabsPrimitive.Root;
 
@@ -12,15 +11,7 @@ const TabsList = React.forwardRef<
   React.ElementRef<typeof TabsPrimitive.List>,
   React.ComponentPropsWithoutRef<typeof TabsPrimitive.List>
 >(({ className, ...props }, ref) => (
-  <CutCornerWrapper
-    size="sm"
-    padding="0.25rem"
-    className="inline-block"
-    style={{
-      ["--cut-corner-stroke" as any]: "rgba(20,239,255,0.38)",
-      ["--cut-corner-fill" as any]: "transparent",
-    }}
-  >
+  <div className="inline-block bg-white/5 border border-white/10 backdrop-blur-xl shadow-lg rounded-lg p-1">
     <TabsPrimitive.List
       ref={ref}
       className={cn(
@@ -29,7 +20,7 @@ const TabsList = React.forwardRef<
       )}
       {...props}
     />
-  </CutCornerWrapper>
+  </div>
 ));
 TabsList.displayName = TabsPrimitive.List.displayName;
 
@@ -37,17 +28,7 @@ const TabsTrigger = React.forwardRef<
   React.ElementRef<typeof TabsPrimitive.Trigger>,
   React.ComponentPropsWithoutRef<typeof TabsPrimitive.Trigger>
 >(({ className, ...props }, ref) => (
-  <CutCornerWrapper
-    size="sm"
-    hoverHighlight
-    padding="0"
-    className="inline-block"
-    style={{
-      ["--cut-corner-stroke" as any]: "rgba(20,239,255,0.38)",
-      ["--cut-corner-stroke-hover" as any]: "rgba(20,239,255,0.52)",
-      ["--cut-corner-fill" as any]: "transparent",
-    }}
-  >
+  <div className="inline-block bg-white/5 border border-white/10 backdrop-blur-xl shadow-lg rounded-lg hover:bg-white/10 hover:border-white/20 transition-all duration-300">
     <TabsPrimitive.Trigger
       ref={ref}
       className={cn(
@@ -56,7 +37,7 @@ const TabsTrigger = React.forwardRef<
       )}
       {...props}
     />
-  </CutCornerWrapper>
+  </div>
 ));
 TabsTrigger.displayName = TabsPrimitive.Trigger.displayName;
 

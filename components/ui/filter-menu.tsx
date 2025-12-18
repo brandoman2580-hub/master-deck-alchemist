@@ -142,7 +142,7 @@ export function FilterMenu({
               placeholder="Search card effects..."
               value={searchParams.effect}
               onChange={handleInputChange}
-              className="bg-slate-950/60 border-cyan-500/50 text-slate-50 placeholder:text-slate-400 focus-visible:border-cyan-400 focus-visible:ring-cyan-400/60"
+              className="bg-slate-950/60 border-cyan-500/50 text-slate-50 placeholder:text-slate-400 focus-visible:outline-none"
             />
           </div>
 

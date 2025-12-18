@@ -5,7 +5,6 @@ import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
 import { Check, ChevronRight, Circle } from "lucide-react";
 
 import { cn } from "../../lib/utils";
-import CutCornerWrapper from "../cut-corner-wrapper";
 
 const DropdownMenu = DropdownMenuPrimitive.Root;
 
@@ -45,15 +44,7 @@ const DropdownMenuSubContent = React.forwardRef<
   React.ElementRef<typeof DropdownMenuPrimitive.SubContent>,
   React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.SubContent>
 >(({ className, ...props }, ref) => (
-  <CutCornerWrapper
-    size="sm"
-    padding="0.25rem"
-    className="z-50 min-w-[8rem]"
-    style={{
-      ["--cut-corner-stroke" as any]: "rgba(20,239,255,0.38)",
-      ["--cut-corner-fill" as any]: "transparent",
-    }}
-  >
+  <div className="z-50 min-w-[8rem] bg-white/5 border border-white/10 backdrop-blur-xl shadow-lg rounded-lg p-1">
     <DropdownMenuPrimitive.SubContent
       ref={ref}
       className={cn(
@@ -62,7 +53,7 @@ const DropdownMenuSubContent = React.forwardRef<
       )}
       {...props}
     />
-  </CutCornerWrapper>
+  </div>
 ));
 DropdownMenuSubContent.displayName =
   DropdownMenuPrimitive.SubContent.displayName;
@@ -72,15 +63,7 @@ const DropdownMenuContent = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Content>
 >(({ className, sideOffset = 4, ...props }, ref) => (
   <DropdownMenuPrimitive.Portal>
-    <CutCornerWrapper
-      size="sm"
-      padding="0.25rem"
-      className="z-50 min-w-[8rem]"
-      style={{
-        ["--cut-corner-stroke" as any]: "rgba(20,239,255,0.38)",
-        ["--cut-corner-fill" as any]: "transparent",
-      }}
-    >
+    <div className="z-50 min-w-[8rem] bg-white/5 border border-white/10 backdrop-blur-xl shadow-lg rounded-lg p-1">
       <DropdownMenuPrimitive.Content
         ref={ref}
         sideOffset={sideOffset}
@@ -92,7 +75,7 @@ const DropdownMenuContent = React.forwardRef<
         )}
         {...props}
       />
-    </CutCornerWrapper>
+    </div>
   </DropdownMenuPrimitive.Portal>
 ));
 DropdownMenuContent.displayName = DropdownMenuPrimitive.Content.displayName;

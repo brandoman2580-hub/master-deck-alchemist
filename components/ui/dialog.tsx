@@ -5,7 +5,6 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 
 import { cn } from "../../lib/utils";
-import CutCornerWrapper from "../cut-corner-wrapper";
 
 const Dialog = DialogPrimitive.Root;
 
@@ -44,25 +43,19 @@ const DialogContent = React.forwardRef<
       )}
       {...props}
     >
-      <CutCornerWrapper
-        size="lg"
-        hoverHighlight
-        className="w-full h-full"
-        padding="1.5rem"
+      <div
+        className="w-full h-full bg-white/5 border border-white/10 backdrop-blur-xl shadow-lg rounded-2xl p-6 hover:bg-white/10 hover:border-white/20 transition-all duration-300"
         style={{
-          ["--cut-corner-stroke" as any]: "rgba(20,239,255,0.38)",
-          ["--cut-corner-stroke-hover" as any]: "rgba(20,239,255,0.52)",
-          ["--cut-corner-fill" as any]: "transparent",
           backdropFilter: "blur(6px) saturate(120%)",
           WebkitBackdropFilter: "blur(6px) saturate(120%)",
         }}
       >
         {children}
-        <DialogPrimitive.Close className="absolute right-4 top-4 opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-cyan-400/60 focus:ring-offset-2 disabled:pointer-events-none text-slate-300 hover:text-cyan-400 z-10">
+        <DialogPrimitive.Close className="absolute right-4 top-4 opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none disabled:pointer-events-none text-slate-300 hover:text-cyan-400 z-10">
           <X className="h-4 w-4" />
           <span className="sr-only">Close</span>
         </DialogPrimitive.Close>
-      </CutCornerWrapper>
+      </div>
     </DialogPrimitive.Content>
   </DialogPortal>
 ));

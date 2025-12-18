@@ -38,8 +38,8 @@ export function PinnedDecksSection({
         </h2>
         <Card className="p-6 text-center">
           <CardContent className="pt-0">
-            <p className="text-muted-50/70 text-sm">No pinned decks yet</p>
-            <p className="text-xs text-muted-50/50 mt-1">
+            <p className="text-white/70 text-sm">No pinned decks yet</p>
+            <p className="text-xs text-white/50 mt-1">
               Pin decks to keep them at the top
             </p>
           </CardContent>

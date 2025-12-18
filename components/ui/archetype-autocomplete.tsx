@@ -3,13 +3,12 @@ import fuzzysort from "fuzzysort";
 import { Input } from "./input";
 import { X } from "lucide-react";
 import { CARD_ARCHETYPE_FILTERS } from "../../lib/constants";
-import CutCornerWrapper from "../cut-corner-wrapper";
 
 type ArchetypeOption = { value: string; label: string };
 
 function Chip({ label, onRemove }: { label: string; onRemove: () => void }) {
   return (
-    <span className="inline-flex items-center bg-cyan-500/40 border border-cyan-400/60 text-cyan-100 rounded px-2 py-1 mr-1 mb-1">
+    <span className="inline-flex items-center bg-white/10 border border-white/20 text-white rounded px-2 py-1 mr-1 mb-1">
       {label}
       <button
         type="button"
@@ -102,14 +101,14 @@ export function ArchetypeAutocomplete({
           }}
           onFocus={() => setOpen(true)}
           onBlur={() => setTimeout(() => setOpen(false), 200)}
-          className="pr-8 bg-slate-950/60 border-cyan-500/50 text-slate-50 placeholder:text-slate-400 focus-visible:border-cyan-400 focus-visible:ring-cyan-400/60"
+          className="pr-8 bg-white/5 border-white/10 text-white placeholder:text-white/50 focus-visible:outline-none rounded-lg"
         />
         {/* X/Clear button */}
         {(search || values.length > 0) && (
           <button
             type="button"
             onClick={handleClear}
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-cyan-400 hover:text-red-400 transition-colors"
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-white/60 hover:text-red-400 transition-colors"
             tabIndex={-1}
             aria-label="Clear"
           >
@@ -118,42 +117,26 @@ export function ArchetypeAutocomplete({
         )}
         {/* Dropdown */}
         {open && filtered.length > 0 && (
-          <CutCornerWrapper
-            size="sm"
-            padding="0"
-            className="absolute z-10 w-full max-h-60 overflow-y-auto mt-1"
-            style={{
-              ["--cut-corner-stroke" as any]: "rgba(20,239,255,0.38)",
-              ["--cut-corner-fill" as any]: "transparent",
-            }}
-          >
-            <div className="bg-gradient-to-b from-cyan-400/20 via-cyan-500/15 to-cyan-600/5 backdrop-blur-md border border-cyan-500/30 shadow-xl">
+          <div className="absolute z-10 w-full max-h-60 overflow-y-auto mt-1 bg-white/5 border border-white/10 backdrop-blur-xl shadow-lg rounded-lg">
+            <div className="bg-white/10 backdrop-blur-xl border border-white/20 shadow-xl">
               {filtered.map((archetype) => (
                 <div
                   key={archetype.value}
-                  className="px-3 py-2 cursor-pointer hover:bg-cyan-500/20 text-slate-50 transition-colors"
+                  className="px-3 py-2 cursor-pointer hover:bg-white/10 text-white transition-colors"
                   onMouseDown={() => handleSelect(archetype)}
                 >
                   {archetype.label}
                 </div>
               ))}
             </div>
-          </CutCornerWrapper>
+          </div>
         )}
         {open && search && filtered.length === 0 && (
-          <CutCornerWrapper
-            size="sm"
-            padding="0"
-            className="absolute z-10 w-full max-h-60 overflow-y-auto mt-1"
-            style={{
-              ["--cut-corner-stroke" as any]: "rgba(20,239,255,0.38)",
-              ["--cut-corner-fill" as any]: "transparent",
-            }}
-          >
-            <div className="bg-gradient-to-b from-cyan-400/20 via-cyan-500/15 to-cyan-600/5 backdrop-blur-md border border-cyan-500/30 shadow-xl">
-              <div className="px-3 py-2 text-slate-400">No results</div>
+          <div className="absolute z-10 w-full max-h-60 overflow-y-auto mt-1 bg-white/5 border border-white/10 backdrop-blur-xl shadow-lg rounded-lg">
+            <div className="bg-white/10 backdrop-blur-xl border border-white/20 shadow-xl">
+              <div className="px-3 py-2 text-white/60">No results</div>
             </div>
-          </CutCornerWrapper>
+          </div>
         )}
       </div>
     </div>

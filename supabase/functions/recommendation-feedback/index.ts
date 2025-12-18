@@ -1,7 +1,9 @@
-// Recommendation feedback ingestion endpoint
+// Recommendation feedback ingestion endpoint (Phase 4)
 // Rationale: Secure, idempotent feedback collection with rate limiting and spam detection
+// Supports both legacy format and new telemetry schema
 
 import { createClient } from "@supabase/supabase-js";
+import { z } from "zod";
 import { corsHeaders } from "../_shared/cors.ts";
 
 // Rate limiting: Max 10 feedback submissions per minute per user
@@ -45,6 +47,25 @@ function detectSpam(feedbackText: string | null): boolean {
 
   return spamPatterns.some((pattern) => pattern.test(text));
 }
+
+// ============================================================================
+// Phase 4: Telemetry Schema
+// ============================================================================
+
+const TelemetryFeedbackZ = z.object({
+  deckFingerprint: z.string(),
+  suggestionId: z.string(),
+  accepted: z.boolean(),
+  timestamp: z.string().optional(), // ISO string, defaults to now
+  userId: z.string().optional(), // Optional, will use auth user if not provided
+});
+
+// Legacy feedback schema (for backward compatibility)
+const LegacyFeedbackZ = z.object({
+  recommendation_id: z.string(),
+  feedback_type: z.enum(["approved", "disapproved"]),
+  feedback_text: z.string().optional(),
+});
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -116,97 +137,168 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Parse request body
-    const { recommendation_id, feedback_type, feedback_text } =
-      await req.json();
+    // Parse and validate request body
+    const body = await req.json();
 
-    // Validate input
-    if (!recommendation_id || typeof recommendation_id !== "string") {
-      return new Response(
-        JSON.stringify({
-          error: "recommendation_id is required and must be a string.",
-        }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
-    }
-
-    if (
-      !feedback_type ||
-      !["approved", "disapproved"].includes(feedback_type)
-    ) {
-      return new Response(
-        JSON.stringify({
-          error: "feedback_type must be 'approved' or 'disapproved'.",
-        }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
-    }
-
-    // Spam detection
-    if (detectSpam(feedback_text)) {
-      return new Response(
-        JSON.stringify({ error: "Feedback rejected due to spam detection." }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
-    }
-
-    // Insert or update feedback (idempotent via ON CONFLICT)
-    const { data, error } = await supabase
-      .from("recommendation_feedback")
-      .upsert(
-        {
-          recommendation_id,
-          user_id: user.id,
-          feedback_type,
-          feedback_text: feedback_text || null,
-          updated_at: new Date().toISOString(),
-        },
-        {
-          onConflict: "recommendation_id,user_id",
-        },
-      )
-      .select()
-      .single();
-
-    if (error) {
-      console.error("Error inserting feedback:", error);
-      return new Response(
-        JSON.stringify({ error: "Failed to save feedback." }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
-    }
-
-    // Log feedback submission
-    console.log("Feedback recorded:", {
-      recommendation_id,
-      user_id: user.id,
-      feedback_type,
-      has_text: !!feedback_text,
+    // Phase 4: Try new telemetry schema first, fallback to legacy
+    console.log("Feedback request body:", JSON.stringify(body, null, 2));
+    const telemetryResult = TelemetryFeedbackZ.safeParse(body);
+    const legacyResult = LegacyFeedbackZ.safeParse(body);
+    console.log("Telemetry validation:", {
+      success: telemetryResult.success,
+      errors: telemetryResult.success ? null : telemetryResult.error.format(),
+    });
+    console.log("Legacy validation:", {
+      success: legacyResult.success,
+      errors: legacyResult.success ? null : legacyResult.error.format(),
     });
 
-    return new Response(
-      JSON.stringify({
-        success: true,
-        feedback_id: data.id,
-        message: "Feedback recorded successfully.",
-      }),
-      {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      },
-    );
+    if (telemetryResult.success) {
+      // New telemetry format
+      const telemetry = telemetryResult.data;
+      const timestamp = telemetry.timestamp || new Date().toISOString();
+      const userId = telemetry.userId || user.id;
+
+      // Insert telemetry data
+      const { data, error } = await supabase
+        .from("recommendation_telemetry")
+        .insert({
+          deck_fingerprint: telemetry.deckFingerprint,
+          suggestion_id: telemetry.suggestionId,
+          accepted: telemetry.accepted,
+          timestamp,
+          user_id: userId,
+          created_at: new Date().toISOString(),
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Error inserting telemetry:", {
+          error,
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code,
+          table: "recommendation_telemetry",
+          data: {
+            deck_fingerprint: telemetry.deckFingerprint,
+            suggestion_id: telemetry.suggestionId,
+            accepted: telemetry.accepted,
+            user_id: userId,
+          },
+        });
+        return new Response(
+          JSON.stringify({
+            error: "Failed to save telemetry.",
+            details: error.message,
+            code: error.code,
+          }),
+          {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
+      }
+
+      console.log("Telemetry recorded:", {
+        deckFingerprint: telemetry.deckFingerprint,
+        suggestionId: telemetry.suggestionId,
+        accepted: telemetry.accepted,
+        userId,
+      });
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          telemetry_id: data.id,
+          message: "Telemetry recorded successfully.",
+        }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    } else if (legacyResult.success) {
+      // Legacy format (backward compatibility)
+      const { recommendation_id, feedback_type, feedback_text } =
+        legacyResult.data;
+
+      // Spam detection
+      if (detectSpam(feedback_text)) {
+        return new Response(
+          JSON.stringify({ error: "Feedback rejected due to spam detection." }),
+          {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
+      }
+
+      // Insert or update feedback (idempotent via ON CONFLICT)
+      const { data, error } = await supabase
+        .from("recommendation_feedback")
+        .upsert(
+          {
+            recommendation_id,
+            user_id: user.id,
+            feedback_type,
+            feedback_text: feedback_text || null,
+            updated_at: new Date().toISOString(),
+          },
+          {
+            onConflict: "recommendation_id,user_id",
+          },
+        )
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Error inserting feedback:", error);
+        return new Response(
+          JSON.stringify({ error: "Failed to save feedback." }),
+          {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
+      }
+
+      // Log feedback submission
+      console.log("Feedback recorded:", {
+        recommendation_id,
+        user_id: user.id,
+        feedback_type,
+        has_text: !!feedback_text,
+      });
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          feedback_id: data.id,
+          message: "Feedback recorded successfully.",
+        }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    } else {
+      // Invalid format
+      return new Response(
+        JSON.stringify({
+          error: "Invalid request format. Expected telemetry schema or legacy feedback schema.",
+          details: {
+            telemetry_errors: telemetryResult.error?.format(),
+            legacy_errors: legacyResult.error?.format(),
+          },
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
   } catch (error: unknown) {
     console.error("Feedback endpoint error:", error);
     const errorMessage =

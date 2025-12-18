@@ -132,7 +132,7 @@ export function DeckSearchAutocomplete({
   return (
     <div ref={containerRef} className="relative w-full">
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-cyan-400/60" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/60" />
         <Input
           ref={inputRef}
           type="text"
@@ -148,29 +148,29 @@ export function DeckSearchAutocomplete({
             setSelectedIndex(-1);
           }}
           onKeyDown={handleKeyDown}
-          className="pl-10 bg-slate-950/60 border-cyan-500/50 text-slate-50 placeholder:text-slate-400 focus-visible:border-cyan-400 focus-visible:ring-cyan-400/60 focus-visible:shadow-[0_0_20px_rgba(56,189,248,0.2)]"
+          className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-white/50 focus-visible:outline-none rounded-lg"
         />
       </div>
 
       {open && filteredDecks.length > 0 && (
-        <div className="absolute z-50 w-full mt-2 bg-gradient-to-b from-cyan-400/20 via-cyan-500/15 to-cyan-600/5 backdrop-blur-md border border-cyan-500/30 rounded-lg shadow-xl max-h-80 overflow-y-auto">
+        <div className="absolute z-50 w-full mt-2 bg-white/10 backdrop-blur-xl border border-white/20 rounded-lg shadow-xl max-h-80 overflow-y-auto">
           {filteredDecks.map((deck, index) => (
             <button
               key={deck.id}
               type="button"
               onClick={() => handleSelect(deck)}
               onMouseEnter={() => setSelectedIndex(index)}
-              className={`w-full text-left px-4 py-3 hover:bg-cyan-500/20 transition-colors border-b border-cyan-500/10 last:border-b-0 ${
-                selectedIndex === index ? "bg-cyan-500/20" : ""
+              className={`w-full text-left px-4 py-3 hover:bg-white/10 transition-colors border-b border-white/10 last:border-b-0 ${
+                selectedIndex === index ? "bg-white/10" : ""
               }`}
             >
               <div className="flex items-center justify-between gap-2">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <p className="font-medium text-slate-50 truncate">
+                    <p className="font-medium text-white truncate">
                       {deck.name}
                     </p>
-                    <span className="text-xs px-2 py-0.5 rounded bg-cyan-500/40 border border-cyan-400/60 text-cyan-100 whitespace-nowrap">
+                    <span className="text-xs px-2 py-0.5 rounded bg-white/10 border border-white/20 text-white whitespace-nowrap">
                       {deck.mode}
                     </span>
                   </div>

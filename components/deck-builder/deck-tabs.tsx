@@ -1,14 +1,13 @@
 "use client";
 
-import { useState, useLayoutEffect, useRef } from "react";
+import { useState, useLayoutEffect, useRef, useCallback, useEffect } from "react";
 import { CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
-import { Progress } from "@/components/ui/progress";
-import { DeckDropZone } from "@/components/ui/deck-drop-zone";
-import { DraggableCard } from "@/components/ui/draggable-card";
-import { AlertCircle } from "lucide-react";
-import { DeckType } from "@/types/types";
-import { DeckMode } from "@/types/types";
+import { Card } from "@/types/card";
+import { DeckType, DeckMode, DeckSection } from "@/types/types";
+import { UniqueIdentifier } from "@dnd-kit/core";
+import { CartSection } from "./cart-section";
+import { Layers, Zap, Shield } from "lucide-react";
 
 interface DeckTabsProps {
   stats: {
@@ -18,22 +17,21 @@ interface DeckTabsProps {
   };
   currentDeck: DeckType;
   deckMode: DeckMode;
+  activeDragId: UniqueIdentifier | null;
   removeCardFromDeck: (
     deckInstanceId: string,
     section: "mainDeck" | "extraDeck" | "sideDeck",
   ) => void;
-  handleDeckCardDoubleClick: (
-    deckInstanceId: string,
-    section: "mainDeck" | "extraDeck" | "sideDeck",
-  ) => void;
+  addCardToDeck: (card: Card, section: DeckSection) => void;
 }
 
 export function DeckTabs({
   stats,
   currentDeck,
   deckMode,
+  activeDragId,
   removeCardFromDeck,
-  handleDeckCardDoubleClick,
+  addCardToDeck,
 }: DeckTabsProps) {
   // Internal state for active tab
   const [activeTab, setActiveTab] = useState("main");
@@ -44,6 +42,14 @@ export function DeckTabs({
   const sideTabRef = useRef<HTMLButtonElement>(null);
   const tabsContainerRef = useRef<HTMLDivElement>(null);
   const [tabSliderStyle, setTabSliderStyle] = useState<React.CSSProperties>({});
+
+
+  // Switch to valid tab if current tab becomes invalid when deck mode changes
+  useEffect(() => {
+    if (deckMode === "Master Duel" && activeTab === "side") {
+      setActiveTab("main");
+    }
+  }, [deckMode, activeTab]);
 
   // Calculate tab slider position
   useLayoutEffect(() => {
@@ -62,7 +68,64 @@ export function DeckTabs({
         });
       }
     }
-  }, [activeTab]);
+  }, [activeTab, deckMode]);
+
+  // Handler for removing individual card instances
+  const handleRemove = useCallback(
+    (deckInstanceId: string, section: DeckSection) => {
+      removeCardFromDeck(deckInstanceId, section);
+    },
+    [removeCardFromDeck],
+  );
+
+  // Undo/Redo handlers (using deckStore from Phase 1)
+  // For now, we'll add basic handlers that can be connected to the store later
+  const handleUndo = useCallback(() => {
+    // TODO: Connect to deckStore.undo() when ready
+    console.log("Undo not yet connected to store");
+  }, []);
+
+  const handleRedo = useCallback(() => {
+    // TODO: Connect to deckStore.redo() when ready
+    console.log("Redo not yet connected to store");
+  }, []);
+
+  // Check undo/redo availability (placeholder)
+  const canUndo = false; // TODO: useDeckStore((state) => state.canUndo())
+  const canRedo = false; // TODO: useDeckStore((state) => state.canRedo())
+
+  // Keyboard shortcuts for undo/redo
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey) {
+        e.preventDefault();
+        if (canUndo) handleUndo();
+      } else if ((e.ctrlKey || e.metaKey) && (e.key === "y" || (e.key === "z" && e.shiftKey))) {
+        e.preventDefault();
+        if (canRedo) handleRedo();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [canUndo, canRedo, handleUndo, handleRedo]);
+  // Calculate status colors for counts
+  const getMainCountColor = () => {
+    if (stats.mainCount < 40) return "text-yellow-400";
+    if (stats.mainCount > 60) return "text-red-400";
+    return "text-white/80";
+  };
+
+  const getExtraCountColor = () => {
+    if (stats.extraCount > 15) return "text-red-400";
+    return "text-white/80";
+  };
+
+  const getSideCountColor = () => {
+    if (stats.sideCount > 15) return "text-red-400";
+    return "text-white/80";
+  };
+
   return (
     <CardContent className="p-0">
       <Tabs
@@ -72,21 +135,26 @@ export function DeckTabs({
       >
         <div className="px-6">
           <div
-            className="relative flex w-full bg-cyb-800/40 border border-accent-cyan/18 backdrop-blur-sm rounded-lg"
+            className="relative flex w-full bg-white/5 border border-white/10 backdrop-blur-xl rounded-lg p-1"
             ref={tabsContainerRef}
           >
             <span
-              className="absolute top-0 bottom-0 transition-all duration-200 bg-accent-cyan/20 rounded-lg"
-              style={{ ...tabSliderStyle, zIndex: 0 }}
+              className="absolute top-1 bottom-1 transition-all duration-300 bg-white/10 rounded-md"
+              style={{
+                ...tabSliderStyle,
+                zIndex: 0,
+                left: typeof tabSliderStyle.left === "number" ? tabSliderStyle.left + 4 : 0,
+                width: typeof tabSliderStyle.width === "number" ? tabSliderStyle.width - 8 : 0,
+              }}
             />
             <button
               ref={mainTabRef}
               type="button"
               onClick={() => setActiveTab("main")}
-              className={`relative z-10 flex-1 px-3 py-2 font-semibold transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60 font-display text-xs flex items-center justify-center gap-1 ${
+              className={`relative z-10 flex-1 px-4 py-3 font-bold transition-all duration-200 focus:outline-none font-display text-sm flex items-center justify-center gap-2 ${
                 activeTab === "main"
-                  ? "text-accent-cyan/80"
-                  : "text-muted-50"
+                  ? "text-white"
+                  : "text-white/60 hover:text-white/80"
               }`}
               aria-pressed={activeTab === "main"}
               style={{
@@ -94,16 +162,20 @@ export function DeckTabs({
                 position: "relative",
               }}
             >
-              Main Deck ({stats.mainCount})
+              <Layers className="h-4 w-4" />
+              <span>Main</span>
+              <span className={`text-xs font-semibold ${getMainCountColor()}`}>
+                {stats.mainCount}/60
+              </span>
             </button>
             <button
               ref={extraTabRef}
               type="button"
               onClick={() => setActiveTab("extra")}
-              className={`relative z-10 flex-1 px-3 py-2 font-semibold transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60 font-display text-xs flex items-center justify-center gap-1 ${
+              className={`relative z-10 flex-1 px-4 py-3 font-bold transition-all duration-200 focus:outline-none font-display text-sm flex items-center justify-center gap-2 ${
                 activeTab === "extra"
-                  ? "text-accent-cyan/80"
-                  : "text-muted-50"
+                  ? "text-white"
+                  : "text-white/60 hover:text-white/80"
               }`}
               aria-pressed={activeTab === "extra"}
               style={{
@@ -111,17 +183,21 @@ export function DeckTabs({
                 position: "relative",
               }}
             >
-              Extra Deck ({stats.extraCount})
+              <Zap className="h-4 w-4" />
+              <span>Extra</span>
+              <span className={`text-xs font-semibold ${getExtraCountColor()}`}>
+                {stats.extraCount}/15
+              </span>
             </button>
             {deckMode === "TCG" && (
               <button
                 ref={sideTabRef}
                 type="button"
                 onClick={() => setActiveTab("side")}
-                className={`relative z-10 flex-1 px-3 py-2 font-semibold transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60 font-display text-xs flex items-center justify-center gap-1 ${
+                className={`relative z-10 flex-1 px-4 py-3 font-bold transition-all duration-200 focus:outline-none font-display text-sm flex items-center justify-center gap-2 ${
                   activeTab === "side"
-                    ? "text-accent-cyan/80"
-                    : "text-muted-50"
+                    ? "text-white"
+                    : "text-white/60 hover:text-white/80"
                 }`}
                 aria-pressed={activeTab === "side"}
                 style={{
@@ -129,163 +205,47 @@ export function DeckTabs({
                   position: "relative",
                 }}
               >
-                Side Deck ({stats.sideCount})
+                <Shield className="h-4 w-4" />
+                <span>Side</span>
+                <span className={`text-xs font-semibold ${getSideCountColor()}`}>
+                  {stats.sideCount}/15
+                </span>
               </button>
             )}
           </div>
         </div>
 
         <TabsContent value="main" className="pt-4 px-6 pb-6">
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-white">
-                Main Deck ({stats.mainCount}/60)
-              </h3>
-              <div className="text-sm text-muted-50">Min: 40 cards</div>
-            </div>
-
-            <Progress value={(stats.mainCount / 40) * 100} className="h-2" />
-
-            <div
-              id="main-deck"
-              className="w-full bg-cyb-900/60 hover:bg-[rgba(20,239,255,0.08)] hover:outline hover:outline-[1px] hover:outline-[rgba(20,239,255,0.35)] hover:shadow-[0_0_12px_rgba(20,239,255,0.20)]"
-            >
-              <DeckDropZone
-                id="main-deck"
-                isEmpty={currentDeck.mainDeck.length === 0}
-              >
-                {currentDeck.mainDeck.length === 0 ? (
-                  <div className="flex flex-col items-center text-muted-50 py-8">
-                    <AlertCircle className="h-8 w-8 mb-2 text-accent-cyan" />
-                    <span className="text-sm font-medium text-muted-50">
-                      Drag and drop cards here to build your Main Deck
-                    </span>
-                  </div>
-                ) : (
-                  <div
-                    className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2"
-                    style={{ minHeight: "140px" }}
-                  >
-                    {currentDeck.mainDeck.map((card) => (
-                      <DraggableCard
-                        id={card.deckInstanceId}
-                        key={card.deckInstanceId}
-                        card={card}
-                        onRemove={() =>
-                          removeCardFromDeck(card.deckInstanceId, "mainDeck")
-                        }
-                        onDoubleClick={() =>
-                          handleDeckCardDoubleClick(card.deckInstanceId, "mainDeck")
-                        }
-                      />
-                    ))}
-                  </div>
-                )}
-              </DeckDropZone>
-            </div>
-          </div>
+          <CartSection
+            section="mainDeck"
+            cards={currentDeck.mainDeck}
+            activeDragId={activeDragId}
+            onRemove={handleRemove}
+            count={stats.mainCount}
+            maxCount={60}
+          />
         </TabsContent>
 
         <TabsContent value="extra" className="pt-4 px-6 pb-6">
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-white">
-                Extra Deck ({stats.extraCount}/15)
-              </h3>
-              <div className="text-sm text-muted-50">Max: 15 cards</div>
-            </div>
-
-            <Progress value={(stats.extraCount / 15) * 100} className="h-2" />
-
-            <div
-              id="extra-deck"
-              className="w-full bg-cyb-900/60 hover:bg-[rgba(20,239,255,0.08)] hover:outline hover:outline-[1px] hover:outline-[rgba(20,239,255,0.35)] hover:shadow-[0_0_12px_rgba(20,239,255,0.20)]"
-            >
-              <DeckDropZone
-                id="extra-deck"
-                isEmpty={currentDeck.extraDeck.length === 0}
-              >
-                {currentDeck.extraDeck.length === 0 ? (
-                  <div className="flex flex-col items-center text-muted-50 py-8">
-                    <AlertCircle className="h-8 w-8 mb-2 text-accent-cyan" />
-                    <span className="text-sm font-medium text-muted-50">
-                      Drag and drop cards here to build your Extra Deck
-                    </span>
-                  </div>
-                ) : (
-                  <div
-                    className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2"
-                    style={{ minHeight: "140px" }}
-                  >
-                    {currentDeck.extraDeck.map((card) => (
-                      <DraggableCard
-                        id={card.deckInstanceId}
-                        key={card.deckInstanceId}
-                        card={card}
-                        onRemove={() =>
-                          removeCardFromDeck(card.deckInstanceId, "extraDeck")
-                        }
-                        onDoubleClick={() =>
-                          handleDeckCardDoubleClick(card.deckInstanceId, "extraDeck")
-                        }
-                      />
-                    ))}
-                  </div>
-                )}
-              </DeckDropZone>
-            </div>
-          </div>
+          <CartSection
+            section="extraDeck"
+            cards={currentDeck.extraDeck}
+            activeDragId={activeDragId}
+            onRemove={handleRemove}
+            count={stats.extraCount}
+            maxCount={15}
+          />
         </TabsContent>
 
         <TabsContent value="side" className="pt-4 px-6 pb-6">
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-white">
-                Side Deck ({stats.sideCount}/15)
-              </h3>
-              <div className="text-sm text-muted-50">Max: 15 cards</div>
-            </div>
-
-            <Progress value={(stats.sideCount / 15) * 100} className="h-2" />
-
-            <div
-              id="side-deck"
-              className="w-full h-full min-h-[300px] rounded-lg bg-cyb-900/60 transition-transform duration-150 hover:scale-[1.01]"
-            >
-              <DeckDropZone
-                id="side-deck"
-                isEmpty={currentDeck.sideDeck.length === 0}
-              >
-                {currentDeck.sideDeck.length === 0 ? (
-                  <div className="flex flex-col items-center text-muted-50 py-8">
-                    <AlertCircle className="h-8 w-8 mb-2 text-accent-cyan" />
-                    <span className="text-sm font-medium text-muted-50">
-                      Drag and drop cards here to build your Side Deck
-                    </span>
-                  </div>
-                ) : (
-                  <div
-                    className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2"
-                    style={{ minHeight: "140px" }}
-                  >
-                    {currentDeck.sideDeck.map((card) => (
-                      <DraggableCard
-                        id={card.deckInstanceId}
-                        key={card.deckInstanceId}
-                        card={card}
-                        onRemove={() =>
-                          removeCardFromDeck(card.deckInstanceId, "sideDeck")
-                        }
-                        onDoubleClick={() =>
-                          handleDeckCardDoubleClick(card.deckInstanceId, "sideDeck")
-                        }
-                      />
-                    ))}
-                  </div>
-                )}
-              </DeckDropZone>
-            </div>
-          </div>
+          <CartSection
+            section="sideDeck"
+            cards={currentDeck.sideDeck}
+            activeDragId={activeDragId}
+            onRemove={handleRemove}
+            count={stats.sideCount}
+            maxCount={15}
+          />
         </TabsContent>
       </Tabs>
     </CardContent>

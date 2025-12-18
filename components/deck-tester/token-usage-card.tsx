@@ -21,13 +21,13 @@ export function TokenUsageCard({
   if (!aiResult?.estimated_cost) return null;
 
   return (
-    <Card className="mb-4 bg-gradient-to-b from-cyan-400/20 via-cyan-500/15 to-cyan-600/5 backdrop-blur-md border border-accent-cyan/18">
+    <Card className="mb-4 rounded-xl bg-white/10 border border-white/20 backdrop-blur-xl shadow-lg">
       <CardContent className="pt-6">
         <div className="space-y-2">
           <div className="flex items-center justify-between text-xs">
             <div className="flex items-center gap-2">
-              <Zap className="h-3.5 w-3.5 text-accent-cyan" />
-              <span className="text-muted-50 font-medium">Token Usage</span>
+              <Zap className="h-3.5 w-3.5 text-white/80" />
+              <span className="text-white/80 font-medium">Token Usage</span>
               {isCached && (
                 <Badge
                   variant="outline"
@@ -37,25 +37,25 @@ export function TokenUsageCard({
                 </Badge>
               )}
             </div>
-            <div className="flex items-center gap-2 text-muted-50/70">
-              <span className="font-semibold text-accent-cyan tabular-nums">
+            <div className="flex items-center gap-2 text-white/70">
+              <span className="font-semibold text-white tabular-nums">
                 {aiResult.estimated_cost.tokens_used.toLocaleString()}
               </span>
-              <span className="text-white0">/</span>
+              <span className="text-white/50">/</span>
               <span className="tabular-nums">
                 {MAX_TOKENS_REFERENCE.toLocaleString()}
               </span>
               {aiResult.estimated_cost.cost_usd > 0 && (
                 <>
-                  <span className="text-white0">•</span>
-                  <span className="text-muted-50">
+                  <span className="text-white/50">•</span>
+                  <span className="text-white/70">
                     ${aiResult.estimated_cost.cost_usd.toFixed(4)}
                   </span>
                 </>
               )}
             </div>
           </div>
-          <Progress value={tokenUsagePercent} className="h-2 bg-cyb-800/40" />
+          <Progress value={tokenUsagePercent} className="h-2 bg-white/5" />
         </div>
       </CardContent>
     </Card>

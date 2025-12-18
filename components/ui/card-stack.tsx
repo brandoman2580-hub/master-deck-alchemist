@@ -8,9 +8,8 @@ import { Card } from "../../types/card";
 import { BanStatus } from "../../types/types";
 import { CardPreview } from "./card-preview";
 import Image from "next/image";
-import CutCornerWrapper from "../cut-corner-wrapper";
 
-interface CardStackProps {
+export interface CardStackProps {
   card: Card;
   remainingCopies: number;
   maxCopies: number;
@@ -18,6 +17,7 @@ interface CardStackProps {
   isBeingDragged: boolean;
   onStackClick?: () => void;
   onDoubleClick?: (card: Card) => void;
+  currentCount?: number; // Optional: show how many copies are in deck
 }
 
 export function CardStack({
@@ -28,6 +28,7 @@ export function CardStack({
   isBeingDragged,
   onStackClick,
   onDoubleClick,
+  currentCount = 0,
 }: CardStackProps) {
   // Consistent drag id per card row
   const dragInstanceId = useMemo(() => `browser-${card.id}`, [card.id]);
@@ -52,13 +53,13 @@ export function CardStack({
   const getBanStatusColor = (status: BanStatus) => {
     switch (status) {
       case "Forbidden":
-        return "bg-red-500 text-white";
+        return "bg-red-500/20 border-red-500/50 text-red-300";
       case "Limited":
-        return "bg-yellow-500 text-black";
+        return "bg-yellow-500/20 border-yellow-500/50 text-yellow-300";
       case "Semi-Limited":
-        return "bg-orange-500 text-white";
+        return "bg-orange-500/20 border-orange-500/50 text-orange-300";
       default:
-        return "bg-green-500 text-white";
+        return "bg-green-500/20 border-green-500/50 text-green-300";
     }
   };
 
@@ -70,21 +71,10 @@ export function CardStack({
 
   return (
     <CardPreview card={card} banStatus={banStatus}>
-      <CutCornerWrapper
-        size="sm"
-        hoverHighlight={!disabled}
-        className={`relative overflow-visible cyan-corner-triangle ${
+      <div
+        className={`relative overflow-visible rounded-lg bg-white/5 border border-white/10 backdrop-blur-md p-2 transition-all ${
           isBeingDragged ? "opacity-50" : ""
-        } ${!disabled ? "cursor-pointer" : ""}`}
-        padding="0.5rem"
-        style={{
-          ["--cut-corner-stroke" as any]: "rgba(20,239,255,0.15)",
-          ["--cut-corner-stroke-hover" as any]: "rgba(20,239,255,0.25)",
-          ["--cut-corner-fill" as any]: "rgba(15, 23, 42, 0.4)",
-          background: "rgba(15, 23, 42, 0.4)",
-          backdropFilter: "blur(4px)",
-          WebkitBackdropFilter: "blur(4px)",
-        }}
+        } ${!disabled ? "cursor-pointer hover:bg-white/10 hover:border-white/20" : ""}`}
       >
         <div ref={cardRef} onDoubleClick={handleDoubleClick}>
           <div className="flex gap-3 items-center p-1">
@@ -142,18 +132,26 @@ export function CardStack({
                   )}
                 </>
               )}
-              {/* Badge: can hide it too, or fade, if you wish */}
-              {!isBeingDragged && (
+              {/* Available Count Badge */}
+              {!isBeingDragged && remainingCopies > 0 && (
                 <div className="absolute -top-1 -right-1 z-10">
                   <Badge
                     variant="secondary"
-                    className={`text-xs px-1.5 py-0.5 min-w-[20px] h-5 flex items-center justify-center border font-semibold ${
-                      remainingCopies === 0
-                        ? "bg-slate-800/90 border-slate-500/60 text-slate-300"
-                        : "bg-cyan-700/90 border-cyan-400/70 text-cyan-50"
-                    }`}
+                    className="text-xs px-1.5 py-0.5 min-w-[20px] h-5 flex items-center justify-center border font-semibold bg-white/10 border-white/20 text-white backdrop-blur-sm"
                   >
                     {remainingCopies}
+                  </Badge>
+                </div>
+              )}
+              
+              {/* In-deck count badge */}
+              {!isBeingDragged && currentCount > 0 && (
+                <div className="absolute -bottom-1 -left-1 z-10">
+                  <Badge
+                    variant="secondary"
+                    className="bg-white/10 text-white text-[10px] px-1 py-0 min-w-[16px] h-4 flex items-center justify-center border border-white/20 font-semibold backdrop-blur-sm"
+                  >
+                    {currentCount}x
                   </Badge>
                 </div>
               )}
@@ -167,14 +165,14 @@ export function CardStack({
               <div className="flex flex-wrap gap-1 mt-1.5">
                 <Badge
                   variant="outline"
-                  className="text-xs border-cyan-500/50 text-cyan-300"
+                  className="text-xs border-white/20 text-white/80"
                 >
                   {card.type}
                 </Badge>
                 {card.attribute && (
                   <Badge
                     variant="outline"
-                    className="text-xs border-cyan-500/50 text-cyan-300"
+                    className="text-xs border-white/20 text-white/80"
                   >
                     {card.attribute}
                   </Badge>
@@ -189,7 +187,7 @@ export function CardStack({
             </div>
           </div>
         </div>
-      </CutCornerWrapper>
+      </div>
     </CardPreview>
   );
 }

@@ -127,7 +127,7 @@ export default function DeckBuilderTips() {
         variant="ghost"
         size="icon"
         onClick={() => setIsOpen(true)}
-        className="relative text-cyan-400 hover:text-cyan-300 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 hover:border-cyan-400/50 transition-all focus:outline-none focus:ring-0"
+        className="relative text-white/80 hover:text-white bg-white/10 hover:bg-white/15 border border-white/20 hover:border-white/30 transition-all focus:outline-none rounded-lg"
         title="View helpful tips"
       >
         <Lightbulb className="h-5 w-5" />
@@ -135,7 +135,7 @@ export default function DeckBuilderTips() {
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent className="max-w-2xl">
-          <DialogHeader>
+          <DialogHeader className="pb-2">
             <div className="flex items-center gap-2">
               <Lightbulb className="h-5 w-5 text-yellow-400" />
               <DialogTitle
@@ -158,7 +158,7 @@ export default function DeckBuilderTips() {
               tips.map((tip, index) => (
                 <div
                   key={index}
-                  className="flex gap-3 p-3 rounded-lg bg-slate-900/40 border border-cyan-500/20 hover:border-cyan-500/40 transition-colors"
+                  className="flex gap-3 p-3 rounded-lg bg-white/5 border border-white/10 hover:border-white/20 transition-colors"
                 >
                   <div className="flex-shrink-0 w-6 h-6 rounded-full bg-yellow-500/20 border border-yellow-500/40 flex items-center justify-center mt-0.5">
                     <span className="text-xs font-semibold text-yellow-400">

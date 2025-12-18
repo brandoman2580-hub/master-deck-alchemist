@@ -1,37 +1,31 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Card as CardUI, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { Card as CardUI, CardContent, CardHeader } from "@/components/ui/card";
 import { InputWithClear } from "@/components/ui/input-with-clear";
-import { FilterMenu } from "@/components/ui/filter-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DeckDropZone } from "@/components/ui/deck-drop-zone";
-import { CardStack } from "@/components/ui/card-stack";
-import { CyberpunkLoader } from "@/components/ui/cyberpunk-loader";
 import { Virtuoso } from "react-virtuoso";
-import { ArrowUp, ArrowDown } from "lucide-react";
-import CutCornerWrapper from "@/components/cut-corner-wrapper";
 import { Card } from "@/types/card";
-import { DeckType, DeckMode, BanStatus } from "@/types/types";
+import { DeckType, DeckMode, BanStatus, DeckSection } from "@/types/types";
 import { UniqueIdentifier } from "@dnd-kit/core";
-import { getRemainingCopies } from "@/app/deck-builder/utils";
+import { getRemainingCopies, isExtraDeckCard } from "@/app/deck-builder/utils";
 import { useCardStore } from "@/store/cardStore";
 import { getTCGBanlist, getMasterDuelBanlist } from "@/lib/api";
-import { filterCards, getArchetypeName } from "@/lib/helpers";
+import { selectFilteredCards } from "@/store/cardPoolSelectors";
+import { CardStack } from "@/components/ui/card-stack";
+import { FilterSidebar } from "./filter-sidebar";
+import { Search, Filter } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { FILTER_CONFIGS } from "@/lib/constants";
 
 interface CardBrowserProps {
   currentDeck: DeckType;
   deckMode: DeckMode;
   activeDragId: UniqueIdentifier | null;
   handleCardDoubleClick: (card: Card) => void;
+  addCardToDeck: (card: Card, section: DeckSection) => void;
 }
 
 export function CardBrowser({
@@ -39,15 +33,20 @@ export function CardBrowser({
   deckMode,
   activeDragId,
   handleCardDoubleClick,
+  addCardToDeck,
 }: CardBrowserProps) {
   // Zustand store
   const cardList = useCardStore((state) => state.cardList);
   const loading = useCardStore((state) => state.loading);
 
+  // Phase 6: Removed debug logs for performance
+
   // Search and filter state
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredCards, setFilteredCards] = useState<Card[]>([]);
   const [banlist, setBanlist] = useState<Record<string, BanStatus>>({});
+  const [isFilterSidebarCollapsed, setIsFilterSidebarCollapsed] = useState(true);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const [searchParams, setSearchParams] = useState({
     name: "",
     type: "",
@@ -86,58 +85,39 @@ export function CardBrowser({
     loadBanlist();
   }, [deckMode]);
 
-  // Filter and sort cards
+  // Debounced search query
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState(searchQuery);
+
   useEffect(() => {
-    let filtered = cardList;
-    if (searchQuery.trim() !== "") {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter((card) => {
-        const archetypeName = getArchetypeName(card);
-        return (
-          card.name.toLowerCase().includes(query) ||
-          card.desc.toLowerCase().includes(query) ||
-          (archetypeName && archetypeName.toLowerCase().includes(query))
-        );
-      });
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Auto-focus search on mount
+  useEffect(() => {
+    if (searchInputRef.current) {
+      searchInputRef.current.focus();
     }
-    filtered = filterCards(filtered, searchParams);
+  }, []);
 
-    // Apply sorting
-    const sortKey = searchParams.sort;
-    const sortDirection = searchParams.sortDirection;
+  // Filter and sort cards using memoized selectors (Phase 1 optimization)
+  useEffect(() => {
+    if (cardList.length === 0) {
+      setFilteredCards([]);
+      return;
+    }
 
-    filtered.sort((a, b) => {
-      let aValue: string | number | undefined;
-      let bValue: string | number | undefined;
-
-      switch (sortKey) {
-        case "name":
-          aValue = a.name.toLowerCase();
-          bValue = b.name.toLowerCase();
-          break;
-        case "atk":
-          aValue = typeof a.atk === "number" ? a.atk : a.atk === "?" ? -1 : 0;
-          bValue = typeof b.atk === "number" ? b.atk : b.atk === "?" ? -1 : 0;
-          break;
-        case "def":
-          aValue = typeof a.def === "number" ? a.def : a.def === "?" ? -1 : 0;
-          bValue = typeof b.def === "number" ? b.def : b.def === "?" ? -1 : 0;
-          break;
-        case "level":
-          aValue = a.level ?? 0;
-          bValue = b.level ?? 0;
-          break;
-        default:
-          return 0;
-      }
-
-      if (aValue < bValue) return sortDirection === "asc" ? -1 : 1;
-      if (aValue > bValue) return sortDirection === "asc" ? 1 : -1;
-      return 0;
+    const filtered = selectFilteredCards(cardList, debouncedSearchQuery, {
+      ...searchParams,
+      sort: searchParams.sort || "name",
+      sortDirection: searchParams.sortDirection || "asc",
     });
-
+    
+    // Phase 6: Removed debug logs for performance
     setFilteredCards(filtered);
-  }, [searchQuery, cardList, searchParams]);
+  }, [debouncedSearchQuery, cardList, searchParams]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -147,222 +127,182 @@ export function CardBrowser({
   const handleSelectChange = (name: string, value: string) => {
     setSearchParams((prev) => ({ ...prev, [name]: value }));
   };
+
+  // Get card count in deck
+  const getCardCountInDeck = useCallback(
+    (cardId: number): number => {
+      const allDeckCards = [
+        ...currentDeck.mainDeck,
+        ...currentDeck.extraDeck,
+        ...currentDeck.sideDeck,
+      ];
+      return allDeckCards.filter((c) => c.id === cardId).length;
+    },
+    [currentDeck],
+  );
+
+  // Handle add card (click-to-add)
+  const handleAddCard = useCallback(
+    (card: Card) => {
+      const section: DeckSection = isExtraDeckCard(card)
+        ? "extraDeck"
+        : "mainDeck";
+      addCardToDeck(card, section);
+    },
+    [addCardToDeck],
+  );
+
+
+  // Get active filters count for badge
+  const activeFiltersCount = useMemo(() => {
+    let count = 0;
+    FILTER_CONFIGS.forEach((config) => {
+      const value = searchParams[config.key as keyof typeof searchParams];
+      if (value && value.trim()) {
+        count += value.split(",").filter(v => v.trim()).length;
+      }
+    });
+    if (searchParams.archetype) {
+      count += searchParams.archetype.split(",").filter(v => v.trim()).length;
+    }
+    if (searchParams.effect && searchParams.effect.trim()) {
+      count += 1;
+    }
+    return count;
+  }, [searchParams]);
+
   return (
-    <div className="space-y-4">
-      <CutCornerWrapper
-        size="md"
-        hoverHighlight
-        padding="0"
-        style={{
-          ["--cut-corner-stroke" as string]: "rgba(20,239,255,0.38)",
-          ["--cut-corner-stroke-hover" as string]: "rgba(20,239,255,0.52)",
-          ["--cut-corner-fill" as string]: "transparent",
-          backdropFilter: "blur(6px) saturate(120%)",
-          WebkitBackdropFilter: "blur(6px) saturate(120%)",
-        }}
-      >
-        <CardUI className="bg-transparent">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xl text-white font-display">
-              Card Browser
-            </CardTitle>
-            <CardDescription className="text-muted-50">
-              Search, filter, and drag/double click cards to add to your deck
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="p-6 pb-0 space-y-4">
-              <div className="flex gap-2">
-                <div className="flex-1">
+    <div className="relative flex flex-col h-full">
+      {/* Main Card Browser - Fixed Width */}
+      <div className="flex-1 flex flex-col min-w-0 w-full min-h-0">
+        <div className="h-full rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl shadow-lg">
+          <CardUI className="bg-transparent h-full flex flex-col pt-4 sm:pt-6">
+            <CardHeader className="pb-2 flex-shrink-0 px-4 sm:px-6 pt-0">
+              <div className="flex items-center gap-2 w-full">
+                <div className="relative flex-1 min-w-0">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/60 pointer-events-none z-10" />
                   <InputWithClear
+                    ref={searchInputRef}
                     placeholder="Search cards..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onClear={() => setSearchQuery("")}
-                    className="w-full bg-cyb-900/60 border-cyan-500/50 text-white placeholder:text-muted-50/70 focus-visible:border-cyan-400 focus-visible:ring-cyan-400/60"
+                    className="w-full h-9 pl-9 pr-9 text-sm bg-white/5 border border-white/10 text-white placeholder:text-white/50 focus-visible:outline-none rounded-lg"
                   />
                 </div>
-                <FilterMenu
-                  searchParams={searchParams}
-                  setSearchParams={setSearchParams}
-                  setSearchQuery={setSearchQuery}
-                  handleSelectChange={handleSelectChange}
-                  handleInputChange={handleInputChange}
-                />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setIsFilterSidebarCollapsed(!isFilterSidebarCollapsed)}
+                  className="h-9 w-9 flex-shrink-0 text-white/80 hover:text-white hover:bg-white/10 relative rounded-lg"
+                  aria-label={isFilterSidebarCollapsed ? "Show filters" : "Hide filters"}
+                >
+                  <Filter className="h-4 w-4" />
+                  {activeFiltersCount > 0 && (
+                    <Badge className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-white/10 text-white text-[9px] flex items-center justify-center font-bold p-0 border border-white/20 backdrop-blur-sm">
+                      {activeFiltersCount}
+                    </Badge>
+                  )}
+                </Button>
               </div>
-
-              <div className="flex items-center justify-between">
-                {loading ? (
-                  <div className="flex items-center gap-2">
-                    <Skeleton className="h-4 w-20" />
-                    <Skeleton className="h-4 w-12" />
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-50">
-                    Found {filteredCards.length} cards
-                  </p>
-                )}
-                <div className="flex items-center gap-2">
-                  <Select
-                    value={searchParams.sort}
-                    onValueChange={(value: string) =>
-                      handleSelectChange("sort", value)
-                    }
-                    disabled
-                  >
-                    <SelectTrigger className="w-[120px] bg-cyb-900/60 border-cyan-500/50 text-white focus:ring-cyan-400/60 opacity-50 cursor-not-allowed">
-                      <SelectValue placeholder="Sort by" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem
-                        value="name"
-                        className="text-white focus:bg-accent-cyan/20 focus:text-accent-cyan/80"
-                      >
-                        Name
-                      </SelectItem>
-                      <SelectItem
-                        value="atk"
-                        className="text-white focus:bg-accent-cyan/20 focus:text-accent-cyan/80"
-                      >
-                        ATK
-                      </SelectItem>
-                      <SelectItem
-                        value="def"
-                        className="text-white focus:bg-accent-cyan/20 focus:text-accent-cyan/80"
-                      >
-                        DEF
-                      </SelectItem>
-                      <SelectItem
-                        value="level"
-                        className="text-white focus:bg-accent-cyan/20 focus:text-accent-cyan/80"
-                      >
-                        Level
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() =>
-                      setSearchParams((prev) => ({
-                        ...prev,
-                        sortDirection:
-                          prev.sortDirection === "asc" ? "desc" : "asc",
-                      }))
-                    }
-                    className="h-9 w-9 p-0 opacity-50 cursor-not-allowed"
-                    aria-label={`Sort ${searchParams.sortDirection === "asc" ? "descending" : "ascending"}`}
-                    disabled
-                  >
-                    {searchParams.sortDirection === "asc" ? (
-                      <ArrowUp className="h-5 w-5 text-accent-cyan" />
-                    ) : (
-                      <ArrowDown className="h-5 w-5 text-accent-cyan" />
-                    )}
-                  </Button>
+              {!loading && (
+                <div className="flex items-center justify-end mt-2 gap-2">
+                  <span className="text-xs text-white/80 font-bold tracking-wider uppercase">
+                    {filteredCards.length.toLocaleString()} {filteredCards.length === 1 ? "CARD" : "CARDS"}
+                  </span>
+                  <div className="h-2.5 w-10 bg-gradient-to-r from-white/20 via-white/10 to-transparent border border-white/10 rounded" />
                 </div>
-              </div>
-            </div>
+              )}
+            </CardHeader>
+            <CardContent className="p-0 flex-1 min-h-0">
+              <div className="h-full border-t border-white/10">
+                <DeckDropZone id="card-browser" isEmpty={false}>
+                  {loading || cardList.length === 0 ? (
+                    <div className="flex flex-col gap-2 p-4 sm:p-6">
+                      {Array.from({ length: 8 }).map((_, i) => (
+                        <div key={i} className="flex items-center gap-3 px-4 py-2.5">
+                          <Skeleton className="w-16 h-24 flex-shrink-0 rounded" />
+                          <div className="flex-1 space-y-2">
+                            <Skeleton className="h-4 w-48" />
+                            <Skeleton className="h-3 w-32" />
+                            <Skeleton className="h-3 w-24" />
+                          </div>
+                          <Skeleton className="h-8 w-20 flex-shrink-0" />
+                        </div>
+                      ))}
+                    </div>
+                  ) : filteredCards.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-full py-16 min-h-[400px]">
+                      <Search className="h-12 w-12 mb-3 text-white/30" />
+                      <span className="text-sm font-medium text-white/70">
+                        No cards found
+                      </span>
+                      <span className="text-xs text-white/50 mt-2">
+                        Try adjusting your search or filters
+                      </span>
+                    </div>
+                  ) : (
+                    <Virtuoso
+                      style={{ height: "100%", minHeight: "400px" }}
+                      totalCount={filteredCards.length}
+                      // Phase 6: itemContent is already optimized by Virtuoso
+                      // CardStack is memoized, so re-renders are minimal
+                      itemContent={(index) => {
+                        const card = filteredCards[index];
+                        const banStatus = banlist[card.name] || "Unlimited";
+                        let maxCopies = 3;
+                        if (banStatus === "Limited") maxCopies = 1;
+                        if (banStatus === "Semi-Limited") maxCopies = 2;
+                        if (banStatus === "Forbidden") maxCopies = 0;
 
-            <div className="h-[500px] border-t border-accent-cyan/18">
-              <DeckDropZone id="card-browser" isEmpty={false}>
-                {loading || cardList.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center h-full">
-                    <CyberpunkLoader size="md" />
-                    <p className="text-muted-50 mt-4">
-                      Loading Card Database...
-                    </p>
-                  </div>
-                ) : filteredCards.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center h-full">
-                    <p className="text-muted-50">No cards found</p>
-                    <p className="text-sm text-muted-50/70">
-                      Try adjusting your search filters
-                    </p>
-                  </div>
-                ) : filteredCards.length > 100 ? (
-                  <Virtuoso
-                    style={{ height: "100%" }}
-                    totalCount={filteredCards.length}
-                    itemContent={(index) => {
-                      const card = filteredCards[index];
-                      const banStatus = banlist[card.name] || "Unlimited";
-                      let maxCopies = 3;
-                      if (banStatus === "Limited") maxCopies = 1;
-                      if (banStatus === "Semi-Limited") maxCopies = 2;
-                      if (banStatus === "Forbidden") maxCopies = 0;
+                        const remaining = getRemainingCopies(
+                          card,
+                          currentDeck,
+                          banlist,
+                        );
+                        const currentCount = getCardCountInDeck(card.id);
 
-                      return (
-                        <div key={card.id} className="px-2 py-1.5">
-                          <CardStack
-                            card={card}
-                            remainingCopies={getRemainingCopies(
-                              card,
-                              currentDeck,
-                              banlist,
-                            )}
-                            maxCopies={maxCopies}
-                            banStatus={banStatus}
-                            isBeingDragged={
-                              activeDragId === `browser-${card.id}`
+                        const stackProps = {
+                          card,
+                          remainingCopies: remaining,
+                          maxCopies,
+                          banStatus,
+                          isBeingDragged: activeDragId === `browser-${card.id}`,
+                          currentCount,
+                          onStackClick: () => {
+                            if (remaining > 0) {
+                              handleAddCard(card);
                             }
-                            onDoubleClick={() => {
-                              const remaining = getRemainingCopies(
-                                card,
-                                currentDeck,
-                                banlist,
-                              );
-                              if (remaining > 0) {
-                                handleCardDoubleClick(card);
-                              }
-                            }}
-                          />
-                        </div>
-                      );
-                    }}
-                  />
-                ) : (
-                  <div className="overflow-y-auto h-full">
-                    {filteredCards.map((card) => {
-                      const banStatus = banlist[card.name] || "Unlimited";
-                      let maxCopies = 3;
-                      if (banStatus === "Limited") maxCopies = 1;
-                      if (banStatus === "Semi-Limited") maxCopies = 2;
-                      if (banStatus === "Forbidden") maxCopies = 0;
+                          },
+                          onDoubleClick: () => {
+                            if (remaining > 0) {
+                              handleCardDoubleClick(card);
+                            }
+                          },
+                        };
+                        return <CardStack key={card.id} {...stackProps} />;
+                      }}
+                    />
+                  )}
+                </DeckDropZone>
+              </div>
+            </CardContent>
+          </CardUI>
+        </div>
+      </div>
 
-                      return (
-                        <div key={card.id} className="px-2 py-1.5">
-                          <CardStack
-                            card={card}
-                            remainingCopies={getRemainingCopies(
-                              card,
-                              currentDeck,
-                              banlist,
-                            )}
-                            maxCopies={maxCopies}
-                            banStatus={banStatus}
-                            isBeingDragged={activeDragId === `browser-${card.id}`}
-                            onDoubleClick={() => {
-                              const remaining = getRemainingCopies(
-                                card,
-                                currentDeck,
-                                banlist,
-                              );
-                              if (remaining > 0) {
-                                handleCardDoubleClick(card);
-                              }
-                            }}
-                          />
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </DeckDropZone>
-            </div>
-          </CardContent>
-        </CardUI>
-      </CutCornerWrapper>
+      {/* Filter Sidebar - Overlay/Slide Over */}
+      <FilterSidebar
+        searchParams={searchParams}
+        setSearchParams={setSearchParams}
+        setSearchQuery={setSearchQuery}
+        handleSelectChange={handleSelectChange}
+        handleInputChange={handleInputChange}
+        isCollapsed={isFilterSidebarCollapsed}
+        onToggleCollapse={() =>
+          setIsFilterSidebarCollapsed(!isFilterSidebarCollapsed)
+        }
+      />
     </div>
   );
 }

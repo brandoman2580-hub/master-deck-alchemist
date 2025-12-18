@@ -1,7 +1,9 @@
-// Refactored recommendation agent with hybrid prompts, feedback integration, and observability
-// Rationale: Implements hybrid prompt system (freeform analysis + templated output), adds recommendation_id for feedback tracking, and logs all requests
+// Recommendation Agent - Strict JSON Schema Implementation (Phase 2)
+// Rationale: Enforces strict JSON-only output using RECOMMENDER_SCHEMA with comprehensive validation,
+// error handling, and consistency improvements. Integrates with existing hybrid search infrastructure.
 
 import { createClient } from "@supabase/supabase-js";
+import { z } from "zod";
 import { corsHeaders } from "../_shared/cors.ts";
 import {
   analyzeQuestionForFilters,
@@ -13,8 +15,6 @@ import {
 import { mmrSelect, type MMRCandidate } from "../_shared/mmr.ts";
 import { toTOON } from "../_shared/toon.ts";
 import {
-  GRANDMASTER_SYSTEM_PROMPT,
-  buildHybridUserPrompt,
   classifyIntent,
 } from "../_shared/prompts.ts";
 
@@ -49,6 +49,162 @@ const MAX_CANDIDATES_TO_LLM = 30; // Maximum cards to send to LLM (target < 1500
 const MMR_LAMBDA = 0.65; // MMR balance: 0.65 = 65% relevance, 35% diversity
 const VECTOR_WEIGHT = 0.7; // Hybrid search: 70% vector, 30% FTS
 const FTS_WEIGHT = 0.3;
+const RETRIEVAL_K = 30;
+const MODEL_TEMP = 0.12; // Low temperature for consistency
+const MAX_OUTPUT_TOKENS = 800;
+const APPLY_CONF_THRESHOLD = 0.6;
+const INVESTIGATE_THRESHOLD = 0.45;
+const MAX_PROMPT_CARD_SUMMARY_CHARS = 700;
+
+// ============================================================================
+// Zod Schemas (matching types/recommender.ts)
+// ============================================================================
+
+const DeckCardZ = z.object({
+  cardId: z.number(),
+  count: z.number().min(0),
+});
+
+const DeckZ = z.object({
+  main: z.array(DeckCardZ),
+  extra: z.array(DeckCardZ).optional().default([]),
+  side: z.array(DeckCardZ).optional().default([]),
+});
+
+const UserPrefsZ = z
+  .object({
+    playstyle: z.enum(["aggro", "control", "combo", "stall", "hybrid"]).optional(),
+    budget: z.enum(["low", "mid", "high"]).optional(),
+  })
+  .optional();
+
+const NumberConstraintZ = z
+  .object({
+    exact: z.number().min(1).max(20).optional(),
+    min: z.number().min(1).max(20).optional(),
+    max: z.number().min(1).max(20).optional(),
+  })
+  .optional();
+
+const RecommendationRequestZ = z.object({
+  question: z.string().optional(),
+  current_deck: DeckZ.optional(),
+  format: z.enum(["MASTER_DUEL", "TCG"]).default("MASTER_DUEL"),
+  recommendation_type: z
+    .enum(["personalized", "archetype", "engine", "tech", "simple"])
+    .optional(),
+  use_hybrid_search: z.boolean().optional().default(true),
+  explainTo: z.enum(["novice", "intermediate", "advanced"]).optional().default("novice"),
+  userPrefs: UserPrefsZ,
+  maxOutputTokens: z.number().optional().default(MAX_OUTPUT_TOKENS),
+  numberConstraint: NumberConstraintZ,
+});
+
+const CardDocZ = z.object({
+  id: z.number(),
+  name: z.string(),
+  desc: z.string().optional().default(""),
+  archetype: z.string().nullable().optional(),
+  ban_tcg: z.string().nullable().optional(),
+  master_duel_banned: z.boolean().optional().default(false),
+  imageurl: z.string().optional().nullable(),
+});
+
+const RecoItemZ = z.object({
+  cardId: z.string(),
+  cardName: z.string().optional(),
+  action: z.enum(["add", "remove", "replace", "tech", "note"]),
+  reason: z.string(),
+  impactEst: z.number().min(-1).max(1),
+  synergyScore: z.number().min(0).max(1).optional(),
+  evidence: z.array(z.string()),
+  banned: z.boolean().optional(),
+});
+
+const UIBlockContentZ = z.union([
+  z.string(),
+  z.array(z.string()),
+  z.record(z.string(), z.any()),
+]);
+
+const UIBlockZ = z.object({
+  id: z.string(),
+  type: z.enum(["text", "list", "card", "table", "suggestion"]),
+  content: UIBlockContentZ,
+});
+
+const RecommenderZ = z.object({
+  schemaVersion: z.string(),
+  confidence: z.number().min(0).max(1),
+  explainTo: z.enum(["novice", "intermediate", "advanced"]),
+  summary: z.string().optional(),
+  recommendations: z.array(RecoItemZ),
+  ui: z.array(UIBlockZ),
+  actions: z.record(z.string(), z.any()).optional(),
+  meta: z.record(z.string(), z.any()).optional(),
+});
+
+// ============================================================================
+// Strict JSON-Only System Prompt
+// ============================================================================
+
+const STRICT_SYSTEM_PROMPT = `You are a Yu-Gi-Oh! deck recommender assistant for an interactive web UI. You must ONLY output a single JSON object (no surrounding text, no markdown, no comments). The JSON must follow the RECOMMENDER_SCHEMA exactly. If you cannot satisfy the schema, return an object with "schemaVersion", "confidence":0.0, "explainTo":"novice", "recommendations":[], and a "ui" field with an investigation suggestion.
+
+Hard rules:
+
+- NEVER invent card names or IDs. All recommended cards must match cardIds provided in the 'cardPool' context supplied in the prompt.
+
+- Respect format-specific banlist metadata in cardPool (ban_tcg / master_duel_banned). Mark banned suggestions with "banned": true and set "action":"note" instead of add/remove.
+
+- Confidence range: 0.0 - 1.0. If confidence < 0.45, be conservative and prefer 'investigate' recommendations.
+
+- explainTo is one of "novice"|"intermediate"|"advanced". Use this to tailor explanations.
+
+- ui must be an ordered array of render blocks. Block types: "text","list","card","table","suggestion".
+
+- No raw HTML/markdown in 'content' fields. Use plain text or arrays.
+
+- Use retrieval context only — do not hallucinate extra card text beyond what's provided. If inferring, tag the evidence with "INFERENCE:" prefix.
+
+- Keep output concise.
+
+RECOMMENDER_SCHEMA:
+
+{
+  "schemaVersion": "string",
+  "confidence": number,
+  "explainTo": "novice"|"intermediate"|"advanced",
+  "summary": "string",
+  "recommendations": [
+    {
+      "cardId": "string",         // must match cardPool ids
+      "cardName": "string",
+      "action": "add"|"remove"|"replace"|"tech"|"note",
+      "reason": "string",
+      "impactEst": number,        // -1..+1
+      "synergyScore": number,     // 0..1
+      "evidence": ["string"],     // references to card text/name in cardPool
+      "banned": boolean (optional)
+    }
+  ],
+  "ui": [
+    {"id":"string","type":"text"|"list"|"card"|"table"|"suggestion","content": string | string[] | object}
+  ],
+  "actions": object,
+  "meta": object
+}
+
+When constructing recommendations:
+
+- Use at most top-k cardPool docs supplied. Prefer cards already in the current deck for "synergyScore" context.
+
+- Provide concise "summary" at top-level and a short "explainTo"-level tailored teaching note for each recommendation.
+
+- Evidence items should reference exact strings from cardPool (e.g., "Dark Magician — 'When this card is summoned...'" or "INFERENCE: based on X + Y").
+
+- ui blocks guide the client to render. For actionable suggestions include a "suggestion" block with \`content\` object: { "suggestionId":string, "cardId":string, "verb":"apply"|"preview", "label":"Apply: add 1x Hand Trap" }.
+
+FAIL-FAST: If you are missing required data to make a safe recommendation (e.g., cardPool missing for a recommended card), return confidence:0 and an "investigate" UI block.`;
 
 // Helper: safely extract archetype as string
 function getArchetypeNameServer(card: { archetype?: any }): string {
@@ -67,244 +223,6 @@ function getArchetypeNameServer(card: { archetype?: any }): string {
   return "";
 }
 
-// Helper: sanitize AI text and replace "this card" with actual card names
-function sanitizeAiCardText(
-  content: string,
-  allowedCardNames: string[],
-  candidateCards: CardCandidate[] = [],
-  allCardNames: string[] = [],
-): string {
-  let cleaned = content.replace(/\[object Object\]/g, "this archetype");
-
-  // First, replace "this card" / "that card" / "the card" with actual candidate card names
-  // Strategy: Find the most recently mentioned candidate card name before each "this card"
-  const thisCardRegex = /\b(this|that|the)\s+card\b/gi;
-  const candidateNames = candidateCards.map((c) => c.name);
-
-  // Create a regex that matches any candidate card name (case-insensitive)
-  const candidateNamesPattern = candidateNames
-    .map((name) => name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
-    .join("|");
-  const candidateNameRegex = new RegExp(
-    `\\b(${candidateNamesPattern})\\b`,
-    "gi",
-  );
-
-  cleaned = cleaned.replace(thisCardRegex, (match, _pronoun, offset) => {
-    // Find the text before this match (look back up to 300 chars)
-    const beforeText = cleaned.substring(Math.max(0, offset - 300), offset);
-
-    // Extract all candidate card names mentioned before this "this card"
-    const mentionedCandidates: string[] = [];
-    let cardMatch;
-    const searchText = beforeText;
-
-    // Reset regex lastIndex to search from start
-    candidateNameRegex.lastIndex = 0;
-    while ((cardMatch = candidateNameRegex.exec(searchText)) !== null) {
-      const matchedName = cardMatch[1];
-      // Find the original casing from candidateCards
-      const originalName = candidateNames.find(
-        (n) => n.toLowerCase() === matchedName.toLowerCase(),
-      );
-      if (originalName && !mentionedCandidates.includes(originalName)) {
-        mentionedCandidates.push(originalName);
-      }
-    }
-
-    // Use the most recently mentioned candidate card
-    if (mentionedCandidates.length > 0) {
-      return `**${mentionedCandidates[mentionedCandidates.length - 1]}**`;
-    } else if (candidateCards.length > 0) {
-      // Use first candidate card as fallback
-      return `**${candidateCards[0].name}**`;
-    }
-
-    return match; // Keep original if no replacement found
-  });
-
-  // Now validate and fix any card names that might be incorrect
-  if (!allowedCardNames || allowedCardNames.length === 0) {
-    return cleaned;
-  }
-
-  // Create comprehensive set of valid card names (allowed + all from database)
-  const allValidCardNames = new Set<string>();
-  allowedCardNames.forEach((name) => allValidCardNames.add(name.toLowerCase()));
-  allCardNames.forEach((name) => allValidCardNames.add(name.toLowerCase()));
-
-  // Create a map for exact matching (preserve original casing)
-  const cardNameMap = new Map<string, string>();
-  allowedCardNames.forEach((name) => {
-    cardNameMap.set(name.toLowerCase(), name);
-  });
-
-  // Validate card names in the text
-  const cardLikeRegex =
-    /\b([A-Z][A-Za-z0-9'&-]+(?:\s+[A-Z][A-Za-z0-9'&-]+)+)\b/g;
-  cleaned = cleaned.replace(cardLikeRegex, (match) => {
-    const trimmed = match.trim();
-    const normalized = trimmed.toLowerCase();
-
-    // Check if it's a valid card name (exact match)
-    if (allValidCardNames.has(normalized)) {
-      return cardNameMap.get(normalized) || trimmed;
-    }
-
-    // Check for fuzzy matches (handles punctuation/spacing variations)
-    for (const validName of allValidCardNames) {
-      const validNormalized = validName.toLowerCase();
-      const matchNoSpecial = normalized.replace(/['&-]/g, "");
-      const validNoSpecial = validNormalized.replace(/['&-]/g, "");
-      if (matchNoSpecial === validNoSpecial && matchNoSpecial.length > 0) {
-        return cardNameMap.get(validNormalized) || trimmed;
-      }
-    }
-
-    // Check common game terms - don't replace these
-    const commonTerms = [
-      "deck",
-      "card",
-      "hand",
-      "field",
-      "graveyard",
-      "banish",
-      "summon",
-      "tribute",
-      "monster",
-      "spell",
-      "trap",
-      "extra deck",
-      "main deck",
-      "side deck",
-      "going first",
-      "going second",
-      "turn",
-      "phase",
-      "battle",
-      "damage",
-      "life points",
-      "opponent",
-      "player",
-      "duel",
-      "game",
-    ];
-    if (
-      commonTerms.some(
-        (term) => normalized.includes(term) || term.includes(normalized),
-      )
-    ) {
-      return trimmed;
-    }
-
-    // Be conservative - preserve card names even if not validated
-    return trimmed;
-  });
-
-  return cleaned;
-}
-
-// Clean up and format response text for better readability
-function formatResponseText(text: string): string {
-  let formatted = text;
-
-  // Remove excessive markdown formatting (e.g., ****text**** -> **text**)
-  // Pattern: 4+ asterisks should be reduced to 2
-  formatted = formatted.replace(/\*{4,}([^*]+?)\*{4,}/g, "**$1**");
-  formatted = formatted.replace(/\*{3,}([^*]+?)\*{3,}/g, "**$1**");
-
-  // Fix multiple consecutive numbers (e.g., "1. 6. Card" -> "1. Card")
-  formatted = formatted.replace(/(\d+)\.\s+(\d+)\.\s+/g, "$1. ");
-
-  // Fix out-of-order numbering: find all numbered list items and renumber them sequentially
-  // Pattern: number followed by period and space, typically before bold text or card names
-  const numberPattern = /\b(\d+)\.\s+(?=\*\*[^*]+\*\*|[A-Z])/g;
-
-  // Find all numbered items and their positions
-  const matches: Array<{ number: number; index: number; length: number }> = [];
-  let match;
-  const textCopy = formatted; // Work with copy to avoid index issues
-  while ((match = numberPattern.exec(textCopy)) !== null) {
-    matches.push({
-      number: parseInt(match[1], 10),
-      index: match.index,
-      length: match[0].length,
-    });
-  }
-
-  // If we have multiple numbered items, fix them to be sequential
-  if (matches.length > 1) {
-    // Work backwards to avoid index shifting
-    for (let i = matches.length - 1; i >= 0; i--) {
-      const matchInfo = matches[i];
-      const correctNumber = i + 1;
-
-      if (matchInfo.number !== correctNumber) {
-        // Replace the number at this specific position
-        const before = formatted.substring(0, matchInfo.index);
-        const numberStr = matchInfo.number.toString();
-        const after = formatted.substring(
-          matchInfo.index + numberStr.length + 2,
-        ); // +2 for ". "
-        formatted = before + correctNumber + ". " + after;
-      }
-    }
-  }
-
-  // Clean up excessive backticks and formatting
-  // Remove backticks around single words (e.g., `add` -> add, but keep code blocks)
-  formatted = formatted.replace(/`([a-zA-Z]+)`/g, "$1");
-
-  // Clean up spacing and formatting
-  // Remove multiple spaces
-  formatted = formatted.replace(/\s{2,}/g, " ");
-
-  // Ensure proper spacing after periods (but preserve numbered lists)
-  formatted = formatted.replace(/\.([A-Z])/g, ". $1");
-
-  // Fix spacing around bold text
-  formatted = formatted.replace(/\s+\*\*/g, " **");
-  formatted = formatted.replace(/\*\*\s+/g, "** ");
-
-  // Remove duplicate bold markers (e.g., **text** **text** -> **text**)
-  formatted = formatted.replace(
-    /\*\*([^*]+?)\*\*\s+\*\*([^*]+?)\*\*/g,
-    (match, p1, p2) => {
-      // If they're the same, keep one
-      if (p1.trim() === p2.trim()) {
-        return `**${p1}**`;
-      }
-      return match;
-    },
-  );
-
-  // Ensure proper paragraph breaks
-  formatted = formatted.replace(/\n{3,}/g, "\n\n");
-
-  // Clean up any remaining formatting issues
-  formatted = formatted.trim();
-
-  return formatted;
-}
-
-// Clean up card names in JSON response (remove excessive formatting)
-function cleanCardName(name: string): string {
-  if (!name) return name;
-
-  let cleaned = name;
-
-  // Remove excessive asterisks (keep only double asterisks for bold)
-  cleaned = cleaned.replace(/\*{4,}([^*]+?)\*{4,}/g, "**$1**");
-  cleaned = cleaned.replace(/\*{3,}([^*]+?)\*{3,}/g, "**$1**");
-
-  // Remove backticks
-  cleaned = cleaned.replace(/`/g, "");
-
-  // Clean up spacing
-  cleaned = cleaned.replace(/\s{2,}/g, " ").trim();
-
-  return cleaned;
-}
 
 // Load Master Duel banlist from Supabase
 async function loadMasterDuelBanlist(
@@ -550,6 +468,122 @@ async function findCardsByArchetype(
   return results;
 }
 
+// ============================================================================
+// Phase 2: New Helper Functions for Strict Schema
+// ============================================================================
+
+/**
+ * Hash deck blob into SHA256 hex (for caching)
+ */
+async function fingerprintDeck(
+  deck: unknown,
+  explainTo: string,
+  prefs: unknown,
+): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = JSON.stringify({ deck, explainTo, prefs });
+  const hash = await crypto.subtle.digest("SHA-256", encoder.encode(data));
+  return [...new Uint8Array(hash)]
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+/**
+ * Build concise summary string for card for prompt
+ */
+function makeCardSummary(card: z.infer<typeof CardDocZ>): string {
+  const desc = (card.desc || "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, MAX_PROMPT_CARD_SUMMARY_CHARS);
+  return `${card.id} | ${card.name} | archetype:${card.archetype || ""} | ban_tcg:${card.ban_tcg || ""} | master_duel_banned:${!!card.master_duel_banned} | desc: ${desc}`;
+}
+
+/**
+ * Build the system+user prompt that will be sent to Groq LLM (strict JSON format)
+ */
+function buildStrictPrompt(
+  payload: z.infer<typeof RecommendationRequestZ>,
+  cardDocs: z.infer<typeof CardDocZ>[],
+): Array<{ role: string; content: string }> {
+  const system = STRICT_SYSTEM_PROMPT;
+
+  const cardSummaries = cardDocs.map(makeCardSummary).join("\n");
+
+  // Build number constraint instruction
+  let numberConstraintInstruction = "";
+  if (payload.numberConstraint) {
+    if (payload.numberConstraint.exact !== undefined) {
+      numberConstraintInstruction = `\n\nIMPORTANT: The user specifically requested exactly ${payload.numberConstraint.exact} card recommendation(s). Please provide exactly ${payload.numberConstraint.exact} recommendation(s) in the recommendations array. Do not provide more or fewer.`;
+    } else if (
+      payload.numberConstraint.min !== undefined &&
+      payload.numberConstraint.max !== undefined
+    ) {
+      numberConstraintInstruction = `\n\nIMPORTANT: The user requested between ${payload.numberConstraint.min} and ${payload.numberConstraint.max} card recommendations. Please provide between ${payload.numberConstraint.min} and ${payload.numberConstraint.max} recommendations in the recommendations array.`;
+    } else if (payload.numberConstraint.min !== undefined) {
+      numberConstraintInstruction = `\n\nIMPORTANT: The user requested at least ${payload.numberConstraint.min} card recommendation(s). Please provide at least ${payload.numberConstraint.min} recommendation(s) in the recommendations array.`;
+    } else if (payload.numberConstraint.max !== undefined) {
+      numberConstraintInstruction = `\n\nIMPORTANT: The user requested at most ${payload.numberConstraint.max} card recommendation(s). Please provide at most ${payload.numberConstraint.max} recommendation(s) in the recommendations array.`;
+    }
+  }
+
+  const userObj = {
+    currentDeck: payload.current_deck || { main: [], extra: [], side: [] },
+    userPrefs: payload.userPrefs || {},
+    format: payload.format || "MASTER_DUEL",
+    explainTo: payload.explainTo || "novice",
+    maxOutputTokens: payload.maxOutputTokens || MAX_OUTPUT_TOKENS,
+    numberConstraint: payload.numberConstraint || undefined,
+    cardPoolSummaries: cardDocs.map((c) => ({
+      id: c.id,
+      name: c.name,
+      archetype: c.archetype,
+      ban_tcg: c.ban_tcg,
+      desc: (c.desc || "").slice(0, MAX_PROMPT_CARD_SUMMARY_CHARS),
+    })),
+  };
+
+  const userContent = JSON.stringify(userObj) + numberConstraintInstruction;
+
+  const messages = [
+    { role: "system", content: system },
+    { role: "user", content: userContent },
+  ];
+
+  return messages;
+}
+
+/**
+ * Try to parse model output strictly as JSON; if it's a string with extra text,
+ * attempt to find the first JSON object substring.
+ */
+function extractJsonLike(text: string): any {
+  const first = text.indexOf("{");
+  const last = text.lastIndexOf("}");
+  if (first !== -1 && last !== -1 && last > first) {
+    const candidate = text.slice(first, last + 1);
+    try {
+      return JSON.parse(candidate);
+    } catch {
+      // pass through
+    }
+  }
+
+  // final attempt: parse entire string
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Validate model output using zod; throws on invalid
+ */
+function validateRecommender(parsed: unknown): z.infer<typeof RecommenderZ> {
+  return RecommenderZ.parse(parsed);
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -569,7 +603,29 @@ Deno.serve(async (req) => {
       );
     }
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+    });
+
+    // Verify Supabase connection by testing cards table access
+    const { data: testCards, error: testError } = await supabase
+      .from("cards")
+      .select("id")
+      .limit(1);
+    
+    if (testError) {
+      console.error("❌ Cannot access cards table:", {
+        error: testError.message,
+        code: testError.code,
+        details: testError.details,
+        hint: testError.hint,
+      });
+    } else {
+      console.log(`✅ Cards table accessible. Test query returned ${testCards?.length || 0} cards`);
+    }
 
     // Check authentication
     const authHeader = req.headers.get("Authorization");
@@ -732,13 +788,70 @@ Deno.serve(async (req) => {
     const recommendationId = crypto.randomUUID();
     const startTime = Date.now();
 
+    // Parse and validate request with Zod
+    const body = await req.json();
+    const parsedReq = RecommendationRequestZ.safeParse(body);
+
+    if (!parsedReq.success) {
+      return new Response(
+        JSON.stringify({
+          error: "invalid_request",
+          details: parsedReq.error.format(),
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    const reqVal = parsedReq.data;
     const {
       question,
       current_deck,
       format = "MASTER_DUEL",
-      recommendation_type = "personalized", // personalized, archetype, engine, tech, simple
-      use_hybrid_search = true, // Enable hybrid RAG by default
-    } = await req.json();
+      recommendation_type = "personalized",
+      use_hybrid_search = true,
+      explainTo = "novice",
+      userPrefs,
+      maxOutputTokens = MAX_OUTPUT_TOKENS,
+    } = reqVal;
+
+    // Phase 2: Deck Legality Check
+    const mainCount = (current_deck?.main || []).reduce(
+      (s, c) => s + c.count,
+      0,
+    );
+
+    if (mainCount < 40 || mainCount > 60) {
+      const payload = {
+        schemaVersion: "1.0.0",
+        confidence: 0.0,
+        explainTo: explainTo,
+        summary: `Deck legality: main deck must be 40-60 cards. Current main deck size: ${mainCount}. Please adjust before applying suggestions.`,
+        recommendations: [],
+        ui: [
+          {
+            id: "legality",
+            type: "text",
+            content: `Deck legality issue: main deck size ${mainCount}. Fix deck to 40–60.`,
+          },
+          {
+            id: "investigate",
+            type: "suggestion",
+            content: {
+              suggestionId: "fix_deck_size",
+              label: "Open deck editor",
+              verb: "preview",
+            },
+          },
+        ],
+        actions: {},
+        meta: { mainCount },
+      };
+
+      return new Response(JSON.stringify(payload), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     if (!question) {
       return new Response(JSON.stringify({ error: "question is required." }), {
@@ -763,14 +876,32 @@ Deno.serve(async (req) => {
       userProfile = await analyzeUserProfile(supabase, user.id, format);
     }
 
-    // Get current deck cards if provided
-    const allDeckCards = current_deck
-      ? [
-          ...(current_deck.mainDeck || []),
-          ...(current_deck.extraDeck || []),
-          ...(current_deck.sideDeck || []),
-        ]
-      : [];
+    // Phase 2: Convert new deck format (main/extra/side with cardId/count) to old format for compatibility
+    // First, collect all cardIds from the new format
+    const deckCardIds: number[] = [];
+    if (current_deck) {
+      deckCardIds.push(...(current_deck.main || []).map((c) => c.cardId));
+      deckCardIds.push(...(current_deck.extra || []).map((c) => c.cardId));
+      deckCardIds.push(...(current_deck.side || []).map((c) => c.cardId));
+    }
+
+    // Fetch actual card data for deck cards (needed for old format compatibility)
+    let allDeckCards: Card[] = [];
+    if (deckCardIds.length > 0) {
+      const uniqueDeckCardIds = [...new Set(deckCardIds)];
+      const { data: deckCardData } = await supabase
+        .from("cards")
+        .select("id, name, type, desc, level, race, attribute, archetype, atk, def")
+        .in("id", uniqueDeckCardIds);
+
+      if (deckCardData) {
+        allDeckCards = deckCardData.map((c: any) => ({
+          ...c,
+          archetype: getArchetypeNameServer(c),
+        })) as Card[];
+      }
+    }
+
     const excludeIds = allDeckCards.map((c: Card) => c.id);
 
     // Extract archetypes from deck for exclusion
@@ -789,8 +920,21 @@ Deno.serve(async (req) => {
       detectedArchetypes: questionFilters.archetypes,
     });
 
-    // Build deck context text for embedding
-    const deckContextText = buildDeckContextText(current_deck || {});
+    // Build deck context text for embedding (convert to old format)
+    const deckForContext = allDeckCards.length > 0
+      ? {
+          mainDeck: allDeckCards.filter((c) =>
+            (current_deck?.main || []).some((dc) => dc.cardId === c.id)
+          ),
+          extraDeck: allDeckCards.filter((c) =>
+            (current_deck?.extra || []).some((dc) => dc.cardId === c.id)
+          ),
+          sideDeck: allDeckCards.filter((c) =>
+            (current_deck?.side || []).some((dc) => dc.cardId === c.id)
+          ),
+        }
+      : {};
+    const deckContextText = buildDeckContextText(deckForContext);
 
     // Build query text: question + deck context
     const queryText = `${question}. ${deckContextText}`;
@@ -952,13 +1096,19 @@ Deno.serve(async (req) => {
           "🔄 Attempting permissive fallback search for generic term...",
         );
         try {
-          // Build a more generic query
-          const fallbackQuery = lowerQuestion.includes("engine")
-            ? "cards that support deck strategy and enable combos"
-            : lowerQuestion.includes("tech")
-              ? "versatile cards that work in many decks"
-              : "useful cards for deck building";
+          // Build a more generic query based on the question
+          let fallbackQuery = "useful cards for deck building";
+          if (lowerQuestion.includes("engine")) {
+            fallbackQuery = "cards that support deck strategy and enable combos";
+          } else if (lowerQuestion.includes("tech")) {
+            fallbackQuery = "versatile cards that work in many decks";
+          } else if (lowerQuestion.includes("staple")) {
+            fallbackQuery = "commonly used staple cards";
+          } else if (lowerQuestion.includes("support")) {
+            fallbackQuery = "support cards for deck strategies";
+          }
 
+          console.log(`🔄 Fallback query: "${fallbackQuery}"`);
           const fallbackEmbedding = await getQueryEmbedding(
             `${fallbackQuery}. ${deckContextText}`,
           );
@@ -985,39 +1135,86 @@ Deno.serve(async (req) => {
               `✅ Fallback search found ${fallbackResults.length} candidates`,
             );
             candidateCards = fallbackResults;
+          } else {
+            console.warn("⚠️ Fallback search returned no results");
           }
         } catch (err) {
           console.error("❌ Fallback search also failed:", err);
         }
       }
 
-      // If still no candidates, return helpful error
+      // If still no candidates, try one more fallback: get random popular cards
       if (candidateCards.length === 0) {
         console.warn(
-          "⚠️ No candidates found after all attempts! Diagnostic info:",
+          "⚠️ No candidates found after all attempts! Trying final fallback: random popular cards...",
+        );
+        
+        try {
+          // Final fallback: Get some popular/generic cards that aren't in the deck
+          const { data: fallbackCards, error: fallbackError } = await supabase
+            .from("cards")
+            .select("id, name, type, desc, archetype, ban_tcg")
+            .not("id", "in", `(${excludeIds.length > 0 ? excludeIds.slice(0, 50).join(",") : "0"})`)
+            .limit(50);
+          
+          if (!fallbackError && fallbackCards && fallbackCards.length > 0) {
+            console.log(`✅ Fallback found ${fallbackCards.length} generic cards`);
+            candidateCards = fallbackCards.map((c: any) => ({
+              id: c.id,
+              name: c.name,
+              archetype: c.archetype,
+              type: c.type,
+              desc: c.desc || "",
+            }));
+          }
+        } catch (fallbackErr) {
+          console.error("❌ Final fallback also failed:", fallbackErr);
+        }
+      }
+
+      // If STILL no candidates after all fallbacks, return proper error response
+      if (candidateCards.length === 0) {
+        console.error(
+          "❌ No candidates found after ALL fallback attempts! Diagnostic info:",
           {
             question,
             questionFilters,
             excludeIds: excludeIds.length,
             excludeArchetypes,
             use_hybrid_search,
+            deckSize: allDeckCards.length,
           },
         );
 
-        return new Response(
-          JSON.stringify({
-            answer: `I couldn't find any candidate cards matching "${question}". 
+        const fingerprint = await fingerprintDeck(
+          current_deck || {},
+          explainTo || "novice",
+          userPrefs || {},
+        );
 
-This might be because:
-- The search terms don't match any cards in the database
-- All matching cards are already in your deck (${excludeIds.length} cards excluded)
-- The RPC search functions may not be available or configured correctly
-
-Try rephrasing your question or being more specific. For example:
-- "What Toy archetype cards work with this deck?"
+        const errorPayload = {
+          schemaVersion: "1.0.0",
+          confidence: 0.0,
+          explainTo: explainTo || "novice",
+          summary: `I couldn't find any candidate cards matching "${question}". This might be because the search terms don't match any cards in the database, all matching cards are already in your deck, or the search functions may not be available. Try rephrasing your question.`,
+          recommendations: [],
+          ui: [
+            {
+              id: "no_candidates",
+              type: "text",
+              content: `I couldn't find any cards matching your request. Try rephrasing your question or being more specific. For example:
+- "What archetype cards work with this deck?"
 - "Recommend Spell cards for this strategy"
 - "What tech cards counter [specific archetype]?"`,
-            validated_cards: [],
+            },
+          ],
+          actions: {
+            applyAllowed: false,
+            investigateRecommended: true,
+          },
+          meta: {
+            deckFingerprint: fingerprint,
+            recommendation_id: recommendationId,
             diagnostic: {
               question,
               filters: questionFilters,
@@ -1025,12 +1222,13 @@ Try rephrasing your question or being more specific. For example:
               exclude_ids_count: excludeIds.length,
               exclude_archetypes: excludeArchetypes,
             },
-          }),
-          {
+          },
+        };
+
+        return new Response(JSON.stringify(errorPayload), {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
             status: 200,
-          },
-        );
+        });
       }
     }
 
@@ -1309,33 +1507,250 @@ Try rephrasing your question or being more specific. For example:
       );
     }
 
-    // Build hybrid prompts (freeform analysis + templated output)
-    // Customize system prompt for explanation questions
-    const systemPrompt = isExplanation
-      ? `${GRANDMASTER_SYSTEM_PROMPT}
+    // Phase 2: Convert finalCandidates to CardDoc format for strict schema (batch fetch)
+    const candidateIds = finalCandidates.map((c) => c.id);
+    const deckCardIdsForFetch = allDeckCards.map((c) => c.id);
+    const allIdsToFetch = [...new Set([...candidateIds, ...deckCardIdsForFetch.slice(0, 10)])].slice(0, RETRIEVAL_K);
 
-IMPORTANT FOR EXPLANATION QUESTIONS:
-- If the user asks about cards in their deck, focus on explaining those specific cards
-- Explain the purpose, benefits, and strategic value of the mentioned cards
-- Discuss synergies and how they work together
-- DO NOT mention "candidate table", "candidate cards", or any technical implementation details
-- DO NOT pivot to recommending other cards unless the user explicitly asks for recommendations
-- If the cards mentioned aren't in the deck, explain what you know about those cards in general
-- If you're unsure about something, be honest and say "I'm not certain" or "I don't have enough information"
-- Provide strategic insight and reasoning, not just card effects`
-      : GRANDMASTER_SYSTEM_PROMPT;
+    console.log(`🔍 Fetching card data for ${allIdsToFetch.length} IDs (${candidateIds.length} candidates, ${deckCardIdsForFetch.slice(0, 10).length} deck cards)`);
+    console.log(`🔍 Sample candidate IDs:`, candidateIds.slice(0, 5));
+    console.log(`🔍 Sample IDs to fetch:`, allIdsToFetch.slice(0, 5));
+    console.log(`🔍 All IDs to fetch (first 10):`, allIdsToFetch.slice(0, 10));
+    console.log(`🔍 ID types:`, allIdsToFetch.slice(0, 5).map(id => ({ id, type: typeof id })));
 
-    const userPrompt = buildHybridUserPrompt(
+    // Ensure all IDs are numbers (not strings)
+    const numericIds = allIdsToFetch.map(id => {
+      const numId = typeof id === 'string' ? parseInt(id, 10) : id;
+      if (isNaN(numId)) {
+        console.warn(`⚠️ Invalid ID found: ${id} (type: ${typeof id})`);
+        return null;
+      }
+      return numId;
+    }).filter((id): id is number => id !== null);
+
+    console.log(`🔍 After numeric conversion: ${numericIds.length} valid IDs`);
+
+    if (numericIds.length === 0) {
+      console.error("❌ No valid numeric IDs to fetch!");
+      const fingerprint = await fingerprintDeck(
+        current_deck || {},
+        explainTo || "novice",
+        userPrefs || {},
+      );
+      const errorPayload = {
+        schemaVersion: "1.0.0",
+        confidence: 0.0,
+        explainTo: explainTo || "novice",
+        summary: "Invalid card IDs found. Cannot fetch card data.",
+        recommendations: [],
+        ui: [
+          {
+            id: "invalid_ids",
+            type: "text",
+            content: "Error: Invalid card IDs detected. Please try again.",
+          },
+        ],
+        actions: {
+          applyAllowed: false,
+          investigateRecommended: true,
+        },
+        meta: {
+          deckFingerprint: fingerprint,
+          recommendation_id: recommendationId,
+          diagnostic: {
+            candidateCount: finalCandidates.length,
+            cardDocsCount: 0,
       question,
-      deckSummary,
-      toonTable || "",
-      finalCandidates.length,
-      format,
-      banlistText,
-      profileText,
-      intentClassified,
-      allDeckCards, // Pass deck cards for explanation questions
+            invalidIds: allIdsToFetch.filter(id => {
+              const numId = typeof id === 'string' ? parseInt(id, 10) : id;
+              return isNaN(numId);
+            }),
+          },
+        },
+      };
+      return new Response(JSON.stringify(errorPayload), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const { data: cardDataBatch, error: cardFetchError } = await supabase
+      .from("cards")
+      .select("id, name, desc, archetype, ban_tcg")
+      .in("id", numericIds);
+
+    if (cardFetchError) {
+      console.error("❌ Error fetching card data:", {
+        error: cardFetchError.message,
+        code: cardFetchError.code,
+        details: cardFetchError.details,
+        hint: cardFetchError.hint,
+        idsCount: allIdsToFetch.length,
+        sampleIds: allIdsToFetch.slice(0, 5),
+      });
+    } else {
+      console.log(`✅ Card data fetch successful: ${cardDataBatch?.length || 0} cards returned`);
+    }
+
+    // Use the banlist already loaded earlier (or load it if not available)
+    // Create a set of banned card names for quick lookup
+    const bannedCardNames = new Set(
+      format === "MASTER_DUEL" && banlist
+        ? Object.entries(banlist)
+            .filter(([, status]) => status === "Forbidden" || status === "Limited")
+            .map(([name]) => name.toLowerCase())
+        : []
     );
+
+    const cardDocs: z.infer<typeof CardDocZ>[] = [];
+    if (cardDataBatch && cardDataBatch.length > 0) {
+      // Create a map for quick lookup
+      const candidateMap = new Map(finalCandidates.map((c) => [c.id, c]));
+      const deckCardMap = new Map(allDeckCards.map((c) => [c.id, c]));
+
+      for (const cardData of cardDataBatch) {
+        try {
+          const candidate = candidateMap.get(cardData.id);
+          const deckCard = deckCardMap.get(cardData.id);
+          // Check if card is banned in Master Duel format
+          const isMasterDuelBanned = format === "MASTER_DUEL" 
+            ? bannedCardNames.has(cardData.name.toLowerCase())
+            : false;
+          
+          const cardDoc = CardDocZ.parse({
+            id: cardData.id,
+            name: cardData.name,
+            desc: cardData.desc || candidate?.desc || deckCard?.desc || "",
+            archetype: cardData.archetype || candidate?.archetype || deckCard?.archetype || null,
+            ban_tcg: cardData.ban_tcg || null,
+            master_duel_banned: isMasterDuelBanned,
+            imageurl: null, // imageurl column doesn't exist in cards table
+          });
+          cardDocs.push(cardDoc);
+        } catch (err) {
+          console.warn(`⚠️ Failed to validate card ${cardData.id}:`, err);
+        }
+      }
+    } else {
+      console.warn(`⚠️ No card data returned from database query. Expected ${allIdsToFetch.length} cards, got ${cardDataBatch?.length || 0}`);
+      // Try fetching cards one by one as a fallback to see if it's a batch size issue
+      if (candidateIds.length > 0 && candidateIds.length <= 100) {
+        console.log(`🔄 Attempting individual card fetches for ${candidateIds.length} candidates...`);
+        const numericCandidateIds = candidateIds.map(id => {
+          const numId = typeof id === 'string' ? parseInt(id, 10) : id;
+          return isNaN(numId) ? null : numId;
+        }).filter((id): id is number => id !== null);
+
+        const individualFetches = await Promise.all(
+          numericCandidateIds.slice(0, 30).map(async (id) => {
+            const { data, error } = await supabase
+              .from("cards")
+              .select("id, name, desc, archetype, ban_tcg")
+              .eq("id", id)
+              .single();
+            if (!error && data) {
+              try {
+                const candidate = finalCandidates.find((c) => c.id === id);
+                // Check if card is banned in Master Duel format
+                const isMasterDuelBanned = format === "MASTER_DUEL" 
+                  ? bannedCardNames.has(data.name.toLowerCase())
+                  : false;
+                
+                const cardDoc = CardDocZ.parse({
+                  id: data.id,
+                  name: data.name,
+                  desc: data.desc || candidate?.desc || "",
+                  archetype: data.archetype || candidate?.archetype || null,
+                  ban_tcg: data.ban_tcg || null,
+                  master_duel_banned: isMasterDuelBanned,
+                  imageurl: null, // imageurl column doesn't exist in cards table
+                });
+                return cardDoc;
+              } catch (parseErr) {
+                console.warn(`⚠️ Failed to parse card ${id}:`, parseErr);
+                return null;
+              }
+            } else if (error) {
+              console.warn(`⚠️ Error fetching card ${id}:`, error.message);
+            }
+            return null;
+          })
+        );
+        const validFetches = individualFetches.filter((c): c is z.infer<typeof CardDocZ> => c !== null);
+        if (validFetches.length > 0) {
+          console.log(`✅ Individual fetches found ${validFetches.length} cards`);
+          cardDocs.push(...validFetches);
+        } else {
+          console.warn(`⚠️ Individual fetches also returned 0 cards. This suggests the card IDs don't exist in the database.`);
+          // Last resort: try to get ANY cards from the database to verify it's accessible
+          const { data: anyCards, error: anyError } = await supabase
+            .from("cards")
+            .select("id, name")
+            .limit(5);
+          if (anyError) {
+            console.error(`❌ Cannot access cards table at all:`, anyError);
+          } else {
+            console.log(`ℹ️ Cards table is accessible. Found ${anyCards?.length || 0} sample cards. This suggests the candidate IDs don't match database IDs.`);
+            if (anyCards && anyCards.length > 0) {
+              console.log(`   Sample card IDs in DB:`, anyCards.map(c => c.id).slice(0, 5));
+            }
+          }
+        }
+      }
+    }
+
+    // Prioritize candidates over deck cards
+    const candidateCardDocs = cardDocs.filter((c) => candidateIds.includes(c.id));
+    const deckCardDocs = cardDocs.filter((c) => !candidateIds.includes(c.id) && deckCardIdsForFetch.includes(c.id));
+    const prioritizedCardDocs = [...candidateCardDocs, ...deckCardDocs].slice(0, RETRIEVAL_K);
+
+    console.log(`📊 Fetched ${prioritizedCardDocs.length} card docs (${candidateCardDocs.length} candidates, ${deckCardDocs.length} deck cards)`);
+
+    // Phase 2: Check if we have card data before calling LLM
+    if (prioritizedCardDocs.length === 0) {
+      console.warn("⚠️ No card docs available - returning error response");
+      const fingerprint = await fingerprintDeck(
+        current_deck || {},
+        explainTo || "novice",
+        userPrefs || {},
+      );
+      const errorPayload = {
+        schemaVersion: "1.0.0",
+        confidence: 0.0,
+        explainTo: explainTo || "novice",
+        summary: "Insufficient data to provide recommendations. No candidate cards were found matching your query.",
+        recommendations: [],
+        ui: [
+          {
+            id: "insufficient_data",
+            type: "text",
+            content: "I couldn't find any cards matching your request. Try rephrasing your question or being more specific about what you're looking for.",
+          },
+        ],
+        actions: {
+          applyAllowed: false,
+          investigateRecommended: true,
+        },
+        meta: {
+          deckFingerprint: fingerprint,
+          recommendation_id: recommendationId,
+          diagnostic: {
+            candidateCount: finalCandidates.length,
+            cardDocsCount: 0,
+            question,
+          },
+        },
+      };
+      return new Response(JSON.stringify(errorPayload), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Phase 2: Build strict JSON-only prompt
+    const messages = buildStrictPrompt(reqVal, prioritizedCardDocs);
+    const systemPrompt = messages[0].content;
+    const userPrompt = messages[1].content;
 
     // Call Groq API
     if (!GROQ_API_KEY) {
@@ -1349,25 +1764,26 @@ IMPORTANT FOR EXPLANATION QUESTIONS:
     }
 
     // Log what we're sending to LLM for debugging
-    console.log("📤 Sending to LLM:", {
+    console.log("📤 Sending to LLM (strict schema):", {
       systemPromptLength: systemPrompt.length,
       userPromptLength: userPrompt.length,
-      candidateCount: finalCandidates.length,
-      toonTableLength: toonTable.length,
-      candidateNamesPreview: finalCandidates
-        .slice(0, 5)
-        .map((c) => c.name)
-        .join(", "),
+      cardDocsCount: cardDocs.length,
+      cardDocsPreview: cardDocs.slice(0, 5).map((c) => c.name).join(", "),
     });
-    console.log(
-      "📤 System prompt preview (first 500 chars):",
-      systemPrompt.substring(0, 500),
-    );
-    console.log(
-      "📤 User prompt preview (first 500 chars):",
-      userPrompt.substring(0, 500),
-    );
 
+    // Phase 2: Call LLM with strict schema prompt
+    if (!GROQ_API_KEY) {
+      return new Response(
+        JSON.stringify({ error: "GROQ_API_KEY not configured." }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    let llmResp: { content: string; raw: any };
+    try {
     const groqResponse = await fetch(
       "https://api.groq.com/openai/v1/chat/completions",
       {
@@ -1378,410 +1794,224 @@ IMPORTANT FOR EXPLANATION QUESTIONS:
         },
         body: JSON.stringify({
           model: MODEL_NAME,
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: userPrompt },
-          ],
-          temperature: 0.7,
-          max_tokens: 1500, // Reduced for token efficiency (target < 1500 total)
+            messages,
+            temperature: MODEL_TEMP, // Low temperature for consistency
+            top_p: 0.8,
+            max_tokens: maxOutputTokens,
+            stop: ["<<END>>"],
         }),
       },
     );
 
     if (!groqResponse.ok) {
       const error = await groqResponse.text();
-      return new Response(JSON.stringify({ error }), {
-        status: 500,
+        throw new Error(`LLM call failed: ${groqResponse.status} ${groqResponse.statusText} - ${error}`);
+    }
+
+    const result = await groqResponse.json();
+      const content = result.choices?.[0]?.message?.content ?? result?.output_text ?? JSON.stringify(result);
+      llmResp = { content, raw: result };
+    } catch (err) {
+      console.error("LLM call error:", err);
+      const payload = {
+        schemaVersion: "1.0.0",
+        confidence: 0.0,
+        explainTo: explainTo,
+        summary: "Failed to call LLM. Please try again.",
+        recommendations: [],
+        ui: [
+          {
+            id: "llm_error",
+            type: "text",
+            content: `LLM call failed: ${err instanceof Error ? err.message : "Unknown error"}`,
+          },
+        ],
+        actions: {},
+        meta: {},
+      };
+      return new Response(JSON.stringify(payload), {
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const result = await groqResponse.json();
-    const rawContent = result.choices?.[0]?.message?.content || "";
-
-    console.log("📝 LLM raw response length:", rawContent.length);
-    console.log(
+    console.log("📝 LLM raw response length:", llmResp.content.length);
+      console.log(
       "📝 LLM response preview (first 500 chars):",
-      rawContent.substring(0, 500),
+      llmResp.content.substring(0, 500),
     );
 
-    // Try to parse JSON response (hybrid prompt may return JSON)
-    let answerText = rawContent;
-    type ParsedResponse = {
-      answer?: string;
-      recommended_cards?: Array<{
-        id?: number;
-        name?: string;
-        reason?: string;
-        synergy_score?: number;
-        risk_assessment?: string;
-      }>;
-      alternative_considerations?: Array<{ name?: string; why_not?: string }>;
-      meta?: {
-        intent_classified?: string;
-        confidence?: number;
-        format_specific_notes?: string;
-      };
-    };
-    let parsedResponse: ParsedResponse | null = null;
-    const jsonMatch = rawContent.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      try {
-        parsedResponse = JSON.parse(jsonMatch[0]) as ParsedResponse;
-        if (parsedResponse?.answer) {
-          answerText = parsedResponse.answer;
-        }
+    // Phase 2: Extract JSON from response
+    let parsed = extractJsonLike(llmResp.content);
 
-        // Clean up card names in recommended_cards if present
-        if (
-          parsedResponse?.recommended_cards &&
-          Array.isArray(parsedResponse.recommended_cards)
-        ) {
-          parsedResponse.recommended_cards =
-            parsedResponse.recommended_cards.map((card) => ({
-              ...card,
-              name: card.name ? cleanCardName(card.name) : card.name,
-              reason: card.reason
-                ? formatResponseText(card.reason)
-                : card.reason,
-            }));
-        }
-
-        // Clean up card names in alternative_considerations if present
-        if (
-          parsedResponse?.alternative_considerations &&
-          Array.isArray(parsedResponse.alternative_considerations)
-        ) {
-          parsedResponse.alternative_considerations =
-            parsedResponse.alternative_considerations.map((alt) => ({
-              ...alt,
-              name: alt.name ? cleanCardName(alt.name) : alt.name,
-              why_not: alt.why_not
-                ? formatResponseText(alt.why_not)
-                : alt.why_not,
-            }));
-        }
-      } catch (e) {
-        console.warn("⚠️ Failed to parse JSON response, using raw text:", e);
-      }
-    }
-
-    // Sanitize response - replace "this card" with actual candidate card names
-    let sanitizedContent = sanitizeAiCardText(
-      answerText,
-      allowedCardNames,
-      finalCandidates, // Pass candidate cards for context-aware replacement
-      allCardNames,
-    );
-
-    // Format and clean up the response for better readability
-    sanitizedContent = formatResponseText(sanitizedContent);
-
-    // For explanation questions, also extract card names from the user's question
-    // (cards they're asking about that might be in their deck)
-    let questionCardNames: string[] = [];
-    if (intentClassified === "explanation") {
-      // Extract card names from the question using simple patterns
-      const cardNamePatterns = [
-        /\b([A-Z][a-zA-Z0-9\s'-]+(?:Connector|Dolphin|Monster|Dragon|Magician|Warrior|Beast|Machine|Fiend|Spellcaster|Zombie|Plant|Insect|Rock|Pyro|Thunder|Aqua|Psychic|Divine|Winged|Elemental|Creator|HERO|Cyber|Blackwing|Gladiator|Six|Samurai|Archfiend|Ojama|Harpie|Amazoness|Toon|Spirit|Union|Gemini|Tuner|Synchro|Xyz|Pendulum|Link|Fusion|Ritual|Ruler|Cardcar))\b/g,
-        /\b([A-Z][a-zA-Z0-9\s'-]+(?:\s+[A-Z][a-zA-Z0-9\s'-]+)+)\b/g, // Multi-word card names
+    // Phase 2: Retry with salvage prompt if JSON extraction fails
+    let attempts = 0;
+    while (!parsed && attempts < 1) {
+      console.log("⚠️ JSON extraction failed, attempting salvage retry...");
+      const salvagePrompt = [
+        {
+          role: "system",
+          content:
+            "You must return a single JSON object matching the RECOMMENDER_SCHEMA. No commentary.",
+        },
+        {
+          role: "user",
+          content: `The previous response failed to be valid JSON. Please output only the JSON object (no markdown/text). Previous output: ${llmResp.content}`,
+        },
       ];
 
-      for (const pattern of cardNamePatterns) {
-        let match;
-        while ((match = pattern.exec(question)) !== null) {
-          const cardName = match[1].trim();
-          // Filter out common words
-          if (
-            cardName.length > 3 &&
-            !["Master Duel", "TCG", "Deck", "Card", "Cards"].some((word) =>
-              cardName.toLowerCase().includes(word.toLowerCase()),
-            )
-          ) {
-            questionCardNames.push(cardName);
-          }
+      try {
+        const salvageResponse = await fetch(
+          "https://api.groq.com/openai/v1/chat/completions",
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${GROQ_API_KEY}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              model: MODEL_NAME,
+              messages: salvagePrompt,
+              temperature: MODEL_TEMP,
+              max_tokens: 400,
+            }),
+          },
+        );
+
+        if (salvageResponse.ok) {
+          const salvageResult = await salvageResponse.json();
+          const salvageContent =
+            salvageResult.choices?.[0]?.message?.content ?? "";
+          llmResp.content = salvageContent;
+          parsed = extractJsonLike(salvageContent);
         }
+      } catch (salvageErr) {
+        console.error("Salvage retry failed:", salvageErr);
       }
-      // Remove duplicates
-      questionCardNames = [...new Set(questionCardNames)];
-      console.log(
-        `📋 Extracted ${questionCardNames.length} card names from question:`,
-        questionCardNames,
-      );
+      attempts++;
     }
 
-    // Extract card names mentioned in response for validation
-    // For explanation questions, also include cards from the user's question
-    const extractCardNames = (text: string): string[] => {
-      const cardNames = new Set<string>();
+    if (!parsed) {
+      const payload = {
+        schemaVersion: "1.0.0",
+        confidence: 0.0,
+        explainTo: explainTo,
+        summary: "Model output invalid. Please investigate.",
+        recommendations: [],
+        ui: [
+          {
+            id: "err",
+            type: "text",
+            content:
+              "The recommendation engine returned an invalid response. Try again or report.",
+          },
+          {
+            id: "retry",
+            type: "suggestion",
+            content: {
+              suggestionId: "retry_recs",
+              label: "Retry recommendation",
+              verb: "preview",
+            },
+          },
+        ],
+        actions: {},
+        meta: { rawModelOutput: llmResp.raw },
+      };
 
-      // First, extract potential card names from bold markdown
-      const boldPattern = /\*\*([^*]+?)\*\*/g;
-      const boldMatches: string[] = [];
-      let match;
-      while ((match = boldPattern.exec(text)) !== null) {
-        const extracted = match[1].trim();
-        // Filter out obvious non-card text (too long, contains special patterns)
-        if (
-          extracted.length > 2 &&
-          extracted.length < 100 &&
-          !extracted.includes("\\n") &&
-          !extracted.includes("+") &&
-          !extracted.startsWith("s ") &&
-          !extracted.startsWith("user") &&
-          !extracted.includes("playstyle") &&
-          !extracted.includes("archetype")
-        ) {
-          boldMatches.push(extracted);
-        }
-      }
+      return new Response(JSON.stringify(payload), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
-      // For explanation questions, also check deck cards
-      const searchTargets = isExplanation
-        ? [
-            ...finalCandidates,
-            ...allDeckCards.map((c) => ({ name: c.name, id: c.id })),
-          ]
-        : finalCandidates;
+    // Phase 2: Validate parsed JSON with Zod
+    let validated;
+    try {
+      validated = validateRecommender(parsed);
+    } catch (e) {
+      // If validation fails, try to sanitize recommendations
+      const recs = (parsed as any).recommendations || [];
+      const allowedIds = new Set(cardDocs.map((c) => String(c.id)));
+      const filteredRecs = recs.filter((r: any) =>
+        allowedIds.has(String(r.cardId)),
+      );
+      parsed.recommendations = filteredRecs;
 
-      // Match extracted names against actual card names (case-insensitive)
-      // This ensures we only return valid card names
-      for (const extractedName of boldMatches) {
-        // Clean up extracted name (remove extra whitespace, handle commas)
-        const cleanedName = extractedName.trim();
+      try {
+        validated = validateRecommender(parsed);
+      } catch (err2) {
+        const payload = {
+          schemaVersion: "1.0.0",
+          confidence: 0.0,
+          explainTo: explainTo,
+          summary: "Model produced invalid recommendation schema after sanitization.",
+          recommendations: [],
+          ui: [
+            {
+              id: "err2",
+              type: "text",
+              content: "The recommender returned an invalid schema. Please retry.",
+            },
+          ],
+          meta: {
+            originalParseError: (e as any).toString(),
+            secondError: (err2 as any).toString(),
+          },
+        };
 
-        // Try exact match first
-        const exactMatch = searchTargets.find(
-          (c) => c.name.toLowerCase() === cleanedName.toLowerCase(),
-        );
-        if (exactMatch) {
-          cardNames.add(exactMatch.name); // Use exact name
-          continue;
-        }
-
-        // Handle cards with commas (e.g., "Goldd, Wu-Lord of Dark World" might be extracted as one name)
-        // Check if extracted name contains a comma and try matching each part
-        if (cleanedName.includes(",")) {
-          const parts = cleanedName
-            .split(",")
-            .map((p) => p.trim())
-            .filter((p) => p.length > 0);
-          for (const part of parts) {
-            const partMatch = searchTargets.find(
-              (c) =>
-                c.name.toLowerCase().includes(part.toLowerCase()) ||
-                part
-                  .toLowerCase()
-                  .includes(c.name.toLowerCase().split(",")[0].toLowerCase()),
-            );
-            if (partMatch) {
-              cardNames.add(partMatch.name);
-              break; // Only add one match per extracted name
-            }
-          }
-          continue;
-        }
-
-        // Try partial match (card name contains extracted text or vice versa)
-        const partialMatch = searchTargets.find((c) => {
-          const candidateLower = c.name.toLowerCase();
-          const extractedLower = cleanedName.toLowerCase();
-          // Check if either name contains the other (but require at least 3 chars to avoid false matches)
-          if (extractedLower.length < 3) return false;
-          return (
-            candidateLower.includes(extractedLower) ||
-            extractedLower.includes(candidateLower)
-          );
+        return new Response(JSON.stringify(payload), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
-        if (partialMatch) {
-          cardNames.add(partialMatch.name); // Use exact name
-        }
       }
-
-      // Also check if any card names appear in the text (even without bold)
-      // This catches cases where LLM mentions cards but forgets bold formatting
-      // But be more strict - only match if it's clearly a card mention
-      for (const card of searchTargets) {
-        const cardName = card.name;
-        if (cardNames.has(cardName)) continue; // Already matched
-
-        // Check if card name appears in text (case-insensitive, whole word)
-        const escapedName = cardName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-        const nameRegex = new RegExp(`\\b${escapedName}\\b`, "gi");
-        if (nameRegex.test(text)) {
-          // For explanation questions, be more lenient - any mention is valid
-          // For discovery questions, only add if it's mentioned in a context that suggests it's a recommendation
-          if (isExplanation) {
-            cardNames.add(cardName);
-          } else {
-            const contextPatterns = [
-              new RegExp(
-                `(?:recommend|suggest|include|add|use|try|consider|think|believe).{0,100}${escapedName}`,
-                "gi",
-              ),
-              new RegExp(
-                `${escapedName}.{0,50}(?:is|can|has|provides|offers|allows|enables)`,
-                "gi",
-              ),
-              new RegExp(
-                `(?:card|monster|spell|trap).{0,50}${escapedName}`,
-                "gi",
-              ),
-            ];
-
-            const hasGoodContext = contextPatterns.some((pattern) =>
-              pattern.test(text),
-            );
-            if (hasGoodContext) {
-              cardNames.add(cardName);
-            }
-          }
-        }
-      }
-
-      console.log(
-        `🔍 Extracted ${boldMatches.length} bold matches, matched ${cardNames.size} to cards`,
-      );
-      if (cardNames.size > 0) {
-        console.log(`   Matched cards: ${Array.from(cardNames).join(", ")}`);
-      }
-      return Array.from(cardNames);
-    };
-
-    const mentionedCardNames = extractCardNames(sanitizedContent);
-    console.log(
-      `🎯 Extracted ${mentionedCardNames.length} card names from LLM response:`,
-      mentionedCardNames,
-    );
-
-    // For explanation questions, combine cards from response and question
-    // Also try to match question card names against deck cards
-    const allMentionedCardNames: string[] = [...mentionedCardNames];
-    if (isExplanation && questionCardNames.length > 0) {
-      // Try to match question card names to deck cards or database
-      for (const qCardName of questionCardNames) {
-        // Check if it's in the deck
-        const deckMatch = allDeckCards.find(
-          (c) =>
-            c.name.toLowerCase() === qCardName.toLowerCase() ||
-            c.name.toLowerCase().includes(qCardName.toLowerCase()) ||
-            qCardName.toLowerCase().includes(c.name.toLowerCase()),
-        );
-        if (deckMatch && !allMentionedCardNames.includes(deckMatch.name)) {
-          allMentionedCardNames.push(deckMatch.name);
-        }
-      }
-      console.log(
-        `📋 Combined ${allMentionedCardNames.length} card names (${mentionedCardNames.length} from response, ${questionCardNames.length} from question)`,
-      );
     }
 
-    // Validate and fetch card data
-    const validatedCards: Card[] = [];
-    if (allMentionedCardNames.length > 0) {
-      console.log(
-        `🔍 Validating ${allMentionedCardNames.length} mentioned card names...`,
-      );
-      const batchSize = 20;
-      for (let i = 0; i < allMentionedCardNames.length; i += batchSize) {
-        const batch = allMentionedCardNames.slice(i, i + batchSize);
-        console.log(`  Batch ${Math.floor(i / batchSize) + 1}:`, batch);
+    // Phase 2: Server-side sanitization and validation
+    const allowedIds = new Set(prioritizedCardDocs.map((c) => String(c.id)));
+    const sanitizedRecs = (validated as any).recommendations.map((r: any) => {
+      const idStr = String(r.cardId);
 
-        // Try exact match first (select only columns that exist in database)
-        const { data: exactMatches } = await supabase
-          .from("cards")
-          .select(
-            "id, name, type, desc, level, race, attribute, archetype, atk, def, ban_tcg",
-          )
-          .in("name", batch)
-          .limit(batchSize * 2);
-
-        if (exactMatches && exactMatches.length > 0) {
-          exactMatches.forEach((card: any) => {
-            validatedCards.push({
-              ...card,
-              archetype: getArchetypeNameServer(card),
-              // Add client-side fields that don't exist in DB
-              misc_info: [{ md_rarity: "" }],
-              card_images: [
-                {
-                  id: card.id,
-                  image_url: `https://images.ygoprodeck.com/images/cards/${card.id}.jpg`,
-                  image_url_small: `https://images.ygoprodeck.com/images/cards_small/${card.id}.jpg`,
-                },
-              ],
-              card_sets: [],
-              card_prices: [],
-            });
-          });
-          console.log(`  ✅ Found ${exactMatches.length} exact matches`);
+      // Mark banned according to cardDocs ban fields if present
+      const cardDoc = prioritizedCardDocs.find((c) => String(c.id) === idStr);
+      if (cardDoc) {
+        if (
+          (format === "TCG" &&
+            (cardDoc.ban_tcg || "").toLowerCase() === "banned") ||
+          (format === "MASTER_DUEL" && !!cardDoc.master_duel_banned)
+        ) {
+          r.banned = true;
+          // If banned, convert action to note to avoid "add" suggestions
+          if (r.action === "add") r.action = "note";
         }
-
-        // If not all found, try case-insensitive search
-        const foundNames = new Set(
-          exactMatches?.map((c: any) => c.name.toLowerCase()) || [],
-        );
-        const notFound = batch.filter(
-          (name) => !foundNames.has(name.toLowerCase()),
-        );
-
-        if (notFound.length > 0) {
-          console.log(
-            `  🔍 Trying case-insensitive search for ${notFound.length} cards...`,
-          );
-          const nameConditions = notFound
-            .map((name) => {
-              const escapedName = name.replace(/[%_\\]/g, "\\$&");
-              return `name.ilike.${escapedName}`;
-            })
-            .join(",");
-
-          const { data: fuzzyMatches } = await supabase
-            .from("cards")
-            .select(
-              "id, name, type, desc, level, race, attribute, archetype, atk, def, ban_tcg",
-            )
-            .or(nameConditions)
-            .limit(batchSize * 2);
-
-          if (fuzzyMatches) {
-            fuzzyMatches.forEach((card: any) => {
-              // Avoid duplicates
-              if (!validatedCards.some((c) => c.id === card.id)) {
-                validatedCards.push({
-                  ...card,
-                  archetype: getArchetypeNameServer(card),
-                  // Add client-side fields that don't exist in DB
-                  misc_info: [{ md_rarity: "" }],
-                  card_images: [
-                    {
-                      id: card.id,
-                      image_url: `https://images.ygoprodeck.com/images/cards/${card.id}.jpg`,
-                      image_url_small: `https://images.ygoprodeck.com/images/cards_small/${card.id}.jpg`,
-                    },
-                  ],
-                  card_sets: [],
-                  card_prices: [],
-                });
-              }
-            });
-            console.log(`  ✅ Found ${fuzzyMatches.length} fuzzy matches`);
-          }
-        }
+        r.cardName = cardDoc.name;
+      } else {
+        // If cardDoc not found, force-out this recommendation
+        r._serverRejected = true;
       }
-      console.log(`📊 Total validated cards: ${validatedCards.length}`);
+
+      return r;
+    }).filter((r: any) => !r._serverRejected);
+
+    // Phase 2: Compute confidence gating for UI
+    const confidence = (validated as any).confidence ?? 0.0;
+    const actions: any = {};
+
+    if (confidence >= APPLY_CONF_THRESHOLD) {
+      actions["applyAllowed"] = true;
+    } else if (confidence <= INVESTIGATE_THRESHOLD) {
+      actions["applyAllowed"] = false;
+      actions["investigateRecommended"] = true;
     } else {
-      console.warn(
-        "⚠️ No card names extracted from LLM response. LLM may not have mentioned specific cards.",
-      );
-      console.warn("   Response preview:", sanitizedContent.substring(0, 200));
+      actions["applyAllowed"] = false;
+      actions["investigateRecommended"] = false;
     }
 
-    // Calculate token usage (more accurate estimation)
+    // Phase 2: Calculate token usage
     const systemTokens = Math.ceil(systemPrompt.length / 4);
     const userTokens = Math.ceil(userPrompt.length / 4);
     const inputTokens = systemTokens + userTokens;
-    const outputTokens = Math.ceil(rawContent.length / 4);
+    const outputTokens = Math.ceil(llmResp.content.length / 4);
     const totalTokens = inputTokens + outputTokens;
     const estimatedCostUSD = (totalTokens / 1000000) * 0.27;
 
@@ -1790,24 +2020,52 @@ IMPORTANT FOR EXPLANATION QUESTIONS:
       `Token usage: ${inputTokens} input + ${outputTokens} output = ${totalTokens} total (target: < 1500)`,
     );
 
-    const durationMs = Date.now() - startTime;
-    const responseVersion = "1.0";
+    // Phase 2: Build final payload with fingerprinting
+    const fingerprint = await fingerprintDeck(
+      current_deck || {},
+      explainTo || "novice",
+      userPrefs || {},
+    );
+
+    const finalPayload = {
+      schemaVersion: (validated as any).schemaVersion || "1.0.0",
+      confidence,
+      explainTo: (validated as any).explainTo,
+      summary: (validated as any).summary || "",
+      recommendations: sanitizedRecs,
+      ui: (validated as any).ui || [
+        {
+          id: "summary",
+          type: "text",
+          content: (validated as any).summary || "See recommendations.",
+        },
+      ],
+      actions,
+      meta: {
+        usedCardIds: prioritizedCardDocs.map((c) => c.id),
+        deckFingerprint: fingerprint,
+        recommendation_id: recommendationId,
+        tokens_used: totalTokens,
+        cost_usd: estimatedCostUSD,
+      },
+    };
 
     // Log successful recommendation
+    const durationMs = Date.now() - startTime;
     const { error: logError } = await supabase
       .from("recommendation_logs")
       .insert({
         recommendation_id: recommendationId,
         user_id: user.id,
-        question,
+        question: question || "",
         format,
-        recommendation_type,
+        recommendation_type: recommendation_type || "personalized",
         use_hybrid_search,
-        candidate_count: candidateCards.length,
-        final_candidate_count: finalCandidates.length,
+        candidate_count: finalCandidates.length,
+        final_candidate_count: cardDocs.length,
         tokens_used: totalTokens,
         cost_usd: estimatedCostUSD,
-        response_version: responseVersion,
+        response_version: "2.0", // Phase 2 version
       });
     if (logError) {
       console.error("Failed to log recommendation:", logError);
@@ -1820,85 +2078,41 @@ IMPORTANT FOR EXPLANATION QUESTIONS:
         timestamp: new Date().toISOString(),
         recommendation_id: recommendationId,
         user_id: user.id,
-        question: question.substring(0, 100),
-        candidate_count: candidateCards.length,
-        final_candidate_count: finalCandidates.length,
+        question: (question || "").substring(0, 100),
+        candidate_count: finalCandidates.length,
+        final_candidate_count: cardDocs.length,
         tokens_used: totalTokens,
         cost_usd: estimatedCostUSD,
-        response_version: responseVersion,
+        response_version: "2.0",
         duration_ms: durationMs,
-        intent_classified: intentClassified,
+        confidence,
       }),
     );
 
-    // Build response with structured JSON data if available
-    type ResponseData = {
-      answer: string;
-      validated_cards: typeof validatedCards;
-      recommendation_id: string;
-      response_version: string;
-      estimated_cost: {
-        tokens_used: number;
-        cost_usd: number;
-      };
-      recommended_cards?: ParsedResponse["recommended_cards"];
-      alternative_considerations?: ParsedResponse["alternative_considerations"];
-      meta?: ParsedResponse["meta"];
-    };
-
-    const responseData: ResponseData = {
-      answer: sanitizedContent,
-      validated_cards: validatedCards,
-      recommendation_id: recommendationId,
-      response_version: responseVersion,
-      estimated_cost: {
-        tokens_used: totalTokens,
-        cost_usd: estimatedCostUSD,
-      },
-    };
-
-    // Include structured JSON data if available
-    if (parsedResponse?.recommended_cards) {
-      responseData.recommended_cards = parsedResponse.recommended_cards;
-    }
-    if (parsedResponse?.alternative_considerations) {
-      responseData.alternative_considerations =
-        parsedResponse.alternative_considerations;
-    }
-    if (parsedResponse?.meta) {
-      responseData.meta = parsedResponse.meta;
-    }
-
-    return new Response(JSON.stringify(responseData), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    return new Response(JSON.stringify(finalPayload), {
       status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (error: unknown) {
-    // Log error
-    const recommendationId = crypto.randomUUID();
-    const errorMessage =
-      error instanceof Error ? error.message : "Unknown error";
+  } catch (err: any) {
+    console.error("recommendation-agent error:", err);
+    const payload = {
+      schemaVersion: "1.0.0",
+      confidence: 0.0,
+      explainTo: "novice",
+      summary: "Internal server error generating recommendations.",
+      recommendations: [],
+      ui: [
+        {
+          id: "err_generic",
+          type: "text",
+          content: `Internal error: ${(err && (err.message || String(err))) || "unknown"}`,
+        },
+      ],
+    };
 
-    console.error(
-      JSON.stringify({
-        level: "error",
-        timestamp: new Date().toISOString(),
-        recommendation_id: recommendationId,
-        error_message: errorMessage,
-        error_type: "exception",
-      }),
-    );
-
-    return new Response(
-      JSON.stringify({
-        error: errorMessage,
-        recommendation_id: recommendationId,
-        response_version: "1.0",
-      }),
-      {
+    return new Response(JSON.stringify(payload), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
-      },
-    );
+    });
   }
 });

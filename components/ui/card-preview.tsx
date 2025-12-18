@@ -19,7 +19,7 @@ export function CardPreview({ card, children, banStatus }: CardPreviewProps) {
         <Tooltip.Trigger asChild>{children}</Tooltip.Trigger>
         <Tooltip.Portal>
           <Tooltip.Content
-            className="z-50 w-[480px] max-w-[calc(100vw-3rem)] rounded-lg border border-cyan-500/30 bg-slate-900/95 backdrop-blur-md shadow-xl p-4"
+            className="z-50 w-[480px] max-w-[calc(100vw-3rem)] rounded-xl border border-white/20 bg-white/10 backdrop-blur-xl shadow-lg p-4"
             side="right"
             sideOffset={10}
             align="start"
@@ -51,14 +51,14 @@ export function CardPreview({ card, children, banStatus }: CardPreviewProps) {
                   <div className="flex flex-wrap gap-1 mt-2">
                     <Badge
                       variant="outline"
-                      className="text-xs border-cyan-500/50 text-cyan-300"
+                      className="text-xs border-white/20 text-white/80"
                     >
                       {card.type}
                     </Badge>
                     {card.attribute && (
                       <Badge
                         variant="outline"
-                        className="text-xs border-cyan-500/50 text-cyan-300"
+                        className="text-xs border-white/20 text-white/80"
                       >
                         {card.attribute}
                       </Badge>
@@ -66,7 +66,7 @@ export function CardPreview({ card, children, banStatus }: CardPreviewProps) {
                     {card.race && (
                       <Badge
                         variant="outline"
-                        className="text-xs border-cyan-500/50 text-cyan-300"
+                        className="text-xs border-white/20 text-white/80"
                       >
                         {card.race}
                       </Badge>
@@ -97,16 +97,16 @@ export function CardPreview({ card, children, banStatus }: CardPreviewProps) {
                   card.type !== "Trap Card" && (
                     <div className="space-y-1">
                       {card.level !== undefined && (
-                        <p className="text-sm text-slate-200">
-                          <span className="font-medium text-cyan-300">
+                        <p className="text-sm text-white/90">
+                          <span className="font-medium text-white/80">
                             Level:
                           </span>{" "}
                           {card.level}
                         </p>
                       )}
                       {card.atk !== undefined && (
-                        <p className="text-sm text-slate-200">
-                          <span className="font-medium text-cyan-300">
+                        <p className="text-sm text-white/90">
+                          <span className="font-medium text-white/80">
                             ATK:
                           </span>{" "}
                           {card.atk}
@@ -114,7 +114,7 @@ export function CardPreview({ card, children, banStatus }: CardPreviewProps) {
                             <span>
                               {" "}
                               /{" "}
-                              <span className="font-medium text-cyan-300">
+                              <span className="font-medium text-white/80">
                                 DEF:
                               </span>{" "}
                               {card.def}
@@ -129,8 +129,8 @@ export function CardPreview({ card, children, banStatus }: CardPreviewProps) {
                 {(() => {
                   const archetypeName = getArchetypeName(card);
                   return archetypeName ? (
-                    <p className="text-sm text-slate-200">
-                      <span className="font-medium text-cyan-300">
+                    <p className="text-sm text-white/90">
+                      <span className="font-medium text-white/80">
                         Archetype:
                       </span>{" "}
                       {archetypeName}
@@ -139,13 +139,13 @@ export function CardPreview({ card, children, banStatus }: CardPreviewProps) {
                 })()}
 
                 {/* Description */}
-                <div className="text-sm text-slate-300 leading-relaxed">
+                <div className="text-sm text-white/80 leading-relaxed">
                   {card.desc}
                 </div>
               </div>
             </div>
 
-            <Tooltip.Arrow className="fill-cyan-500/30" />
+            <Tooltip.Arrow className="fill-white/20" />
           </Tooltip.Content>
         </Tooltip.Portal>
       </Tooltip.Root>

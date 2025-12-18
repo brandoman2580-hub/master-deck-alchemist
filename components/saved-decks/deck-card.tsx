@@ -53,7 +53,7 @@ export function DeckCard({
     : deck.name;
 
   return (
-    <Card className="hover:border-accent-cyan/25 transition-colors">
+    <Card className="hover:border-white/30 transition-colors">
       <CardHeader>
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -66,7 +66,7 @@ export function DeckCard({
                     </CardTitle>
                   </TooltipTrigger>
                   <TooltipContent
-                    className="bg-gradient-to-b from-cyan-400/20 via-cyan-500/15 to-cyan-600/5 backdrop-blur-md border border-cyan-500/30 text-slate-50 shadow-[0_0_20px_rgba(56,189,248,0.25)] max-w-xs"
+                    className="bg-white/10 border border-white/20 backdrop-blur-xl text-white shadow-lg max-w-xs"
                     side="top"
                   >
                     <p className="font-medium">{deck.name}</p>
@@ -80,7 +80,7 @@ export function DeckCard({
             )}
             <Badge
               variant="secondary"
-              className="text-xs font-medium pointer-events-none border bg-accent-cyan/20 border-accent-cyan/30 text-accent-cyan/80 whitespace-nowrap font-display"
+              className="text-xs font-medium pointer-events-none whitespace-nowrap font-display"
             >
               {deck.mode}
             </Badge>
@@ -91,8 +91,8 @@ export function DeckCard({
             onClick={() => onTogglePin(deck.id, !deck.isPinned)}
             className={`h-8 w-8 flex-shrink-0 ${
               deck.isPinned
-                ? "text-accent-cyan hover:text-accent-cyan/90"
-                : "text-muted-50/70 hover:text-accent-cyan"
+                ? "text-white hover:text-white/80"
+                : "text-white/60 hover:text-white/80"
             }`}
             aria-pressed={deck.isPinned}
             aria-label={deck.isPinned ? "Unpin deck" : "Pin deck"}
@@ -100,29 +100,29 @@ export function DeckCard({
             <Pin className={`h-4 w-4 ${deck.isPinned ? "fill-current" : ""}`} />
           </Button>
         </div>
-        <CardDescription className="flex items-center text-muted-50">
-          <Clock className="h-3 w-3 mr-1 text-accent-cyan" />
+        <CardDescription className="flex items-center text-white/70">
+          <Clock className="h-3 w-3 mr-1 text-white/60" />
           Last updated:{" "}
           {deck.updated_at ? formatDate(deck.updated_at) : "Unknown"}
         </CardDescription>
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-3 gap-2 text-sm">
-          <div className="bg-cyb-800/40 border border-accent-cyan/18 p-2 rounded-md text-center">
-            <p className="text-xs text-muted-50">Main</p>
-            <p className="font-bold text-accent-cyan/90 font-display">
+          <div className="bg-white/5 border border-white/10 p-2 rounded-md text-center backdrop-blur-sm">
+            <p className="text-xs text-white/70">Main</p>
+            <p className="font-bold text-white font-display">
               {deck.mainDeck.length}
             </p>
           </div>
-          <div className="bg-cyb-800/40 border border-accent-cyan/18 p-2 rounded-md text-center">
-            <p className="text-xs text-muted-50">Extra</p>
-            <p className="font-bold text-accent-cyan/90 font-display">
+          <div className="bg-white/5 border border-white/10 p-2 rounded-md text-center backdrop-blur-sm">
+            <p className="text-xs text-white/70">Extra</p>
+            <p className="font-bold text-white font-display">
               {deck.extraDeck.length}
             </p>
           </div>
-          <div className="bg-cyb-800/40 border border-accent-cyan/18 p-2 rounded-md text-center">
-            <p className="text-xs text-muted-50">Side</p>
-            <p className="font-bold text-accent-cyan/90 font-display">
+          <div className="bg-white/5 border border-white/10 p-2 rounded-md text-center backdrop-blur-sm">
+            <p className="text-xs text-white/70">Side</p>
+            <p className="font-bold text-white font-display">
               {deck.sideDeck.length}
             </p>
           </div>
@@ -150,13 +150,13 @@ export function DeckCard({
                 <AlertDialogTitle className="text-white font-display">
                   Delete Deck
                 </AlertDialogTitle>
-                <AlertDialogDescription className="text-muted-50">
+                <AlertDialogDescription className="text-white/80">
                   Are you sure you want to delete {deck.name}? This action
                   cannot be undone.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel className="text-slate-300 hover:text-slate-50 border-cyan-500/30 hover:border-cyan-500/50 bg-slate-800/40 hover:bg-slate-800/60">
+                <AlertDialogCancel>
                   Cancel
                 </AlertDialogCancel>
                 <AlertDialogAction

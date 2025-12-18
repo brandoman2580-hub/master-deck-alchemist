@@ -3,7 +3,6 @@ import { useState } from "react";
 import { useActionState } from "react";
 import { signup } from "../../app/login/actions";
 import { SignupFormState } from "../../types/types";
-import CutCornerWrapper from "../cut-corner-wrapper";
 
 const initialState: SignupFormState = { success: false };
 
@@ -63,15 +62,7 @@ export function SignupForm({ onBack }: { onBack: () => void }) {
           Please check your inbox and follow the instructions to confirm your
           account.
         </div>
-        <CutCornerWrapper
-          size="sm"
-          padding="0"
-          className="w-full"
-          style={{
-            ["--cut-corner-stroke" as any]: "rgba(20,239,255,0.38)",
-            ["--cut-corner-fill" as any]: "transparent",
-          }}
-        >
+        <div className="w-full bg-white/5 border border-white/10 backdrop-blur-xl shadow-lg rounded-lg">
           <button
             type="button"
             onClick={onBack}
@@ -79,7 +70,7 @@ export function SignupForm({ onBack }: { onBack: () => void }) {
           >
             Back to login
           </button>
-        </CutCornerWrapper>
+        </div>
       </div>
     );
   }
@@ -93,15 +84,7 @@ export function SignupForm({ onBack }: { onBack: () => void }) {
         >
           Email
         </label>
-        <CutCornerWrapper
-          size="sm"
-          padding="0"
-          className="w-full"
-          style={{
-            ["--cut-corner-stroke" as any]: "rgba(20,239,255,0.38)",
-            ["--cut-corner-fill" as any]: "transparent",
-          }}
-        >
+        <div className="w-full bg-white/5 border border-white/10 backdrop-blur-xl shadow-lg rounded-lg">
           <input
             id="signup-email"
             name="email"
@@ -111,9 +94,9 @@ export function SignupForm({ onBack }: { onBack: () => void }) {
             onChange={(e) => setEmail(e.target.value)}
             onBlur={() => setTouched((t) => ({ ...t, email: true }))}
             required
-            className="w-full px-3 py-2 border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 shadow-sm focus:outline-none"
           />
-        </CutCornerWrapper>
+        </div>
         {showEmailFeedback && (
           <div className="text-xs text-red-600 mt-1">
             Please enter a valid email address.
@@ -127,15 +110,7 @@ export function SignupForm({ onBack }: { onBack: () => void }) {
         >
           Password
         </label>
-        <CutCornerWrapper
-          size="sm"
-          padding="0"
-          className="w-full"
-          style={{
-            ["--cut-corner-stroke" as any]: "rgba(20,239,255,0.38)",
-            ["--cut-corner-fill" as any]: "transparent",
-          }}
-        >
+        <div className="w-full bg-white/5 border border-white/10 backdrop-blur-xl shadow-lg rounded-lg">
           <input
             id="signup-password"
             name="password"
@@ -145,9 +120,9 @@ export function SignupForm({ onBack }: { onBack: () => void }) {
             onChange={(e) => setPassword(e.target.value)}
             onBlur={() => setTouched((t) => ({ ...t, password: true }))}
             required
-            className="w-full px-3 py-2 border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 shadow-sm focus:outline-none"
           />
-        </CutCornerWrapper>
+        </div>
         <ul className="mt-2 space-y-0.5 text-xs">
           {passwordReqs.map((req, i) => (
             <li
@@ -171,15 +146,7 @@ export function SignupForm({ onBack }: { onBack: () => void }) {
         >
           Confirm Password
         </label>
-        <CutCornerWrapper
-          size="sm"
-          padding="0"
-          className="w-full"
-          style={{
-            ["--cut-corner-stroke" as any]: "rgba(20,239,255,0.38)",
-            ["--cut-corner-fill" as any]: "transparent",
-          }}
-        >
+        <div className="w-full bg-white/5 border border-white/10 backdrop-blur-xl shadow-lg rounded-lg">
           <input
             id="signup-confirm"
             name="confirm"
@@ -189,9 +156,9 @@ export function SignupForm({ onBack }: { onBack: () => void }) {
             onChange={(e) => setConfirm(e.target.value)}
             onBlur={() => setTouched((t) => ({ ...t, confirm: true }))}
             required
-            className="w-full px-3 py-2 border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 shadow-sm focus:outline-none"
           />
-        </CutCornerWrapper>
+        </div>
         {showConfirmFeedback && (
           <div className="text-xs text-red-600 mt-1">
             Passwords do not match.
@@ -201,15 +168,7 @@ export function SignupForm({ onBack }: { onBack: () => void }) {
       {formState.error && (
         <div className="text-red-600 text-sm">{formState.error}</div>
       )}
-      <CutCornerWrapper
-        size="sm"
-        padding="0"
-        className="w-full"
-        style={{
-          ["--cut-corner-stroke" as any]: "rgba(20,239,255,0.38)",
-          ["--cut-corner-fill" as any]: "transparent",
-        }}
-      >
+      <div className="w-full bg-white/5 border border-white/10 backdrop-blur-xl shadow-lg rounded-lg">
         <button
           type="submit"
           disabled={!canSignUp}
@@ -221,7 +180,7 @@ export function SignupForm({ onBack }: { onBack: () => void }) {
         >
           {isPending ? "Signing up..." : "Sign up"}
         </button>
-      </CutCornerWrapper>
+      </div>
       <button
         type="button"
         onClick={onBack}

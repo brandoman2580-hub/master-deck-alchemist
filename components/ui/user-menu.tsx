@@ -6,7 +6,6 @@ import { createPortal } from "react-dom";
 import { Button } from "./button";
 import { HelpCircle, LogOut } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
-import CutCornerWrapper from "../cut-corner-wrapper";
 
 function getInitials(
   user: { user_metadata?: { name?: string }; email?: string } | null,
@@ -99,26 +98,14 @@ export function UserMenu() {
 
   return (
     <div className="relative" ref={dropdownRef}>
-      <CutCornerWrapper
-        size="sm"
-        hoverHighlight
-        padding="0"
-        className="inline-block"
-        style={{
-          ["--cut-corner-stroke" as any]: "rgba(20,239,255,0.38)",
-          ["--cut-corner-stroke-hover" as any]: "rgba(20,239,255,0.52)",
-          ["--cut-corner-fill" as any]: "transparent",
-        }}
+      <button
+        ref={buttonRef}
+        className="w-10 h-10 rounded-lg bg-white/10 text-white font-bold flex items-center justify-center hover:bg-white/15 border border-white/20 transition-colors"
+        aria-label="User menu"
+        onClick={() => setDropdownOpen((v) => !v)}
       >
-        <button
-          ref={buttonRef}
-          className="w-10 h-10 bg-cyan-500/20 text-cyan-400 font-bold flex items-center justify-center hover:bg-cyan-500/30 transition-colors"
-          aria-label="User menu"
-          onClick={() => setDropdownOpen((v) => !v)}
-        >
-          {getInitials(user)}
-        </button>
-      </CutCornerWrapper>
+        {getInitials(user)}
+      </button>
       {mounted &&
         dropdownOpen &&
         createPortal(
@@ -130,36 +117,24 @@ export function UserMenu() {
               right: `${dropdownPosition.right}px`,
             }}
           >
-            <CutCornerWrapper
-              size="sm"
-              padding="0.5rem 0"
-              style={{
-                ["--cut-corner-stroke" as any]: "rgba(20,239,255,0.38)",
-                ["--cut-corner-fill" as any]: "rgba(15, 23, 42, 0.85)",
-                background: "rgba(15, 23, 42, 0.85)",
-                backdropFilter: "blur(6px) saturate(120%)",
-                WebkitBackdropFilter: "blur(6px) saturate(120%)",
-              }}
-            >
-              <div className="py-2">
-                <Button
-                  variant="ghost"
-                  className="w-full justify-start text-slate-300 hover:text-cyan-400 cursor-not-allowed"
-                  startIcon={<HelpCircle className="mr-2" />}
-                  disabled
-                >
-                  Help
-                </Button>
-                <Button
-                  variant="ghost"
-                  className="w-full justify-start text-slate-300 hover:text-cyan-400 hover:bg-cyan-500/10"
-                  startIcon={<LogOut className="mr-2" />}
-                  onClick={handleLogout}
-                >
-                  Logout
-                </Button>
-              </div>
-            </CutCornerWrapper>
+            <div className="rounded-xl bg-white/10 border border-white/20 backdrop-blur-xl shadow-lg py-2">
+              <Button
+                variant="ghost"
+                className="w-full justify-start text-white/80 hover:text-white hover:bg-white/10 cursor-not-allowed"
+                startIcon={<HelpCircle className="mr-2" />}
+                disabled
+              >
+                Help
+              </Button>
+              <Button
+                variant="ghost"
+                className="w-full justify-start text-white/80 hover:text-white hover:bg-white/10"
+                startIcon={<LogOut className="mr-2" />}
+                onClick={handleLogout}
+              >
+                Logout
+              </Button>
+            </div>
           </div>,
           document.body,
         )}

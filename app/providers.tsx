@@ -12,18 +12,25 @@ import { useSupabaseUserSync } from "../hooks/useSupabaseUserSync";
 export function Providers({ children }: { children: ReactNode }) {
   const setCardList = useCardStore((state) => state.setCardList);
   const setLoading = useCardStore((state) => state.setLoading);
+  const cardList = useCardStore((state) => state.cardList);
   useSupabaseUserSync();
 
   useEffect(() => {
-    // Only fetch cards once, on client
+    // Only fetch cards once, on client, if not already loaded
+    if (cardList.length > 0) {
+      return; // Cards already loaded
+    }
+
     const fetchAllCards = async () => {
       setLoading(true);
       try {
+        console.log("Fetching card pool...");
         const results = await getCardData({
           name: "",
           sort: "name",
           sortDirection: "asc",
         });
+        console.log(`Loaded ${results.length} cards into store`);
         setCardList(results);
       } catch (error) {
         console.error("Error fetching cards:", error);
@@ -32,7 +39,8 @@ export function Providers({ children }: { children: ReactNode }) {
       }
     };
     fetchAllCards();
-  }, [setCardList, setLoading]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty deps - only run once on mount
 
   return (
     <ThemeProvider
@@ -42,7 +50,7 @@ export function Providers({ children }: { children: ReactNode }) {
       disableTransitionOnChange
     >
       <DeckProvider>
-        <div className="relative z-20">
+        <div className="relative z-20 flex flex-col min-h-screen">
           <Navbar />
           <main
             id="main-content"

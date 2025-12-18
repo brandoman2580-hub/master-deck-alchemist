@@ -5,10 +5,10 @@ import { Zap } from "lucide-react";
 
 export function EmptyState() {
   return (
-    <Card className="bg-gradient-to-b from-cyan-400/20 via-cyan-500/15 to-cyan-600/5 backdrop-blur-md border border-accent-cyan/18">
+    <Card className="rounded-xl bg-white/10 border border-white/20 backdrop-blur-xl shadow-lg">
       <CardContent className="pt-12 pb-12">
-        <div className="text-center text-muted-50/70">
-          <Zap className="h-12 w-12 mx-auto mb-4 text-accent-cyan/50" />
+        <div className="text-center text-white/70">
+          <Zap className="h-12 w-12 mx-auto mb-4 text-white/50" />
           <p>Select decks and run an AI test to see results</p>
         </div>
       </CardContent>

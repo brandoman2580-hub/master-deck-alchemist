@@ -10,7 +10,6 @@ import { openLoginModal } from "../lib/helpers";
 import { useUserStore } from "../store/useUserStore";
 import { UserMenu } from "./ui/user-menu";
 import MDAIcon from "@/public/images/MDA_Logo_One.svg";
-import CutCornerWrapper from "../components/cut-corner-wrapper";
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -35,22 +34,9 @@ export default function Navbar() {
   ];
 
   return (
-    <header className="sticky top-4 z-[30]">
-      <div className="mx-8">
-        <CutCornerWrapper
-          size="md"
-          hoverHighlight
-          className="container flex h-14 items-center"
-          padding="0"
-          style={{
-            ["--cut-corner-stroke" as any]: "rgba(20,239,255,0.38)",
-            ["--cut-corner-stroke-hover" as any]: "rgba(20,239,255,0.52)",
-            ["--cut-corner-fill" as any]: "transparent",
-            backdropFilter: "blur(6px) saturate(120%)",
-            WebkitBackdropFilter: "blur(6px) saturate(120%)",
-          }}
-        >
-          <div className="flex h-14 items-center w-full px-4">
+    <header className="w-full z-[30] border-b border-white/10 bg-white/5 backdrop-blur-xl">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex h-14 items-center w-full">
             <Link
               href="/"
               className="mr-6 flex items-center space-x-0"
@@ -59,7 +45,7 @@ export default function Navbar() {
               <div className="flex items-center gap-3">
                 <MDAIcon className="w-14 h-14" aria-hidden="true" />
                 <span
-                  className="tracking-wider uppercase text-cyan-400"
+                  className="tracking-wider uppercase text-white"
                   style={{ fontFamily: "var(--font-heading)" }}
                 >
                   Master Deck Alchemist
@@ -86,7 +72,7 @@ export default function Navbar() {
                     {item.icon && <span aria-hidden="true">{item.icon}</span>}
                     <span
                       className={cn(
-                        "hidden sm:inline-block text-white",
+                        "hidden sm:inline-block",
                         pathname === item.href ? "font-medium" : "",
                       )}
                     >
@@ -105,8 +91,7 @@ export default function Navbar() {
                 <UserMenu />
               )}
             </div>
-          </div>
-        </CutCornerWrapper>
+        </div>
       </div>
     </header>
   );

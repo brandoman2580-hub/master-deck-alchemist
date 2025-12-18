@@ -1,11 +1,9 @@
-// NOTE: extracted from app/deck-builder/page.tsx
 "use client";
 
 import { useState, useEffect, useLayoutEffect, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import {
   CardHeader,
-  CardDescription,
 } from "@/components/ui/card";
 import {
   Dialog,
@@ -23,7 +21,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { InputWithClear } from "@/components/ui/input-with-clear";
-import { Download, Upload, Trash2, Edit } from "lucide-react";
+import { Download, Upload, Trash2, Edit, Undo2, Redo2 } from "lucide-react";
 import { DECK_MODES } from "@/lib/constants";
 import { DeckMode } from "@/types/types";
 import { openLoginModal } from "@/lib/helpers";
@@ -38,6 +36,10 @@ interface DeckHeaderProps {
   importDeck: (jsonData: string) => void;
   clearDeck: () => void;
   renameDeck: (name: string) => void;
+  canUndo?: boolean;
+  canRedo?: boolean;
+  onUndo?: () => void;
+  onRedo?: () => void;
 }
 
 export function DeckHeader({
@@ -50,6 +52,10 @@ export function DeckHeader({
   importDeck,
   clearDeck,
   renameDeck,
+  canUndo = false,
+  canRedo = false,
+  onUndo,
+  onRedo,
 }: DeckHeaderProps) {
   // Internal state for rename dialog and import
   const [isRenameOpen, setIsRenameOpen] = useState(false);
@@ -88,65 +94,68 @@ export function DeckHeader({
     }
   }, [deckMode, btnRefs]);
 
-  const displayName = deckName.length > 8 ? `${deckName.slice(0, 8)}...` : deckName;
-  const shouldTruncate = deckName.length > 8;
+  const displayName = deckName.length > 40 ? `${deckName.slice(0, 40)}...` : deckName;
+  const shouldTruncate = deckName.length > 40;
 
   return (
-    <CardHeader className="pb-2">
-      <div className="flex items-center justify-between w-full">
-        <div className="flex items-center gap-2">
-          {shouldTruncate ? (
-            <TooltipProvider delayDuration={100} skipDelayDuration={0}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className="text-xl font-bold text-white truncate cursor-help font-display">
-                    {displayName}
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent
-                  className="text-white shadow-[0_0_20px_rgba(56,189,248,0.25)] max-w-xs"
-                  side="top"
-                >
-                  <p className="font-medium">{deckName}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          ) : (
-            <span className="text-xl font-bold text-white font-display">
-              {displayName}
-            </span>
-          )}
-          <Dialog open={isRenameOpen} onOpenChange={setIsRenameOpen}>
-            <TooltipProvider delayDuration={100} skipDelayDuration={0}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  {!user ? (
+    <CardHeader className="pb-2 pt-0 space-y-3">
+      {/* First Row: Deck Name with Rename Button */}
+      <div className="flex items-center gap-2 w-full min-w-0">
+        {shouldTruncate ? (
+          <TooltipProvider delayDuration={100} skipDelayDuration={0}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="text-xl font-bold text-white truncate cursor-help font-display flex-1 min-w-0">
+                  {displayName}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent
+                className="max-w-xs"
+                side="top"
+              >
+                <p className="font-medium">{deckName}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        ) : (
+          <span className="text-xl font-bold text-white font-display flex-1 min-w-0">
+            {displayName}
+          </span>
+        )}
+        <Dialog open={isRenameOpen} onOpenChange={setIsRenameOpen}>
+          <TooltipProvider delayDuration={100} skipDelayDuration={0}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                {!user ? (
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    aria-label="Rename deck"
+                    onClick={openLoginModal}
+                    className="h-8 w-8 flex-shrink-0"
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                ) : (
+                  <DialogTrigger asChild>
                     <Button
                       size="icon"
                       variant="ghost"
                       aria-label="Rename deck"
-                      onClick={openLoginModal}
+                      className="h-8 w-8 flex-shrink-0"
                     >
-                      <Edit className="h-5 w-5" />
+                      <Edit className="h-4 w-4" />
                     </Button>
-                  ) : (
-                    <DialogTrigger asChild>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        aria-label="Rename deck"
-                      >
-                        <Edit className="h-5 w-5" />
-                      </Button>
-                    </DialogTrigger>
-                  )}
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Rename Deck</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            <DialogContent>
+                  </DialogTrigger>
+                )}
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Rename Deck</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          <DialogContent>
+            <div className="flex flex-col gap-2">
               <DialogHeader>
                 <DialogTitle>Rename Deck</DialogTitle>
                 <DialogDescription>
@@ -175,44 +184,48 @@ export function DeckHeader({
                   Save
                 </Button>
               </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </div>
-        <div className="flex items-center gap-2">
-          <div
-            className="relative flex w-fit bg-cyb-800/40 border border-accent-cyan/18 backdrop-blur-sm rounded-lg"
-            ref={containerRef}
-          >
-            <span
-              className="absolute top-0 bottom-0 transition-all duration-200 bg-accent-cyan/20 rounded-lg"
-              style={{ ...sliderStyle, zIndex: 0 }}
-            />
-            {DECK_MODES.map((mode) => (
-              <button
-                key={mode}
-                ref={btnRefs[mode]}
-                type="button"
-                onClick={() => {
-                  setDeckMode(mode);
-                  updateDeckMode(mode);
-                }}
-                className={`relative z-10 px-3 py-2 font-semibold transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60 font-display text-xs flex items-center justify-center gap-1 ${
-                  deckMode === mode ? "text-accent-cyan/80" : "text-muted-50"
-                }`}
-                aria-pressed={deckMode === mode}
-                style={{
-                  background: "transparent",
-                  position: "relative",
-                }}
-              >
-                {mode}
-              </button>
-            ))}
-          </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {/* Second Row: Format Toggle and Deck Actions */}
+      <div className="flex items-center justify-between w-full gap-4">
+        {/* Format Toggle */}
+        <div
+          className="relative flex w-fit bg-white/5 border border-white/10 backdrop-blur-xl rounded-lg"
+          ref={containerRef}
+        >
+          <span
+            className="absolute top-0 bottom-0 transition-all duration-200 bg-white/10 rounded-lg"
+            style={{ ...sliderStyle, zIndex: 0 }}
+          />
+          {DECK_MODES.map((mode) => (
+            <button
+              key={mode}
+              ref={btnRefs[mode]}
+              type="button"
+              onClick={() => {
+                setDeckMode(mode);
+                updateDeckMode(mode);
+              }}
+              className={`relative z-10 px-3 py-1.5 font-semibold transition-colors duration-200 focus:outline-none font-display text-xs flex items-center justify-center gap-1 ${
+                deckMode === mode ? "text-white" : "text-white/60"
+              }`}
+              aria-pressed={deckMode === mode}
+              style={{
+                background: "transparent",
+                position: "relative",
+              }}
+            >
+              {mode}
+            </button>
+          ))}
         </div>
 
+        {/* Deck Actions */}
         <TooltipProvider delayDuration={100} skipDelayDuration={0}>
-          <div className="flex gap-1">
+          <div className="flex items-center gap-1">
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -225,6 +238,7 @@ export function DeckHeader({
                       handleExportDeck();
                     }
                   }}
+                  className="h-8 w-8"
                 >
                   <Download className="h-4 w-4" />
                 </Button>
@@ -237,7 +251,7 @@ export function DeckHeader({
             {!user ? (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" onClick={openLoginModal}>
+                  <Button variant="ghost" size="icon" onClick={openLoginModal} className="h-8 w-8">
                     <Upload className="h-4 w-4" />
                   </Button>
                 </TooltipTrigger>
@@ -250,7 +264,7 @@ export function DeckHeader({
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <DialogTrigger asChild>
-                      <Button variant="ghost" size="icon">
+                      <Button variant="ghost" size="icon" className="h-8 w-8">
                         <Upload className="h-4 w-4" />
                       </Button>
                     </DialogTrigger>
@@ -305,6 +319,7 @@ export function DeckHeader({
                       clearDeck();
                     }
                   }}
+                  className="h-8 w-8"
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
@@ -313,13 +328,48 @@ export function DeckHeader({
                 <p>Clear Deck</p>
               </TooltipContent>
             </Tooltip>
+
+            {/* Undo/Redo Controls */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={onUndo}
+                  disabled={!canUndo}
+                  className={`h-8 w-8 transition-all ${
+                    canUndo ? "text-white/80 hover:text-white" : "text-white/30 opacity-30"
+                  }`}
+                >
+                  <Undo2 className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Undo (Ctrl+Z)</p>
+              </TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={onRedo}
+                  disabled={!canRedo}
+                  className={`h-8 w-8 transition-all ${
+                    canRedo ? "text-white/80 hover:text-white" : "text-white/30 opacity-30"
+                  }`}
+                >
+                  <Redo2 className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Redo (Ctrl+Shift+Z)</p>
+              </TooltipContent>
+            </Tooltip>
           </div>
         </TooltipProvider>
       </div>
-      <CardDescription className="text-muted-50">
-        Drag cards from the right panel to add them to your deck, or drag cards
-        back to the browser to remove them
-      </CardDescription>
     </CardHeader>
   );
 }

@@ -13,9 +13,9 @@ export function ErrorCard({ error, onDismiss }: ErrorCardProps) {
   if (!error) return null;
 
   return (
-    <Card className="mb-4 bg-red-500/10 border-red-500/30">
+    <Card className="mb-4 rounded-xl bg-red-500/10 border border-red-500/30 backdrop-blur-xl shadow-lg">
       <CardContent className="pt-6">
-        <div className="flex items-center gap-2 text-red-400">
+        <div className="flex items-center gap-2 text-red-300">
           <AlertCircle className="h-5 w-5" />
           <p>{error}</p>
           <Button

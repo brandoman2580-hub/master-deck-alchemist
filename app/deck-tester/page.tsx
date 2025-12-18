@@ -138,9 +138,9 @@ export default function DeckTester() {
       : 0;
 
   return (
-    <div className="min-h-screen bg-cyb-900 px-8 pt-8 pb-10 relative">
+    <div className="min-h-screen bg-transparent px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8 pb-8 sm:pb-10 relative">
       <div className="max-w-7xl mx-auto relative z-10">
-        <div className="flex flex-col md:flex-row gap-8">
+        <div className="flex flex-col md:flex-row gap-4 sm:gap-6 lg:gap-8">
           {/* ==== Filter Panel ==== */}
           <TestSetupPanel
             onRunTest={handleRunTest}

@@ -42,3 +42,68 @@ entrypoint = "./functions/sync-card-pool/index.ts"
 # Specifies static files to be bundled with the function. Supports glob patterns.
 # For example, if you want to serve static HTML pages in your function:
 # static_files = [ "./functions/sync-card-pool/*.html" ]
+[functions.backfill-card-ai-profiles]
+enabled = true
+verify_jwt = true
+import_map = "./functions/backfill-card-ai-profiles/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/backfill-card-ai-profiles/index.ts"
+# Specifies static files to be bundled with the function. Supports glob patterns.
+# For example, if you want to serve static HTML pages in your function:
+# static_files = [ "./functions/backfill-card-ai-profiles/*.html" ]
+
+[functions.backfill-card-embeddings]
+enabled = true
+verify_jwt = true
+import_map = "./functions/backfill-card-embeddings/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/backfill-card-embeddings/index.ts"
+# Specifies static files to be bundled with the function. Supports glob patterns.
+# For example, if you want to serve static HTML pages in your function:
+# static_files = [ "./functions/backfill-card-embeddings/*.html" ]
+
+[functions.recommend-deck]
+enabled = true
+verify_jwt = true
+import_map = "./functions/recommend-deck/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/recommend-deck/index.ts"
+# Specifies static files to be bundled with the function. Supports glob patterns.
+# For example, if you want to serve static HTML pages in your function:
+# static_files = [ "./functions/recommend-deck/*.html" ]
+
+[functions.embed-cron]
+enabled = true
+verify_jwt = true
+import_map = "./functions/embed-cron/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/embed-cron/index.ts"
+# Specifies static files to be bundled with the function. Supports glob patterns.
+# For example, if you want to serve static HTML pages in your function:
+# static_files = [ "./functions/embed-cron/*.html" ]
+
+[functions.recommend-cards]
+enabled = true
+verify_jwt = true
+import_map = "./functions/recommend-cards/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/recommend-cards/index.ts"
+# Specifies static files to be bundled with the function. Supports glob patterns.
+# For example, if you want to serve static HTML pages in your function:
+# static_files = [ "./functions/recommend-cards/*.html" ]
+
+[functions.stream-recommendations]
+enabled = true
+verify_jwt = true
+import_map = "./functions/stream-recommendations/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/stream-recommendations/index.ts"
+# Specifies static files to be bundled with the function. Supports glob patterns.
+# For example, if you want to serve static HTML pages in your function:
+# static_files = [ "./functions/stream-recommendations/*.html" ]

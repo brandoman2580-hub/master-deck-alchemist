@@ -18,7 +18,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import CutCornerWrapper from "@/components/cut-corner-wrapper";
 import { DECK_MODES } from "@/lib/constants";
 import { DeckType } from "@/types/types";
 import {
@@ -151,60 +150,50 @@ export function TestSetupPanel({
         <CardTitle className="text-white font-display tracking-wider">
           AI TESTING SETUP
         </CardTitle>
-        <CardDescription className="text-muted-50">
+        <CardDescription className="text-white/70">
           Pick format, decks and test type for AI-powered analysis.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Mode Buttons */}
         <div className="flex items-center gap-2">
-          <CutCornerWrapper
-            size="sm"
-            padding="0"
-            className="relative flex w-fit"
-            style={{
-              ["--cut-corner-stroke" as any]: "rgba(20,239,255,0.38)",
-              ["--cut-corner-fill" as any]: "transparent",
-            }}
+          <div
+            ref={containerRef}
+            className="relative flex w-fit bg-white/5 border border-white/10 backdrop-blur-xl rounded-lg"
           >
-            <div
-              ref={containerRef}
-              className="relative flex w-fit bg-cyb-800/40 border border-accent-cyan/18 backdrop-blur-sm"
-            >
-              <span
-                className="absolute top-0 bottom-0 transition-all duration-200 bg-accent-cyan/20"
-                style={{ ...sliderStyle, zIndex: 0 }}
-              />
-              {DECK_MODES.map((mode) => (
-                <button
-                  key={mode}
-                  ref={btnRefs[mode]}
-                  type="button"
-                  onClick={() => {
-                    setDeckMode(mode);
-                    updateDeckMode(mode);
-                    setSelectedDeckId(null);
-                    setOpponentDeckId(null);
-                  }}
-                  className={`relative z-10 px-3 py-2 font-semibold transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-cyan/60 font-display text-xs flex items-center justify-center gap-1
-                    ${deckMode === mode ? "text-accent-cyan/80" : "text-muted-50"}`}
-                  aria-pressed={deckMode === mode}
-                  style={{
-                    background: "transparent",
-                    position: "relative",
-                  }}
-                >
-                  {mode}
-                </button>
-              ))}
-            </div>
-          </CutCornerWrapper>
+            <span
+              className="absolute top-0 bottom-0 transition-all duration-200 bg-white/10 rounded-lg"
+              style={{ ...sliderStyle, zIndex: 0 }}
+            />
+            {DECK_MODES.map((mode) => (
+              <button
+                key={mode}
+                ref={btnRefs[mode]}
+                type="button"
+                onClick={() => {
+                  setDeckMode(mode);
+                  updateDeckMode(mode);
+                  setSelectedDeckId(null);
+                  setOpponentDeckId(null);
+                }}
+                className={`relative z-10 px-3 py-2 font-semibold transition-colors duration-200 focus:outline-none font-display text-xs flex items-center justify-center gap-1
+                  ${deckMode === mode ? "text-white" : "text-white/60"}`}
+                aria-pressed={deckMode === mode}
+                style={{
+                  background: "transparent",
+                  position: "relative",
+                }}
+              >
+                {mode}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Test Type Selector */}
         <div>
           <div className="flex items-center justify-between mb-2">
-            <label className="block font-medium text-accent-cyan font-display text-xs">
+            <label className="block font-medium text-white/80 font-display text-xs">
               Test Type
             </label>
             <Dialog open={infoModalOpen} onOpenChange={setInfoModalOpen}>
@@ -212,32 +201,32 @@ export function TestSetupPanel({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-5 w-5 text-accent-cyan hover:text-accent-cyan/90 hover:bg-accent-cyan/20"
+                  className="h-5 w-5 text-white/80 hover:text-white hover:bg-white/10"
                 >
                   <Info className="h-4 w-4" />
                 </Button>
               </DialogTrigger>
               <DialogContent className="text-white max-w-2xl">
                 <DialogHeader>
-                  <DialogTitle className="text-accent-cyan/80 font-display">
+                  <DialogTitle className="text-white/90 font-display">
                     Test Type Information
                   </DialogTitle>
-                  <DialogDescription className="text-muted-50">
+                  <DialogDescription className="text-white/70">
                     Learn about what each test type analyzes and provides.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-6 mt-4">
                   {/* Matchup Analysis */}
                   <div className="space-y-2">
-                    <h3 className="text-lg font-semibold text-accent-cyan/90 flex items-center gap-2">
+                    <h3 className="text-lg font-semibold text-white/90 flex items-center gap-2">
                       <Target className="h-5 w-5" />
                       Matchup Analysis
                     </h3>
-                    <p className="text-sm text-muted-50">
+                    <p className="text-sm text-white/80">
                       Provides comprehensive matchup assessment between two
                       decks, including:
                     </p>
-                    <ul className="list-disc list-inside text-sm text-muted-50/70 space-y-1 ml-2">
+                    <ul className="list-disc list-inside text-sm text-white/70 space-y-1 ml-2">
                       <li>
                         Win rate estimates (going first, going second, overall)
                       </li>
@@ -262,15 +251,15 @@ export function TestSetupPanel({
 
                   {/* Duel Simulation */}
                   <div className="space-y-2">
-                    <h3 className="text-lg font-semibold text-accent-cyan/90 flex items-center gap-2">
+                    <h3 className="text-lg font-semibold text-white/90 flex items-center gap-2">
                       <Dices className="h-5 w-5" />
                       Duel Simulation
                     </h3>
-                    <p className="text-sm text-muted-50">
+                    <p className="text-sm text-white/80">
                       Simulates multiple duels using AI reasoning to provide
                       statistical insights, including:
                     </p>
-                    <ul className="list-disc list-inside text-sm text-muted-50/70 space-y-1 ml-2">
+                    <ul className="list-disc list-inside text-sm text-white/70 space-y-1 ml-2">
                       <li>
                         Simulation statistics - wins, losses, draws, average
                         turn length
@@ -298,15 +287,15 @@ export function TestSetupPanel({
 
                   {/* Strategic Insights */}
                   <div className="space-y-2">
-                    <h3 className="text-lg font-semibold text-accent-cyan/90 flex items-center gap-2">
+                    <h3 className="text-lg font-semibold text-white/90 flex items-center gap-2">
                       <Brain className="h-5 w-5" />
                       Strategic Insights
                     </h3>
-                    <p className="text-sm text-muted-50">
+                    <p className="text-sm text-white/80">
                       Offers detailed strategic guidance and deck optimization
                       recommendations, including:
                     </p>
-                    <ul className="list-disc list-inside text-sm text-muted-50/70 space-y-1 ml-2">
+                    <ul className="list-disc list-inside text-sm text-white/70 space-y-1 ml-2">
                       <li>
                         Key card synergies - most impactful card interactions
                       </li>
@@ -335,25 +324,25 @@ export function TestSetupPanel({
             value={testType}
             onValueChange={(value) => setTestType(value as TestType)}
           >
-            <SelectTrigger className="bg-slate-950/60 border-cyan-500/50 text-white focus:ring-cyan-400/60">
+            <SelectTrigger className="bg-white/10 border-white/20 text-white focus:outline-none rounded-lg">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent className="bg-gradient-to-b from-cyan-400/20 via-cyan-500/15 to-cyan-600/5 backdrop-blur-md border border-accent-cyan/18">
+            <SelectContent className="bg-white/20 border-white/30 backdrop-blur-xl rounded-lg">
               <SelectItem
                 value="matchup_analysis"
-                className="text-white focus:bg-cyan-500/40 focus:text-accent-cyan/80"
+                className="text-white focus:bg-white/20 focus:text-white"
               >
                 Matchup Analysis
               </SelectItem>
               <SelectItem
                 value="duel_simulation"
-                className="text-white focus:bg-cyan-500/40 focus:text-accent-cyan/80"
+                className="text-white focus:bg-white/20 focus:text-white"
               >
                 Duel Simulation
               </SelectItem>
               <SelectItem
                 value="strategic_insights"
-                className="text-white focus:bg-cyan-500/40 focus:text-accent-cyan/80"
+                className="text-white focus:bg-white/20 focus:text-white"
               >
                 Strategic Insights
               </SelectItem>
@@ -363,23 +352,23 @@ export function TestSetupPanel({
 
         {/* User Deck */}
         <div>
-          <label className="block mb-2 font-medium text-accent-cyan/90">
+          <label className="block mb-2 font-medium text-white/80">
             Your Deck
           </label>
           <Select value={selectedDeckId || ""} onValueChange={setSelectedDeckId}>
-            <SelectTrigger className="bg-slate-950/60 border-cyan-500/50 text-white focus:ring-cyan-400/60">
+            <SelectTrigger className="bg-white/10 border-white/20 text-white focus:outline-none rounded-lg">
               <SelectValue
                 placeholder={
                   decks.length === 0 ? "No decks" : "Choose your deck"
                 }
               />
             </SelectTrigger>
-            <SelectContent className="bg-gradient-to-b from-cyan-400/20 via-cyan-500/15 to-cyan-600/5 backdrop-blur-md border border-accent-cyan/18">
+            <SelectContent className="bg-white/20 border-white/30 backdrop-blur-xl rounded-lg">
               {decks.map((deck) => (
                 <SelectItem
                   key={deck.id}
                   value={deck.id}
-                  className="text-white focus:bg-cyan-500/40 focus:text-accent-cyan/80"
+                  className="text-white focus:bg-white/20 focus:text-white"
                 >
                   {deck.name}
                 </SelectItem>
@@ -390,14 +379,14 @@ export function TestSetupPanel({
 
         {/* Opponent Deck */}
         <div>
-          <label className="block mb-2 font-medium text-accent-cyan/90">
+          <label className="block mb-2 font-medium text-white/80">
             Opponent Deck
           </label>
           <Select
             value={opponentDeckId || ""}
             onValueChange={setOpponentDeckId}
           >
-            <SelectTrigger className="bg-slate-950/60 border-cyan-500/50 text-white focus:ring-cyan-400/60">
+            <SelectTrigger className="bg-white/10 border-white/20 text-white focus:outline-none rounded-lg">
               <SelectValue
                 placeholder={
                   opponentDecks.length === 0
@@ -406,15 +395,15 @@ export function TestSetupPanel({
                 }
               />
             </SelectTrigger>
-            <SelectContent className="bg-gradient-to-b from-cyan-400/20 via-cyan-500/15 to-cyan-600/5 backdrop-blur-md border border-accent-cyan/18">
-              <div className="font-bold px-2 py-1 text-accent-cyan/90">
+            <SelectContent className="bg-white/20 border-white/30 backdrop-blur-xl rounded-lg">
+              <div className="font-bold px-2 py-1 text-white/80">
                 Meta Decks
               </div>
               {opponentDecks.map((deck) => (
                 <SelectItem
                   key={deck.id}
                   value={deck.id}
-                  className="text-white focus:bg-cyan-500/40 focus:text-accent-cyan/80"
+                  className="text-white focus:bg-white/20 focus:text-white"
                 >
                   {deck.name}
                 </SelectItem>
@@ -422,18 +411,18 @@ export function TestSetupPanel({
               <SelectItem
                 disabled
                 value="divider"
-                className="text-muted-50/70"
+                className="text-white/50"
               >
                 ----
               </SelectItem>
-              <div className="font-bold px-2 py-1 text-accent-cyan/90">
+              <div className="font-bold px-2 py-1 text-white/80">
                 Your Decks
               </div>
               {decks.map((deck) => (
                 <SelectItem
                   key={deck.id + "-op"}
                   value={deck.id}
-                  className="text-white focus:bg-cyan-500/40 focus:text-accent-cyan/80"
+                  className="text-white focus:bg-white/20 focus:text-white"
                 >
                   Your: {deck.name}
                 </SelectItem>
@@ -445,7 +434,7 @@ export function TestSetupPanel({
         {/* Simulation Config (only for duel_simulation) */}
         {testType === "duel_simulation" && (
           <div>
-            <label className="block mb-2 font-medium text-accent-cyan/90">
+            <label className="block mb-2 font-medium text-white/80">
               Number of Simulations (Max 20)
             </label>
             <Input
@@ -457,7 +446,7 @@ export function TestSetupPanel({
                 const val = Math.min(Math.max(1, Number(e.target.value)), 20);
                 setNumSimulations(val);
               }}
-              className="w-32 bg-slate-950/60 border-cyan-500/50 text-white placeholder:text-muted-50/70 focus-visible:border-cyan-400 focus-visible:ring-cyan-400/60"
+              className="w-32 bg-white/5 border-white/10 text-white placeholder:text-white/50 focus-visible:outline-none rounded-lg"
               disabled={simulationLoading}
             />
           </div>
@@ -465,7 +454,7 @@ export function TestSetupPanel({
 
         {/* Context Input */}
         <div>
-          <label className="block mb-2 font-medium text-accent-cyan/90">
+          <label className="block mb-2 font-medium text-white/80">
             Additional Context (Optional)
           </label>
           <Input
@@ -473,7 +462,7 @@ export function TestSetupPanel({
             value={context}
             onChange={(e) => setContext(e.target.value)}
             placeholder="e.g., going first, specific scenario..."
-            className="bg-slate-950/60 border-cyan-500/50 text-white placeholder:text-muted-50/70 focus-visible:border-cyan-400 focus-visible:ring-cyan-400/60"
+            className="bg-white/5 border-white/10 text-white placeholder:text-white/50 focus-visible:outline-none rounded-lg"
             disabled={simulationLoading}
           />
         </div>
@@ -503,7 +492,7 @@ export function TestSetupPanel({
           )}
         </Button>
         {!user && (
-          <p className="text-xs text-muted-50/70 text-center">
+          <p className="text-xs text-white/70 text-center">
             Please log in to use AI testing
           </p>
         )}

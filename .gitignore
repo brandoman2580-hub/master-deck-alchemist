@@ -41,11 +41,32 @@ next-env.d.ts
 # cursor
 .cursor
 
-# Ignore all markdown files except README.md at repo root and any README.md files in subfolders
-# Ignore top-level markdown
+# Markdown files
+# Ignore all markdown files except README.md and developer documentation
 *.md
 !README.md
 
-# Ignore nested markdown files but keep any README.md
+# Ignore nested markdown files but keep README.md and important developer docs
 **/*.md
 !**/README.md
+# Keep important developer documentation (pertinent to future developers)
+!docs/api/*.md
+!docs/environment-variables.md
+!docs/deployment-checklist.md
+!docs/monitoring-guide.md
+!docs/*guide.md
+!docs/*reference.md
+
+# Phase-driven test files (not UI-driven tests)
+# These are temporary phase-specific tests that shouldn't be committed
+**/phase*-*.test.ts
+**/phase*-*.test.tsx
+**/phase*-unit-tests.ts
+**/phase*-edge-cases.test.ts
+**/phase*-load-testing.md
+**/PHASE*-README.md
+**/run-phase*-tests.sh
+
+# SQL migration files
+# Ignore migration SQL files (these are typically generated/applied remotely)
+supabase/migrations/*.sql

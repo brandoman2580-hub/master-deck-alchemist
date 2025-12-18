@@ -40,8 +40,8 @@ export function ModeDecksSection({
         </h2>
         <Card className="p-6 text-center">
           <CardContent className="pt-0">
-            <p className="text-muted-50/70 text-sm">No {mode} decks found</p>
-            <p className="text-xs text-muted-50/50 mt-1">
+            <p className="text-white/70 text-sm">No {mode} decks found</p>
+            <p className="text-xs text-white/50 mt-1">
               Create a deck in {mode} mode to see it here
             </p>
           </CardContent>

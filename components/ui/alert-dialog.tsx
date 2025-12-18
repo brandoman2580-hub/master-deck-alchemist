@@ -5,7 +5,6 @@ import * as AlertDialogPrimitive from "@radix-ui/react-alert-dialog";
 
 import { cn } from "../../lib/utils";
 import { buttonVariants } from "./button";
-import CutCornerWrapper from "../cut-corner-wrapper";
 
 const AlertDialog = AlertDialogPrimitive.Root;
 
@@ -37,26 +36,20 @@ const AlertDialogContent = React.forwardRef<
     <AlertDialogPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed left-[50%] top-[50%] z-50 w-full max-w-lg translate-x-[-50%] translate-y-[-50%] grid gap-4 p-0 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] bg-slate-900/95 border border-cyan-500/30",
+        "fixed left-[50%] top-[50%] z-50 w-full max-w-lg translate-x-[-50%] translate-y-[-50%] grid gap-4 p-0 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]",
         className,
       )}
       {...props}
     >
-      <CutCornerWrapper
-        size="lg"
-        hoverHighlight
-        className="w-full h-full"
-        padding="1.5rem"
+      <div
+        className="w-full h-full bg-white/5 border border-white/10 backdrop-blur-xl shadow-lg rounded-2xl p-6 hover:bg-white/10 hover:border-white/20 transition-all duration-300"
         style={{
-          ["--cut-corner-stroke" as any]: "rgba(20,239,255,0.38)",
-          ["--cut-corner-stroke-hover" as any]: "rgba(20,239,255,0.52)",
-          ["--cut-corner-fill" as any]: "transparent",
           backdropFilter: "blur(6px) saturate(120%)",
           WebkitBackdropFilter: "blur(6px) saturate(120%)",
         }}
       >
         {children}
-      </CutCornerWrapper>
+      </div>
     </AlertDialogPrimitive.Content>
   </AlertDialogPortal>
 ));

@@ -19,7 +19,7 @@ export function MatchupAnalytics({
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {/* Win Rate Estimates */}
-      <Card className="bg-gradient-to-b from-cyan-400/20 via-cyan-500/15 to-cyan-600/5 backdrop-blur-md border border-accent-cyan/18">
+      <Card className="rounded-xl bg-white/10 border border-white/20 backdrop-blur-xl shadow-lg">
         <CardHeader>
           <CardTitle className="text-white text-base font-display">
             Win Rate Estimates
@@ -28,20 +28,20 @@ export function MatchupAnalytics({
         <CardContent className="space-y-3">
           <div className="space-y-2">
             <div className="flex justify-between items-center">
-              <span className="text-xs text-muted-50/70">Going First</span>
-              <span className="text-sm font-semibold text-accent-cyan">
+              <span className="text-xs text-white/70">Going First</span>
+              <span className="text-sm font-semibold text-white">
                 {analytics.win_rate_estimates.going_first.toFixed(1)}%
               </span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-xs text-muted-50/70">Going Second</span>
-              <span className="text-sm font-semibold text-accent-cyan">
+              <span className="text-xs text-white/70">Going Second</span>
+              <span className="text-sm font-semibold text-white">
                 {analytics.win_rate_estimates.going_second.toFixed(1)}%
               </span>
             </div>
-            <div className="flex justify-between items-center pt-2 border-t border-cyan-500/20">
-              <span className="text-xs font-medium text-muted-50">Overall</span>
-              <span className="text-base font-bold text-accent-cyan/90">
+            <div className="flex justify-between items-center pt-2 border-t border-white/10">
+              <span className="text-xs font-medium text-white/80">Overall</span>
+              <span className="text-base font-bold text-white">
                 {analytics.win_rate_estimates.overall.toFixed(1)}%
               </span>
             </div>
@@ -51,7 +51,7 @@ export function MatchupAnalytics({
 
       {/* Card Effectiveness */}
       {analytics.card_effectiveness.length > 0 && (
-        <Card className="bg-gradient-to-b from-cyan-400/20 via-cyan-500/15 to-cyan-600/5 backdrop-blur-md border border-accent-cyan/18">
+        <Card className="rounded-xl bg-white/10 border border-white/20 backdrop-blur-xl shadow-lg">
           <CardHeader>
             <CardTitle className="text-white text-base font-display">
               Card Effectiveness
@@ -63,7 +63,7 @@ export function MatchupAnalytics({
                 {analytics.card_effectiveness.slice(0, 5).map((card, i) => (
                   <div
                     key={i}
-                    className="bg-cyb-800/40 p-2 border border-cyan-500/20"
+                    className="bg-white/5 p-2 border border-white/10 rounded-md backdrop-blur-sm"
                   >
                     <div className="flex items-center justify-between mb-1 gap-2">
                       <span className="text-xs font-semibold text-white break-words">
@@ -73,7 +73,7 @@ export function MatchupAnalytics({
                         {card.impact_score}%
                       </Badge>
                     </div>
-                    <p className="text-xs text-muted-50/70 break-words">
+                    <p className="text-xs text-white/70 break-words">
                       {card.description}
                     </p>
                   </div>
@@ -161,7 +161,7 @@ export function MatchupAnalytics({
 
       {/* Side Deck Impact - Only show for TCG format */}
       {deckMode === "TCG" && analytics.side_deck_impact.length > 0 && (
-        <Card className="bg-gradient-to-b from-cyan-400/20 via-cyan-500/15 to-cyan-600/5 backdrop-blur-md border border-accent-cyan/18">
+        <Card className="rounded-xl bg-white/10 border border-white/20 backdrop-blur-xl shadow-lg">
           <CardHeader>
             <CardTitle className="text-white text-base font-display">
               Side Deck Impact
@@ -173,7 +173,7 @@ export function MatchupAnalytics({
                 {analytics.side_deck_impact.slice(0, 5).map((card, i) => (
                   <div
                     key={i}
-                    className="bg-cyb-800/40 p-2 border border-cyan-500/20"
+                    className="bg-white/5 p-2 border border-white/10 rounded-md backdrop-blur-sm"
                   >
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-xs font-semibold text-white break-words">
@@ -186,7 +186,7 @@ export function MatchupAnalytics({
                         +{card.matchup_improvement}%
                       </Badge>
                     </div>
-                    <p className="text-xs text-muted-50/70 break-words">
+                    <p className="text-xs text-white/70 break-words">
                       {card.description}
                     </p>
                   </div>
@@ -199,7 +199,7 @@ export function MatchupAnalytics({
 
       {/* Resource Usage */}
       {analytics.resource_usage && (
-        <Card className="bg-gradient-to-b from-cyan-400/20 via-cyan-500/15 to-cyan-600/5 backdrop-blur-md border border-accent-cyan/18">
+        <Card className="rounded-xl bg-white/10 border border-white/20 backdrop-blur-xl shadow-lg">
           <CardHeader>
             <CardTitle className="text-white text-base font-display">
               Resource Usage
@@ -208,15 +208,15 @@ export function MatchupAnalytics({
           <CardContent className="space-y-3">
             <div className="space-y-2">
               <div className="flex justify-between items-center">
-                <span className="text-xs text-muted-50/70">
+                <span className="text-xs text-white/70">
                   Draw Consistency
                 </span>
-                <span className="text-sm font-semibold text-accent-cyan">
+                <span className="text-sm font-semibold text-white">
                   {analytics.resource_usage.draw_consistency.toFixed(0)}%
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-xs text-muted-50/70">
+                <span className="text-xs text-white/70">
                   Depletion Rate
                 </span>
                 <Badge variant="outline" className="text-xs capitalize">
@@ -224,15 +224,15 @@ export function MatchupAnalytics({
                 </Badge>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-xs text-muted-50/70">
+                <span className="text-xs text-white/70">
                   Recovery Success
                 </span>
-                <span className="text-sm font-semibold text-accent-cyan">
+                <span className="text-sm font-semibold text-white">
                   {analytics.resource_usage.recovery_success_rate.toFixed(0)}%
                 </span>
               </div>
             </div>
-            <p className="text-xs text-muted-50/70 pt-2 border-t border-cyan-500/20 break-words">
+            <p className="text-xs text-white/70 pt-2 border-t border-white/10 break-words">
               {analytics.resource_usage.description}
             </p>
           </CardContent>
