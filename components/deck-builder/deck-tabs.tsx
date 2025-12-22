@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useLayoutEffect, useRef, useCallback, useEffect } from "react";
+import { motion } from "framer-motion";
 import { CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Card } from "@/types/card";
@@ -8,6 +9,12 @@ import { DeckType, DeckMode, DeckSection } from "@/types/types";
 import { UniqueIdentifier } from "@dnd-kit/core";
 import { CartSection } from "./cart-section";
 import { Layers, Zap, Shield } from "lucide-react";
+import {
+  SPRING_CONFIG,
+  useCounterAnimation,
+  useHoverAnimation,
+  fadeInVariants,
+} from "@/lib/animations";
 
 interface DeckTabsProps {
   stats: {
@@ -125,6 +132,14 @@ export function DeckTabs({
     return "text-white/80";
   };
 
+  // Counter animations for counts
+  const mainCount = useCounterAnimation(stats.mainCount);
+  const extraCount = useCounterAnimation(stats.extraCount);
+  const sideCount = useCounterAnimation(stats.sideCount);
+
+  // Hover animation for tab buttons
+  const tabHover = useHoverAnimation(1.02, 0);
+
   return (
     <CardContent className="p-0">
       <Tabs
@@ -137,20 +152,26 @@ export function DeckTabs({
             className="relative flex w-full bg-white/5 border border-white/10 backdrop-blur-xl rounded-lg p-1"
             ref={tabsContainerRef}
           >
-            <span
-              className="absolute top-1 bottom-1 transition-all duration-300 bg-white/10 rounded-md"
+            <motion.span
+              className="absolute top-1 bottom-1 bg-white/10 rounded-md"
               style={{
                 ...tabSliderStyle,
                 zIndex: 0,
                 left: typeof tabSliderStyle.left === "number" ? tabSliderStyle.left + 4 : 0,
                 width: typeof tabSliderStyle.width === "number" ? tabSliderStyle.width - 8 : 0,
               }}
+              layout
+              transition={{
+                type: "spring",
+                stiffness: SPRING_CONFIG.gentle.tension,
+                damping: SPRING_CONFIG.gentle.friction,
+              }}
             />
-            <button
+            <motion.button
               ref={mainTabRef}
               type="button"
               onClick={() => setActiveTab("main")}
-              className={`relative z-10 flex-1 px-4 py-3 font-bold transition-all duration-200 focus:outline-none font-display text-sm flex items-center justify-center gap-2 ${
+              className={`relative z-10 flex-1 px-4 py-3 font-bold transition-colors duration-200 focus:outline-none font-display text-sm flex items-center justify-center gap-2 ${
                 activeTab === "main"
                   ? "text-white"
                   : "text-white/60 hover:text-white/80"
@@ -160,18 +181,19 @@ export function DeckTabs({
                 background: "transparent",
                 position: "relative",
               }}
+              {...tabHover}
             >
               <Layers className="h-4 w-4" />
               <span>Main</span>
               <span className={`text-xs font-semibold ${getMainCountColor()}`}>
-                {stats.mainCount}/60
+                {mainCount}/60
               </span>
-            </button>
-            <button
+            </motion.button>
+            <motion.button
               ref={extraTabRef}
               type="button"
               onClick={() => setActiveTab("extra")}
-              className={`relative z-10 flex-1 px-4 py-3 font-bold transition-all duration-200 focus:outline-none font-display text-sm flex items-center justify-center gap-2 ${
+              className={`relative z-10 flex-1 px-4 py-3 font-bold transition-colors duration-200 focus:outline-none font-display text-sm flex items-center justify-center gap-2 ${
                 activeTab === "extra"
                   ? "text-white"
                   : "text-white/60 hover:text-white/80"
@@ -181,19 +203,20 @@ export function DeckTabs({
                 background: "transparent",
                 position: "relative",
               }}
+              {...tabHover}
             >
               <Zap className="h-4 w-4" />
               <span>Extra</span>
               <span className={`text-xs font-semibold ${getExtraCountColor()}`}>
-                {stats.extraCount}/15
+                {extraCount}/15
               </span>
-            </button>
+            </motion.button>
             {deckMode === "TCG" && (
-              <button
+              <motion.button
                 ref={sideTabRef}
                 type="button"
                 onClick={() => setActiveTab("side")}
-                className={`relative z-10 flex-1 px-4 py-3 font-bold transition-all duration-200 focus:outline-none font-display text-sm flex items-center justify-center gap-2 ${
+                className={`relative z-10 flex-1 px-4 py-3 font-bold transition-colors duration-200 focus:outline-none font-display text-sm flex items-center justify-center gap-2 ${
                   activeTab === "side"
                     ? "text-white"
                     : "text-white/60 hover:text-white/80"
@@ -203,48 +226,70 @@ export function DeckTabs({
                   background: "transparent",
                   position: "relative",
                 }}
+                {...tabHover}
               >
                 <Shield className="h-4 w-4" />
                 <span>Side</span>
                 <span className={`text-xs font-semibold ${getSideCountColor()}`}>
-                  {stats.sideCount}/15
+                  {sideCount}/15
                 </span>
-              </button>
+              </motion.button>
             )}
           </div>
         </div>
 
         <TabsContent value="main" className="pt-4 px-6 pb-6">
-          <CartSection
-            section="mainDeck"
-            cards={currentDeck.mainDeck}
-            activeDragId={activeDragId}
-            onRemove={handleRemove}
-            count={stats.mainCount}
-            maxCount={60}
-          />
+          <motion.div
+            key="main"
+            initial="hidden"
+            animate="visible"
+            variants={fadeInVariants}
+          >
+            <CartSection
+              section="mainDeck"
+              cards={currentDeck.mainDeck}
+              activeDragId={activeDragId}
+              onRemove={handleRemove}
+              count={stats.mainCount}
+              maxCount={60}
+            />
+          </motion.div>
         </TabsContent>
 
         <TabsContent value="extra" className="pt-4 px-6 pb-6">
-          <CartSection
-            section="extraDeck"
-            cards={currentDeck.extraDeck}
-            activeDragId={activeDragId}
-            onRemove={handleRemove}
-            count={stats.extraCount}
-            maxCount={15}
-          />
+          <motion.div
+            key="extra"
+            initial="hidden"
+            animate="visible"
+            variants={fadeInVariants}
+          >
+            <CartSection
+              section="extraDeck"
+              cards={currentDeck.extraDeck}
+              activeDragId={activeDragId}
+              onRemove={handleRemove}
+              count={stats.extraCount}
+              maxCount={15}
+            />
+          </motion.div>
         </TabsContent>
 
         <TabsContent value="side" className="pt-4 px-6 pb-6">
-          <CartSection
-            section="sideDeck"
-            cards={currentDeck.sideDeck}
-            activeDragId={activeDragId}
-            onRemove={handleRemove}
-            count={stats.sideCount}
-            maxCount={15}
-          />
+          <motion.div
+            key="side"
+            initial="hidden"
+            animate="visible"
+            variants={fadeInVariants}
+          >
+            <CartSection
+              section="sideDeck"
+              cards={currentDeck.sideDeck}
+              activeDragId={activeDragId}
+              onRemove={handleRemove}
+              count={stats.sideCount}
+              maxCount={15}
+            />
+          </motion.div>
         </TabsContent>
       </Tabs>
     </CardContent>

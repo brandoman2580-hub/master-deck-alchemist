@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
+import { motion } from "framer-motion";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent } from "../../components/ui/card";
 import Link from "next/link";
@@ -16,6 +17,12 @@ import { DeckType } from "../../types/types";
 import { DeckSearchAutocomplete } from "../../components/saved-decks/deck-search-autocomplete";
 import { PinnedDecksSection } from "../../components/saved-decks/pinned-decks-section";
 import { ModeDecksSection } from "../../components/saved-decks/mode-decks-section";
+import {
+  fadeInVariants,
+  staggerContainer,
+  staggerItem,
+  pulseVariants,
+} from "@/lib/animations";
 
 export default function SavedDecks() {
   const [decks, setDecks] = useState<DeckType[]>([]);
@@ -96,18 +103,28 @@ export default function SavedDecks() {
     }).format(date);
   };
 
+  const containerRef = useRef<HTMLDivElement>(null);
+
   return (
     <div className="min-h-screen bg-transparent px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8 pb-8 sm:pb-10 relative">
-      <div className="max-w-7xl mx-auto relative z-10">
-        <div className="flex flex-col space-y-4 sm:space-y-6">
-          <div className="flex items-center justify-between">
+      <div ref={containerRef} className="max-w-7xl mx-auto relative z-10">
+        <motion.div
+          className="flex flex-col space-y-4 sm:space-y-6"
+          initial="hidden"
+          animate="visible"
+          variants={fadeInVariants}
+        >
+          <motion.div
+            className="flex items-center justify-between"
+            variants={fadeInVariants}
+          >
             <h1 className="text-2xl sm:text-3xl font-bold text-white font-display tracking-wider">
               SAVED DECKS
             </h1>
             <Button asChild>
               <Link href="/deck-builder">Create New Deck</Link>
             </Button>
-          </div>
+          </motion.div>
 
           {error && (
             <div className="rounded-lg bg-white/10 border border-white/20 backdrop-blur-xl shadow-lg p-3 sm:p-4">
@@ -120,52 +137,70 @@ export default function SavedDecks() {
           {loading ? (
             <p className="text-white/70">Loading decks...</p>
           ) : decks.length === 0 ? (
-            <Card className="p-6 sm:p-8 text-center rounded-xl bg-white/5 border border-white/10 backdrop-blur-xl shadow-lg">
-              <CardContent className="pt-6">
-                <p className="text-white/80">No saved decks found</p>
-                <p className="text-sm text-white/60 mt-2">
-                  Start building a deck and save it to see it here
-                </p>
-                <Button className="mt-4" asChild>
-                  <Link href="/deck-builder">Create Your First Deck</Link>
-                </Button>
-              </CardContent>
-            </Card>
+            <motion.div
+              initial="hidden"
+              animate="visible"
+              variants={pulseVariants}
+            >
+              <Card className="p-6 sm:p-8 text-center rounded-xl bg-white/5 border border-white/10 backdrop-blur-xl shadow-lg">
+                <CardContent className="pt-6">
+                  <p className="text-white/80">No saved decks found</p>
+                  <p className="text-sm text-white/60 mt-2">
+                    Start building a deck and save it to see it here
+                  </p>
+                  <Button className="mt-4" asChild>
+                    <Link href="/deck-builder">Create Your First Deck</Link>
+                  </Button>
+                </CardContent>
+              </Card>
+            </motion.div>
           ) : (
-            <>
-              <DeckSearchAutocomplete decks={decks} />
+            <motion.div
+              initial="hidden"
+              animate="visible"
+              variants={staggerContainer(0.1)}
+            >
+              <motion.div variants={staggerItem}>
+                <DeckSearchAutocomplete decks={decks} />
+              </motion.div>
 
-              <PinnedDecksSection
-                decks={decks}
-                onLoad={handleLoadDeck}
-                onDelete={handleDeleteDeck}
-                onTogglePin={handleTogglePin}
-                loading={loading}
-                formatDate={formatDate}
-              />
+              <motion.div variants={staggerItem} className="mt-6">
+                <PinnedDecksSection
+                  decks={decks}
+                  onLoad={handleLoadDeck}
+                  onDelete={handleDeleteDeck}
+                  onTogglePin={handleTogglePin}
+                  loading={loading}
+                  formatDate={formatDate}
+                />
+              </motion.div>
 
-              <ModeDecksSection
-                decks={decks}
-                mode="TCG"
-                onLoad={handleLoadDeck}
-                onDelete={handleDeleteDeck}
-                onTogglePin={handleTogglePin}
-                loading={loading}
-                formatDate={formatDate}
-              />
+              <motion.div variants={staggerItem}>
+                <ModeDecksSection
+                  decks={decks}
+                  mode="TCG"
+                  onLoad={handleLoadDeck}
+                  onDelete={handleDeleteDeck}
+                  onTogglePin={handleTogglePin}
+                  loading={loading}
+                  formatDate={formatDate}
+                />
+              </motion.div>
 
-              <ModeDecksSection
-                decks={decks}
-                mode="Master Duel"
-                onLoad={handleLoadDeck}
-                onDelete={handleDeleteDeck}
-                onTogglePin={handleTogglePin}
-                loading={loading}
-                formatDate={formatDate}
-              />
-            </>
+              <motion.div variants={staggerItem}>
+                <ModeDecksSection
+                  decks={decks}
+                  mode="Master Duel"
+                  onLoad={handleLoadDeck}
+                  onDelete={handleDeleteDeck}
+                  onTogglePin={handleTogglePin}
+                  loading={loading}
+                  formatDate={formatDate}
+                />
+              </motion.div>
+            </motion.div>
           )}
-        </div>
+        </motion.div>
       </div>
     </div>
   );

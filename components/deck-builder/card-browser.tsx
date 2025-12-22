@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { motion } from "framer-motion";
 import { Card as CardUI, CardContent, CardHeader } from "@/components/ui/card";
 import { InputWithClear } from "@/components/ui/input-with-clear";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -19,6 +20,7 @@ import { Search, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { FILTER_CONFIGS } from "@/lib/constants";
+import { pulseVariants } from "@/lib/animations";
 
 interface CardBrowserProps {
   currentDeck: DeckType;
@@ -179,7 +181,13 @@ export function CardBrowser({
           <CardUI className="bg-transparent h-full flex flex-col pt-4 sm:pt-6">
             <CardHeader className="pb-2 flex-shrink-0 px-4 sm:px-6 pt-0">
               <div className="flex items-center gap-2 w-full">
-                <div className="relative flex-1 min-w-0">
+                <motion.div
+                  className="relative flex-1 min-w-0"
+                  whileFocus={{
+                    scale: 1.01,
+                    transition: { duration: 0.2 },
+                  }}
+                >
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/60 pointer-events-none z-10" />
                   <InputWithClear
                     ref={searchInputRef}
@@ -187,9 +195,9 @@ export function CardBrowser({
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onClear={() => setSearchQuery("")}
-                    className="w-full h-9 pl-9 pr-9 text-sm bg-white/5 border border-white/10 text-white placeholder:text-white/50 focus-visible:outline-none rounded-lg"
+                    className="w-full h-9 pl-9 pr-9 text-sm bg-white/5 border border-white/10 text-white placeholder:text-white/50 focus-visible:outline-none rounded-lg transition-all duration-200 focus:border-white/30 focus:bg-white/10"
                   />
-                </div>
+                </motion.div>
                 <Button
                   variant="ghost"
                   size="icon"
@@ -232,7 +240,12 @@ export function CardBrowser({
                       ))}
                     </div>
                   ) : filteredCards.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-full py-16 min-h-[400px]">
+                    <motion.div
+                      className="flex flex-col items-center justify-center h-full py-16 min-h-[400px]"
+                      initial="hidden"
+                      animate="visible"
+                      variants={pulseVariants}
+                    >
                       <Search className="h-12 w-12 mb-3 text-white/30" />
                       <span className="text-sm font-medium text-white/70">
                         No cards found
@@ -240,7 +253,7 @@ export function CardBrowser({
                       <span className="text-xs text-white/50 mt-2">
                         Try adjusting your search or filters
                       </span>
-                    </div>
+                    </motion.div>
                   ) : (
                     <Virtuoso
                       style={{ height: "100%", minHeight: "400px" }}

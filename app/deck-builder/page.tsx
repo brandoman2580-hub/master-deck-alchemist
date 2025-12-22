@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { motion } from "framer-motion";
 import { useDeck } from "../../context/deck-context";
 import {
   DndContext,
@@ -36,6 +37,10 @@ import { DeckTabs } from "../../components/deck-builder/deck-tabs";
 import { CardBrowser } from "../../components/deck-builder/card-browser";
 import { DragOverlayComponent } from "../../components/deck-builder/drag-overlay";
 import { useAnalytics } from "../../lib/hooks/useAnalytics";
+import {
+  slideInDownVariants,
+  scaleInVariants,
+} from "@/lib/animations";
 
 export default function DeckBuilder() {
   const {
@@ -254,6 +259,7 @@ export default function DeckBuilder() {
 
 
   const stats = getDeckStats();
+  const pageRef = useRef<HTMLDivElement>(null);
 
   return (
     <DndContext
@@ -262,8 +268,19 @@ export default function DeckBuilder() {
       onDragEnd={handleDragEnd}
     >
       {/* Glassmorphic deck builder layout */}
-      <div className="h-[calc(100vh-3.75rem)] bg-transparent flex flex-col overflow-hidden">
-        <div className="flex-shrink-0 px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 pb-4">
+      <motion.div
+        ref={pageRef}
+        className="h-[calc(100vh-3.75rem)] bg-transparent flex flex-col overflow-hidden"
+        initial="hidden"
+        animate="visible"
+        variants={scaleInVariants}
+      >
+        <motion.div
+          className="flex-shrink-0 px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 pb-4"
+          initial="hidden"
+          animate="visible"
+          variants={slideInDownVariants}
+        >
           <div className="max-w-7xl mx-auto">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
@@ -308,7 +325,7 @@ export default function DeckBuilder() {
               </div>
             </div>
           </div>
-        </div>
+        </motion.div>
 
         <div className="flex-1 min-h-0 px-4 sm:px-6 lg:px-8 pb-4 sm:pb-6">
           <div className="max-w-7xl mx-auto h-full">
@@ -355,12 +372,12 @@ export default function DeckBuilder() {
             </div>
           </div>
         </div>
-      </div>
 
       <DragOverlayComponent activeDragCard={activeDragCard} />
 
       {/* AI Assistant Modal */}
       <AIChatbot isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
+      </motion.div>
     </DndContext>
   );
 }

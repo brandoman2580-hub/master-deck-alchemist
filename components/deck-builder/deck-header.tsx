@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useLayoutEffect, useRef, useMemo } from "react";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import {
   CardHeader,
@@ -25,6 +26,9 @@ import { Download, Upload, Trash2, Edit, Undo2, Redo2 } from "lucide-react";
 import { DECK_MODES } from "@/lib/constants";
 import { DeckMode } from "@/types/types";
 import { openLoginModal } from "@/lib/helpers";
+import {
+  SPRING_CONFIG,
+} from "@/lib/animations";
 
 interface DeckHeaderProps {
   currentDeckName: string;
@@ -154,7 +158,7 @@ export function DeckHeader({
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
-          <DialogContent>
+          <DialogContent className="bg-white/10 border border-white/20 backdrop-blur-xl">
             <div className="flex flex-col gap-2">
               <DialogHeader>
                 <DialogTitle>Rename Deck</DialogTitle>
@@ -196,9 +200,15 @@ export function DeckHeader({
           className="relative flex w-fit bg-white/5 border border-white/10 backdrop-blur-xl rounded-lg"
           ref={containerRef}
         >
-          <span
-            className="absolute top-0 bottom-0 transition-all duration-200 bg-white/10 rounded-lg"
+          <motion.span
+            className="absolute top-0 bottom-0 bg-white/10 rounded-lg"
             style={{ ...sliderStyle, zIndex: 0 }}
+            layout
+            transition={{
+              type: "spring",
+              stiffness: SPRING_CONFIG.gentle.tension,
+              damping: SPRING_CONFIG.gentle.friction,
+            }}
           />
           {DECK_MODES.map((mode) => (
             <button
@@ -273,7 +283,7 @@ export function DeckHeader({
                     <p>Import Deck</p>
                   </TooltipContent>
                 </Tooltip>
-                <DialogContent>
+                <DialogContent className="bg-white/10 border border-white/20 backdrop-blur-xl">
                   <DialogHeader>
                     <DialogTitle>Import Deck</DialogTitle>
                     <DialogDescription>

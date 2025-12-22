@@ -1,10 +1,13 @@
 "use client";
 
 import * as React from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
 
 import { cn } from "../../lib/utils";
+import { SCALE, ANIMATION_DURATION, EASING } from "@/lib/animations";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 
 const buttonVariants = cva(
   "relative inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium transition-all duration-300 focus-visible:outline-none focus:outline-none disabled:pointer-events-none disabled:opacity-50 overflow-hidden [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:inline-block rounded-lg",
@@ -46,7 +49,10 @@ const buttonVariants = cva(
 
 export interface ButtonProps
   extends
-    React.ButtonHTMLAttributes<HTMLButtonElement>,
+    Omit<
+      React.ButtonHTMLAttributes<HTMLButtonElement>,
+      "onDrag" | "onDragStart" | "onDragEnd" | "onAnimationStart" | "onAnimationEnd"
+    >,
     VariantProps<typeof buttonVariants> {
   asChild?: boolean;
   startIcon?: React.ReactNode;
@@ -63,13 +69,46 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       startIcon,
       endIcon,
       children,
+      disabled,
+      onClick,
       ...props
     },
     ref,
   ) => {
     const Comp = asChild ? Slot : "button";
+    const prefersReducedMotion = useReducedMotion();
+    const [ripples, setRipples] = React.useState<Array<{ id: number; x: number; y: number }>>([]);
+    const buttonRef = React.useRef<HTMLButtonElement | null>(null);
+
+    const handleClick = React.useCallback(
+      (e: React.MouseEvent<HTMLButtonElement>) => {
+        if (disabled || prefersReducedMotion) {
+          onClick?.(e);
+          return;
+        }
+
+        const button = buttonRef.current || (ref as React.RefObject<HTMLButtonElement>)?.current;
+        if (button) {
+          const rect = button.getBoundingClientRect();
+          const x = e.clientX - rect.left;
+          const y = e.clientY - rect.top;
+          const id = Date.now();
+
+          setRipples((prev) => [...prev, { id, x, y }]);
+
+          // Remove ripple after animation
+          setTimeout(() => {
+            setRipples((prev) => prev.filter((r) => r.id !== id));
+          }, 600);
+        }
+
+        onClick?.(e);
+      },
+      [disabled, prefersReducedMotion, onClick, ref],
+    );
+
     const content = (
-      <span className="inline-flex items-center justify-center gap-2">
+      <span className="inline-flex items-center justify-center gap-2 relative z-10">
         {startIcon && <span className="flex items-center">{startIcon}</span>}
         {children}
         {endIcon && <span className="flex items-center">{endIcon}</span>}
@@ -77,17 +116,79 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     );
 
     // Square-shaped buttons (no cut corners)
+    if (asChild || prefersReducedMotion || disabled) {
+      return (
+        <Comp
+          className={cn(
+            buttonVariants({ variant, size, className }),
+          )}
+          ref={ref}
+          disabled={disabled}
+          onClick={onClick}
+          {...props}
+        >
+          {asChild ? <span>{content}</span> : content}
+        </Comp>
+      );
+    }
+
     return (
-      <Comp
-        className={cn(
-          buttonVariants({ variant, size, className }),
-          // Square shape - no skew or clip-path
-        )}
-        ref={ref}
-        {...props}
+      <motion.button
+        ref={(node) => {
+          buttonRef.current = node;
+          if (typeof ref === "function") {
+            ref(node);
+          } else if (ref) {
+            (ref as React.MutableRefObject<HTMLButtonElement | null>).current = node;
+          }
+        }}
+        className={cn(buttonVariants({ variant, size, className }), "relative overflow-hidden")}
+        disabled={disabled}
+        whileHover={{
+          scale: SCALE.hover,
+          transition: {
+            duration: ANIMATION_DURATION.fast,
+            ease: EASING.smooth,
+          },
+        }}
+        whileTap={{
+          scale: SCALE.active,
+          transition: {
+            duration: ANIMATION_DURATION.instant,
+          },
+        }}
+        onClick={handleClick}
+        {...(props as any)}
       >
-        {asChild ? <span>{content}</span> : content}
-      </Comp>
+        <AnimatePresence>
+          {ripples.map((ripple) => (
+            <motion.span
+              key={ripple.id}
+              className="absolute rounded-full bg-white/30 pointer-events-none"
+              initial={{
+                x: ripple.x,
+                y: ripple.y,
+                width: 0,
+                height: 0,
+                opacity: 0.6,
+              }}
+              animate={{
+                width: 200,
+                height: 200,
+                x: ripple.x - 100,
+                y: ripple.y - 100,
+                opacity: 0,
+              }}
+              exit={{ opacity: 0 }}
+              transition={{
+                duration: ANIMATION_DURATION.normal,
+                ease: EASING.smooth,
+              }}
+            />
+          ))}
+        </AnimatePresence>
+        {content}
+      </motion.button>
     );
   },
 );

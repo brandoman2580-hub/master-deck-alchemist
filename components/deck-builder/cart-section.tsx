@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { motion } from "framer-motion";
 import { DeckDropZone } from "@/components/ui/deck-drop-zone";
 import { Layers, Zap, Shield } from "lucide-react";
 import { Card } from "@/types/card";
@@ -11,6 +12,14 @@ import { CSS } from "@dnd-kit/utilities";
 import { CardPreview } from "@/components/ui/card-preview";
 import Image from "next/image";
 import { X } from "lucide-react";
+import {
+  fadeInVariants,
+  staggerContainer,
+  SCALE,
+  ANIMATION_DURATION,
+  EASING,
+} from "@/lib/animations";
+import { AnimatePresence } from "framer-motion";
 
 interface CartSectionProps {
   section: DeckSection;
@@ -68,10 +77,18 @@ function DeckCardCopy({
     : undefined;
 
   return (
-    <div
+    <motion.div
       ref={setNodeRef}
       style={style}
       className={`relative ${isBeingDragged ? "opacity-30 scale-95" : ""}`}
+      initial={{ opacity: 0, scale: SCALE.initial }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: SCALE.initial }}
+      layout
+      transition={{
+        duration: ANIMATION_DURATION.normal,
+        ease: EASING.smooth,
+      }}
     >
       {/* Card Thumbnail - Draggable */}
       <div
@@ -104,7 +121,7 @@ function DeckCardCopy({
           </div>
         </CardPreview>
       </div>
-    </div>
+    </motion.div>
   );
 }
 
@@ -136,30 +153,54 @@ export function CartSection({
       >
         <DeckDropZone id={section} isEmpty={cards.length === 0}>
           {cards.length === 0 ? (
-            <div className="flex flex-col items-center justify-center text-muted-50 py-16 h-full min-h-[400px]">
-              <Icon className="h-16 w-16 mb-4 text-white/40" />
+            <motion.div
+              className="flex flex-col items-center justify-center text-muted-50 py-16 h-full min-h-[400px]"
+              initial="hidden"
+              animate="visible"
+              variants={fadeInVariants}
+            >
+              <motion.div
+                animate={{
+                  scale: [1, 1.05, 1],
+                  opacity: [0.4, 0.6, 0.4],
+                }}
+                transition={{
+                  duration: 2,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }}
+              >
+                <Icon className="h-16 w-16 mb-4 text-white/40" />
+              </motion.div>
               <span className="text-base font-semibold text-white/60 mb-2">
                 {sectionHeadlines[section]}
               </span>
               <span className="text-sm text-white/60 font-medium">
                 {count} / {maxCount}
               </span>
-            </div>
+            </motion.div>
           ) : (
-            <div className="grid grid-cols-4 sm:grid-cols-5 lg:grid-cols-6 xl:grid-cols-4 gap-3 p-4">
-              {sortedCards.map((card) => {
-                return (
-                  <DeckCardCopy
-                    key={card.deckInstanceId}
-                    card={card}
-                    deckInstanceId={card.deckInstanceId}
-                    section={section}
-                    activeDragId={activeDragId}
-                    onRemove={onRemove}
-                  />
-                );
-              })}
-            </div>
+            <motion.div
+              className="grid grid-cols-4 sm:grid-cols-5 lg:grid-cols-6 xl:grid-cols-4 gap-3 p-4"
+              initial="hidden"
+              animate="visible"
+              variants={staggerContainer(0.05)}
+            >
+              <AnimatePresence>
+                {sortedCards.map((card) => {
+                  return (
+                    <DeckCardCopy
+                      key={card.deckInstanceId}
+                      card={card}
+                      deckInstanceId={card.deckInstanceId}
+                      section={section}
+                      activeDragId={activeDragId}
+                      onRemove={onRemove}
+                    />
+                  );
+                })}
+              </AnimatePresence>
+            </motion.div>
           )}
         </DeckDropZone>
       </div>

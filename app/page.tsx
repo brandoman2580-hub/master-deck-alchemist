@@ -1,5 +1,7 @@
 "use client";
 
+import { useRef } from "react";
+import { motion } from "framer-motion";
 import {
   ArrowRight,
   Brain,
@@ -10,6 +12,13 @@ import {
 import MDAIcon from "@/public/images/MDA_Logo_One.svg";
 import { Button } from "../components/ui/button";
 import Link from "next/link";
+import {
+  fadeInUpVariants,
+  staggerContainer,
+  staggerItem,
+  useInViewAnimation,
+  useHoverAnimation,
+} from "@/lib/animations";
 
 export default function Home() {
   return (
@@ -30,6 +39,10 @@ export default function Home() {
 }
 
 function Hero() {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const isInView = useInViewAnimation(containerRef, { once: true, amount: 0.3 });
+  const hoverAnimation = useHoverAnimation();
+
   return (
     <section className="relative min-h-screen overflow-hidden">
       <div
@@ -37,50 +50,73 @@ function Hero() {
         aria-hidden
       />
 
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-28">
-        <div className="flex flex-col lg:flex-row items-start lg:items-center gap-12 lg:gap-16">
+      <div
+        ref={containerRef}
+        className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-28"
+      >
+        <motion.div
+          className="flex flex-col lg:flex-row items-start lg:items-center gap-12 lg:gap-16"
+          initial="hidden"
+          animate={isInView ? "visible" : "hidden"}
+          variants={staggerContainer(0.1)}
+        >
           <div className="max-w-xl space-y-8">
-            <div className="space-y-4">
-              <h1
+            <motion.div className="space-y-4" variants={staggerItem}>
+              <motion.h1
                 className="text-5xl md:text-6xl lg:text-7xl leading-tight tracking-[0.08em]"
                 style={{ fontFamily: "var(--font-heading)" }}
+                variants={fadeInUpVariants}
               >
                 Master Deck Alchemist
-              </h1>
-              <p className="max-w-cxl text-lg md:text-xl text-slate-200 leading-relaxed">
-              Analyze consistency, synergies, and weaknesses with AI that explains its reasoning — so every change makes sense.
-              </p>
-            </div>
-
-            <div className="flex flex-col sm:flex-row items-center gap-4">
-              <Button
-                asChild
-                size="lg"
-                className="h-14 px-8"
+              </motion.h1>
+              <motion.p
+                className="max-w-cxl text-lg md:text-xl text-slate-200 leading-relaxed"
+                variants={fadeInUpVariants}
               >
-                <Link href="/deck-builder" className="flex items-center gap-3">
-                  Launch Deck Builder
-                  <ArrowRight className="h-5 w-5" aria-hidden />
-                </Link>
-              </Button>
+                Analyze consistency, synergies, and weaknesses with AI that explains its reasoning — so every change makes sense.
+              </motion.p>
+            </motion.div>
 
-              <Button
-                asChild
-                size="lg"
-                variant="outline"
-                className="h-14 px-8"
-              >
-                <Link href="/saved-decks">View Saved Decks</Link>
-              </Button>
-            </div>
+            <motion.div
+              className="flex flex-col sm:flex-row items-center gap-4"
+              variants={staggerItem}
+            >
+              <motion.div {...hoverAnimation}>
+                <Button
+                  asChild
+                  size="lg"
+                  className="h-14 px-8"
+                >
+                  <Link href="/deck-builder" className="flex items-center gap-3">
+                    Launch Deck Builder
+                    <ArrowRight className="h-5 w-5" aria-hidden />
+                  </Link>
+                </Button>
+              </motion.div>
+
+              <motion.div {...hoverAnimation}>
+                <Button
+                  asChild
+                  size="lg"
+                  variant="outline"
+                  className="h-14 px-8"
+                >
+                  <Link href="/saved-decks">View Saved Decks</Link>
+                </Button>
+              </motion.div>
+            </motion.div>
           </div>
-        </div>
+        </motion.div>
       </div>
     </section>
   );
 }
 
 function Features() {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const isInView = useInViewAnimation(containerRef, { once: true, amount: 0.2 });
+  const hoverAnimation = useHoverAnimation(1.02, -2);
+
   const features = [
     {
       icon: Sparkles,
@@ -110,8 +146,16 @@ function Features() {
 
   return (
     <section className="relative bg-slate-950 py-20">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        <div className="text-center mb-14">
+      <div
+        ref={containerRef}
+        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10"
+      >
+        <motion.div
+          className="text-center mb-14"
+          initial="hidden"
+          animate={isInView ? "visible" : "hidden"}
+          variants={fadeInUpVariants}
+        >
           <span
             className="text-white/60 tracking-[0.1em] uppercase text-sm mb-3 block"
             style={{ fontFamily: "var(--font-heading)" }}
@@ -127,13 +171,20 @@ function Features() {
           <p className="text-slate-300 text-lg max-w-2xl mx-auto">
             Precision tools for competitive deck building.
           </p>
-        </div>
+        </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <motion.div
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+          initial="hidden"
+          animate={isInView ? "visible" : "hidden"}
+          variants={staggerContainer(0.1)}
+        >
           {features.map((feature, index) => (
-            <div
+            <motion.div
               key={index}
               className="rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 backdrop-blur-xl p-6 transition-all duration-300 shadow-lg hover:shadow-xl"
+              variants={staggerItem}
+              {...hoverAnimation}
             >
               <div className="flex flex-col gap-4">
                 <div className="flex items-center justify-between">
@@ -153,15 +204,19 @@ function Features() {
                   {feature.description}
                 </p>
               </div>
-            </div>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       </div>
     </section>
   );
 }
 
 function StatsStrip() {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const isInView = useInViewAnimation(containerRef, { once: true, amount: 0.2 });
+  const hoverAnimation = useHoverAnimation(1.02, -2);
+
   const steps = [
     {
       label: "Explore uncharted decks",
@@ -183,12 +238,19 @@ function StatsStrip() {
 
   return (
     <section className="relative bg-slate-950 py-12">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div ref={containerRef} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <motion.div
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
+          initial="hidden"
+          animate={isInView ? "visible" : "hidden"}
+          variants={staggerContainer(0.1)}
+        >
           {steps.map((step, index) => (
-            <div
+            <motion.div
               key={step.label}
               className="rounded-xl bg-white/5 border border-white/10 backdrop-blur-md px-5 py-6 hover:bg-white/10 hover:border-white/20 transition-all duration-300"
+              variants={staggerItem}
+              {...hoverAnimation}
             >
               <div className="flex items-start gap-4">
                 <div
@@ -210,22 +272,31 @@ function StatsStrip() {
                   </p>
                 </div>
               </div>
-            </div>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       </div>
     </section>
   );
 }
 
 function Footer() {
+  const containerRef = useRef<HTMLElement>(null);
+  const isInView = useInViewAnimation(containerRef, { once: true, amount: 0.2 });
+
   return (
     <footer
+      ref={containerRef}
       className="relative bg-slate-950 border-t border-white/10 py-12"
       aria-label="Footer"
       role="contentinfo"
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <motion.div
+        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
+        initial="hidden"
+        animate={isInView ? "visible" : "hidden"}
+        variants={fadeInUpVariants}
+      >
         <div className="flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-3">
             <MDAIcon
@@ -268,7 +339,7 @@ function Footer() {
         </div>
 
         <div className="mt-8 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-      </div>
+      </motion.div>
     </footer>
   );
 }

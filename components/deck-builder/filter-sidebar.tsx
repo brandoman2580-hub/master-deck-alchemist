@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,6 +11,10 @@ import { CARD_ARCHETYPE_FILTERS, FILTER_CONFIGS } from "@/lib/constants";
 import { ToggleFilter } from "@/components/ui/filter-toggle";
 import { SearchParams } from "@/types/types";
 import { ArchetypeAutocomplete } from "@/components/ui/archetype-autocomplete";
+import {
+  slideInRightVariants,
+  backdropVariants,
+} from "@/lib/animations";
 
 type ArchetypeOption = { value: string; label: string };
 type HandleSelectChange = (key: string, value: string) => void;
@@ -126,22 +131,30 @@ export function FilterSidebar({
     }
   };
 
-  if (isCollapsed) {
-    return null;
-  }
-
   return (
-    <>
-      {/* Backdrop - Full screen */}
-      <div
-        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
-        onClick={onToggleCollapse}
-        aria-hidden="true"
-      />
-      {/* Filter Panel - Full Page Slideout */}
-      <div className="fixed right-0 top-0 bottom-0 w-full max-w-2xl bg-slate-900/98 backdrop-blur-md border-l border-white/10 shadow-2xl shadow-black/50 flex flex-col h-full overflow-y-auto z-50 animate-in slide-in-from-right duration-300">
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-white/10">
+    <AnimatePresence>
+      {!isCollapsed && (
+        <>
+          {/* Backdrop - Full screen */}
+          <motion.div
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
+            onClick={onToggleCollapse}
+            aria-hidden="true"
+            variants={backdropVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+          />
+          {/* Filter Panel - Full Page Slideout */}
+          <motion.div
+            className="fixed right-0 top-0 bottom-0 w-full max-w-2xl bg-slate-900/98 backdrop-blur-md border-l border-white/10 shadow-2xl shadow-black/50 flex flex-col h-full overflow-y-auto z-50"
+            variants={slideInRightVariants}
+            initial="hidden"
+            animate="visible"
+            exit="hidden"
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b border-white/10">
         <div className="flex items-center gap-2">
           <Filter className="h-5 w-5 text-white/80" />
           <h3 className="text-lg font-semibold text-white font-display">
@@ -177,9 +190,9 @@ export function FilterSidebar({
         </div>
       </div>
 
-      {/* Active Filters Pills */}
-      {activeFilters.length > 0 && (
-        <div className="px-4 pt-3 pb-2 border-b border-white/10">
+            {/* Active Filters Pills */}
+            {activeFilters.length > 0 && (
+              <div className="px-4 pt-3 pb-2 border-b border-white/10">
           <div className="flex flex-wrap gap-2">
             {activeFilters.map((filter, idx) => (
               <Badge
@@ -197,12 +210,12 @@ export function FilterSidebar({
                 </button>
               </Badge>
             ))}
-          </div>
-        </div>
-      )}
+              </div>
+            </div>
+          )}
 
-      {/* Filter Content */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          {/* Filter Content */}
+          <div className="flex-1 overflow-y-auto p-6 space-y-6">
         {/* Render all filter sections */}
         {FILTER_CONFIGS.map((config, idx) => {
           const currentValue =
@@ -253,23 +266,25 @@ export function FilterSidebar({
             value={searchParams.effect || ""}
             onChange={handleInputChange}
             className="bg-white/5 border-white/10 text-white placeholder:text-white/50 focus-visible:outline-none rounded-lg"
-          />
+            />
+          </div>
         </div>
-      </div>
 
-      {/* Footer with Reset Button */}
-      <div className="border-t border-white/10 p-4 bg-slate-900/50">
-        <Button
-          variant="outline"
-          onClick={handleClearFilters}
-          className="w-full border-white/20 text-white/80 hover:bg-white/10 hover:border-white/30"
-          disabled={activeFilters.length === 0}
-        >
-          <Trash2 className="h-4 w-4 mr-2" />
-          Reset Filters
-        </Button>
-      </div>
-    </div>
-    </>
+        {/* Footer with Reset Button */}
+        <div className="border-t border-white/10 p-4 bg-slate-900/50">
+          <Button
+            variant="outline"
+            onClick={handleClearFilters}
+            className="w-full border-white/20 text-white/80 hover:bg-white/10 hover:border-white/30"
+            disabled={activeFilters.length === 0}
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Reset Filters
+          </Button>
+        </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
   );
 }

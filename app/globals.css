@@ -299,3 +299,14 @@
   pointer-events: none;
 }
 
+/* === Radix UI Dialog Overrides === */
+/* Remove default Radix UI dialog styles to allow glassmorphism */
+[data-radix-dialog-content] {
+  background: transparent !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+

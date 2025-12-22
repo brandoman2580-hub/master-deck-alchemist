@@ -134,7 +134,7 @@ export default function DeckBuilderTips() {
       </Button>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl bg-white/10 border border-white/20 backdrop-blur-xl">
           <DialogHeader className="pb-2">
             <div className="flex items-center gap-2">
               <Lightbulb className="h-5 w-5 text-yellow-400" />

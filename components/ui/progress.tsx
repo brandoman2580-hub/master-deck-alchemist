@@ -1,9 +1,11 @@
 "use client";
 
 import * as React from "react";
+import { motion } from "framer-motion";
 import * as ProgressPrimitive from "@radix-ui/react-progress";
 
 import { cn } from "../../lib/utils";
+import { SPRING_CONFIG } from "@/lib/animations";
 
 const Progress = React.forwardRef<
   React.ElementRef<typeof ProgressPrimitive.Root>,
@@ -17,9 +19,18 @@ const Progress = React.forwardRef<
     )}
     {...props}
   >
-    <ProgressPrimitive.Indicator
-      className="h-full w-full flex-1 bg-primary transition-all"
-      style={{ transform: `translateX(-${100 - (value || 0)}%)` }}
+    <motion.div
+      className="h-full w-full flex-1 bg-primary rounded-full"
+      initial={{ scaleX: 0, transformOrigin: "left" }}
+      animate={{
+        scaleX: (value || 0) / 100,
+      }}
+      transition={{
+        type: "spring",
+        stiffness: SPRING_CONFIG.gentle.tension,
+        damping: SPRING_CONFIG.gentle.friction,
+      }}
+      style={{ transformOrigin: "left" }}
     />
   </ProgressPrimitive.Root>
 ));

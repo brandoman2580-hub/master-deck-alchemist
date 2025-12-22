@@ -206,7 +206,7 @@ export function TestSetupPanel({
                   <Info className="h-4 w-4" />
                 </Button>
               </DialogTrigger>
-              <DialogContent className="text-white max-w-2xl">
+              <DialogContent className="text-white max-w-2xl bg-white/10 border border-white/20 backdrop-blur-xl">
                 <DialogHeader>
                   <DialogTitle className="text-white/90 font-display">
                     Test Type Information

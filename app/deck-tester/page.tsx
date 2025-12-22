@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
+import { motion } from "framer-motion";
 import { getUserDecks, getMetaDecks } from "../../lib/supabaseDecks";
 import { useUserStore } from "../../store/useUserStore";
 import { openLoginModal } from "../../lib/helpers";
@@ -23,6 +24,13 @@ import {
   formatDeck,
   getBanlistFormat,
 } from "./utils";
+import {
+  slideInLeftVariants,
+  fadeInVariants,
+  staggerContainer,
+  staggerItem,
+} from "@/lib/animations";
+import { AnimatePresence } from "framer-motion";
 
 type TestType = "matchup_analysis" | "duel_simulation" | "strategic_insights";
 
@@ -137,18 +145,31 @@ export default function DeckTester() {
       ? Math.min((aiResult.estimated_cost.tokens_used / 100000) * 100, 100)
       : 0;
 
+  const containerRef = useRef<HTMLDivElement>(null);
+
   return (
     <div className="min-h-screen bg-transparent px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8 pb-8 sm:pb-10 relative">
-      <div className="max-w-7xl mx-auto relative z-10">
+      <div ref={containerRef} className="max-w-7xl mx-auto relative z-10">
         <div className="flex flex-col md:flex-row gap-4 sm:gap-6 lg:gap-8">
           {/* ==== Filter Panel ==== */}
-          <TestSetupPanel
-            onRunTest={handleRunTest}
-            simulationLoading={simulationLoading}
-          />
+          <motion.div
+            initial="hidden"
+            animate="visible"
+            variants={slideInLeftVariants}
+          >
+            <TestSetupPanel
+              onRunTest={handleRunTest}
+              simulationLoading={simulationLoading}
+            />
+          </motion.div>
 
           {/* ==== Results Grid ==== */}
-          <div className="grow flex flex-col relative">
+          <motion.div
+            className="grow flex flex-col relative"
+            initial="hidden"
+            animate="visible"
+            variants={fadeInVariants}
+          >
             <ErrorCard error={error} onDismiss={() => setError(null)} />
 
             {/* Token Usage Display */}
@@ -158,41 +179,63 @@ export default function DeckTester() {
               tokenUsagePercent={tokenUsagePercent}
             />
 
-            {aiResult ? (
-              <div className="space-y-6">
-                {/* Test Type Specific Analytics */}
-                {currentTestType === "matchup_analysis" &&
-                  aiResult.matchup_analytics && (
-                    <MatchupAnalytics
-                      analytics={aiResult.matchup_analytics}
-                      deckMode={deckMode}
-                    />
-                  )}
+            <AnimatePresence mode="wait">
+              {aiResult ? (
+                <motion.div
+                  key="results"
+                  className="space-y-6"
+                  initial="hidden"
+                  animate="visible"
+                  exit="hidden"
+                  variants={staggerContainer(0.1)}
+                >
+                  {/* Test Type Specific Analytics */}
+                  {currentTestType === "matchup_analysis" &&
+                    aiResult.matchup_analytics && (
+                      <motion.div variants={staggerItem}>
+                        <MatchupAnalytics
+                          analytics={aiResult.matchup_analytics}
+                          deckMode={deckMode}
+                        />
+                      </motion.div>
+                    )}
 
-                {currentTestType === "duel_simulation" &&
-                  aiResult.simulation_analytics && (
-                    <DuelSimulationAnalytics
-                      analytics={aiResult.simulation_analytics}
-                    />
-                  )}
+                  {currentTestType === "duel_simulation" &&
+                    aiResult.simulation_analytics && (
+                      <motion.div variants={staggerItem}>
+                        <DuelSimulationAnalytics
+                          analytics={aiResult.simulation_analytics}
+                        />
+                      </motion.div>
+                    )}
 
-                {currentTestType === "strategic_insights" &&
-                  aiResult.strategic_analytics && (
-                    <StrategicInsightsAnalytics
-                      analytics={aiResult.strategic_analytics}
-                    />
-                  )}
-              </div>
-            ) : (
-              <EmptyState />
-            )}
+                  {currentTestType === "strategic_insights" &&
+                    aiResult.strategic_analytics && (
+                      <motion.div variants={staggerItem}>
+                        <StrategicInsightsAnalytics
+                          analytics={aiResult.strategic_analytics}
+                        />
+                      </motion.div>
+                    )}
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="empty"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                >
+                  <EmptyState />
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             <LoadingOverlay
               isLoading={simulationLoading}
               testType={currentTestType}
               numSimulations={currentNumSimulations}
             />
-          </div>
+          </motion.div>
         </div>
       </div>
     </div>

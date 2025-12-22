@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useRef } from "react";
+import { motion } from "framer-motion";
 import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { Badge } from "./badge";
@@ -8,6 +9,7 @@ import { Card } from "../../types/card";
 import { BanStatus } from "../../types/types";
 import { CardPreview } from "./card-preview";
 import Image from "next/image";
+import { useHoverAnimation } from "@/lib/animations";
 
 export interface CardStackProps {
   card: Card;
@@ -69,12 +71,15 @@ export function CardStack({
     }
   };
 
+  const hoverAnimation = useHoverAnimation(1.02, -2);
+
   return (
     <CardPreview card={card} banStatus={banStatus}>
-      <div
-        className={`relative overflow-visible rounded-lg bg-white/5 border border-white/10 backdrop-blur-md p-2 transition-all ${
+      <motion.div
+        className={`relative overflow-visible rounded-lg bg-white/5 border border-white/10 backdrop-blur-md p-2 transition-colors ${
           isBeingDragged ? "opacity-50" : ""
         } ${!disabled ? "cursor-pointer hover:bg-white/10 hover:border-white/20" : ""}`}
+        {...(disabled ? {} : hoverAnimation)}
       >
         <div ref={cardRef} onDoubleClick={handleDoubleClick}>
           <div className="flex gap-3 items-center p-1">
@@ -187,7 +192,7 @@ export function CardStack({
             </div>
           </div>
         </div>
-      </div>
+      </motion.div>
     </CardPreview>
   );
 }
