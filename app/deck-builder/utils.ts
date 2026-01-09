@@ -228,10 +228,10 @@ export function getDeckSectionFromTarget(
   targetId: string,
   currentDeck: DeckType,
 ): "mainDeck" | "extraDeck" | "sideDeck" | null {
-  // Direct drop zone targets
-  if (targetId === "main-deck") return "mainDeck";
-  if (targetId === "extra-deck") return "extraDeck";
-  if (targetId === "side-deck") return "sideDeck";
+  // Direct drop zone targets (support both camelCase and kebab-case for compatibility)
+  if (targetId === "mainDeck" || targetId === "main-deck") return "mainDeck";
+  if (targetId === "extraDeck" || targetId === "extra-deck") return "extraDeck";
+  if (targetId === "sideDeck" || targetId === "side-deck") return "sideDeck";
 
   // Check if dropping on an existing card in a deck section
   const sections: ("mainDeck" | "extraDeck" | "sideDeck")[] = [

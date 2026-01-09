@@ -68,12 +68,14 @@ export function DeckProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const saveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Fetch banlist on mount from Supabase
+  // Fetch banlist based on deck mode from Supabase
   useEffect(() => {
     const loadBanlist = async () => {
       try {
-        const { getMasterDuelBanlist } = await import("../lib/api");
-        const banlistData = await getMasterDuelBanlist();
+        const { getMasterDuelBanlist, getTCGBanlist } = await import("../lib/api");
+        const banlistData = currentDeck.mode === "TCG" 
+          ? await getTCGBanlist()
+          : await getMasterDuelBanlist();
         setBanlist(banlistData);
       } catch (error) {
         console.error("Error loading banlist:", error);
@@ -81,7 +83,7 @@ export function DeckProvider({ children }: { children: ReactNode }) {
       }
     };
     loadBanlist();
-  }, []);
+  }, [currentDeck.mode]);
 
   // --- Deck Operations ---
 
@@ -97,8 +99,15 @@ export function DeckProvider({ children }: { children: ReactNode }) {
         if (banStatus === "Semi-Limited") maxCopies = 2;
         if (banStatus === "Forbidden") maxCopies = 0;
 
-        const count = currentSection.filter((c) => c.id === card.id).length;
-        if (count >= maxCopies) return prev;
+        // Count copies across ALL deck sections (mainDeck, extraDeck, sideDeck)
+        // Banlist applies to the entire deck, not just individual sections
+        const totalCount = [
+          ...(prev.mainDeck || []),
+          ...(prev.extraDeck || []),
+          ...(prev.sideDeck || []),
+        ].filter((c) => c.id === card.id).length;
+
+        if (totalCount >= maxCopies) return prev;
         const cardWithInstanceId = { ...card, deckInstanceId: uuidv4() };
         return {
           ...prev,

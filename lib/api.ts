@@ -252,45 +252,67 @@ export async function getMasterDuelBanlist(): Promise<
   }
 }
 
-// 4. Banlist fetch—for TCG, you should also use your Supabase cards table if you store ban info
+/**
+ * Normalize TCG ban status from YGOPRODeck API format to our BanStatus type
+ * YGOPRODeck API returns: "Banned", "Limited", "Semi-Limited", or null/undefined
+ * Database may store: "Banned", "Forbidden", "Limited", "Semi-Limited", or null
+ * We standardize to: "Forbidden", "Limited", "Semi-Limited", "Unlimited"
+ */
+function normalizeTCGBanStatus(status: string | null | undefined): BanStatus {
+  if (!status) return "Unlimited";
+  
+  const normalized = status.trim().toLowerCase();
+  
+  // Handle "Banned" or "Forbidden" (both mean the same thing)
+  if (normalized === "banned" || normalized === "forbidden") {
+    return "Forbidden";
+  }
+  
+  // Handle "Limited" (case-insensitive)
+  if (normalized === "limited") {
+    return "Limited";
+  }
+  
+  // Handle "Semi-Limited" variations (case-insensitive)
+  if (normalized === "semi-limited" || normalized === "semi limited") {
+    return "Semi-Limited";
+  }
+  
+  // Default to Unlimited for unknown values
+  return "Unlimited";
+}
+
+// 4. Banlist fetch—for TCG, fetch from cards table ban_tcg column
 export async function getTCGBanlist(): Promise<Record<string, BanStatus>> {
-  // For now, return an empty banlist since the TCG ban status is not stored in the cards table
-  // This can be updated later when TCG ban status data is available
   try {
-    // Check if ban_status column exists and has data
+    // Fetch all cards with TCG ban status (ban_tcg column)
     const { data, error } = await supabase
       .from("cards")
-      .select("name, ban_status")
-      .not("ban_status", "is", null)
-      .limit(1);
+      .select("name, ban_tcg")
+      .not("ban_tcg", "is", null);
 
     if (error) {
       console.warn(
-        "TCG banlist column not found, using empty banlist:",
+        "Error fetching TCG banlist from cards table:",
         error.message,
       );
       return {};
     }
 
     if (!data || data.length === 0) {
-      console.warn("No TCG ban status data found, using empty banlist");
+      console.warn("No TCG ban status data found in cards table");
       return {};
     }
 
-    // If we have data, fetch all ban status entries
-    const { data: allData, error: allError } = await supabase
-      .from("cards")
-      .select("name, ban_status")
-      .not("ban_status", "is", null);
-
-    if (allError) throw allError;
-
     const banlist: Record<string, BanStatus> = {};
-    for (const card of allData ?? []) {
-      if (card.ban_status) {
-        banlist[card.name] = card.ban_status as BanStatus;
+    for (const card of data) {
+      if (card.ban_tcg) {
+        // Normalize the ban status value
+        banlist[card.name] = normalizeTCGBanStatus(card.ban_tcg);
       }
     }
+
+    console.log(`Loaded TCG banlist with ${Object.keys(banlist).length} entries`);
     return banlist;
   } catch (error) {
     console.warn("Error fetching TCG banlist, using empty banlist:", error);
