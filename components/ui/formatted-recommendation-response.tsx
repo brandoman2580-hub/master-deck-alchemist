@@ -102,14 +102,14 @@ export function FormattedRecommendationResponse({
 
             if (matchedCard) {
               return (
-                <strong className="text-cyan-400 font-semibold hover:text-cyan-300 transition-colors">
+                <strong className="text-cyan-400 font-bold cursor-pointer hover:underline decoration-cyan-500/50 underline-offset-4 decoration-2 transition-all">
                   {text}
                 </strong>
               );
             }
 
             return (
-              <strong className="text-slate-200 font-semibold">
+              <strong className="text-cyan-400 font-semibold">
                 {children}
               </strong>
             );
@@ -172,36 +172,37 @@ export function FormattedRecommendationResponse({
               return (
                 <div
                   key={index}
-                  className="group relative rounded-lg border border-cyan-500/20 bg-gradient-to-br from-slate-800/50 to-slate-900/50 p-4 backdrop-blur-sm transition-all hover:border-cyan-500/40 hover:shadow-lg hover:shadow-cyan-500/10"
+                  className="group relative rounded-xl border border-cyan-500/20 bg-gradient-to-br from-slate-900/80 to-slate-800/50 p-5 backdrop-blur-md transition-all duration-300 hover:border-cyan-500/40 hover:shadow-[0_0_20px_-5px_rgba(6,182,212,0.15)] hover:-translate-y-0.5"
                 >
-                  <div className="flex items-start justify-between gap-3">
+                  <div className="absolute inset-0 bg-gradient-to-b from-transparent via-cyan-500/[0.02] to-transparent opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-500" style={{ backgroundSize: '100% 3px' }} />
+                  <div className="flex items-start justify-between gap-3 relative z-10">
                     <div className="flex-1 space-y-2">
-                      <div className="flex items-center gap-2">
-                        <h4 className="font-semibold text-cyan-300 group-hover:text-cyan-200 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <h4 className="font-bold text-lg text-slate-50 group-hover:text-cyan-400 transition-colors tracking-tight">
                           {cardName}
                         </h4>
                         {card.risk_assessment && (
                           <span
-                            className={`px-2 py-0.5 rounded-full text-xs font-medium border ${getRiskColor(card.risk_assessment)}`}
+                            className={`px-2.5 py-0.5 rounded-md text-[10px] uppercase font-bold tracking-wider border ${getRiskColor(card.risk_assessment)}`}
                           >
-                            {card.risk_assessment}
+                            {card.risk_assessment} Risk
                           </span>
                         )}
                       </div>
 
                       {card.reason && (
-                        <p className="text-sm text-slate-300 leading-relaxed">
+                        <p className="text-sm text-slate-300 leading-relaxed border-l-2 border-cyan-500/20 pl-3">
                           {card.reason}
                         </p>
                       )}
 
                       {card.synergy_score !== undefined && (
-                        <div className="flex items-center gap-2 pt-1">
+                        <div className="flex items-center gap-2 pt-2">
                           <TrendingUp className="h-4 w-4 text-cyan-400" />
                           <span
-                            className={`text-sm font-medium ${getSynergyColor(card.synergy_score)}`}
+                            className={`text-xs font-bold uppercase tracking-wider ${getSynergyColor(card.synergy_score)}`}
                           >
-                            Synergy: {card.synergy_score}/100
+                            Synergy Score: {card.synergy_score}/100
                           </span>
                         </div>
                       )}

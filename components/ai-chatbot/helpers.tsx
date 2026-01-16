@@ -371,8 +371,23 @@ export function renderCategoryRecommendationCard(
                   key={`${rec.cardName}-${idx}`}
                   className="rounded-2xl bg-gradient-to-br from-slate-900/70 via-slate-900/55 to-slate-900/35 p-5 ring-1 ring-slate-800 transition-all duration-300 hover:-translate-y-0.5"
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="space-y-3">
+                  <div className="flex items-start gap-4">
+                    {/* Card Image with Hover Preview */}
+                    {card && card.card_images?.[0] && (
+                      <CardPreview card={card} banStatus={banStatus}>
+                        <div className="relative w-20 h-[112px] flex-shrink-0 rounded-lg overflow-hidden border border-white/20 bg-slate-900/50 cursor-pointer group/image transition-transform hover:scale-105">
+                          <Image
+                            src={card.card_images[0].image_url_small || card.card_images[0].image_url || "/placeholder.svg"}
+                            alt={card.name}
+                            fill
+                            className="object-cover"
+                            sizes="80px"
+                          />
+                        </div>
+                      </CardPreview>
+                    )}
+                    
+                    <div className="flex-1 min-w-0 space-y-3">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-sm font-semibold text-slate-50">
                           {rec.cardName}
@@ -389,18 +404,7 @@ export function renderCategoryRecommendationCard(
                       <p className="text-sm text-slate-200 leading-relaxed">
                         {rec.reason}
                       </p>
-                      {rec.synergies?.length ? (
-                        <div className="flex flex-wrap gap-1.5 text-[11px] text-white/80">
-                          {rec.synergies.map((s) => (
-                            <span
-                              key={`${rec.cardName}-${s}`}
-                              className="rounded-full bg-white/10 border border-white/20 px-2 py-0.5"
-                            >
-                              {s}
-                            </span>
-                          ))}
-                        </div>
-                      ) : null}
+
                       {rec.impact && (
                         <div className="text-xs text-emerald-200">
                           Impact: {rec.impact}

@@ -228,6 +228,7 @@ export interface Quota {
 export interface AIChatbotProps {
   isOpen: boolean;
   onClose: () => void;
+  initialQuestion?: string;
 }
 
 export interface AIResponseCardProps {

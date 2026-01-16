@@ -12,13 +12,9 @@ import {
   PointerSensor,
   UniqueIdentifier,
 } from "@dnd-kit/core";
-import { Button } from "../../components/ui/button";
 import { Card as CardUI } from "../../components/ui/card";
 import { Badge } from "../../components/ui/badge";
-import { Sparkles } from "lucide-react";
-import AIChatbot from "../../components/ai-chatbot/ai-chatbot";
 import { Card } from "../../types/card";
-import { openLoginModal } from "../../lib/helpers";
 import { DeckMode, DeckSection } from "../../types/types";
 import { useCardStore } from "../../store/cardStore";
 import { useUserStore } from "../../store/useUserStore";
@@ -32,6 +28,7 @@ import {
   getDeckSectionFromTarget,
 } from "./utils";
 import { TierBadge } from "../../components/deck-builder/tier-badge";
+import { MetaBadge, MetaThreatBadge } from "../../components/deck-builder/meta-badge";
 import { DeckHeader } from "../../components/deck-builder/deck-header";
 import { DeckTabs } from "../../components/deck-builder/deck-tabs";
 import { CardBrowser } from "../../components/deck-builder/card-browser";
@@ -41,6 +38,8 @@ import {
   slideInDownVariants,
   scaleInVariants,
 } from "@/lib/animations";
+import { detectMetaDeck } from "../../lib/utils/metaDetector";
+import { getMetaStats } from "../../lib/api/metaStats";
 
 export default function DeckBuilder() {
   const {
@@ -57,9 +56,18 @@ export default function DeckBuilder() {
 
   // State -----------------------------------------------
   const [activeDragCard, setActiveDragCard] = useState<Card | null>(null);
-  const [isChatOpen, setIsChatOpen] = useState(false);
   const [deckTier, setDeckTier] = useState<number | null>(null);
   const [deckPlayStyle, setDeckPlayStyle] = useState<string[]>([]);
+  const [metaMatch, setMetaMatch] = useState<{
+    deck_name: string;
+    tier: number;
+    format: "tcg" | "master_duel";
+    confidence: number;
+  } | null>(null);
+  const [metaThreats, setMetaThreats] = useState<Array<{
+    deck_name: string;
+    tier: number;
+  }>>([]);
   const [activeDragId, setActiveDragId] = useState<UniqueIdentifier | null>(
     null,
   );
@@ -100,6 +108,44 @@ export default function DeckBuilder() {
     analyzeDeck();
   }, [currentDeck, analyzeDeck]);
 
+  // Detect meta deck match and fetch meta threats
+  useEffect(() => {
+    const detectMeta = async () => {
+      if (currentDeck.mainDeck.length === 0) {
+        setMetaMatch(null);
+        setMetaThreats([]);
+        return;
+      }
+
+      try {
+        const format = deckMode === "TCG" ? "tcg" : "master_duel";
+        
+        // Detect if deck matches a known meta deck
+        // This will gracefully handle if the endpoint is not available
+        const match = await detectMetaDeck(currentDeck, format);
+        setMetaMatch(match);
+
+        // Fetch meta threats (top tier decks)
+        // This will return empty stats if the endpoint is not available
+        const metaStats = await getMetaStats({ format, days: 30 });
+        const threats = metaStats.topDecks
+          .filter((deck) => deck.tier <= 2)
+          .map((deck) => ({
+            deck_name: deck.deck_name,
+            tier: deck.tier,
+          }));
+        setMetaThreats(threats);
+      } catch (error) {
+        // Silently handle errors - meta features are optional
+        console.debug("Meta detection unavailable:", error);
+        setMetaMatch(null);
+        setMetaThreats([]);
+      }
+    };
+
+    detectMeta();
+  }, [currentDeck, deckMode]);
+
   const handleExportDeck = () => {
     const jsonData = exportDeck();
     exportDeckAsFile(jsonData, currentDeck.name || "");
@@ -107,7 +153,10 @@ export default function DeckBuilder() {
 
   // Phase 6: Wrapper for addCardToDeck with analytics
   const handleAddCardToDeck = useCallback(
-    (card: Card, section: DeckSection) => {
+    async (card: Card, section: DeckSection) => {
+      // Simulate small delay for UI feedback
+      await new Promise((resolve) => setTimeout(resolve, 300));
+
       addCardToDeck(card, section);
       track({
         type: "card_added",
@@ -115,6 +164,10 @@ export default function DeckBuilder() {
         cardName: card.name,
         section,
       });
+
+      // Clear from added set after 2s
+      setTimeout(() => {
+      }, 2000);
     },
     [addCardToDeck, track],
   );
@@ -302,26 +355,18 @@ export default function DeckBuilder() {
                     );
                   })}
                   <TierBadge tier={deckTier} />
+                  {metaMatch && (
+                    <MetaBadge
+                      metaMatch={metaMatch}
+                      format={deckMode === "TCG" ? "tcg" : "master_duel"}
+                    />
+                  )}
+                  {metaThreats.length > 0 && <MetaThreatBadge threats={metaThreats} />}
                 </div>
               </div>
 
               <div className="flex flex-wrap gap-2 items-center">
                 <DeckBuilderTips />
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => {
-                    if (!user) {
-                      openLoginModal();
-                    } else {
-                      setIsChatOpen(true);
-                    }
-                  }}
-                  className="text-white/80 hover:text-white hover:bg-white/10"
-                  aria-label="Ask AI Assistant"
-                >
-                  <Sparkles className="h-5 w-5" />
-                </Button>
               </div>
             </div>
           </div>
@@ -374,9 +419,6 @@ export default function DeckBuilder() {
         </div>
 
       <DragOverlayComponent activeDragCard={activeDragCard} />
-
-      {/* AI Assistant Modal */}
-      <AIChatbot isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
       </motion.div>
     </DndContext>
   );

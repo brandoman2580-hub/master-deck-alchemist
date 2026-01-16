@@ -79,6 +79,9 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     const prefersReducedMotion = useReducedMotion();
     const [ripples, setRipples] = React.useState<Array<{ id: number; x: number; y: number }>>([]);
     const buttonRef = React.useRef<HTMLButtonElement | null>(null);
+    const removeRipple = React.useCallback((id: number) => {
+      setRipples((prev) => prev.filter((r) => r.id !== id));
+    }, []);
 
     const handleClick = React.useCallback(
       (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -95,11 +98,6 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           const id = Date.now();
 
           setRipples((prev) => [...prev, { id, x, y }]);
-
-          // Remove ripple after animation
-          setTimeout(() => {
-            setRipples((prev) => prev.filter((r) => r.id !== id));
-          }, 600);
         }
 
         onClick?.(e);
@@ -179,9 +177,9 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
                 y: ripple.y - 100,
                 opacity: 0,
               }}
-              exit={{ opacity: 0 }}
+              onAnimationComplete={() => removeRipple(ripple.id)}
               transition={{
-                duration: ANIMATION_DURATION.normal,
+                duration: 0.6,
                 ease: EASING.smooth,
               }}
             />

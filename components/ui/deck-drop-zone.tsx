@@ -1,16 +1,19 @@
 import React from "react";
 import { useDroppable } from "@dnd-kit/core";
+import { cn } from "@/lib/utils";
 
 interface DeckDropZoneProps {
   id: string;
   children: React.ReactNode;
   isEmpty?: boolean;
+  className?: string;
 }
 
 export const DeckDropZone: React.FC<DeckDropZoneProps> = ({
   id,
   children,
   isEmpty = false,
+  className,
 }) => {
   const { setNodeRef, isOver } = useDroppable({ id });
 
@@ -22,7 +25,7 @@ export const DeckDropZone: React.FC<DeckDropZoneProps> = ({
       <div
         ref={setNodeRef}
         id={id}
-        className="w-full h-full min-h-[300px] transition-all duration-150 relative"
+        className={cn("w-full h-full min-h-[300px] transition-all duration-150 relative flex flex-col", className)}
         style={{ position: "relative" }}
       >
         {children}

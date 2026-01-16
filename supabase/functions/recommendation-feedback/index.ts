@@ -58,6 +58,11 @@ const TelemetryFeedbackZ = z.object({
   accepted: z.boolean(),
   timestamp: z.string().optional(), // ISO string, defaults to now
   userId: z.string().optional(), // Optional, will use auth user if not provided
+  // Phase 5: Rich feedback fields
+  cardId: z.string().optional(),
+  rejectionReasons: z.array(z.string()).optional(),
+  feedbackText: z.string().optional(),
+  context: z.record(z.string(), z.any()).optional(),
 });
 
 // Legacy feedback schema (for backward compatibility)
@@ -159,6 +164,17 @@ Deno.serve(async (req) => {
       const timestamp = telemetry.timestamp || new Date().toISOString();
       const userId = telemetry.userId || user.id;
 
+      // Spam detection (Phase 5): Apply basic screening to free-text.
+      if (detectSpam(telemetry.feedbackText || null)) {
+        return new Response(
+          JSON.stringify({ error: "Feedback rejected due to spam detection." }),
+          {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
+      }
+
       // Insert telemetry data
       const { data, error } = await supabase
         .from("recommendation_telemetry")
@@ -168,6 +184,10 @@ Deno.serve(async (req) => {
           accepted: telemetry.accepted,
           timestamp,
           user_id: userId,
+          card_id: telemetry.cardId || null,
+          rejection_reasons: telemetry.rejectionReasons || null,
+          feedback_text: telemetry.feedbackText || null,
+          context: telemetry.context || null,
           created_at: new Date().toISOString(),
         })
         .select()
@@ -225,7 +245,7 @@ Deno.serve(async (req) => {
         legacyResult.data;
 
       // Spam detection
-      if (detectSpam(feedback_text)) {
+      if (detectSpam(feedback_text ?? null)) {
         return new Response(
           JSON.stringify({ error: "Feedback rejected due to spam detection." }),
           {

@@ -19,6 +19,10 @@ export interface TelemetryFeedbackRequest {
   accepted: boolean;
   timestamp?: string; // ISO string, defaults to now
   userId?: string; // Optional, will use auth user if not provided
+  // Phase 5: Rich feedback fields
+  cardId?: string; // Recommended card id (string to match recommender schema)
+  rejectionReasons?: string[]; // Reason codes (e.g., ["no-synergy","too-complex"])
+  feedbackText?: string; // Optional free-text note from the user
   // Enhanced context for better feedback
   context?: {
     originalQuestion?: string;
@@ -95,6 +99,13 @@ export async function submitTelemetryFeedback(
     accepted: request.accepted,
     timestamp: request.timestamp || new Date().toISOString(),
     userId: request.userId,
+    ...(request.cardId && { cardId: request.cardId }),
+    ...(request.rejectionReasons && request.rejectionReasons.length > 0
+      ? { rejectionReasons: request.rejectionReasons }
+      : {}),
+    ...(request.feedbackText && request.feedbackText.trim()
+      ? { feedbackText: request.feedbackText.trim() }
+      : {}),
     ...(request.context && { context: request.context }),
   };
 

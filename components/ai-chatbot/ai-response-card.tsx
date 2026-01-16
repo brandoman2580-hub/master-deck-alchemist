@@ -14,7 +14,8 @@ import {
   SelectValue,
 } from "../ui/select";
 import Image from "next/image";
-import { Plus, Loader2, Check } from "lucide-react";
+import { Plus, Loader2 } from "lucide-react";
+import { AnimatedCheckmark } from "@/components/ui/animated-checkmark";
 import type { AIResponseCardProps, CandidateCard, CardSuggestionMeta } from "./types";
 import { cleanupLLMResponse, highlightKeywords } from "./utils";
 
@@ -98,7 +99,7 @@ function MarkdownWithCardPreviews({
 
           if (!trimmedText || nameToCardMap.size === 0) {
             return (
-              <strong className="text-primary font-semibold">{children}</strong>
+              <strong className="text-cyan-400 font-semibold drop-shadow-[0_0_8px_rgba(6,182,212,0.3)]">{children}</strong>
             );
           }
 
@@ -111,20 +112,20 @@ function MarkdownWithCardPreviews({
 
           if (matchedCard) {
             return (
-              <strong className="text-cyan-400 font-semibold">
+              <strong className="text-cyan-400 font-bold cursor-pointer hover:underline decoration-cyan-500/50 underline-offset-4 decoration-2 transition-all">
                 {trimmedText}
               </strong>
             );
           }
 
           return (
-            <strong className="text-primary font-semibold">{children}</strong>
+            <strong className="text-cyan-400 font-semibold">{children}</strong>
           );
         },
         em({ children }) {
           const text = extractTextContent(children);
           return (
-            <em className="text-cyan-400 font-medium border-b border-cyan-500/30 px-1">
+            <em className="text-cyan-300 font-medium italic bg-cyan-500/5 px-1 rounded-sm">
               {text}
             </em>
           );
@@ -133,7 +134,7 @@ function MarkdownWithCardPreviews({
           const text = extractTextContent(children);
           return (
             <code
-              className={`${className || ""} bg-cyan-500/10 text-cyan-300 border border-cyan-500/30 px-1.5 py-0.5 rounded text-xs font-mono`}
+              className={`${className || ""} bg-slate-900/80 text-cyan-300 border border-cyan-500/20 px-1.5 py-0.5 rounded text-xs font-mono shadow-inner`}
             >
               {text}
             </code>
@@ -141,39 +142,42 @@ function MarkdownWithCardPreviews({
         },
         p({ children }) {
           return (
-            <p className="mb-4 leading-relaxed text-white/90">{children}</p>
+            <p className="mb-4 leading-relaxed text-slate-300">{children}</p>
           );
         },
         h1({ children }) {
-          return <h1 className="text-xl font-bold mb-3 mt-6">{children}</h1>;
+          return <h1 className="text-xl font-bold text-slate-50 tracking-tight mb-4 mt-6 border-b border-cyan-500/20 pb-2">{children}</h1>;
         },
         h2({ children }) {
           return (
-            <h2 className="text-lg font-semibold mb-3 mt-5">{children}</h2>
+            <h2 className="text-lg font-semibold text-slate-100 mb-3 mt-5 flex items-center gap-2">
+              <span className="w-1 h-4 bg-cyan-500 rounded-full" />
+              {children}
+            </h2>
           );
         },
         h3({ children }) {
           return (
-            <h3 className="text-base font-medium mb-2 mt-4">{children}</h3>
+            <h3 className="text-base font-medium text-slate-200 mb-2 mt-4">{children}</h3>
           );
         },
         ul({ children }) {
           return (
-            <ul className="mb-4 space-y-2 pl-6 list-disc marker:text-white/60">
+            <ul className="mb-4 space-y-2 pl-4">
               {children}
             </ul>
           );
         },
         ol({ children }) {
           return (
-            <ol className="mb-4 space-y-2 pl-6 list-decimal marker:text-white/60 marker:font-semibold">
+            <ol className="mb-4 space-y-2 pl-4 list-decimal marker:text-cyan-500/70 marker:font-semibold">
               {children}
             </ol>
           );
         },
         li({ children }) {
           return (
-            <li className="pl-2 leading-relaxed text-white/90">
+            <li className="pl-2 leading-relaxed text-slate-300 relative before:content-['•'] before:absolute before:left-[-1em] before:text-cyan-500/50">
               {children}
             </li>
           );
@@ -259,52 +263,52 @@ export function AIResponseCard({
 
     return (
       <div
-        className={`p-3 border-b border-cyan-500/20 hover:bg-slate-900/40 transition-colors ${
+        className={`p-3 border-b border-white/5 hover:bg-white/5 transition-colors group/card ${
           !canAdd ? "opacity-60 cursor-not-allowed" : "cursor-pointer"
         }`}
       >
-        <div className="flex gap-3 items-center">
+        <div className="flex gap-4 items-start">
           <CardPreview card={card} banStatus={banStatus}>
-            <div className="relative w-12 h-[72px] flex-shrink-0 flex items-center justify-center cursor-pointer">
+            <div className="relative w-12 h-[72px] flex-shrink-0 flex items-center justify-center cursor-pointer group-hover/card:scale-105 transition-transform duration-300">
               <Image
                 width={80}
                 height={120}
-                src={card.card_images[0]?.image_url || "/placeholder.svg"}
+                src={card.card_images[0]?.image_url_small || "/placeholder.svg"}
                 alt={card.name}
-                className="w-full h-auto object-contain rounded shadow-sm"
+                className="w-full h-auto object-contain rounded shadow-lg border border-white/10 group-hover/card:border-cyan-500/40 transition-colors"
               />
             </div>
           </CardPreview>
 
-          <div className="flex-1 min-w-0">
-            <h4 className="font-medium text-sm truncate text-slate-50">
+          <div className="flex-1 min-w-0 space-y-1">
+            <h4 className="font-semibold text-sm truncate text-slate-50 group-hover/card:text-cyan-400 transition-colors">
               {card.name}
             </h4>
-            <div className="flex flex-wrap gap-1 mt-1.5">
+            <div className="flex flex-wrap gap-1.5">
               <Badge
                 variant="outline"
-                className="text-xs border-cyan-500/50 text-cyan-300"
+                className="text-[10px] px-1.5 py-0 border-cyan-500/30 text-cyan-300 bg-cyan-500/5"
               >
                 {card.type}
               </Badge>
               {card.attribute && (
                 <Badge
                   variant="outline"
-                  className="text-xs border-cyan-500/50 text-cyan-300"
+                  className="text-[10px] px-1.5 py-0 border-white/10 text-slate-300"
                 >
                   {card.attribute}
                 </Badge>
               )}
               {banStatus !== "Unlimited" && (
-                <Badge className={`text-xs ${getBanStatusColor(banStatus)}`}>
+                <Badge className={`text-[10px] px-1.5 py-0 ${getBanStatusColor(banStatus)}`}>
                   {banStatus}
                 </Badge>
               )}
             </div>
-            <p className="text-xs text-slate-400 mt-1.5 line-clamp-2">
+            <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed opacity-80">
               {card.desc}
             </p>
-            <div className="flex items-center gap-2 mt-2">
+            <div className="flex items-center gap-3 pt-1">
               {currentDeckMode === "TCG" ? (
                 <Select
                   defaultValue={optimalDeckType}
@@ -319,40 +323,45 @@ export function AIResponseCard({
                     }
                   }}
                 >
-                  <SelectTrigger className="h-7 w-24 text-xs">
+                  <SelectTrigger className="h-6 w-auto min-w-[80px] text-[10px] bg-white/5 border-white/10 hover:border-cyan-500/30">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="mainDeck">Main</SelectItem>
-                    <SelectItem value="extraDeck">Extra</SelectItem>
-                    <SelectItem value="sideDeck">Side</SelectItem>
+                  <SelectContent className="bg-slate-900 border-white/10 text-slate-300">
+                    <SelectItem value="mainDeck">Main Deck</SelectItem>
+                    <SelectItem value="extraDeck">Extra Deck</SelectItem>
+                    <SelectItem value="sideDeck">Side Deck</SelectItem>
                   </SelectContent>
                 </Select>
               ) : (
-                <span className="text-xs text-slate-400">
-                  → {optimalDeckType === "mainDeck" ? "Main" : "Extra"} Deck
+                <span className="text-[10px] text-slate-500 uppercase tracking-wider font-medium">
+                  {optimalDeckType === "mainDeck" ? "Main" : "Extra"} Deck
                 </span>
               )}
               {!canAdd && (
-                <span className="text-xs text-slate-400">
+                <span className="text-[10px] text-red-400 font-medium flex items-center gap-1">
+                  <span className="w-1 h-1 rounded-full bg-red-400"></span>
                   {banStatus === "Forbidden" ? "Forbidden" : "Limit reached"}
                 </span>
               )}
             </div>
           </div>
 
-          <div className="flex-shrink-0">
+          <div className="flex-shrink-0 self-center">
             <Button
-              variant={wasAdded ? "default" : "ghost"}
+              variant={wasAdded ? "default" : "outline"}
               size="sm"
-              className="h-8 w-8 p-0"
+              className={`h-8 w-8 p-0 rounded-lg transition-all ${
+                wasAdded 
+                  ? "bg-cyan-500 hover:bg-cyan-600 text-white shadow-[0_0_10px_rgba(6,182,212,0.3)]" 
+                  : "border-white/10 hover:border-cyan-500/50 hover:bg-cyan-500/10 text-slate-400 hover:text-cyan-400"
+              }`}
               disabled={!canAdd || isAdding}
               onClick={() => handleAddCardToDeck && handleAddCardToDeck(card)}
             >
               {isAdding ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : wasAdded ? (
-                <Check className="h-4 w-4" />
+                <AnimatedCheckmark className="h-4 w-4" />
               ) : (
                 <Plus className="h-4 w-4" />
               )}
@@ -388,24 +397,24 @@ export function AIResponseCard({
             return (
               <div
                 key={card.id}
-                className="bg-white/5 border border-white/10 backdrop-blur-xl shadow-lg rounded-xl p-4 hover:bg-white/10 hover:border-white/20 transition-all duration-300"
+                className="bg-white/5 border border-white/10 backdrop-blur-xl shadow-lg rounded-xl overflow-hidden hover:border-cyan-500/30 hover:shadow-[0_0_20px_-5px_rgba(6,182,212,0.15)] transition-all duration-300"
               >
-                <div className="border border-cyan-500/30 bg-slate-900/70 backdrop-blur-sm space-y-2 shadow-[0_2px_12px_rgba(0,0,0,0.2)]">
-                  <div className="flex flex-col gap-3 md:flex-row md:items-start">
+                <div className="bg-slate-900/60 p-4">
+                  <div className="flex gap-4">
                     <div className="shrink-0">{renderCardPreview(card)}</div>
-                    <div className="flex-1 space-y-1">
-                      <h3 className="font-semibold text-sm md:text-base text-slate-50">
+                    <div className="flex-1 space-y-2">
+                      <h3 className="font-bold text-lg text-slate-50 tracking-tight">
                         {card.name}
                       </h3>
                       {meta?.reason && (
-                        <p className="text-xs md:text-sm text-slate-300 leading-relaxed">
+                        <p className="text-sm text-slate-300 leading-relaxed border-l-2 border-cyan-500/30 pl-3">
                           {meta.reason}
                         </p>
                       )}
 
                       {meta?.synergy_with_candidateIds &&
                         meta.synergy_with_candidateIds.length > 0 && (
-                          <div className="flex flex-wrap gap-1 pt-1">
+                          <div className="flex flex-wrap gap-2 pt-2">
                             {meta.synergy_with_candidateIds.map((id) => {
                               const partner = candidateCards.find(
                                 (c) => c.candidateId === id
@@ -414,8 +423,9 @@ export function AIResponseCard({
                               return (
                                 <span
                                   key={id}
-                                  className="rounded-full border border-cyan-500/30 bg-cyan-500/10 px-2 py-0.5 text-[10px] md:text-xs text-cyan-300"
+                                  className="rounded-lg border border-cyan-500/20 bg-cyan-500/5 px-2.5 py-1 text-xs text-cyan-300 flex items-center gap-1.5"
                                 >
+                                  <span className="w-1 h-1 rounded-full bg-cyan-400"></span>
                                   Synergy: {partner.name}
                                 </span>
                               );

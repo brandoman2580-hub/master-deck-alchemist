@@ -64,6 +64,22 @@ Content-Type: application/json
       | "mid"
       | "high";
   };
+  conversationContext?: {               // Optional multi-turn memory from client
+    previousRecommendations: string[];
+    userFeedback: Array<{
+      cardId: string;
+      accepted: boolean;
+      reason?: string;
+    }>;
+    deckEvolution: Array<{
+      timestamp: string;
+      deckFingerprint?: string;
+      mainCount?: number;
+      extraCount?: number;
+      sideCount?: number;
+    }>;
+    userGoals: string[];                // e.g. ["competitive", "budget"]
+  };
   maxOutputTokens?: number;             // Default: 800
 }
 ```

@@ -394,3 +394,92 @@ export const rippleVariants: Variants = {
   },
 };
 
+/**
+ * Message bubble variants with spring physics for natural feel
+ */
+export const messageBubbleVariants: Variants = {
+  hidden: {
+    opacity: 0,
+    y: prefersReducedMotion() ? 0 : 20,
+    scale: prefersReducedMotion() ? 1 : 0.95,
+  },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: prefersReducedMotion()
+      ? { duration: 0 }
+      : {
+          type: "spring",
+          stiffness: 300,
+          damping: 25,
+          mass: 0.5,
+        },
+  },
+};
+
+/**
+ * Message container variants for staggering multiple messages
+ */
+export const messageContainerVariants: Variants = {
+  hidden: {
+    opacity: 0,
+  },
+  visible: {
+    opacity: 1,
+    transition: prefersReducedMotion()
+      ? { duration: 0 }
+      : {
+          staggerChildren: 0.1,
+          delayChildren: 0.05,
+        },
+  },
+};
+
+/**
+ * User message bubble variants (slides from right)
+ */
+export const userMessageVariants: Variants = {
+  hidden: {
+    opacity: 0,
+    x: prefersReducedMotion() ? 0 : 20,
+    scale: prefersReducedMotion() ? 1 : 0.95,
+  },
+  visible: {
+    opacity: 1,
+    x: 0,
+    scale: 1,
+    transition: prefersReducedMotion()
+      ? { duration: 0 }
+      : {
+          type: "spring",
+          stiffness: 300,
+          damping: 25,
+          mass: 0.5,
+        },
+  },
+};
+
+/**
+ * Assistant message bubble variants (slides from left)
+ */
+export const assistantMessageVariants: Variants = {
+  hidden: {
+    opacity: 0,
+    x: prefersReducedMotion() ? 0 : -20,
+    scale: prefersReducedMotion() ? 1 : 0.95,
+  },
+  visible: {
+    opacity: 1,
+    x: 0,
+    scale: 1,
+    transition: prefersReducedMotion()
+      ? { duration: 0 }
+      : {
+          type: "spring",
+          stiffness: 300,
+          damping: 25,
+          mass: 0.5,
+        },
+  },
+};

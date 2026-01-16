@@ -118,3 +118,21 @@ entrypoint = "./functions/embed/index.ts"
 # Specifies static files to be bundled with the function. Supports glob patterns.
 # For example, if you want to serve static HTML pages in your function:
 # static_files = [ "./functions/embed/*.html" ]
+
+[functions.meta-stats]
+enabled = true
+verify_jwt = false
+import_map = "./functions/meta-stats/deno.json"
+entrypoint = "./functions/meta-stats/index.ts"
+
+[functions.update-meta]
+enabled = true
+verify_jwt = false
+import_map = "./functions/update-meta/deno.json"
+entrypoint = "./functions/update-meta/index.ts"
+
+[functions.meta-health]
+enabled = true
+verify_jwt = false
+import_map = "./functions/meta-health/deno.json"
+entrypoint = "./functions/meta-health/index.ts"

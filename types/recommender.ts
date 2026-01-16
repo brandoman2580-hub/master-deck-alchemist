@@ -144,13 +144,28 @@ export const UIBlockZ = z.object({
 export type UIBlock = z.infer<typeof UIBlockZ>;
 
 /**
+ * Reasoning schema (Phase 2)
+ */
+export const ReasoningZ = z.object({
+  userIntent: z.string(),
+  deckWeaknesses: z.string(),
+  strategicConsiderations: z.string(),
+  metaContext: z.string().optional(),
+  candidateEvaluation: z.string(),
+});
+
+export type Reasoning = z.infer<typeof ReasoningZ>;
+
+/**
  * Full recommender response schema
  * Matches RECOMMENDER_SCHEMA from system prompt
+ * Phase 2: Added reasoning field (optional for error responses)
  */
 export const RecommenderZ = z.object({
   schemaVersion: z.string(),
   confidence: z.number().min(0).max(1),
   explainTo: z.enum(["novice", "intermediate", "advanced"]),
+  reasoning: ReasoningZ.optional(), // Phase 2: Optional reasoning field (may be missing in error responses)
   summary: z.string().optional(),
   recommendations: z.array(RecoItemZ),
   ui: z.array(UIBlockZ),
@@ -187,11 +202,20 @@ export interface RecommenderActions {
 /**
  * Meta object structure
  * Contains additional metadata about the recommendation
+ * Phase 2: Added timing and performance metadata
  */
 export interface RecommenderMeta {
   deckFingerprint?: string;
   usedCardIds?: number[];
   mainCount?: number;
+  // Phase 2: Two-stage timing metadata
+  stage1Duration?: number;
+  stage2Duration?: number;
+  totalDuration?: number;
+  candidateCount?: number;
+  tokens_used?: number;
+  cost_usd?: number;
+  recommendation_id?: string;
   [key: string]: any;
 }
 

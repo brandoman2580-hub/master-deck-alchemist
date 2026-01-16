@@ -20,7 +20,7 @@ jest.mock("../store/cardStore", () => ({
   })),
 }));
 
-vi.mock("../components/ui/card-preview", () => ({
+jest.mock("../components/ui/card-preview", () => ({
   CardPreview: ({ card }: { card: Card }) => (
     <div data-testid={`card-preview-${card.id}`}>{card.name}</div>
   ),
@@ -366,4 +366,5 @@ describe("RecommenderUIBlocks", () => {
     });
   });
 });
+
 

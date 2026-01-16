@@ -13,7 +13,7 @@ import {
   ThumbsUp,
   ThumbsDown,
   Plus,
-  Check,
+  SlidersHorizontal,
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@radix-ui/react-avatar";
 import { useDeck } from "../../context/deck-context";
@@ -37,12 +37,13 @@ import {
   DialogTitle,
 } from "../ui/dialog";
 import { Input } from "../ui/input";
+import { Badge } from "../ui/badge";
 import { useCardStore } from "../../store/cardStore";
 import { BanStatus, DeckSection } from "../../types/types";
 import { AIResponseCard } from "./ai-response-card";
 import { CardPreview } from "../ui/card-preview";
 import { FormattedRecommendationResponse } from "../ui/formatted-recommendation-response";
-import { RecommenderUIBlocks } from "../ui/recommender-ui-blocks";
+import { RecommenderUIBlocks } from "@/components/ui/recommender-ui-blocks";
 import { submitFeedback, submitTelemetryFeedback } from "../../lib/api/recommendationFeedback";
 import { extractNumberConstraint, detectDuplicateCards, formatNumberConstraint } from "../../lib/utils/prompt-utils";
 import type {
@@ -54,6 +55,11 @@ import type {
 import { ANALYSIS_MODES } from "./constants";
 import { fetchCategoryRecommendations } from "./helpers";
 import { generateAIResponse } from "./generate-ai-response";
+import { SuggestedQuestions } from "./suggested-questions";
+import { buildConversationContextFromMessages } from "@/components/ai-chatbot/conversation-context";
+import { AIPreferencesDialog } from "./ai-preferences-dialog";
+import { useAIPrefsStore } from "@/store/aiPrefsStore";
+import { AnimatedCheckmark } from "@/components/ui/animated-checkmark";
 import {
   renderCategoryRecommendationCard,
   renderDeckAnalysisCard,
@@ -72,16 +78,35 @@ import {
 } from "@/lib/animations";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 
-interface AIChatbotProps {
+type AIChatbotComponentProps = {
   isOpen: boolean;
   onClose: () => void;
-}
+  initialQuestion?: string;
+};
 
-export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
-  const { currentDeck, addCardToDeck, getDeckStats, saveDeck } = useDeck();
+export default function AIChatbot({
+  isOpen,
+  onClose,
+  initialQuestion,
+}: AIChatbotComponentProps) {
+  const { currentDeck, addCardToDeck, removeCardFromDeck, getDeckStats, saveDeck } = useDeck();
   const prefersReducedMotion = useReducedMotion();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
+  const lastAppliedInitialQuestionRef = useRef<string | null>(null);
+  const [isPreferencesDialogOpen, setIsPreferencesDialogOpen] = useState(false);
+
+  const playstyle = useAIPrefsStore((s) => s.playstyle);
+  const explainTo = useAIPrefsStore((s) => s.explainTo);
+  const hasDismissedOnboarding = useAIPrefsStore((s) => s.hasDismissedOnboarding);
+  const setPlaystyle = useAIPrefsStore((s) => s.setPlaystyle);
+  const setExplainTo = useAIPrefsStore((s) => s.setExplainTo);
+  const dismissOnboarding = useAIPrefsStore((s) => s.dismissOnboarding);
+
+  const playstyleLabel = useMemo(() => {
+    if (!playstyle) return null;
+    return playstyle.slice(0, 1).toUpperCase() + playstyle.slice(1);
+  }, [playstyle]);
 
   // Optimized input handler - useCallback to prevent unnecessary re-renders
   const handleInputChange = useCallback(
@@ -156,7 +181,7 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
         const userMessage: Message = {
           id: crypto.randomUUID(),
           role: "user",
-          content: `[${mode.label}] ${mode.prompt}`,
+          content: mode.prompt,
           timestamp: new Date(),
           type: "analysis-mode",
         };
@@ -200,53 +225,87 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
     [currentDeck, saveDeck],
   );
 
-  const handleSendMessage = useCallback(async () => {
-    if (input.trim() === "") return;
+  const sendUserMessage = useCallback(
+    async (rawMessage: string) => {
+      if (isLoading) return;
 
-    // Capture input content and clear immediately for better UX (non-blocking)
-    const messageContent = input.trim();
-    setInput(""); // Clear input immediately
+      const messageContent = rawMessage.trim();
+      if (messageContent === "") return;
 
-    const userMessage: Message = {
-      id: crypto.randomUUID(),
-      role: "user",
-      content: messageContent,
-      timestamp: new Date(),
-    };
+      // Clear input immediately for better UX
+      setInput("");
 
-    setMessages((prev) => [...prev, userMessage]);
-    setIsLoading(true);
-
-    try {
-      // Ensure deck is saved to Supabase before analysis
-      // This ensures the edge function can find the deck
-      try {
-        await saveDeck(currentDeck);
-      } catch (saveError) {
-        console.warn("Failed to save deck before analysis:", saveError);
-        // Continue anyway - the deck might already be saved
-      }
-
-      const { message } = await generateAIResponse(
-        messageContent, // Use captured content
-        currentDeck,
-        allCards,
-      );
-      setMessages((prev) => [...prev, message]);
-    } catch (error) {
-      console.error("Error in handleSendMessage:", error);
-      const errorMessage: Message = {
+      const userMessage: Message = {
         id: crypto.randomUUID(),
-        role: "assistant",
-        content: `Error: ${error instanceof Error ? error.message : "Failed to send message."}`,
+        role: "user",
+        content: messageContent,
         timestamp: new Date(),
-        type: "error",
       };
-      setMessages((prev) => [...prev, errorMessage]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [input, currentDeck, allCards, saveDeck]);
+
+      // Compute deck stats + conversation context before we append the assistant reply
+      const deckStats = getDeckStats();
+      const conversationContext = buildConversationContextFromMessages({
+        messages,
+        feedbackStates,
+        deckStats,
+        pendingUserMessage: messageContent,
+      });
+
+      setMessages((prev) => [...prev, userMessage]);
+      setIsLoading(true);
+
+      try {
+        // Ensure deck is saved to Supabase before analysis
+        // This ensures the edge function can find the deck
+        try {
+          await saveDeck(currentDeck);
+        } catch (saveError) {
+          console.warn("Failed to save deck before analysis:", saveError);
+          // Continue anyway - the deck might already be saved
+        }
+
+        const { message } = await generateAIResponse(
+          messageContent,
+          currentDeck,
+          allCards,
+          {
+            deckStats,
+            conversationContext,
+            explainTo,
+            userPrefs: playstyle ? { playstyle } : undefined,
+          },
+        );
+        setMessages((prev) => [...prev, message]);
+      } catch (error) {
+        console.error("Error in sendUserMessage:", error);
+        const errorMessage: Message = {
+          id: crypto.randomUUID(),
+          role: "assistant",
+          content: `Error: ${error instanceof Error ? error.message : "Failed to send message."}`,
+          timestamp: new Date(),
+          type: "error",
+        };
+        setMessages((prev) => [...prev, errorMessage]);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [
+      allCards,
+      currentDeck,
+      explainTo,
+      feedbackStates,
+      getDeckStats,
+      isLoading,
+      messages,
+      playstyle,
+      saveDeck,
+    ],
+  );
+
+  const handleSendMessage = useCallback(() => {
+    void sendUserMessage(input);
+  }, [input, sendUserMessage]);
 
   // Enhanced card handling functions - memoized to prevent re-renders
   const canAddCardToDeck = useCallback(
@@ -296,23 +355,15 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
 
       if (!canAddCardToDeck(card, deckType)) return;
 
-      setAddingCardId(card.id.toString());
+      const cardId = card.id.toString();
+      setAddingCardId(cardId);
 
-      // Simulate loading
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      addCardToDeck(card, deckType);
-      setAddedCards((prev) => new Set([...prev, card.id.toString()]));
-      setAddingCardId(null);
-
-      // Remove from added cards after 2 seconds
-      setTimeout(() => {
-        setAddedCards((prev) => {
-          const newSet = new Set(prev);
-          newSet.delete(card.id.toString());
-          return newSet;
-        });
-      }, 2000);
+      try {
+        addCardToDeck(card, deckType);
+        setAddedCards((prev) => new Set([...prev, cardId]));
+      } finally {
+        setAddingCardId(null);
+      }
     },
     [addCardToDeck, canAddCardToDeck, getOptimalDeckType],
   );
@@ -535,24 +586,28 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
               animate="visible"
               variants={fadeInVariants}
             >
-              <div className="flex gap-2 max-w-[90%]">
-                <Avatar className="bg-transparent shadow-none">
+              <div className="flex gap-4 max-w-[90%]">
+                <Avatar className="bg-transparent shadow-none mt-1">
                   <AvatarFallback className="bg-transparent">
-                    <Bot className="h-6 w-6 text-white/70" />
+                    <div className="h-8 w-8 rounded-full bg-cyan-950/30 flex items-center justify-center border border-cyan-500/20 shadow-[0_0_10px_rgba(6,182,212,0.1)]">
+                      <Bot className="h-4 w-4 text-cyan-400" />
+                    </div>
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 space-y-2">
-                  {renderCategoryRecommendationCard(
-                    message.categoryRecommendation,
-                    allCards,
-                    banlist,
-                    canAddCardToDeck,
-                    getOptimalDeckType,
-                    handleAddCardToDeck,
-                    addingCardId,
-                    addedCards,
-                  )}
-                  <div className="text-xs text-slate-400 mt-1 text-left">
+                  <div className="rounded-2xl rounded-tl-sm bg-slate-900/40 border border-white/5 backdrop-blur-sm p-1 shadow-sm">
+                    {renderCategoryRecommendationCard(
+                      message.categoryRecommendation,
+                      allCards,
+                      banlist,
+                      canAddCardToDeck,
+                      getOptimalDeckType,
+                      handleAddCardToDeck,
+                      addingCardId,
+                      addedCards,
+                    )}
+                  </div>
+                  <div className="text-[10px] text-slate-500 mt-1 text-left flex items-center gap-1.5 pl-1">
                     {message.timestamp.toLocaleTimeString([], {
                       hour: "2-digit",
                       minute: "2-digit",
@@ -762,17 +817,21 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
               animate="visible"
               variants={fadeInVariants}
             >
-              <div className="flex gap-2 max-w-[90%]">
+              <div className="flex gap-4 max-w-[90%]">
                 {/* Clean, icon-only avatar with transparent bg */}
-                <Avatar className="bg-transparent shadow-none">
+                <Avatar className="bg-transparent shadow-none mt-1">
                   <AvatarFallback className="bg-transparent">
-                    <Bot className="h-6 w-6 text-white/70" />
+                    <div className="h-8 w-8 rounded-full bg-cyan-950/30 flex items-center justify-center border border-cyan-500/20 shadow-[0_0_10px_rgba(6,182,212,0.1)]">
+                      <Bot className="h-4 w-4 text-cyan-400" />
+                    </div>
                   </AvatarFallback>
                 </Avatar>
                 {/* Mode-specific Analysis Card */}
                 <div className="flex-1">
-                  {analysisCard}
-                  <div className="text-xs text-slate-400 mt-1 text-left">
+                  <div className="rounded-2xl rounded-tl-sm overflow-hidden shadow-lg border border-white/5 bg-slate-900/40 backdrop-blur-md">
+                    {analysisCard}
+                  </div>
+                  <div className="text-[10px] text-slate-500 mt-1 text-left flex items-center gap-1.5 pl-1">
                     {message.timestamp.toLocaleTimeString([], {
                       hour: "2-digit",
                       minute: "2-digit",
@@ -799,27 +858,31 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
               }`}
             >
               <div
-                className={`flex gap-2 max-w-[80%] ${
+                className={`flex gap-4 max-w-[85%] ${
                   message.role === "user" ? "flex-row-reverse" : ""
                 }`}
               >
                 {/* Clean, icon-only avatar with transparent bg */}
-                <Avatar className="bg-transparent shadow-none">
+                <Avatar className="bg-transparent shadow-none mt-1">
                   <AvatarFallback className="bg-transparent">
                       {message.role === "user" ? (
-                        <User className="h-6 w-6 text-white/80" />
+                        <div className="h-8 w-8 rounded-full bg-indigo-500/20 flex items-center justify-center border border-indigo-400/30">
+                          <User className="h-4 w-4 text-indigo-300" />
+                        </div>
                       ) : (
-                        <Bot className="h-6 w-6 text-white/70" />
+                        <div className="h-8 w-8 rounded-full bg-cyan-950/30 flex items-center justify-center border border-cyan-500/20 shadow-[0_0_10px_rgba(6,182,212,0.1)]">
+                          <Bot className="h-4 w-4 text-cyan-400" />
+                        </div>
                       )}
                   </AvatarFallback>
                 </Avatar>
                 {/* Bubble */}
-                <div>
+                <div className="flex-1 min-w-0">
                   <div
-                    className={`px-5 py-3 rounded-2xl ${
+                    className={`px-6 py-4 rounded-2xl shadow-sm ${
                       message.role === "user"
-                        ? "bg-white/10 border border-white/20 text-white rounded-tr-sm backdrop-blur-md"
-                        : "bg-white/10 border border-white/20 text-white backdrop-blur-lg"
+                        ? "bg-indigo-600/20 border border-indigo-500/30 text-white rounded-tr-sm backdrop-blur-md"
+                        : "bg-slate-900/60 border border-white/5 text-slate-100 rounded-tl-sm backdrop-blur-md"
                     }`}
                   >
                     {/* Phase 3: Render new strict schema response with UI blocks */}
@@ -865,7 +928,28 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
                             <RecommenderUIBlocks
                               blocks={message.recommenderResponse.ui}
                               recommendations={message.recommenderResponse.recommendations}
+                              reasoning={message.recommenderResponse.reasoning}
                               allCards={allCards}
+                              onAddCard={async (cardId) => {
+                                const card = allCards.find((c) => c.id === parseInt(cardId, 10));
+                                if (card) {
+                                  handleAddCardToDeck(card, getOptimalDeckType(card));
+                                }
+                              }}
+                              onRemoveCard={async (cardId) => {
+                                // Find card in deck and remove it
+                                const cardIdNum = parseInt(cardId, 10);
+                                const deckSections: DeckSection[] = ["mainDeck", "extraDeck", "sideDeck"];
+                                for (const section of deckSections) {
+                                  const cardInstance = currentDeck[section].find((c) => c.id === cardIdNum);
+                                  if (cardInstance) {
+                                    removeCardFromDeck(cardInstance.deckInstanceId, section);
+                                    break;
+                                  }
+                                }
+                              }}
+                              addedCardIds={addedCards}
+                              addingCardIds={new Set(addingCardId ? [addingCardId] : [])}
                             onApplySuggestion={async (suggestionId, cardId) => {
                               console.log("🔵 onApplySuggestion called:", { suggestionId, cardId });
                               if (cardId) {
@@ -971,9 +1055,7 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
                   <div
                     className={`flex items-center gap-2 mt-1 ${message.role === "user" ? "justify-end" : "justify-start"}`}
                   >
-                    <div
-                      className={`text-xs text-slate-400 ${message.role === "user" ? "text-right" : "text-left"}`}
-                    >
+                    <div className="text-[10px] text-slate-500">
                       {message.timestamp.toLocaleTimeString([], {
                         hour: "2-digit",
                         minute: "2-digit",
@@ -1110,7 +1192,7 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
                                         </>
                                       ) : wasAdded ? (
                                         <>
-                                          <Check className="h-3 w-3 mr-1" />
+                                          <AnimatedCheckmark className="h-3 w-3 mr-1" />
                                           Added
                                         </>
                                       ) : (
@@ -1150,6 +1232,50 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
     ],
   );
 
+  const refinementQuestions = useMemo(() => {
+    if (isLoading) return [];
+
+    const lastRecMessage = [...messages]
+      .reverse()
+      .find(
+        (m) =>
+          m.role === "assistant" &&
+          m.recommenderResponse != null &&
+          (m.recommenderResponse.recommendations?.length || 0) > 0,
+      );
+
+    if (!lastRecMessage?.recommenderResponse) return [];
+
+    const topRec = lastRecMessage.recommenderResponse.recommendations?.[0];
+    const topCardName = topRec?.cardName || "Card X";
+
+    return [
+      "Would you like alternatives that are easier to pilot?",
+      `Should I explain why ${topCardName} synergizes with your deck?`,
+      "Want to explore a different archetype with a similar gameplan?",
+    ];
+  }, [isLoading, messages]);
+
+  // If the parent passes an initial question (e.g. from quick actions), prefill it once on open.
+  useEffect(() => {
+    if (!isOpen) return;
+    const nextInitial = (initialQuestion || "").trim();
+    if (!nextInitial) return;
+
+    if (lastAppliedInitialQuestionRef.current === nextInitial) return;
+    lastAppliedInitialQuestionRef.current = nextInitial;
+
+    setInput(nextInitial);
+  }, [initialQuestion, isOpen]);
+
+  // Phase 4 (no budget): prompt once for playstyle + detail level to personalize recommendations.
+  useEffect(() => {
+    if (!isOpen) return;
+    if (hasDismissedOnboarding) return;
+    if (playstyle) return;
+    setIsPreferencesDialogOpen(true);
+  }, [hasDismissedOnboarding, isOpen, playstyle]);
+
   const memoizedInputForm = useMemo(
     () => (
       <form
@@ -1159,9 +1285,10 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
           handleSendMessage();
         }}
       >
-        <div className="flex-1 relative">
+        <div className="flex-1 relative group">
+          <div className="absolute inset-0 bg-cyan-500/5 rounded-xl blur-sm group-focus-within:bg-cyan-500/10 transition-all duration-300" />
           <Input
-            placeholder="Enter your prompt here..."
+            placeholder="Type your message..."
             value={input}
             autoFocus
             onChange={handleInputChange}
@@ -1177,11 +1304,11 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
                 handleSendMessage();
               }
             }}
-            className="w-full bg-slate-950/60 border border-slate-900 rounded-xl px-4 py-3 pr-12 text-slate-50 placeholder:text-slate-400 focus:border-slate-700 focus-visible:ring-1 focus-visible:ring-slate-700 transition-colors transition-shadow"
+            className="w-full h-12 bg-slate-900/60 border border-white/10 rounded-xl px-5 pr-12 text-slate-50 placeholder:text-slate-500 focus:border-cyan-500/50 focus-visible:ring-1 focus-visible:ring-cyan-500/30 transition-all shadow-inner relative z-10"
           />
           <button
             type="button"
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-300 transition-colors"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-cyan-400 transition-colors z-20 p-1.5 rounded-lg hover:bg-white/5"
             aria-label="Voice input (coming soon)"
             disabled
           >
@@ -1205,7 +1332,7 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
           type="submit"
           variant="default"
           disabled={isLoading || input.trim() === ""}
-          className="px-6 bg-white/10 border border-white/20 hover:bg-white/15 text-white"
+          className="h-12 px-6 bg-cyan-500/10 border border-cyan-500/30 hover:bg-cyan-500/20 text-cyan-100 shadow-[0_0_15px_-3px_rgba(6,182,212,0.2)] hover:shadow-[0_0_20px_-3px_rgba(6,182,212,0.4)] transition-all rounded-xl"
           aria-label="Send message"
         >
           <Send className="h-5 w-5" aria-hidden="true" />
@@ -1213,7 +1340,7 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
         <button
           type="button"
           onClick={() => setIsInfoDialogOpen(true)}
-          className="text-slate-400 hover:text-slate-300 transition-colors p-2 rounded-lg hover:bg-slate-800/50"
+          className="text-slate-500 hover:text-cyan-400 transition-colors p-3 rounded-xl hover:bg-cyan-500/5 border border-transparent hover:border-cyan-500/20"
           aria-label="How to use the AI Assistant"
         >
           <Info className="h-5 w-5" aria-hidden="true" />
@@ -1223,7 +1350,7 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
     [input, isLoading, handleInputChange, handleSendMessage],
   );
 
-  // Modern, clean AI assistant UI inspired by the image
+  // Modern, clean AI assistant UI inspired by futuristic HUDs
   return (
     <>
       {!prefersReducedMotion ? (
@@ -1231,159 +1358,173 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
           {isOpen && (
             <motion.div
               key="ai-chatbot-modal"
-              className="fixed inset-0 bg-slate-950/90 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+              className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
               variants={backdropVariants}
               initial="hidden"
               animate="visible"
               exit="exit"
             >
-            <motion.div
-              className="w-full max-w-4xl h-[90vh] rounded-2xl bg-white/10 border border-white/20 backdrop-blur-xl shadow-lg overflow-hidden"
-              variants={modalVariants}
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-            >
-        <CardUI className="w-full h-full flex flex-col bg-transparent">
-          {/* Clean Header */}
-          <CardHeader className="pb-4 bg-white/5 border-b border-white/10">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-white/10 flex items-center justify-center border border-white/20">
-                  <Bot className="h-5 w-5 text-white/80" />
-                </div>
-                <div>
-                  <CardTitle
-                    className="text-xl font-bold text-slate-50"
-                    style={{ fontFamily: "var(--font-heading)" }}
-                  >
-                    AI Assistant
-                  </CardTitle>
-                  <CardDescription className="text-slate-300 text-sm mt-0.5">
-                    What do you need help with?
-                  </CardDescription>
-                </div>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={onClose}
-                className="text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 rounded-lg"
+              <motion.div
+                className="w-full max-w-5xl h-[85vh] rounded-3xl overflow-hidden relative shadow-2xl border border-white/10"
+                style={{
+                  background: "linear-gradient(165deg, rgba(2, 6, 23, 0.95) 0%, rgba(15, 23, 42, 0.9) 100%)",
+                  boxShadow: "0 0 40px -10px rgba(20, 239, 255, 0.15), 0 0 15px -5px rgba(20, 239, 255, 0.1)",
+                }}
+                variants={modalVariants}
+                initial="hidden"
+                animate="visible"
+                exit="exit"
               >
-                <X className="h-5 w-5" />
-              </Button>
-            </div>
-          </CardHeader>
+                {/* Decorative background elements */}
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-cyan-500/50 to-transparent opacity-50" />
+                <div className="absolute bottom-0 right-0 w-64 h-64 bg-cyan-500/5 blur-[100px] rounded-full pointer-events-none" />
+                <div className="absolute top-0 left-0 w-64 h-64 bg-blue-600/5 blur-[100px] rounded-full pointer-events-none" />
 
-          <CardContent className="flex-1 overflow-hidden px-0 flex flex-col">
-            {/* Analysis modes */}
-            <div
-              className={`px-6 pt-5 pb-4 space-y-4 bg-slate-950/50 transition-[max-height,opacity,transform] duration-400 ease-in-out ${
-                selectedAnalysisMode
-                  ? "max-h-0 opacity-0 -translate-y-2 pointer-events-none"
-                  : "max-h-[480px] opacity-100 translate-y-0"
-              }`}
-            >
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-[11px] uppercase tracking-[0.35em] text-slate-300/80">
-                    Analysis Modes
-                  </p>
-                  <p className="text-lg font-semibold text-slate-50">
-                    Choose a focus area to begin optimizing your deck
-                  </p>
-                </div>
-              </div>
-              {memoizedAnalysisModes}
-            </div>
-            {/* Modern scrollable area */}
-            {selectedAnalysisMode ? (
-              <div className="h-full flex-1 min-h-0 flex flex-col">
-                <div className="px-6 pt-3 pb-2 flex items-center justify-between">
-                  <div className="text-sm text-slate-200">Chat about your deck</div>
-                  {memoizedCompactModes}
-                </div>
-                <ScrollArea className="flex-1 h-full min-h-0 overflow-y-auto overflow-x-hidden px-4 pr-2">
-                  <div className="flex flex-col space-y-3 py-4 min-w-0">
-                    {memoizedMessages}
-                    {isLoading && (
-                      <div className="flex justify-start">
-                        <div className="flex gap-2 max-w-[80%]">
-                          <Avatar className="bg-transparent shadow-none">
-                            <AvatarFallback>
-                              <Bot className="h-6 w-6 text-cyan-400/70" />
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <div className="px-5 py-3 rounded-2xl bg-gradient-to-br from-slate-900/80 via-slate-900/60 to-slate-900/35 text-slate-50 backdrop-blur-sm flex items-center">
-                              <Loader2 className="h-4 w-4 animate-spin mr-2 text-white/80" />
-                              <span className="text-xs">AI thinking…</span>
-                            </div>
+                <CardUI className="w-full h-full flex flex-col bg-transparent border-none shadow-none relative z-10">
+                  {/* Glassmorphic Header */}
+                  <CardHeader className="pb-4 pt-6 px-8 border-b border-white/5 bg-white/5 backdrop-blur-md">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="relative group">
+                          <div className="absolute inset-0 bg-cyan-500/20 rounded-full blur-md group-hover:bg-cyan-500/30 transition-all duration-500" />
+                          <div className="h-12 w-12 rounded-full bg-slate-900/80 flex items-center justify-center border border-white/10 relative shadow-inner ring-1 ring-white/5 group-hover:ring-cyan-500/30 transition-all">
+                            <Bot className="h-6 w-6 text-cyan-400" />
                           </div>
                         </div>
+                        <div>
+                          <CardTitle
+                            className="text-2xl font-bold text-white tracking-wide"
+                            style={{ fontFamily: "var(--font-heading)" }}
+                          >
+                            AI <span className="text-cyan-400">ARCHITECT</span>
+                          </CardTitle>
+                          <CardDescription className="text-slate-400 text-xs mt-1 uppercase tracking-widest font-medium">
+                            Deck Optimization System
+                          </CardDescription>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {playstyleLabel ? (
+                          <Badge
+                            variant="outline"
+                            className="hidden sm:inline-flex border-cyan-500/30 text-cyan-200 bg-cyan-500/10"
+                          >
+                            Playstyle: {playstyleLabel}
+                          </Badge>
+                        ) : null}
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setIsPreferencesDialogOpen(true)}
+                          className="text-slate-400 hover:text-white hover:bg-white/5 rounded-full h-10 w-10 transition-all duration-300"
+                          aria-label="Personalize AI settings"
+                        >
+                          <SlidersHorizontal className="h-5 w-5" aria-hidden="true" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={onClose}
+                          className="text-slate-400 hover:text-white hover:bg-white/5 rounded-full h-10 w-10 transition-all duration-300 hover:rotate-90"
+                          aria-label="Close AI Assistant"
+                        >
+                          <X className="h-5 w-5" aria-hidden="true" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardHeader>
+
+                  <CardContent className="flex-1 overflow-hidden px-0 flex flex-col relative">
+                    {/* Analysis modes - Animated Grid */}
+                    <div
+                      className={`px-8 pt-6 pb-4 space-y-6 transition-[max-height,opacity,transform] duration-500 ease-spring ${
+                        selectedAnalysisMode
+                          ? "max-h-0 opacity-0 -translate-y-4 pointer-events-none"
+                          : "max-h-[600px] opacity-100 translate-y-0"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="text-[10px] uppercase tracking-[0.3em] text-cyan-400/80 font-bold mb-2">
+                            Select Module
+                          </p>
+                          <h3 className="text-xl font-medium text-slate-100">
+                            Initialize analysis protocol
+                          </h3>
+                        </div>
+                      </div>
+                      {memoizedAnalysisModes}
+                    </div>
+
+                    {/* Chat Area */}
+                    {selectedAnalysisMode ? (
+                      <div className="h-full flex-1 min-h-0 flex flex-col">
+                        {/* Compact Mode Selector */}
+                        <div className="px-8 pt-4 pb-2 flex items-center justify-between bg-gradient-to-b from-slate-950/20 to-transparent z-10">
+                          <div className="text-xs font-medium text-slate-400 uppercase tracking-wider">Session Active</div>
+                          {memoizedCompactModes}
+                        </div>
+                        
+                        <ScrollArea className="flex-1 h-full min-h-0 overflow-y-auto overflow-x-hidden px-4 sm:px-8 pr-4 custom-scrollbar">
+                          <div className="flex flex-col space-y-6 py-6 min-w-0">
+                            {memoizedMessages}
+                            {isLoading && (
+                              <motion.div 
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="flex justify-start"
+                              >
+                                <div className="flex gap-4 max-w-[80%]">
+                                  <div className="h-8 w-8 rounded-full bg-cyan-500/10 flex items-center justify-center border border-cyan-500/20 mt-1">
+                                    <Bot className="h-4 w-4 text-cyan-400" />
+                                  </div>
+                                  <div className="px-6 py-4 rounded-2xl rounded-tl-sm bg-slate-900/50 border border-white/5 backdrop-blur-sm">
+                                    <div className="flex gap-1 items-center">
+                                      <span className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-bounce [animation-delay:-0.3s]" />
+                                      <span className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-bounce [animation-delay:-0.15s]" />
+                                      <span className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-bounce" />
+                                    </div>
+                                    <span className="text-xs text-cyan-500/70 mt-2 block font-medium">Processing Request...</span>
+                                  </div>
+                                </div>
+                              </motion.div>
+                            )}
+                            <div ref={messagesEndRef} />
+                          </div>
+                        </ScrollArea>
+                      </div>
+                    ) : (
+                      <div className="flex-1 flex flex-col items-center justify-center px-6 py-8 text-slate-400">
+                        <div className="w-24 h-24 rounded-full bg-white/5 flex items-center justify-center mb-6 border border-white/10 shadow-[0_0_30px_-10px_rgba(255,255,255,0.1)]">
+                          <Aperture className="h-10 w-10 text-white/20" />
+                        </div>
+                        <p className="text-center max-w-sm text-sm leading-relaxed">
+                          Select a specialized analysis module above to begin optimizing your deck strategy.
+                        </p>
                       </div>
                     )}
-                    <div ref={messagesEndRef} />
-                  </div>
-                </ScrollArea>
-              </div>
-            ) : (
-              <div className="flex-1 flex items-center justify-center px-6 py-8 text-slate-300">
-                Select a focus area above to start chatting about your deck.
-              </div>
-            )}
-          </CardContent>
+                  </CardContent>
 
-          {/* Recent History Section */}
-          {messages.length > 1 && (
-            <div className="px-6 py-3 bg-gradient-to-r from-slate-900/40 via-slate-900/20 to-slate-900/40">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                  Recent History
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setMessages([messages[0]])}
-                  className="text-xs text-white/80 hover:text-white transition-colors"
-                >
-                  Clear
-                </button>
-              </div>
-              <div className="space-y-1 max-h-24 overflow-y-auto">
-                {messages.slice(1, 4).map((msg) => (
-                  <div
-                    key={msg.id}
-                  className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gradient-to-r from-slate-900/60 via-slate-900/45 to-slate-900/30 transition-colors cursor-pointer"
-                    onClick={() => {
-                      setInput(msg.content);
-                    }}
-                  >
-                    <div className="h-4 w-4 rounded-full bg-white/10 border border-white/20 flex items-center justify-center flex-shrink-0">
-                      {msg.role === "user" ? (
-                        <User className="h-2.5 w-2.5 text-white/80" />
-                      ) : (
-                        <Bot className="h-2.5 w-2.5 text-white/80" />
-                      )}
+                  {/* Input Area */}
+                  {selectedAnalysisMode && (
+                    <div className="p-6 pt-2 bg-gradient-to-t from-slate-950/90 via-slate-950/50 to-transparent">
+                      
+                      {refinementQuestions.length > 0 ? (
+                        <SuggestedQuestions
+                          questions={refinementQuestions}
+                          onSelect={(question) => {
+                            void sendUserMessage(question);
+                          }}
+                        />
+                      ) : null}
+
+                      {memoizedInputForm}
                     </div>
-                    <span className="text-xs text-slate-300 truncate flex-1">
-                      {msg.content.slice(0, 50)}
-                      {msg.content.length > 50 ? "..." : ""}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Clean Input Bar - Memoized to prevent re-renders */}
-          {selectedAnalysisMode && (
-            <CardFooter className="pt-4 pb-6 px-6 bg-gradient-to-r from-slate-950/70 via-slate-900/60 to-slate-900/50">
-              {memoizedInputForm}
-            </CardFooter>
-          )}
-            </CardUI>
+                  )}
+                </CardUI>
+              </motion.div>
             </motion.div>
-          </motion.div>
           )}
         </AnimatePresence>
       ) : (
@@ -1524,6 +1665,14 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
                 {/* Clean Input Bar - Memoized to prevent re-renders */}
                 {selectedAnalysisMode && (
                   <CardFooter className="pt-4 pb-6 px-6 bg-gradient-to-r from-slate-950/70 via-slate-900/60 to-slate-900/50">
+                    {refinementQuestions.length > 0 ? (
+                      <SuggestedQuestions
+                        questions={refinementQuestions}
+                        onSelect={(question) => {
+                          void sendUserMessage(question);
+                        }}
+                      />
+                    ) : null}
                     {memoizedInputForm}
                   </CardFooter>
                 )}
@@ -1532,6 +1681,23 @@ export default function AIChatbot({ isOpen, onClose }: AIChatbotProps) {
           </div>
         )
       )}
+
+      <AIPreferencesDialog
+        open={isPreferencesDialogOpen}
+        onOpenChange={(open) => {
+          setIsPreferencesDialogOpen(open);
+          if (!open && !playstyle) {
+            dismissOnboarding();
+          }
+        }}
+        playstyle={playstyle}
+        explainTo={explainTo}
+        onChangePlaystyle={(p) => setPlaystyle(p)}
+        onChangeExplainTo={(lvl) => setExplainTo(lvl)}
+        onSkip={() => dismissOnboarding()}
+        onDone={() => dismissOnboarding()}
+        mode={playstyle ? "edit" : "onboarding"}
+      />
 
       {/* Information Dialog */}
       <Dialog open={isInfoDialogOpen} onOpenChange={setIsInfoDialogOpen}>

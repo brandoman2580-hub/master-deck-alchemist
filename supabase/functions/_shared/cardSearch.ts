@@ -35,6 +35,9 @@ export interface CardCandidate {
   archetype?: string | null;
   type?: string | null;
   desc?: string | null;
+  race?: string | null; // Added for synergy scoring (e.g., "Dragon", "Spellcaster")
+  attribute?: string | null; // Added for synergy scoring (e.g., "LIGHT", "DARK")
+  level?: number; // Added for level-based synergy
   vector_sim?: number;
   fts_rank?: number;
   hybrid_score?: number;
@@ -198,12 +201,23 @@ export function analyzeQuestionForFilters(question: string): StructuredFilters {
     filters.attributes = detectedAttributes;
   }
 
+  // Filter out category labels in brackets (e.g., [POWER LEVEL], [CONSISTENCY])
+  // These are analysis mode labels, not archetypes
+  const categoryLabels = ["POWER LEVEL", "CONSISTENCY", "INTERACTION", "META", "POWER", "CONSISTENCY", "INTERACTION"];
+  const categoryPattern = /\[([A-Z\s]+)\]/g;
+  const cleanedQuestion = question.replace(categoryPattern, (match, label) => {
+    if (categoryLabels.some(cat => label.toUpperCase().includes(cat))) {
+      return ""; // Remove category labels
+    }
+    return match; // Keep other bracketed text
+  });
+
   // Detect archetype mentions (improved: case-insensitive, supports single words)
   // Strategy 1: Check for quoted strings (e.g., "Toy" cards, 'Blue-Eyes')
   const quotedPattern = /["']([^"']+)["']/g;
   const quotedMatches: string[] = [];
   let quotedMatch;
-  while ((quotedMatch = quotedPattern.exec(question)) !== null) {
+  while ((quotedMatch = quotedPattern.exec(cleanedQuestion)) !== null) {
     quotedMatches.push(quotedMatch[1].trim());
   }
 
@@ -211,7 +225,7 @@ export function analyzeQuestionForFilters(question: string): StructuredFilters {
   // This catches "Explore Toy cards" -> "Toy"
   const explorePattern =
     /\b(?:explore|find|recommend|suggest|show|list|search|look\s+for)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+(?:cards?|archetype|monsters?|spells?|traps?)/gi;
-  const exploreMatches = question.match(explorePattern) || [];
+  const exploreMatches = cleanedQuestion.match(explorePattern) || [];
   const extractedExplore = exploreMatches
     .map((m) => {
       const match = m.match(
@@ -225,7 +239,7 @@ export function analyzeQuestionForFilters(question: string): StructuredFilters {
   // Look for patterns like "Toy cards", "Toy archetype", etc.
   const singleWordArchetypePattern =
     /\b([A-Z][a-z]+)\s+(?:cards?|archetype|deck|monsters?|spells?|traps?|support)/gi;
-  const singleWordMatches = question.match(singleWordArchetypePattern) || [];
+  const singleWordMatches = cleanedQuestion.match(singleWordArchetypePattern) || [];
   const extractedSingleWords = singleWordMatches
     .map((m) => {
       const match = m.match(/\b([A-Z][a-z]+)\s+/);
@@ -235,7 +249,7 @@ export function analyzeQuestionForFilters(question: string): StructuredFilters {
 
   // Strategy 4: Capitalized words (case-insensitive regex) - multi-word archetypes
   const archetypePattern = /\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\b/gi;
-  const archetypeMatches = question.match(archetypePattern) || [];
+  const archetypeMatches = cleanedQuestion.match(archetypePattern) || [];
 
   // Strategy 5: Common archetype keywords followed by a word
   const archetypeKeywords = ["archetype", "cards", "deck"];
@@ -245,7 +259,7 @@ export function analyzeQuestionForFilters(question: string): StructuredFilters {
       `\\b${keyword}\\s+([A-Z][a-z]+(?:\\s+[A-Z][a-z]+)*)`,
       "gi",
     );
-    const matches = question.match(keywordPattern);
+    const matches = cleanedQuestion.match(keywordPattern);
     if (matches) {
       matches.forEach((match) => {
         const extracted = match
@@ -282,6 +296,17 @@ export function analyzeQuestionForFilters(question: string): StructuredFilters {
       "Side Deck",
       "Card",
       "Cards",
+      // Category labels (analysis modes)
+      "Power Level",
+      "POWER LEVEL",
+      "Consistency",
+      "CONSISTENCY",
+      "Interaction",
+      "INTERACTION",
+      "Meta",
+      "META",
+      "Power",
+      "POWER",
     ];
     const potentialArchetypes = allMatches
       .map((m) => m.trim())
@@ -304,17 +329,45 @@ export function analyzeQuestionForFilters(question: string): StructuredFilters {
 /**
  * Build deck context text for embedding generation
  * Creates a concise summary of the deck's strategy, archetypes, and key cards
+ * Enhanced version that accepts optional deck analysis for richer context
  */
-export function buildDeckContextText(deck: {
-  mainDeck?: Array<{
-    name: string;
-    type?: string;
-    desc?: string;
-    archetype?: any;
-  }>;
-  extraDeck?: Array<{ name: string; type?: string; desc?: string }>;
-  sideDeck?: Array<{ name: string; type?: string; desc?: string }>;
-}): string {
+export function buildDeckContextText(
+  deck: {
+    mainDeck?: Array<{
+      name: string;
+      type?: string;
+      desc?: string;
+      archetype?: any;
+    }>;
+    extraDeck?: Array<{ name: string; type?: string; desc?: string; archetype?: any }>;
+    sideDeck?: Array<{ name: string; type?: string; desc?: string; archetype?: any }>;
+  },
+  deckAnalysis?: {
+    primaryArchetype?: string | null;
+    playstyle?: string;
+    deckSize?: number;
+    mainDeckSize?: number;
+    extraDeckSize?: number;
+    ratios?: {
+      monsters: number;
+      spells: number;
+      traps: number;
+      monstersPercent: number;
+      spellsPercent: number;
+      trapsPercent: number;
+    };
+    cardRoles?: {
+      starters: number;
+      extenders: number;
+      interruptions: number;
+      boardBreakers: number;
+      endBoardPieces: number;
+    };
+    winCondition?: string;
+    estimatedBrickRate?: number;
+    missingStaples?: Array<{ cardName: string; reason: string }>;
+  }
+): string {
   const allCards = [
     ...(deck.mainDeck || []),
     ...(deck.extraDeck || []),
@@ -325,29 +378,54 @@ export function buildDeckContextText(deck: {
     return "No deck provided";
   }
 
-  // Extract archetypes
-  const archetypes = new Set<string>();
-  allCards.forEach((card) => {
-    const arch = getArchetypeName(card);
-    if (arch) archetypes.add(arch);
-  });
-
-  // Extract key card types
-  const types = new Set<string>();
-  allCards.forEach((card) => {
-    if (card.type) types.add(card.type);
-  });
-
-  // Build context
   const parts: string[] = [];
 
-  if (archetypes.size > 0) {
-    parts.push(`Archetypes: ${Array.from(archetypes).join(", ")}`);
+  // Enhanced context with deck analysis if provided
+  if (deckAnalysis) {
+    if (deckAnalysis.primaryArchetype) {
+      parts.push(`Primary archetype: ${deckAnalysis.primaryArchetype}`);
+    }
+    if (deckAnalysis.playstyle) {
+      parts.push(`Playstyle: ${deckAnalysis.playstyle}`);
+    }
+    if (deckAnalysis.mainDeckSize) {
+      parts.push(`Deck size: ${deckAnalysis.mainDeckSize} main deck cards`);
+    }
+    if (deckAnalysis.ratios) {
+      parts.push(
+        `Ratios: ${deckAnalysis.ratios.monsters}M / ${deckAnalysis.ratios.spells}S / ${deckAnalysis.ratios.traps}T (${deckAnalysis.ratios.monstersPercent.toFixed(1)}% / ${deckAnalysis.ratios.spellsPercent.toFixed(1)}% / ${deckAnalysis.ratios.trapsPercent.toFixed(1)}%)`
+      );
+    }
+    if (deckAnalysis.cardRoles) {
+      parts.push(
+        `Card roles: ${deckAnalysis.cardRoles.starters} starters, ${deckAnalysis.cardRoles.extenders} extenders, ${deckAnalysis.cardRoles.interruptions} interruptions`
+      );
+    }
+    if (deckAnalysis.winCondition) {
+      parts.push(`Win condition: ${deckAnalysis.winCondition}`);
+    }
+    if (deckAnalysis.estimatedBrickRate !== undefined) {
+      parts.push(
+        `Estimated brick rate: ${(deckAnalysis.estimatedBrickRate * 100).toFixed(1)}%`
+      );
+    }
+    if (deckAnalysis.missingStaples && deckAnalysis.missingStaples.length > 0) {
+      parts.push(
+        `Missing staples: ${deckAnalysis.missingStaples.map((s) => s.cardName).join(", ")}`
+      );
+    }
   }
 
-  if (types.size > 0) {
-    const typeList = Array.from(types).slice(0, 5).join(", ");
-    parts.push(`Card types: ${typeList}`);
+  // Extract archetypes (fallback if no analysis)
+  if (!deckAnalysis?.primaryArchetype) {
+    const archetypes = new Set<string>();
+    allCards.forEach((card) => {
+      const arch = getArchetypeName(card);
+      if (arch) archetypes.add(arch);
+    });
+    if (archetypes.size > 0) {
+      parts.push(`Archetypes: ${Array.from(archetypes).join(", ")}`);
+    }
   }
 
   // Include top 10 card names
@@ -356,16 +434,6 @@ export function buildDeckContextText(deck: {
     .map((c) => c.name)
     .join(", ");
   parts.push(`Key cards: ${topCards}`);
-
-  // Include brief effect descriptions (truncated)
-  const effectTexts = allCards
-    .slice(0, 5)
-    .map((c) => (c.desc || "").slice(0, 100))
-    .filter(Boolean)
-    .join(" ");
-  if (effectTexts) {
-    parts.push(`Effects: ${effectTexts}`);
-  }
 
   return parts.join(". ");
 }
@@ -404,6 +472,7 @@ declare const Supabase: {
 /**
  * Get embedding for text using Supabase AI directly (in Deno runtime)
  * This function must be called from within a Supabase Edge Function
+ * CRITICAL: Uses MODEL_NAME env variable to match the model used for card embeddings
  */
 export async function getQueryEmbedding(text: string): Promise<number[]> {
   if (!text || text.trim().length === 0) {
@@ -411,8 +480,12 @@ export async function getQueryEmbedding(text: string): Promise<number[]> {
   }
 
   try {
+    // Use "gte-small" for Supabase embedding model (must match the model used to generate card embeddings)
+    // Note: MODEL_NAME env variable is for LLM model (Groq), not embedding model
+    const modelName = "gte-small";
+    
     // Create an inference session using the built-in Supabase.ai API
-    const session = new Supabase.ai.Session("gte-small");
+    const session = new Supabase.ai.Session(modelName);
 
     const raw = await session.run(String(text).slice(0, 20000), {
       mean_pool: true,
@@ -472,11 +545,14 @@ export async function hybridSearch(
       matchCount,
     });
 
+    // Ensure exclude_ids are integers (not bigints) to avoid type ambiguity
+    const excludeIdsInt = excludeIds.map((id) => Number(id)).filter((id) => !isNaN(id));
+    
     const { data, error } = await supabaseClient.rpc("hybrid_card_search", {
       query_embedding: queryEmbedding,
       query_text: queryText || "card",
       exclude_archetypes: excludeArchetypes,
-      exclude_ids: excludeIds,
+      exclude_ids: excludeIdsInt,
       exclude_types: excludeTypes,
       exclude_races: excludeRaces,
       banlist_format: banlistFormat,
@@ -500,6 +576,9 @@ export async function hybridSearch(
         archetype: row.archetype ?? null,
         type: row.type ?? null,
         desc: row.desc ?? null,
+        race: row.race ?? null,
+        attribute: row.attribute ?? null,
+        level: row.level ?? null,
         vector_sim: row.vector_sim,
         fts_rank: row.fts_rank,
         hybrid_score: row.hybrid_score,
@@ -519,12 +598,15 @@ export async function hybridSearch(
     console.log(
       "🔍 Attempting vector-only search (match_cards_with_exclusions)...",
     );
+    // Ensure exclude_ids are integers (not bigints) to avoid type ambiguity
+    const excludeIdsInt = excludeIds.map((id) => Number(id)).filter((id) => !isNaN(id));
+    
     const { data, error } = await supabaseClient.rpc(
       "match_cards_with_exclusions",
       {
         query_embedding: queryEmbedding,
         exclude_archetypes: excludeArchetypes,
-        exclude_ids: excludeIds,
+        exclude_ids: excludeIdsInt,
         match_count: matchCount,
       },
     );
@@ -539,6 +621,9 @@ export async function hybridSearch(
         archetype: row.archetype ?? null,
         type: row.type ?? null,
         desc: row.desc ?? null,
+        race: row.race ?? null,
+        attribute: row.attribute ?? null,
+        level: row.level ?? null,
         vector_sim: row.similarity,
       }));
     } else {
@@ -551,28 +636,44 @@ export async function hybridSearch(
     );
   }
 
-  // Fallback 2: Try FTS search only
+  // Fallback 2: Try FTS search only (use direct SQL query since RPC may not exist)
   if (queryText) {
     try {
-      console.log("🔍 Attempting FTS-only search (match_cards_by_text)...");
-      const { data, error } = await supabaseClient.rpc("match_cards_by_text", {
-        query: queryText,
-        match_count: matchCount,
-        excluded_ids: excludeIds.length > 0 ? excludeIds : [0],
-        banlist_format: banlistFormat,
-      });
+      console.log("🔍 Attempting FTS-only search via direct query...");
+      // Ensure exclude_ids are integers
+      const excludeIdsInt = excludeIds.map((id) => Number(id)).filter((id) => !isNaN(id));
+      
+      // Use direct SQL query with text search
+      let query = supabaseClient
+        .from("cards")
+        .select("id, name, archetype, type, desc")
+        .textSearch("name", queryText, { type: "websearch" });
+      
+      // Exclude IDs using filter (Supabase doesn't support .not() with "in" directly)
+      if (excludeIdsInt.length > 0 && excludeIdsInt.length < 100) {
+        // For small lists, use individual .not() calls
+        for (const excludeId of excludeIdsInt.slice(0, 50)) { // Limit to 50 to avoid query size issues
+          query = query.neq("id", excludeId);
+        }
+      }
+      
+      query = query.limit(matchCount);
+      const { data, error } = await query;
 
       if (error) {
-        console.error("❌ FTS search RPC error:", error.message, error.code);
+        console.error("❌ FTS search error:", error.message, error.code);
       } else if (data && data.length > 0) {
         console.log(`✅ FTS search returned ${data.length} results`);
         return data.map((row: any) => ({
-          id: Number(row.card_id || row.id),
+          id: Number(row.id),
           name: String(row.name),
           archetype: row.archetype ?? null,
           type: row.type ?? null,
           desc: row.desc ?? null,
-          fts_rank: row.rank,
+          race: row.race ?? null,
+          attribute: row.attribute ?? null,
+          level: row.level ?? null,
+          fts_rank: 1.0, // Default rank for direct queries
         }));
       } else {
         console.warn("⚠️ FTS search returned empty result");
@@ -608,6 +709,9 @@ export async function hybridSearch(
           archetype: row.archetype ?? null,
           type: row.type ?? null,
           desc: row.desc ?? null,
+          race: row.race ?? null,
+          attribute: row.attribute ?? null,
+          level: row.level ?? null,
           vector_sim: row.similarity,
         }));
       }

@@ -1,9 +1,29 @@
 import type { Card } from "../../types/card";
 import type { DeckType } from "../../types/types";
 import { supabase } from "../../lib/supabaseClient";
-import { getRecommendations } from "../../lib/api/recommendationAgent";
+import { getRecommendations, type ConversationContext } from "../../lib/api/recommendationAgent";
 import type { Message, Quota, AnalysisType } from "./types";
 import { extractCardsFromText, isRecommendationRequest } from "./utils";
+import { analyzeDeckEnhanced } from "../../app/deck-builder/utils";
+import type { AIExplainToPreference, AIPlaystylePreference } from "@/store/aiPrefsStore";
+
+type DeckStatsParam = {
+  mainCount: number;
+  extraCount: number;
+  sideCount: number;
+  monsterCount: number;
+  spellCount: number;
+  trapCount: number;
+};
+
+export type GenerateAIResponseOptions = {
+  deckStats?: DeckStatsParam;
+  conversationContext?: ConversationContext;
+  explainTo?: AIExplainToPreference;
+  userPrefs?: {
+    playstyle?: AIPlaystylePreference;
+  };
+};
 
 /**
  * Generate AI response for a user message
@@ -12,6 +32,7 @@ export async function generateAIResponse(
   userMessage: string,
   currentDeck: DeckType,
   allCards: Card[],
+  options?: GenerateAIResponseOptions,
 ): Promise<{ message: Message; quota?: Quota }> {
   const message: Message = {
     id: crypto.randomUUID(),
@@ -40,11 +61,31 @@ export async function generateAIResponse(
     if (isRecommendation) {
       // Use recommendation agent
       try {
+        // Phase 1: Compute enhanced deck analysis if stats are available
+        let deckAnalysis: ReturnType<typeof analyzeDeckEnhanced> | undefined = undefined;
+        if (options?.deckStats) {
+          try {
+            deckAnalysis = analyzeDeckEnhanced(currentDeck, options.deckStats);
+            console.log("📊 Computed deck analysis:", {
+              playstyle: deckAnalysis.playstyle,
+              primaryArchetype: deckAnalysis.primaryArchetype,
+              brickRate: deckAnalysis.estimatedBrickRate,
+              cardRoles: deckAnalysis.cardRoles,
+            });
+          } catch (analysisError) {
+            console.warn("⚠️ Failed to compute deck analysis:", analysisError);
+          }
+        }
+
         const recommendationResult = await getRecommendations({
           question: userMessage,
           current_deck: currentDeck,
           format: banlistFormat,
           recommendation_type: "personalized",
+          explainTo: options?.explainTo,
+          userPrefs: options?.userPrefs,
+          deckAnalysis, // Phase 1: Pass enhanced analysis
+          conversationContext: options?.conversationContext, // Phase 1: Multi-turn memory
         });
 
         // Phase 3: Handle new strict schema response format
@@ -89,14 +130,6 @@ export async function generateAIResponse(
                 const fullCard = allCards.find((c) => c.id === cardId);
                 if (fullCard) {
                   return fullCard;
-                }
-                // Try to get from card store (if available in scope)
-                const cardFromStore = allCards.find((c) => c.id === cardId);
-                if (cardFromStore) {
-                  return {
-                    ...cardFromStore,
-                    deckInstanceId: `temp-${cardFromStore.id}`,
-                  } as Card;
                 }
                 return null;
               })
@@ -181,7 +214,7 @@ export async function generateAIResponse(
 
     // Extract structured analysis and deck stats
     const structuredAnalysis = result.structured_analysis ?? null;
-    const deckStats = result.deck_stats ?? null;
+    const resultDeckStats = result.deck_stats ?? null;
     const analysisType = (result.analysis_type ?? "custom") as AnalysisType;
 
     // For custom prompts, use raw_answer (plain text response)
@@ -331,7 +364,7 @@ export async function generateAIResponse(
         banlistFormat,
         analysisType,
         structuredAnalysis,
-        deckStats,
+        deckStats: resultDeckStats,
       };
     } else if (analysisType === "custom") {
       // For custom prompts, set type and basic metadata
@@ -340,7 +373,7 @@ export async function generateAIResponse(
         deckId,
         banlistFormat,
         analysisType: "custom",
-        deckStats,
+        deckStats: resultDeckStats,
       };
     }
 

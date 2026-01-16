@@ -15,6 +15,10 @@ const TelemetryFeedbackZ = z.object({
   accepted: z.boolean(),
   timestamp: z.string().optional(),
   userId: z.string().optional(),
+  cardId: z.string().optional(),
+  rejectionReasons: z.array(z.string()).optional(),
+  feedbackText: z.string().optional(),
+  context: z.record(z.string(), z.any()).optional(),
 });
 
 Deno.test("Telemetry schema: Valid request passes", () => {
@@ -65,6 +69,28 @@ Deno.test("Telemetry schema: Optional fields work", () => {
 
   const result = TelemetryFeedbackZ.safeParse(minimalRequest);
   assertEquals(result.success, true);
+});
+
+Deno.test("Telemetry schema: Rich feedback fields work", () => {
+  const richRequest = {
+    deckFingerprint: "abc123def456",
+    suggestionId: "reject-add-123",
+    accepted: false,
+    cardId: "123",
+    rejectionReasons: ["no-synergy", "too-complex"],
+    feedbackText: "I need lower-commitment interaction.",
+    context: {
+      originalQuestion: "What should I add?",
+      receivedCount: 8,
+    },
+  };
+
+  const result = TelemetryFeedbackZ.safeParse(richRequest);
+  assertEquals(result.success, true);
+  if (result.success) {
+    assertEquals(result.data.cardId, "123");
+    assertEquals(result.data.rejectionReasons?.length, 2);
+  }
 });
 
 console.log("✅ All telemetry feedback tests passed");
