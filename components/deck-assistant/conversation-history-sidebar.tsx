@@ -1,16 +1,18 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { History, X, MessageSquare, Clock, Download } from "lucide-react";
+import { History, X, MessageSquare, Clock, Download, Edit2, Check, X as XIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { getConversationHistory } from "@/lib/api/deckAssistant";
+import { Input } from "@/components/ui/input";
+import { getConversationHistory, updateConversationName } from "@/lib/api/deckAssistant";
 
 interface Conversation {
   id: string;
   created_at: string;
   updated_at: string;
+  name?: string | null;
 }
 
 interface ConversationHistorySidebarProps {
@@ -37,6 +39,9 @@ export function ConversationHistorySidebar({
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState<string>("");
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!deckId || deckId === "temp" || deckId === "") {
@@ -47,7 +52,8 @@ export function ConversationHistorySidebar({
       setLoading(true);
       setError(null);
       try {
-        const history = await getConversationHistory(deckId);
+        // Limit to 5 most recent conversations
+        const history = await getConversationHistory(deckId, 5);
         setConversations(history);
       } catch (err) {
         console.error("Failed to load conversation history:", err);
@@ -86,6 +92,41 @@ export function ConversationHistorySidebar({
     } catch {
       return "Unknown";
     }
+  };
+
+  const handleStartEdit = (conv: Conversation) => {
+    setEditingId(conv.id);
+    setEditingName(conv.name || "Conversation");
+    // Focus input after a short delay to ensure it's rendered
+    setTimeout(() => {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    }, 0);
+  };
+
+  const handleSaveEdit = async (convId: string) => {
+    const trimmedName = editingName.trim();
+    if (!trimmedName) {
+      setEditingId(null);
+      return;
+    }
+
+    try {
+      await updateConversationName(convId, trimmedName);
+      setConversations((prev) =>
+        prev.map((c) => (c.id === convId ? { ...c, name: trimmedName } : c))
+      );
+      setEditingId(null);
+    } catch (err) {
+      console.error("Failed to update conversation name:", err);
+      setError(err instanceof Error ? err.message : "Failed to update name");
+      setEditingId(null);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setEditingName("");
   };
 
   return (
@@ -203,10 +244,9 @@ export function ConversationHistorySidebar({
                 ) : (
                   <div className="p-2">
                     {conversations.map((conv) => (
-                      <button
+                      <div
                         key={conv.id}
-                        onClick={() => onSelectConversation(conv.id)}
-                        className={`w-full text-left p-3 rounded-lg mb-2 transition-all ${
+                        className={`w-full p-3 rounded-lg mb-2 transition-all ${
                           currentConversationId === conv.id
                             ? "bg-white/15 border border-white/30"
                             : "bg-white/5 border border-white/10 hover:bg-white/10"
@@ -221,12 +261,65 @@ export function ConversationHistorySidebar({
                                 {formatDate(conv.updated_at)}
                               </span>
                             </div>
-                            <p className="text-xs text-white/80 truncate">
-                              Conversation
-                            </p>
+                            {editingId === conv.id ? (
+                              <div className="flex items-center gap-1">
+                                <Input
+                                  ref={inputRef}
+                                  value={editingName}
+                                  onChange={(e) => setEditingName(e.target.value)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter") {
+                                      handleSaveEdit(conv.id);
+                                    } else if (e.key === "Escape") {
+                                      handleCancelEdit();
+                                    }
+                                  }}
+                                  className="h-6 text-xs bg-white/10 border-white/20 text-white flex-1"
+                                  maxLength={100}
+                                />
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  onClick={() => handleSaveEdit(conv.id)}
+                                  className="h-6 w-6 text-white/70 hover:text-white hover:bg-white/10"
+                                >
+                                  <Check className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  onClick={handleCancelEdit}
+                                  className="h-6 w-6 text-white/70 hover:text-white hover:bg-white/10"
+                                >
+                                  <XIcon className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-2 group">
+                                <button
+                                  onClick={() => onSelectConversation(conv.id)}
+                                  className="flex-1 text-left min-w-0"
+                                >
+                                  <p className="text-xs text-white/80 truncate">
+                                    {conv.name || "Conversation"}
+                                  </p>
+                                </button>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleStartEdit(conv);
+                                  }}
+                                  className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity text-white/50 hover:text-white hover:bg-white/10"
+                                >
+                                  <Edit2 className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            )}
                           </div>
                         </div>
-                      </button>
+                      </div>
                     ))}
                   </div>
                 )}

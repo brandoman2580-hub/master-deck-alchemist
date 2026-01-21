@@ -78,7 +78,7 @@ export function ArchetypeAutocomplete({
 
   return (
     <div className="relative">
-      <label className="block text-sm font-medium mb-1 text-cyan-300">
+      <label className="block text-sm font-medium mb-1 text-white/80">
         Archetype
       </label>
       <div className="flex flex-wrap items-center gap-1 mb-1">

@@ -84,37 +84,6 @@ export function DeckTabs({
     [removeCardFromDeck],
   );
 
-  // Undo/Redo handlers (using deckStore from Phase 1)
-  // For now, we'll add basic handlers that can be connected to the store later
-  const handleUndo = useCallback(() => {
-    // TODO: Connect to deckStore.undo() when ready
-    console.log("Undo not yet connected to store");
-  }, []);
-
-  const handleRedo = useCallback(() => {
-    // TODO: Connect to deckStore.redo() when ready
-    console.log("Redo not yet connected to store");
-  }, []);
-
-  // Check undo/redo availability (placeholder)
-  const canUndo = false; // TODO: useDeckStore((state) => state.canUndo())
-  const canRedo = false; // TODO: useDeckStore((state) => state.canRedo())
-
-  // Keyboard shortcuts for undo/redo
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey) {
-        e.preventDefault();
-        if (canUndo) handleUndo();
-      } else if ((e.ctrlKey || e.metaKey) && (e.key === "y" || (e.key === "z" && e.shiftKey))) {
-        e.preventDefault();
-        if (canRedo) handleRedo();
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [canUndo, canRedo, handleUndo, handleRedo]);
   // Calculate status colors for counts
   const getMainCountColor = () => {
     if (stats.mainCount < 40) return "text-yellow-400";
@@ -171,7 +140,7 @@ export function DeckTabs({
               ref={mainTabRef}
               type="button"
               onClick={() => setActiveTab("main")}
-              className={`relative z-10 flex-1 px-4 py-3 font-bold transition-colors duration-200 focus:outline-none font-display text-sm flex items-center justify-center gap-2 ${
+              className={`relative z-10 flex-1 px-4 py-3 font-medium transition-colors duration-200 focus:outline-none text-sm flex items-center justify-center gap-2 ${
                 activeTab === "main"
                   ? "text-white"
                   : "text-white/60 hover:text-white/80"
@@ -193,7 +162,7 @@ export function DeckTabs({
               ref={extraTabRef}
               type="button"
               onClick={() => setActiveTab("extra")}
-              className={`relative z-10 flex-1 px-4 py-3 font-bold transition-colors duration-200 focus:outline-none font-display text-sm flex items-center justify-center gap-2 ${
+              className={`relative z-10 flex-1 px-4 py-3 font-medium transition-colors duration-200 focus:outline-none text-sm flex items-center justify-center gap-2 ${
                 activeTab === "extra"
                   ? "text-white"
                   : "text-white/60 hover:text-white/80"
@@ -216,7 +185,7 @@ export function DeckTabs({
                 ref={sideTabRef}
                 type="button"
                 onClick={() => setActiveTab("side")}
-                className={`relative z-10 flex-1 px-4 py-3 font-bold transition-colors duration-200 focus:outline-none font-display text-sm flex items-center justify-center gap-2 ${
+                className={`relative z-10 flex-1 px-4 py-3 font-medium transition-colors duration-200 focus:outline-none text-sm flex items-center justify-center gap-2 ${
                   activeTab === "side"
                     ? "text-white"
                     : "text-white/60 hover:text-white/80"

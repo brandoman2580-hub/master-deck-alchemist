@@ -11,6 +11,34 @@ import { CardPreview } from "./card-preview";
 import Image from "next/image";
 import { useHoverAnimation } from "@/lib/animations";
 
+// Helper function to get rarity badge styling
+function getRarityBadge(rarity: string | undefined) {
+  if (!rarity || rarity.trim() === "") return null;
+  
+  const rarityUpper = rarity.toUpperCase().trim();
+  let badgeClass = "";
+  let displayText = "";
+  
+  // Check for exact matches first, then partial matches
+  if (rarityUpper === "N" || rarityUpper === "NORMAL" || rarityUpper.includes("NORMAL")) {
+    badgeClass = "bg-gray-400/90 border-gray-300/60 text-white";
+    displayText = "N";
+  } else if (rarityUpper === "R" || (rarityUpper.includes("RARE") && !rarityUpper.includes("SUPER") && !rarityUpper.includes("ULTRA"))) {
+    badgeClass = "bg-blue-500/90 border-blue-400/60 text-white";
+    displayText = "R";
+  } else if (rarityUpper === "SR" || rarityUpper.includes("SUPER RARE") || rarityUpper.includes("SUPERRARE")) {
+    badgeClass = "bg-gradient-to-r from-yellow-400 via-orange-400 to-yellow-500 border-yellow-300/60 text-white";
+    displayText = "SR";
+  } else if (rarityUpper === "UR" || rarityUpper.includes("ULTRA RARE") || rarityUpper.includes("ULTRARARE")) {
+    badgeClass = "bg-gradient-to-r from-purple-500 via-pink-500 to-blue-500 border-purple-400/60 text-white";
+    displayText = "UR";
+  } else {
+    return null;
+  }
+  
+  return { badgeClass, displayText };
+}
+
 export interface CardStackProps {
   card: Card;
   remainingCopies: number;
@@ -137,9 +165,28 @@ export function CardStack({
                   )}
                 </>
               )}
+              {/* Rarity Badge - Top Right Corner of Card Image */}
+              {!isBeingDragged && (() => {
+                const rarity = card.misc_info?.[0]?.md_rarity;
+                const rarityBadge = getRarityBadge(rarity);
+                return rarityBadge ? (
+                  <div className="absolute top-0 right-0 z-20 transform translate-x-1/2 -translate-y-1/2">
+                    <Badge
+                      variant="secondary"
+                      className={`text-[10px] px-1.5 py-0.5 min-w-[22px] h-5 flex items-center justify-center border-2 font-bold shadow-lg ${rarityBadge.badgeClass}`}
+                    >
+                      {rarityBadge.displayText}
+                    </Badge>
+                  </div>
+                ) : null;
+              })()}
+              
               {/* Available Count Badge */}
               {!isBeingDragged && remainingCopies > 0 && (
-                <div className="absolute -top-1 -right-1 z-10">
+                <div className={`absolute z-10 ${(() => {
+                  const rarity = card.misc_info?.[0]?.md_rarity;
+                  return getRarityBadge(rarity) ? "-bottom-1 -left-1" : "-top-1 -right-1";
+                })()}`}>
                   <Badge
                     variant="secondary"
                     className="text-xs px-1.5 py-0.5 min-w-[20px] h-5 flex items-center justify-center border font-semibold bg-white/10 border-white/20 text-white backdrop-blur-sm"
@@ -164,9 +211,23 @@ export function CardStack({
 
             {/* Card Info */}
             <div className="flex-1 min-w-0">
-              <h4 className="font-medium text-sm truncate text-slate-50">
-                {card.name}
-              </h4>
+              <div className="flex items-center gap-2">
+                <h4 className="font-medium text-sm truncate text-slate-50">
+                  {card.name}
+                </h4>
+                {(() => {
+                  const rarity = card.misc_info?.[0]?.md_rarity;
+                  const rarityBadge = getRarityBadge(rarity);
+                  return rarityBadge ? (
+                    <Badge
+                      variant="secondary"
+                      className={`text-[10px] px-1.5 py-0.5 border font-bold ${rarityBadge.badgeClass}`}
+                    >
+                      {rarityBadge.displayText}
+                    </Badge>
+                  ) : null;
+                })()}
+              </div>
               <div className="flex flex-wrap gap-1 mt-1.5">
                 <Badge
                   variant="outline"
@@ -185,6 +246,18 @@ export function CardStack({
                 <Badge className={`text-xs ${getBanStatusColor(banStatus)}`}>
                   {banStatus}
                 </Badge>
+                {(() => {
+                  const rarity = card.misc_info?.[0]?.md_rarity;
+                  const rarityBadge = getRarityBadge(rarity);
+                  return rarityBadge ? (
+                    <Badge
+                      variant="secondary"
+                      className={`text-xs px-1.5 py-0.5 border font-bold ${rarityBadge.badgeClass}`}
+                    >
+                      {rarityBadge.displayText}
+                    </Badge>
+                  ) : null;
+                })()}
               </div>
               <p className="text-xs text-slate-400 mt-1.5 line-clamp-2">
                 {card.desc}

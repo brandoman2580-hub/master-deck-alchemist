@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useEffect, useLayoutEffect, useRef, useMemo } from "react";
-import { motion } from "framer-motion";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   CardHeader,
@@ -15,20 +14,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { InputWithClear } from "@/components/ui/input-with-clear";
-import { Download, Upload, Trash2, Edit, Undo2, Redo2 } from "lucide-react";
+import { Download, Upload, Trash2, Edit } from "lucide-react";
 import { DECK_MODES } from "@/lib/constants";
 import { DeckMode } from "@/types/types";
 import { openLoginModal } from "@/lib/helpers";
-import {
-  SPRING_CONFIG,
-} from "@/lib/animations";
+import { Badge } from "@/components/ui/badge";
 
 interface DeckHeaderProps {
   currentDeckName: string;
@@ -40,10 +31,6 @@ interface DeckHeaderProps {
   importDeck: (jsonData: string) => void;
   clearDeck: () => void;
   renameDeck: (name: string) => void;
-  canUndo?: boolean;
-  canRedo?: boolean;
-  onUndo?: () => void;
-  onRedo?: () => void;
 }
 
 export function DeckHeader({
@@ -56,329 +43,208 @@ export function DeckHeader({
   importDeck,
   clearDeck,
   renameDeck,
-  canUndo = false,
-  canRedo = false,
-  onUndo,
-  onRedo,
 }: DeckHeaderProps) {
   // Internal state for rename dialog and import
   const [isRenameOpen, setIsRenameOpen] = useState(false);
   const [deckName, setDeckName] = useState(currentDeckName || "");
   const [importText, setImportText] = useState("");
+  const [selectedMode, setSelectedMode] = useState<DeckMode>(deckMode);
 
-  // Refs for mode selector slider
-  const tcgRef = useRef<HTMLButtonElement>(null);
-  const masterDuelRef = useRef<HTMLButtonElement>(null);
-  const btnRefs = useMemo(
-    () => ({
-      TCG: tcgRef,
-      "Master Duel": masterDuelRef,
-    }),
-    [],
-  );
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [sliderStyle, setSliderStyle] = useState<React.CSSProperties>({});
-
-  // Sync deckName when rename dialog opens
+  // Sync deckName and mode when rename dialog opens
   useEffect(() => {
     if (isRenameOpen) {
       setDeckName(currentDeckName || "");
+      setSelectedMode(deckMode);
     }
-  }, [isRenameOpen, currentDeckName]);
-
-  // Calculate mode selector slider position
-  useLayoutEffect(() => {
-    if (containerRef.current && btnRefs[deckMode]?.current) {
-      const containerRect = containerRef.current.getBoundingClientRect();
-      const btnRect = btnRefs[deckMode].current.getBoundingClientRect();
-      setSliderStyle({
-        left: btnRect.left - containerRect.left,
-        width: btnRect.width,
-      });
-    }
-  }, [deckMode, btnRefs]);
+  }, [isRenameOpen, currentDeckName, deckMode]);
 
   const displayName = deckName.length > 40 ? `${deckName.slice(0, 40)}...` : deckName;
   const shouldTruncate = deckName.length > 40;
 
   return (
     <CardHeader className="pb-2 pt-0 space-y-3">
-      {/* First Row: Deck Name with Rename Button */}
+      {/* First Row: Deck Name with Format Mode Badge */}
       <div className="flex items-center gap-2 w-full min-w-0">
         {shouldTruncate ? (
-          <TooltipProvider delayDuration={100} skipDelayDuration={0}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className="text-xl font-bold text-white truncate cursor-help font-display flex-1 min-w-0">
-                  {displayName}
-                </span>
-              </TooltipTrigger>
-              <TooltipContent
-                className="max-w-xs"
-                side="top"
-              >
-                <p className="font-medium">{deckName}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <span className="text-xl font-bold text-white truncate cursor-help font-display flex-1 min-w-0">
+            {displayName}
+          </span>
         ) : (
           <span className="text-xl font-bold text-white font-display flex-1 min-w-0">
             {displayName}
           </span>
         )}
-        <Dialog open={isRenameOpen} onOpenChange={setIsRenameOpen}>
-          <TooltipProvider delayDuration={100} skipDelayDuration={0}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                {!user ? (
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    aria-label="Rename deck"
-                    onClick={openLoginModal}
-                    className="h-8 w-8 flex-shrink-0"
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                ) : (
-                  <DialogTrigger asChild>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      aria-label="Rename deck"
-                      className="h-8 w-8 flex-shrink-0"
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                  </DialogTrigger>
-                )}
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Rename Deck</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-          <DialogContent className="bg-white/10 border border-white/20 backdrop-blur-xl">
-            <div className="flex flex-col gap-2">
-              <DialogHeader>
-                <DialogTitle>Rename Deck</DialogTitle>
-                <DialogDescription>
-                  Enter a new name for your deck.
-                </DialogDescription>
-              </DialogHeader>
-              <InputWithClear
-                value={deckName}
-                onChange={(e) => setDeckName(e.target.value)}
-                placeholder="Deck name"
-                maxLength={40}
-                autoFocus
-              />
-              <DialogFooter>
-                <Button
-                  onClick={() => {
-                    if (
-                      deckName.trim() &&
-                      deckName.trim() !== currentDeckName
-                    ) {
-                      renameDeck(deckName.trim());
-                    }
-                    setIsRenameOpen(false);
-                  }}
-                >
-                  Save
-                </Button>
-              </DialogFooter>
-            </div>
-          </DialogContent>
-        </Dialog>
+        {/* Format Mode Badge */}
+        <Badge
+          variant="outline"
+          className={`px-3 py-1.5 font-semibold text-xs border-white/20 text-white flex-shrink-0 ${deckMode === "TCG"
+              ? "bg-red-500/80 border-red-400/50"
+              : "bg-blue-500/80 border-blue-400/50"
+            }`}
+        >
+          {deckMode}
+        </Badge>
       </div>
 
-      {/* Second Row: Format Toggle and Deck Actions */}
-      <div className="flex items-center justify-between w-full gap-4">
-        {/* Format Toggle */}
-        <div
-          className="relative flex w-fit bg-white/5 border border-white/10 backdrop-blur-xl rounded-lg"
-          ref={containerRef}
-        >
-          <motion.span
-            className="absolute top-0 bottom-0 bg-white/10 rounded-lg"
-            style={{ ...sliderStyle, zIndex: 0 }}
-            layout
-            transition={{
-              type: "spring",
-              stiffness: SPRING_CONFIG.gentle.tension,
-              damping: SPRING_CONFIG.gentle.friction,
-            }}
-          />
-          {DECK_MODES.map((mode) => (
-            <button
-              key={mode}
-              ref={btnRefs[mode]}
-              type="button"
-              onClick={() => {
-                setDeckMode(mode);
-                updateDeckMode(mode);
-              }}
-              className={`relative z-10 px-3 py-1.5 font-semibold transition-colors duration-200 focus:outline-none font-display text-xs flex items-center justify-center gap-1 ${
-                deckMode === mode ? "text-white" : "text-white/60"
-              }`}
-              aria-pressed={deckMode === mode}
-              style={{
-                background: "transparent",
-                position: "relative",
-              }}
-            >
-              {mode}
-            </button>
-          ))}
-        </div>
-
-        {/* Deck Actions */}
-        <TooltipProvider delayDuration={100} skipDelayDuration={0}>
-          <div className="flex items-center gap-1">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => {
-                    if (!user) {
-                      openLoginModal();
-                    } else {
-                      handleExportDeck();
-                    }
-                  }}
-                  className="h-8 w-8"
-                >
-                  <Download className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Export Deck</p>
-              </TooltipContent>
-            </Tooltip>
-
+      {/* Second Row: Deck Actions with Labels */}
+      <div className="flex items-center w-full gap-2">
+        <div className="flex items-center gap-2 w-full">
+          <Dialog open={isRenameOpen} onOpenChange={setIsRenameOpen}>
             {!user ? (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" onClick={openLoginModal} className="h-8 w-8">
-                    <Upload className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Import Deck</p>
-                </TooltipContent>
-              </Tooltip>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={openLoginModal}
+                className="h-8 gap-2 flex-1 text-white/80 hover:text-white bg-white/10 hover:bg-white/15 border border-white/20 hover:border-white/30 transition-all focus:outline-none rounded-lg"
+              >
+                <Edit className="h-4 w-4" />
+                <span className="text-xs">Rename</span>
+              </Button>
             ) : (
-              <Dialog>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <DialogTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <Upload className="h-4 w-4" />
-                      </Button>
-                    </DialogTrigger>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Import Deck</p>
-                  </TooltipContent>
-                </Tooltip>
-                <DialogContent className="bg-white/10 border border-white/20 backdrop-blur-xl">
-                  <DialogHeader>
-                    <DialogTitle>Import Deck</DialogTitle>
-                    <DialogDescription>
-                      Paste the JSON data of a previously exported deck.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="py-4">
-                    <textarea
-                      className="w-full h-32 p-2 border rounded-md"
-                      placeholder="Paste JSON data here..."
-                      value={importText}
-                      onChange={(e) => setImportText(e.target.value)}
-                    />
-                  </div>
-                  <DialogFooter>
-                    <Button
-                      onClick={() => {
-                        try {
-                          importDeck(importText);
-                          setImportText("");
-                        } catch (error) {
-                          console.error("Failed to import deck:", error);
-                        }
-                      }}
-                      disabled={!importText.trim()}
-                    >
-                      Import
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
+              <DialogTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 gap-2 flex-1 text-white/80 hover:text-white bg-white/10 hover:bg-white/15 border border-white/20 hover:border-white/30 transition-all focus:outline-none rounded-lg"
+                >
+                  <Edit className="h-4 w-4" />
+                  <span className="text-xs">Rename</span>
+                </Button>
+              </DialogTrigger>
             )}
+            <DialogContent className="bg-white/10 border border-white/20 backdrop-blur-xl">
+              <div className="flex flex-col gap-4">
+                <DialogHeader>
+                  <DialogTitle>Rename Deck</DialogTitle>
+                  <DialogDescription>
+                    Enter a new name for your deck and select the format mode.
+                  </DialogDescription>
+                </DialogHeader>
+                <InputWithClear
+                  value={deckName}
+                  onChange={(e) => setDeckName(e.target.value)}
+                  placeholder="Deck name"
+                  maxLength={40}
+                  autoFocus
+                />
+                <div className="flex flex-col gap-2">
+                  <label className="text-sm font-medium text-white/90">Format Mode</label>
+                  <div className="flex gap-2">
+                    {DECK_MODES.map((mode) => (
+                      <Button
+                        key={mode}
+                        type="button"
+                        variant={selectedMode === mode ? "default" : "outline"}
+                        onClick={() => setSelectedMode(mode)}
+                        className="flex-1"
+                      >
+                        {mode}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button
+                    onClick={() => {
+                      if (
+                        deckName.trim() &&
+                        deckName.trim() !== currentDeckName
+                      ) {
+                        renameDeck(deckName.trim());
+                      }
+                      if (selectedMode !== deckMode) {
+                        setDeckMode(selectedMode);
+                        updateDeckMode(selectedMode);
+                      }
+                      setIsRenameOpen(false);
+                    }}
+                  >
+                    Save
+                  </Button>
+                </DialogFooter>
+              </div>
+            </DialogContent>
+          </Dialog>
 
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => {
-                    if (!user) {
-                      openLoginModal();
-                    } else {
-                      clearDeck();
-                    }
-                  }}
-                  className="h-8 w-8"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Clear Deck</p>
-              </TooltipContent>
-            </Tooltip>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              if (!user) {
+                openLoginModal();
+              } else {
+                handleExportDeck();
+              }
+            }}
+            className="h-8 gap-2 flex-1 text-white/80 hover:text-white bg-white/10 hover:bg-white/15 border border-white/20 hover:border-white/30 transition-all focus:outline-none rounded-lg"
+          >
+            <Download className="h-4 w-4" />
+            <span className="text-xs">Export</span>
+          </Button>
 
-            {/* Undo/Redo Controls */}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={onUndo}
-                  disabled={!canUndo}
-                  className={`h-8 w-8 transition-all ${
-                    canUndo ? "text-white/80 hover:text-white" : "text-white/30 opacity-30"
-                  }`}
-                >
-                  <Undo2 className="h-4 w-4" />
+          {!user ? (
+            <Button variant="ghost" size="sm" onClick={openLoginModal} className="h-8 gap-2 flex-1 text-white/80 hover:text-white bg-white/10 hover:bg-white/15 border border-white/20 hover:border-white/30 transition-all focus:outline-none rounded-lg">
+              <Upload className="h-4 w-4" />
+              <span className="text-xs">Import</span>
+            </Button>
+          ) : (
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-8 gap-2 flex-1 text-white/80 hover:text-white bg-white/10 hover:bg-white/15 border border-white/20 hover:border-white/30 transition-all focus:outline-none rounded-lg">
+                  <Upload className="h-4 w-4" />
+                  <span className="text-xs">Import</span>
                 </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Undo (Ctrl+Z)</p>
-              </TooltipContent>
-            </Tooltip>
+              </DialogTrigger>
+              <DialogContent className="bg-white/10 border border-white/20 backdrop-blur-xl">
+                <DialogHeader>
+                  <DialogTitle>Import Deck</DialogTitle>
+                  <DialogDescription>
+                    Paste the JSON data of a previously exported deck.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="py-4">
+                  <textarea
+                    className="w-full h-32 p-2 border rounded-md"
+                    placeholder="Paste JSON data here..."
+                    value={importText}
+                    onChange={(e) => setImportText(e.target.value)}
+                  />
+                </div>
+                <DialogFooter>
+                  <Button
+                    onClick={() => {
+                      try {
+                        importDeck(importText);
+                        setImportText("");
+                      } catch (error) {
+                        console.error("Failed to import deck:", error);
+                      }
+                    }}
+                    disabled={!importText.trim()}
+                  >
+                    Import
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          )}
 
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={onRedo}
-                  disabled={!canRedo}
-                  className={`h-8 w-8 transition-all ${
-                    canRedo ? "text-white/80 hover:text-white" : "text-white/30 opacity-30"
-                  }`}
-                >
-                  <Redo2 className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Redo (Ctrl+Shift+Z)</p>
-              </TooltipContent>
-            </Tooltip>
-          </div>
-        </TooltipProvider>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              if (!user) {
+                openLoginModal();
+              } else {
+                clearDeck();
+              }
+            }}
+            className="h-8 gap-2 flex-1 text-white/80 hover:text-white bg-white/10 hover:bg-white/15 border border-white/20 hover:border-white/30 transition-all focus:outline-none rounded-lg"
+          >
+            <Trash2 className="h-4 w-4" />
+            <span className="text-xs">Delete</span>
+          </Button>
+        </div>
       </div>
     </CardHeader>
   );

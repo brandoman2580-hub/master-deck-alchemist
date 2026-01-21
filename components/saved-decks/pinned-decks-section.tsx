@@ -1,7 +1,7 @@
 "use client";
 
 import { DeckType } from "../../types/types";
-import { DeckCard } from "./deck-card";
+import { DeckMediaCard } from "./deck-media-card";
 import { Card, CardContent } from "../ui/card";
 
 interface PinnedDecksSectionProps {
@@ -55,7 +55,7 @@ export function PinnedDecksSection({
       </h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {pinnedDecks.map((deck) => (
-          <DeckCard
+          <DeckMediaCard
             key={deck.id}
             deck={deck}
             onLoad={onLoad}

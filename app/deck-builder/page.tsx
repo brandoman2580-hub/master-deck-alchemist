@@ -28,7 +28,7 @@ import {
   getDeckSectionFromTarget,
 } from "./utils";
 import { TierBadge } from "../../components/deck-builder/tier-badge";
-import { MetaBadge, MetaThreatBadge } from "../../components/deck-builder/meta-badge";
+import { MetaBadge } from "../../components/deck-builder/meta-badge";
 import { DeckHeader } from "../../components/deck-builder/deck-header";
 import { DeckTabs } from "../../components/deck-builder/deck-tabs";
 import { CardBrowser } from "../../components/deck-builder/card-browser";
@@ -39,7 +39,6 @@ import {
   scaleInVariants,
 } from "@/lib/animations";
 import { detectMetaDeck } from "../../lib/utils/metaDetector";
-import { getMetaStats } from "../../lib/api/metaStats";
 
 export default function DeckBuilder() {
   const {
@@ -64,10 +63,6 @@ export default function DeckBuilder() {
     format: "tcg" | "master_duel";
     confidence: number;
   } | null>(null);
-  const [metaThreats, setMetaThreats] = useState<Array<{
-    deck_name: string;
-    tier: number;
-  }>>([]);
   const [activeDragId, setActiveDragId] = useState<UniqueIdentifier | null>(
     null,
   );
@@ -108,12 +103,11 @@ export default function DeckBuilder() {
     analyzeDeck();
   }, [currentDeck, analyzeDeck]);
 
-  // Detect meta deck match and fetch meta threats
+  // Detect meta deck match
   useEffect(() => {
     const detectMeta = async () => {
       if (currentDeck.mainDeck.length === 0) {
         setMetaMatch(null);
-        setMetaThreats([]);
         return;
       }
 
@@ -124,22 +118,10 @@ export default function DeckBuilder() {
         // This will gracefully handle if the endpoint is not available
         const match = await detectMetaDeck(currentDeck, format);
         setMetaMatch(match);
-
-        // Fetch meta threats (top tier decks)
-        // This will return empty stats if the endpoint is not available
-        const metaStats = await getMetaStats({ format, days: 30 });
-        const threats = metaStats.topDecks
-          .filter((deck) => deck.tier <= 2)
-          .map((deck) => ({
-            deck_name: deck.deck_name,
-            tier: deck.tier,
-          }));
-        setMetaThreats(threats);
       } catch (error) {
         // Silently handle errors - meta features are optional
         console.debug("Meta detection unavailable:", error);
         setMetaMatch(null);
-        setMetaThreats([]);
       }
     };
 
@@ -361,7 +343,6 @@ export default function DeckBuilder() {
                       format={deckMode === "TCG" ? "tcg" : "master_duel"}
                     />
                   )}
-                  {metaThreats.length > 0 && <MetaThreatBadge threats={metaThreats} />}
                 </div>
               </div>
 
@@ -404,8 +385,8 @@ export default function DeckBuilder() {
                 </div>
               </div>
 
-              {/* Right side - Card Browser (Shopping-style) */}
-              <div className="h-full flex flex-col min-h-0">
+              {/* Right side - Card Browser */}
+              <div className="flex flex-col min-h-0">
                 <CardBrowser
                   currentDeck={currentDeck}
                   deckMode={deckMode}

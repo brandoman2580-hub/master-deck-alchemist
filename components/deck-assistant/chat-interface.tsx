@@ -53,8 +53,13 @@ export function ChatInterface({
   const storageKey = `deck-assistant-conversation-${currentDeck.id || 'temp'}`;
   
   // Load persisted state from localStorage on mount
+  // Only load if we're not explicitly loading a different conversation
   const [messages, setMessages] = useState<Message[]>(() => {
     if (typeof window === 'undefined') return [];
+    // Don't load from localStorage if externalConversationId is provided (explicit conversation selection)
+    if (externalConversationId) {
+      return [];
+    }
     try {
       const saved = localStorage.getItem(storageKey);
       if (saved) {
@@ -77,16 +82,20 @@ export function ChatInterface({
   const [isLoading, setIsLoading] = useState(false);
   const [conversationId, setConversationId] = useState<string | undefined>(() => {
     if (typeof window === 'undefined') return externalConversationId;
+    // If externalConversationId is provided, use it directly (don't load from localStorage)
+    if (externalConversationId) {
+      return externalConversationId;
+    }
     try {
       const saved = localStorage.getItem(storageKey);
       if (saved) {
         const parsed = JSON.parse(saved);
-        return parsed.conversationId || externalConversationId;
+        return parsed.conversationId;
       }
     } catch (err) {
       console.error("Failed to load persisted conversationId:", err);
     }
-    return externalConversationId;
+    return undefined;
   });
   const [error, setError] = useState<string | null>(null);
   const [deckFingerprint, setDeckFingerprint] = useState<string | undefined>();
@@ -130,16 +139,36 @@ export function ChatInterface({
   // Load conversation history when conversationId changes
   useEffect(() => {
     if (externalConversationId && externalConversationId !== conversationId) {
+      // Clear localStorage first to prevent mixing conversations
+      try {
+        localStorage.removeItem(storageKey);
+      } catch (err) {
+        console.error("Failed to clear conversation state:", err);
+      }
+      // Clear messages before loading new conversation
+      setMessages([]);
       setConversationId(externalConversationId);
       loadConversationHistory(externalConversationId);
+    } else if (externalConversationId === undefined && conversationId !== undefined) {
+      // Clear conversation when externalConversationId becomes undefined (New Conversation clicked)
+      setConversationId(undefined);
+      setMessages([]);
+      setError(null);
+      // Clear localStorage
+      try {
+        localStorage.removeItem(storageKey);
+      } catch (err) {
+        console.error("Failed to clear conversation state:", err);
+      }
     }
-  }, [externalConversationId]);
+  }, [externalConversationId, conversationId, storageKey]);
 
   // Track if we've loaded a conversation to prevent unnecessary reloads
   // Use a key based on deck ID to persist across tab switches but reset on deck change
   const conversationLoadKeyRef = useRef<string | null>(null);
 
   // Load most recent conversation when deck changes (if no conversationId is set or externalConversationId is undefined)
+  // Only auto-load if we don't have messages from localStorage (to prevent mixing conversations)
   useEffect(() => {
     const loadMostRecentConversation = async () => {
       // Only load if deck is valid and no external conversationId is provided
@@ -160,13 +189,25 @@ export function ChatInterface({
         return;
       }
 
+      // Don't auto-load if we have messages from localStorage (they might be from a different conversation)
+      // Only auto-load if we have no messages at all
+      if (messages.length > 0) {
+        return;
+      }
+
       try {
-        const history = await getConversationHistory(currentDeck.id);
+        const history = await getConversationHistory(currentDeck.id, 5);
         if (history.length > 0) {
           // Load the most recent conversation (first in the list since it's ordered by updated_at DESC)
           const mostRecentId = history[0].id;
           // Only load if it's different from what we have
           if (mostRecentId !== conversationId) {
+            // Clear localStorage before loading to prevent mixing
+            try {
+              localStorage.removeItem(storageKey);
+            } catch (err) {
+              console.error("Failed to clear conversation state:", err);
+            }
             await loadConversationHistory(mostRecentId);
             conversationLoadKeyRef.current = currentDeck.id;
           }
@@ -198,6 +239,9 @@ export function ChatInterface({
   const loadConversationHistory = async (convId: string) => {
     setIsLoadingHistory(true);
     try {
+      // Clear any existing messages first to prevent mixing
+      setMessages([]);
+      
       const historyMessages = await getConversationMessages(convId);
       const formattedMessages: Message[] = historyMessages.map((msg) => ({
         id: msg.id,
@@ -398,12 +442,12 @@ export function ChatInterface({
   return (
     <div className="flex flex-col h-full min-h-0">
       {/* Message List - Scrollable */}
-      <div className="flex-1 overflow-y-auto min-h-0 p-4 sm:p-6">
+      <div className="flex-1 overflow-y-auto min-h-0 p-4 sm:p-6" style={{ minHeight: 0 }}>
         {isLoadingHistory ? (
-          // Loading skeletons
-          <div className="flex flex-col gap-4">
+          // Loading skeletons - maintain consistent height to prevent layout shift
+          <div className="flex flex-col gap-4 h-full min-h-0">
             {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="flex flex-col gap-2">
+              <div key={i} className="flex flex-col gap-2 flex-shrink-0">
                 <div className="flex justify-end">
                   <Skeleton className="h-8 w-48 bg-white/10" />
                 </div>
@@ -418,7 +462,7 @@ export function ChatInterface({
             ))}
           </div>
         ) : messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-center">
+          <div className="flex flex-col items-center justify-center h-full w-full text-center" style={{ minHeight: '100%' }}>
             <p className="text-white/70 text-sm mb-2">Ask me anything about your deck!</p>
             <p className="text-white/50 text-xs">I can help you find cards, improve consistency, or optimize ratios.</p>
             {error && (

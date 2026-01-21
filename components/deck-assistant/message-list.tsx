@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { ThumbsUp, ThumbsDown, Search, X } from "lucide-react";
+import { ThumbsUp, ThumbsDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import type { Message } from "./chat-interface";
 import { CardSlideshow } from "./card-slideshow";
 import type { Card } from "@/types/card";
@@ -25,18 +24,6 @@ interface MessageListProps {
  */
 export function MessageList({ messages, onAddCard, deckFingerprint, conversationId }: MessageListProps) {
   const [feedbackStates, setFeedbackStates] = useState<Map<string, "approved" | "disapproved" | null>>(new Map());
-  const [searchQuery, setSearchQuery] = useState("");
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
-
-  // Filter messages based on search query
-  const filteredMessages = useMemo(() => {
-    if (!searchQuery.trim()) return messages;
-    const query = searchQuery.toLowerCase();
-    return messages.filter((msg) => 
-      msg.content.toLowerCase().includes(query) ||
-      msg.recommendations?.some(rec => rec.cardName.toLowerCase().includes(query))
-    );
-  }, [messages, searchQuery]);
 
   // Load feedback states from localStorage when conversationId changes
   useEffect(() => {
@@ -103,57 +90,7 @@ export function MessageList({ messages, onAddCard, deckFingerprint, conversation
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Search Bar */}
-      {messages.length > 0 && (
-        <div className="flex items-center gap-2 mb-2">
-          {isSearchOpen ? (
-            <div className="flex items-center gap-2 flex-1">
-              <Input
-                placeholder="Search messages..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-8 text-sm bg-white/5 border-white/10 text-white placeholder:text-white/50"
-                autoFocus
-              />
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => {
-                  setIsSearchOpen(false);
-                  setSearchQuery("");
-                }}
-                className="h-8 w-8 text-white/70 hover:text-white"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-          ) : (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsSearchOpen(true)}
-              className="h-8 text-xs text-white/70 hover:text-white hover:bg-white/10"
-            >
-              <Search className="h-3 w-3 mr-1" />
-              Search
-            </Button>
-          )}
-        </div>
-      )}
-
-      {/* Search Results Count */}
-      {searchQuery && (
-        <div className="text-xs text-white/60 mb-2">
-          Found {filteredMessages.length} of {messages.length} messages
-        </div>
-      )}
-
-      {filteredMessages.length === 0 && searchQuery ? (
-        <div className="text-center py-8 text-white/50 text-sm">
-          No messages found matching &quot;{searchQuery}&quot;
-        </div>
-      ) : (
-        filteredMessages.map((message) => {
+      {messages.map((message) => {
           const feedbackState = feedbackStates.get(message.id);
           const hasRecommendations = message.recommendations && message.recommendations.length > 0;
           const showFeedback = message.role === "assistant" && (hasRecommendations || message.content.length > 50);
@@ -223,8 +160,7 @@ export function MessageList({ messages, onAddCard, deckFingerprint, conversation
             )}
           </motion.div>
           );
-        })
-      )}
+        })}
     </div>
   );
 }

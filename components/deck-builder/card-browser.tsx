@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo, useLayoutEffect } from "react";
 import { motion } from "framer-motion";
 import { Card as CardUI, CardContent, CardHeader } from "@/components/ui/card";
 import { InputWithClear } from "@/components/ui/input-with-clear";
@@ -20,8 +20,7 @@ import { Search, Filter, Bot } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { FILTER_CONFIGS } from "@/lib/constants";
-import { pulseVariants } from "@/lib/animations";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { pulseVariants, SPRING_CONFIG } from "@/lib/animations";
 import { DeckAssistant } from "@/components/deck-assistant/deck-assistant";
 
 interface CardBrowserProps {
@@ -43,14 +42,36 @@ export function CardBrowser({
   const cardList = useCardStore((state) => state.cardList);
   const loading = useCardStore((state) => state.loading);
 
-  // Phase 6: Removed debug logs for performance
-
   // Tab state - controlled to track active tab
   const [activeTab, setActiveTab] = useState("browser");
+
+  // Refs for tab slider animation
+  const browserTabRef = useRef<HTMLButtonElement>(null);
+  const assistantTabRef = useRef<HTMLButtonElement>(null);
+  const tabsContainerRef = useRef<HTMLDivElement>(null);
+  const [tabSliderStyle, setTabSliderStyle] = useState<React.CSSProperties>({});
 
   // Virtuoso container ref for height calculation
   const virtuosoContainerRef = useRef<HTMLDivElement>(null);
   const [virtuosoHeight, setVirtuosoHeight] = useState<number>(600);
+
+  // Calculate tab slider position
+  useLayoutEffect(() => {
+    if (tabsContainerRef.current) {
+      let activeTabRef: React.RefObject<HTMLButtonElement> | null = null;
+      if (activeTab === "browser") activeTabRef = browserTabRef;
+      else if (activeTab === "assistant") activeTabRef = assistantTabRef;
+
+      if (activeTabRef?.current) {
+        const containerRect = tabsContainerRef.current.getBoundingClientRect();
+        const btnRect = activeTabRef.current.getBoundingClientRect();
+        setTabSliderStyle({
+          left: btnRect.left - containerRect.left,
+          width: btnRect.width,
+        });
+      }
+    }
+  }, [activeTab]);
 
   // Search and filter state
   const [searchQuery, setSearchQuery] = useState("");
@@ -219,41 +240,78 @@ export function CardBrowser({
   return (
     <div className="relative grid grid-rows-[auto_1fr] h-full min-h-0 overflow-hidden" style={{ height: "100%" }}>
       {/* Tabbed Interface: Card Browser + AI Assistant */}
-      <Tabs
-        value={activeTab}
-        onValueChange={setActiveTab}
-        className="grid grid-rows-[auto_1fr] h-full min-h-0 overflow-hidden"
-        style={{ height: "100%" }}
-      >
-        <TabsList className="bg-transparent rounded-none px-0 h-auto flex-shrink-0">
-          <TabsTrigger
-            value="browser"
-            className="data-[state=active]:bg-white/10 data-[state=active]:text-white text-white/70 rounded-none px-4 py-2 text-sm font-medium flex items-center gap-2"
+      <div className="grid grid-rows-[auto_1fr] h-full min-h-0 overflow-hidden" style={{ height: "100%" }}>
+        {/* Custom Tab List with Slide Animation */}
+        <div className="pb-2 flex-shrink-0">
+          <div
+            ref={tabsContainerRef}
+            className="relative flex w-full bg-white/5 border border-white/10 backdrop-blur-xl rounded-lg p-1"
           >
-            <Search className="h-4 w-4" />
-            Card Browser
-          </TabsTrigger>
-          <TabsTrigger
-            value="assistant"
-            className="data-[state=active]:bg-white/10 data-[state=active]:text-white text-white/70 rounded-none px-4 py-2 text-sm font-medium flex items-center gap-2"
-          >
-            <Bot className="h-4 w-4" />
-            AI Assistant
-          </TabsTrigger>
-        </TabsList>
+            <motion.span
+              className="absolute top-1 bottom-1 bg-white/10 rounded-md"
+              style={{
+                ...tabSliderStyle,
+                zIndex: 0,
+                left: typeof tabSliderStyle.left === "number" ? tabSliderStyle.left + 4 : 0,
+                width: typeof tabSliderStyle.width === "number" ? tabSliderStyle.width - 8 : 0,
+              }}
+              layout
+              transition={{
+                type: "spring",
+                stiffness: SPRING_CONFIG.gentle.tension,
+                damping: SPRING_CONFIG.gentle.friction,
+              }}
+            />
+            <motion.button
+              ref={browserTabRef}
+              type="button"
+              onClick={() => setActiveTab("browser")}
+              className={`relative z-10 flex-1 px-4 py-3 font-medium transition-colors duration-200 focus:outline-none text-sm flex items-center justify-center gap-2 ${
+                activeTab === "browser"
+                  ? "text-white"
+                  : "text-white/60 hover:text-white/80"
+              }`}
+              aria-pressed={activeTab === "browser"}
+              style={{
+                background: "transparent",
+                position: "relative",
+              }}
+            >
+              <Search className="h-4 w-4" />
+              Card Browser
+            </motion.button>
+            <motion.button
+              ref={assistantTabRef}
+              type="button"
+              onClick={() => setActiveTab("assistant")}
+              className={`relative z-10 flex-1 px-4 py-3 font-medium transition-colors duration-200 focus:outline-none text-sm flex items-center justify-center gap-2 ${
+                activeTab === "assistant"
+                  ? "text-white"
+                  : "text-white/60 hover:text-white/80"
+              }`}
+              aria-pressed={activeTab === "assistant"}
+              style={{
+                background: "transparent",
+                position: "relative",
+              }}
+            >
+              <Bot className="h-4 w-4" />
+              AI Assistant
+            </motion.button>
+          </div>
+        </div>
 
         {/* Card Browser Tab */}
-        <TabsContent
-          value="browser"
+        <div
           className="mt-0 min-h-0 overflow-hidden h-full"
           style={{ height: "100%", display: activeTab === "browser" ? "grid" : "none" }}
         >
           <div className="grid grid-rows-[auto_1fr] h-full min-h-0 overflow-hidden" style={{ height: "100%" }}>
-            <CardUI className="bg-transparent grid grid-rows-[auto_1fr] pt-4 sm:pt-6 h-full min-h-0 overflow-hidden" style={{ height: "100%" }}>
-              <CardHeader className="pb-2 flex-shrink-0 px-4 sm:px-6 pt-0">
+            <CardUI className="bg-transparent grid grid-rows-[auto_1fr] h-full min-h-0 overflow-hidden" style={{ height: "100%" }}>
+              <CardHeader className="pb-2 flex-shrink-0 px-0 pt-4 sm:pt-6">
                 <div className="flex items-center gap-2 w-full">
                   <motion.div
-                    className="relative flex-1 min-w-0"
+                    className="relative flex-[4] min-w-0"
                     whileFocus={{
                       scale: 1.01,
                       transition: { duration: 0.2 },
@@ -271,25 +329,26 @@ export function CardBrowser({
                   </motion.div>
                   <Button
                     variant="ghost"
-                    size="icon"
+                    size="sm"
                     onClick={() =>
                       setIsFilterSidebarCollapsed(!isFilterSidebarCollapsed)
                     }
-                    className="h-9 w-9 flex-shrink-0 text-white/80 hover:text-white hover:bg-white/10 relative rounded-lg"
+                    className="h-9 flex-1 text-white/80 hover:text-white bg-white/10 hover:bg-white/15 border border-white/20 hover:border-white/30 transition-all focus:outline-none rounded-lg"
                     aria-label={
                       isFilterSidebarCollapsed ? "Show filters" : "Hide filters"
                     }
                   >
-                    <Filter className="h-4 w-4" />
+                    <Filter className="h-4 w-4 mr-2" />
+                    <span className="text-sm">Filters</span>
                     {activeFiltersCount > 0 && (
-                      <Badge className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-white/10 text-white text-[9px] flex items-center justify-center font-bold p-0 border border-white/20 backdrop-blur-sm">
+                      <Badge className="ml-2 h-5 w-5 rounded-full bg-white/10 text-white text-[9px] flex items-center justify-center font-bold p-0 border border-white/20 backdrop-blur-sm">
                         {activeFiltersCount}
                       </Badge>
                     )}
                   </Button>
                 </div>
                 {!loading && (
-                  <div className="flex items-center justify-end mt-2 gap-2">
+                  <div className="flex items-center justify-start mt-2 pl-4 gap-2">
                     <span className="text-xs text-white/80 font-bold tracking-wider uppercase">
                       {filteredCards.length.toLocaleString()}{" "}
                       {filteredCards.length === 1 ? "CARD" : "CARDS"}
@@ -400,19 +459,18 @@ export function CardBrowser({
               </CardContent>
             </CardUI>
           </div>
-        </TabsContent>
+        </div>
 
-        {/* AI Assistant Tab - forceMount to preserve conversation state across tab switches */}
-        <TabsContent
-          value="assistant"
-          className="flex-1 mt-0 min-h-0"
-          forceMount
+        {/* AI Assistant Tab */}
+        <div
+          className="mt-0 min-h-0 overflow-hidden h-full"
+          style={{ height: "100%", display: activeTab === "assistant" ? "flex" : "none" }}
         >
-          <div className={activeTab === "assistant" ? "h-full" : "hidden"}>
+          <div className="h-full min-h-0 overflow-hidden flex flex-col w-full">
             <DeckAssistant currentDeck={currentDeck} deckMode={deckMode} />
           </div>
-        </TabsContent>
-      </Tabs>
+        </div>
+      </div>
 
       {/* Filter Sidebar - Overlay/Slide Over */}
       <FilterSidebar

@@ -21,21 +21,56 @@ import {
   fadeInVariants,
   staggerContainer,
   staggerItem,
-  pulseVariants,
 } from "@/lib/animations";
 
 export default function SavedDecks() {
   const [decks, setDecks] = useState<DeckType[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const hasLoadedRef = useRef(false);
+  const lastUserIdRef = useRef<string | null>(null);
 
   const user = useUserStore((state) => state.user);
   const router = useRouter();
   const { loadDeck } = useDeck();
 
+  // Ensure page starts at top on initial load
+  useEffect(() => {
+    // Disable scroll restoration to prevent browser from restoring scroll position
+    if ('scrollRestoration' in window.history) {
+      window.history.scrollRestoration = 'manual';
+    }
+    
+    // Scroll to top immediately on mount (synchronous)
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    
+    // Also set scroll position directly for cross-browser compatibility
+    if (document.documentElement) {
+      document.documentElement.scrollTop = 0;
+    }
+    if (document.body) {
+      document.body.scrollTop = 0;
+    }
+  }, []);
+
   useEffect(() => {
     const fetchDecks = async () => {
-      if (!user) return;
+      if (!user) {
+        // Clear decks if user logs out
+        if (hasLoadedRef.current) {
+          setDecks([]);
+          hasLoadedRef.current = false;
+          lastUserIdRef.current = null;
+        }
+        return;
+      }
+
+      // Only fetch if we haven't loaded yet OR if the user ID changed
+      const userIdChanged = lastUserIdRef.current !== user.id;
+      if (!userIdChanged && hasLoadedRef.current) {
+        return; // Already loaded for this user, don't reload
+      }
+
       setLoading(true);
       setError(null);
       try {
@@ -51,14 +86,17 @@ export default function SavedDecks() {
           isPinned: deck.is_pinned ?? false,
         }));
         setDecks(decks);
+        hasLoadedRef.current = true;
+        lastUserIdRef.current = user.id;
       } catch (err: any) {
         setError(err.message || "Failed to load decks");
+        hasLoadedRef.current = false;
       } finally {
         setLoading(false);
       }
     };
     fetchDecks();
-  }, [user]);
+  }, [user?.id]); // Only depend on user.id, not the entire user object
 
   const handleLoadDeck = async (id: string) => {
     if (!user) return;
@@ -140,7 +178,7 @@ export default function SavedDecks() {
             <motion.div
               initial="hidden"
               animate="visible"
-              variants={pulseVariants}
+              variants={fadeInVariants}
             >
               <Card className="p-6 sm:p-8 text-center rounded-xl bg-white/5 border border-white/10 backdrop-blur-xl shadow-lg">
                 <CardContent className="pt-6">
@@ -175,7 +213,7 @@ export default function SavedDecks() {
                 />
               </motion.div>
 
-              <motion.div variants={staggerItem}>
+              <motion.div variants={staggerItem} className="mt-10 pt-8 border-t border-white/20">
                 <ModeDecksSection
                   decks={decks}
                   mode="TCG"
@@ -187,7 +225,7 @@ export default function SavedDecks() {
                 />
               </motion.div>
 
-              <motion.div variants={staggerItem}>
+              <motion.div variants={staggerItem} className="mt-10 pt-8 border-t border-white/20">
                 <ModeDecksSection
                   decks={decks}
                   mode="Master Duel"

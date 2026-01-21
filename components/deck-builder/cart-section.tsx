@@ -20,6 +20,35 @@ import {
   EASING,
 } from "@/lib/animations";
 import { AnimatePresence } from "framer-motion";
+import { Badge } from "@/components/ui/badge";
+
+// Helper function to get rarity badge styling
+function getRarityBadge(rarity: string | undefined) {
+  if (!rarity || rarity.trim() === "") return null;
+  
+  const rarityUpper = rarity.toUpperCase().trim();
+  let badgeClass = "";
+  let displayText = "";
+  
+  // Check for exact matches first, then partial matches
+  if (rarityUpper === "N" || rarityUpper === "NORMAL" || rarityUpper.includes("NORMAL")) {
+    badgeClass = "bg-gray-400/90 border-gray-300/60 text-white";
+    displayText = "N";
+  } else if (rarityUpper === "R" || (rarityUpper.includes("RARE") && !rarityUpper.includes("SUPER") && !rarityUpper.includes("ULTRA"))) {
+    badgeClass = "bg-blue-500/90 border-blue-400/60 text-white";
+    displayText = "R";
+  } else if (rarityUpper === "SR" || rarityUpper.includes("SUPER RARE") || rarityUpper.includes("SUPERRARE")) {
+    badgeClass = "bg-gradient-to-r from-yellow-400 via-orange-400 to-yellow-500 border-yellow-300/60 text-white";
+    displayText = "SR";
+  } else if (rarityUpper === "UR" || rarityUpper.includes("ULTRA RARE") || rarityUpper.includes("ULTRARARE")) {
+    badgeClass = "bg-gradient-to-r from-purple-500 via-pink-500 to-blue-500 border-purple-400/60 text-white";
+    displayText = "UR";
+  } else {
+    return null;
+  }
+  
+  return { badgeClass, displayText };
+}
 
 interface CartSectionProps {
   section: DeckSection;
@@ -106,6 +135,21 @@ function DeckCardCopy({
               className="w-full h-full object-contain rounded shadow-sm"
               loading="lazy"
             />
+            {/* Rarity Badge - Top Right Corner of Card Image */}
+            {(() => {
+              const rarity = card.misc_info?.[0]?.md_rarity;
+              const rarityBadge = getRarityBadge(rarity);
+              return rarityBadge ? (
+                <div className="absolute top-0 right-0 z-20 transform translate-x-1/2 -translate-y-1/2">
+                  <Badge
+                    variant="secondary"
+                    className={`text-[8px] px-1 py-0 min-w-[18px] h-4 flex items-center justify-center border-2 font-bold shadow-lg ${rarityBadge.badgeClass}`}
+                  >
+                    {rarityBadge.displayText}
+                  </Badge>
+                </div>
+              ) : null;
+            })()}
             {/* X button in top-left corner of thumbnail */}
             <button
               type="button"
@@ -181,7 +225,7 @@ export function CartSection({
             </motion.div>
           ) : (
             <motion.div
-              className="grid grid-cols-4 sm:grid-cols-5 lg:grid-cols-6 xl:grid-cols-4 gap-3 p-4"
+              className="grid grid-cols-4 sm:grid-cols-5 lg:grid-cols-6 xl:grid-cols-4 gap-3 p-4 justify-items-center"
               initial="hidden"
               animate="visible"
               variants={staggerContainer(0.05)}

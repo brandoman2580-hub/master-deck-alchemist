@@ -3,14 +3,14 @@
 import { motion } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { Zap } from "lucide-react";
-import { pulseVariants } from "@/lib/animations";
+import { fadeInVariants } from "@/lib/animations";
 
 export function EmptyState() {
   return (
     <motion.div
       initial="hidden"
       animate="visible"
-      variants={pulseVariants}
+      variants={fadeInVariants}
     >
       <Card className="rounded-xl bg-white/10 border border-white/20 backdrop-blur-xl shadow-lg">
         <CardContent className="pt-12 pb-12">

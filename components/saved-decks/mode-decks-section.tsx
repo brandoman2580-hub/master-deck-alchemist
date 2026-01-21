@@ -1,7 +1,7 @@
 "use client";
 
 import { DeckType, DeckMode } from "../../types/types";
-import { DeckCard } from "./deck-card";
+import { DeckMediaCard } from "./deck-media-card";
 import { Card, CardContent } from "../ui/card";
 
 interface ModeDecksSectionProps {
@@ -60,7 +60,7 @@ export function ModeDecksSection({
       </h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {modeDecks.map((deck) => (
-          <DeckCard
+          <DeckMediaCard
             key={deck.id}
             deck={deck}
             onLoad={onLoad}

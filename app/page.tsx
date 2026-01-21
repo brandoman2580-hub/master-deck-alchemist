@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   ArrowRight,
@@ -21,6 +21,25 @@ import {
 } from "@/lib/animations";
 
 export default function Home() {
+  // Ensure page starts at top on initial load
+  useEffect(() => {
+    // Disable scroll restoration to prevent browser from restoring scroll position
+    if ('scrollRestoration' in window.history) {
+      window.history.scrollRestoration = 'manual';
+    }
+    
+    // Scroll to top immediately on mount (synchronous)
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    
+    // Also set scroll position directly for cross-browser compatibility
+    if (document.documentElement) {
+      document.documentElement.scrollTop = 0;
+    }
+    if (document.body) {
+      document.body.scrollTop = 0;
+    }
+  }, []);
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
       <main

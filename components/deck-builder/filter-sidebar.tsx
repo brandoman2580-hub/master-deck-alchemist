@@ -147,7 +147,7 @@ export function FilterSidebar({
           />
           {/* Filter Panel - Full Page Slideout */}
           <motion.div
-            className="fixed right-0 top-0 bottom-0 w-full max-w-2xl bg-slate-900/98 backdrop-blur-md border-l border-white/10 shadow-2xl shadow-black/50 flex flex-col h-full overflow-y-auto z-50"
+            className="fixed right-0 top-0 bottom-0 w-full max-w-2xl bg-slate-900/98 backdrop-blur-3xl border-l border-white/10 shadow-2xl shadow-black/50 flex flex-col h-full overflow-y-auto z-50"
             variants={slideInRightVariants}
             initial="hidden"
             animate="visible"
@@ -271,7 +271,7 @@ export function FilterSidebar({
         </div>
 
         {/* Footer with Reset Button */}
-        <div className="border-t border-white/10 p-4 bg-slate-900/50">
+        <div className="border-t border-white/10 p-4 bg-slate-900/98">
           <Button
             variant="outline"
             onClick={handleClearFilters}

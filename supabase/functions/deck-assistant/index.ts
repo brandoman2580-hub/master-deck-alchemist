@@ -411,6 +411,9 @@ async function handleChatRequest(
     }
 
     const actualConversationId = conversationId || convId;
+    
+    // Check if this is a new conversation (no conversationId was provided)
+    const isNewConversation = !conversationId;
 
     // 2. Load conversation history
     const { data: messages, error: historyError } = await supabase
@@ -503,6 +506,34 @@ async function handleChatRequest(
       content: userQuery,
       sequence_number: userSeqData || 0,
     });
+
+    // If this is a new conversation, set the name from the first user message
+    if (isNewConversation) {
+      const conversationName = userQuery.trim().replace(/\s+/g, " ");
+      const truncatedName = conversationName.length > 50 
+        ? conversationName.substring(0, 47) + "..." 
+        : conversationName;
+      
+      // Try to update conversation name (gracefully fail if name column doesn't exist)
+      try {
+        const { error: nameError } = await supabase
+          .from("chatbot_conversations")
+          .update({ name: truncatedName })
+          .eq("id", actualConversationId);
+        
+        if (nameError) {
+          // Only warn if it's not a missing column error
+          if (!nameError.message.includes("column") && !nameError.message.includes("does not exist")) {
+            console.warn("Failed to set conversation name:", nameError.message);
+          } else {
+            console.log("Name column does not exist yet, skipping name update");
+          }
+        }
+      } catch (err) {
+        // Silently fail if name column doesn't exist
+        console.log("Name column may not exist yet, skipping name update");
+      }
+    }
 
     // 8. Build deck cards with names for ratio suggestions
     const deckCardsWithNames = deck.mainDeck.map(dc => {

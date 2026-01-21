@@ -37,12 +37,13 @@ export function DeckAssistant({ currentDeck, deckMode }: DeckAssistantProps) {
   };
 
   const handleNewConversation = () => {
+    // Clear conversation state - ChatInterface will handle clearing localStorage
     setConversationId(undefined);
     setIsHistorySidebarCollapsed(true);
   };
 
   return (
-    <div className="h-full flex flex-col min-h-0 relative">
+    <div className="flex flex-col relative h-[calc(100vh-250px)]">
       {/* History Toggle Button */}
       <div className="absolute top-4 left-4 z-30 flex items-center gap-2">
         <Button
@@ -64,7 +65,7 @@ export function DeckAssistant({ currentDeck, deckMode }: DeckAssistantProps) {
         </Button>
       </div>
 
-      {/* Conversation History Sidebar */}
+      {/* Conversation History Dialog */}
       {currentDeck.id && currentDeck.id !== "temp" && currentDeck.id !== "" && (
         <ConversationHistorySidebar
           deckId={currentDeck.id}
@@ -98,7 +99,7 @@ export function DeckAssistant({ currentDeck, deckMode }: DeckAssistantProps) {
               Learn how to get the most out of your AI-powered deck building assistant.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 text-sm text-white/90 max-h-[60vh] overflow-y-auto pr-2">
+          <div className="space-y-4 text-sm text-white/90 max-h-[60vh] overflow-y-auto pr-2 pt-4">
             <section className="space-y-2">
               <h3 className="font-semibold text-white/90 text-base">
                 Getting Started
@@ -130,7 +131,7 @@ export function DeckAssistant({ currentDeck, deckMode }: DeckAssistantProps) {
                 The assistant will provide:
               </p>
               <ul className="list-disc pl-5 space-y-1 text-white/80">
-                <li><strong>Ratio Suggestions:</strong> When you ask about ratios, you'll get specific recommendations like "Lair of Darkness: 3 → 2"</li>
+                <li><strong>Ratio Suggestions:</strong> When you ask about ratios, you'll get specific recommendations like "Effect Veiler: 3 → 2"</li>
                 <li><strong>Card Recommendations:</strong> When you ask for new cards, you'll see a slideshow with reasoning and priority levels</li>
                 <li><strong>Archetype-Aware:</strong> Suggestions consider your deck's archetype (Dragons, Fiends, etc.)</li>
               </ul>
