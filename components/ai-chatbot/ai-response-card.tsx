@@ -273,7 +273,7 @@ export function AIResponseCard({
               <Image
                 width={80}
                 height={120}
-                src={card.card_images[0]?.image_url_small || "/placeholder.svg"}
+                src={card.card_images?.[0]?.image_url_small || "/placeholder.svg"}
                 alt={card.name}
                 className="w-full h-auto object-contain rounded shadow-lg border border-white/10 group-hover/card:border-cyan-500/40 transition-colors"
               />

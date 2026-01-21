@@ -130,7 +130,7 @@ function DeckCardCopy({
             <Image
               width={56}
               height={80}
-              src={card.card_images[0]?.image_url_small || "/placeholder.svg"}
+              src={card.card_images?.[0]?.image_url_small || "/placeholder.svg"}
               alt={card.name}
               className="w-full h-full object-contain rounded shadow-sm"
               loading="lazy"

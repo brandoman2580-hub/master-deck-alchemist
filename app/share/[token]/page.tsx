@@ -48,27 +48,34 @@ export default function SharePage() {
           const mapToDeckCard = (card: { cardId: number; deckInstanceId?: string; name: string; type?: string; desc?: string }): DeckCard => {
             const fullCard = findCardById(card.cardId);
             if (fullCard) {
+              // Ensure all required fields are properly initialized
+              // Handle null, undefined, or invalid card_images
+              const safeCardImages = (fullCard.card_images != null && Array.isArray(fullCard.card_images) && fullCard.card_images.length > 0)
+                ? fullCard.card_images
+                : [];
+              const safeCardPrices = (fullCard.card_prices != null && Array.isArray(fullCard.card_prices))
+                ? fullCard.card_prices
+                : [];
+              const safeMiscInfo: [{ md_rarity: string }] = (fullCard.misc_info != null && Array.isArray(fullCard.misc_info) && fullCard.misc_info.length > 0 && fullCard.misc_info[0] != null)
+                ? [{ md_rarity: fullCard.misc_info[0].md_rarity || "" }]
+                : [{ md_rarity: "" }];
+              const safeCardSets = (fullCard.card_sets != null && typeof fullCard.card_sets === 'object' && !Array.isArray(fullCard.card_sets))
+                ? fullCard.card_sets
+                : {
+                    set_name: "",
+                    set_code: "",
+                    set_rarity: "",
+                    set_rarity_code: "",
+                    set_price: "",
+                  };
+
               return {
                 ...fullCard,
                 deckInstanceId: card.deckInstanceId || uuidv4(),
-                // Ensure card_images is always an array, even if undefined or empty
-                card_images: Array.isArray(fullCard.card_images) && fullCard.card_images.length > 0
-                  ? fullCard.card_images
-                  : [],
-                // Ensure card_prices is always an array
-                card_prices: Array.isArray(fullCard.card_prices) ? fullCard.card_prices : [],
-                // Ensure misc_info is always an array with at least one element
-                misc_info: Array.isArray(fullCard.misc_info) && fullCard.misc_info.length > 0
-                  ? fullCard.misc_info
-                  : [{ md_rarity: "" }],
-                // Ensure card_sets is always an object
-                card_sets: fullCard.card_sets || {
-                  set_name: "",
-                  set_code: "",
-                  set_rarity: "",
-                  set_rarity_code: "",
-                  set_price: "",
-                },
+                card_images: safeCardImages,
+                card_prices: safeCardPrices,
+                misc_info: safeMiscInfo,
+                card_sets: safeCardSets,
               };
             }
             // Fallback: create minimal card if not found in store
@@ -135,10 +142,8 @@ export default function SharePage() {
     setCurrentDeck(deckToImport);
     setStatus("success");
 
-    // Redirect to deck builder after a short delay
-    setTimeout(() => {
-      router.push("/deck-builder");
-    }, 2000);
+    // Redirect to deck builder immediately
+    router.push("/deck-builder");
   }
 
   function getCardImageUrl(card: DeckCard): string | null {
@@ -287,15 +292,14 @@ export default function SharePage() {
             <p className="text-sm text-white/70 text-center">
               {customDeckName && `"${customDeckName}" has been loaded into your deck builder.`}
             </p>
+            <div className="w-full max-w-xs mt-4">
+              <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                <div className="h-full bg-cyan-400 rounded-full animate-pulse" style={{ width: "100%" }} />
+              </div>
+            </div>
             <p className="text-xs text-white/50 text-center">
               Redirecting to deck builder...
             </p>
-            <Button
-              onClick={() => router.push("/deck-builder")}
-              className="mt-2"
-            >
-              Go to Deck Builder
-            </Button>
           </div>
         )}
 

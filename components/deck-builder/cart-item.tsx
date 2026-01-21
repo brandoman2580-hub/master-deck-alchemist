@@ -105,7 +105,7 @@ export const CartItem = memo(function CartItem({
             <Image
               width={80}
               height={120}
-              src={card.card_images[0]?.image_url_small || "/placeholder.svg"}
+              src={card.card_images?.[0]?.image_url_small || "/placeholder.svg"}
               alt={card.name}
               className="w-full h-full object-contain rounded shadow-sm"
               loading="lazy"
