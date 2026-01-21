@@ -4,7 +4,7 @@ import { useState } from "react";
 import { DeckType, DeckMode } from "@/types/types";
 import { ChatInterface } from "./chat-interface";
 import { ConversationHistorySidebar } from "./conversation-history-sidebar";
-import { History, Info } from "lucide-react";
+import { History, Info, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -13,6 +13,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { useUserStore } from "@/store/useUserStore";
+import { openLoginModal } from "@/lib/helpers";
 
 interface DeckAssistantProps {
   currentDeck: DeckType;
@@ -27,6 +35,15 @@ export function DeckAssistant({ currentDeck, deckMode }: DeckAssistantProps) {
   const [conversationId, setConversationId] = useState<string | undefined>();
   const [isHistorySidebarCollapsed, setIsHistorySidebarCollapsed] = useState(true);
   const [isInfoDialogOpen, setIsInfoDialogOpen] = useState(false);
+  const user = useUserStore((state) => state.user);
+  
+  // Check if deck is empty
+  const isDeckEmpty = 
+    currentDeck.mainDeck.length === 0 &&
+    currentDeck.extraDeck.length === 0 &&
+    currentDeck.sideDeck.length === 0;
+  
+  const isAuthenticated = !!user;
 
   // Note: Conversation persistence is handled in ChatInterface component
   // We don't reset conversationId here to allow persistence across deck changes
@@ -46,27 +63,77 @@ export function DeckAssistant({ currentDeck, deckMode }: DeckAssistantProps) {
     <div className="flex flex-col relative h-[calc(100vh-250px)]">
       {/* History Toggle Button */}
       <div className="absolute top-4 left-4 z-30 flex items-center gap-2">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setIsHistorySidebarCollapsed(!isHistorySidebarCollapsed)}
-          className="h-8 w-8 bg-white/10 hover:bg-white/15 border border-white/20 text-white"
-        >
-          <History className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setIsInfoDialogOpen(true)}
-          className="h-8 w-8 bg-white/10 hover:bg-white/15 border border-white/20 text-white"
-          aria-label="How to use AI Assistant"
-        >
-          <Info className="h-4 w-4" />
-        </Button>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  if (!isAuthenticated) {
+                    openLoginModal();
+                  } else {
+                    setIsHistorySidebarCollapsed(!isHistorySidebarCollapsed);
+                  }
+                }}
+                disabled={!isAuthenticated}
+                className={`h-8 w-8 bg-white/10 border border-white/20 text-white ${
+                  isAuthenticated
+                    ? "hover:bg-white/15"
+                    : "opacity-50 cursor-not-allowed relative group"
+                }`}
+              >
+                <History className="h-4 w-4" />
+                {!isAuthenticated && (
+                  <Lock className="h-3 w-3 absolute -top-0.5 -right-0.5 text-red-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                )}
+              </Button>
+            </TooltipTrigger>
+            {!isAuthenticated && (
+              <TooltipContent>
+                <p>Please log in to use this feature</p>
+              </TooltipContent>
+            )}
+          </Tooltip>
+        </TooltipProvider>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  if (!isAuthenticated) {
+                    openLoginModal();
+                  } else {
+                    setIsInfoDialogOpen(true);
+                  }
+                }}
+                disabled={!isAuthenticated}
+                className={`h-8 w-8 bg-white/10 border border-white/20 text-white ${
+                  isAuthenticated
+                    ? "hover:bg-white/15"
+                    : "opacity-50 cursor-not-allowed relative group"
+                }`}
+                aria-label="How to use AI Assistant"
+              >
+                <Info className="h-4 w-4" />
+                {!isAuthenticated && (
+                  <Lock className="h-3 w-3 absolute -top-0.5 -right-0.5 text-red-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                )}
+              </Button>
+            </TooltipTrigger>
+            {!isAuthenticated && (
+              <TooltipContent>
+                <p>Please log in to use this feature</p>
+              </TooltipContent>
+            )}
+          </Tooltip>
+        </TooltipProvider>
       </div>
 
       {/* Conversation History Dialog */}
-      {currentDeck.id && currentDeck.id !== "temp" && currentDeck.id !== "" && (
+      {isAuthenticated && currentDeck.id && currentDeck.id !== "temp" && currentDeck.id !== "" && (
         <ConversationHistorySidebar
           deckId={currentDeck.id}
           currentConversationId={conversationId}
@@ -84,6 +151,8 @@ export function DeckAssistant({ currentDeck, deckMode }: DeckAssistantProps) {
           deckMode={deckMode}
           conversationId={conversationId}
           onConversationChange={(id) => setConversationId(id)}
+          isAuthenticated={isAuthenticated}
+          isDeckEmpty={isDeckEmpty}
         />
       </div>
 

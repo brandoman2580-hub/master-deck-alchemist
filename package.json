@@ -16,6 +16,7 @@
     "a11y:scan-full": "npm run build && npx start-server-and-test start http://localhost:3000 30000 'npm run a11y:scan'",
     "a11y:baseline": "mkdir -p baseline && cp reports/pa11y-report.json baseline/pa11y-baseline.json 2>/dev/null || true && cp reports/jest-a11y-results.json baseline/jest-a11y-baseline.json 2>/dev/null || true",
     "test:a11y": "jest --testPathPattern=a11y",
+    "test:deck-share": "tsx scripts/test-deck-share-standalone.ts",
     "seed:metadata": "tsx scripts/seed-card-metadata.ts",
     "verify:embeddings": "tsx scripts/verify-embeddings.ts"
   },
@@ -49,6 +50,7 @@
     "next": "^16.0.7",
     "next-themes": "^0.2.1",
     "pg": "^8.16.3",
+    "qrcode.react": "^4.2.0",
     "react": "^18",
     "react-dom": "^18",
     "react-markdown": "^10.1.0",

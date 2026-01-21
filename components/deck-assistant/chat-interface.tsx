@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { DeckType, DeckMode } from "@/types/types";
 import { InputWithClear } from "@/components/ui/input-with-clear";
 import { Button } from "@/components/ui/button";
-import { Send } from "lucide-react";
+import { Send, Lock } from "lucide-react";
 import { MessageList } from "./message-list";
 import { sendChatMessage, getConversationMessages, getConversationHistory, type DeckAssistantChatResponse } from "@/lib/api/deckAssistant";
 import { useDeck } from "@/context/deck-context";
@@ -13,6 +13,13 @@ import { fingerprintDeck } from "@/lib/recommender-helpers";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Card } from "@/types/card";
 import type { DeckSection } from "@/types/types";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { openLoginModal } from "@/lib/helpers";
 
 export interface Message {
   id: string;
@@ -37,6 +44,8 @@ interface ChatInterfaceProps {
   deckMode: DeckMode;
   conversationId?: string;
   onConversationChange?: (conversationId: string | undefined) => void;
+  isAuthenticated?: boolean;
+  isDeckEmpty?: boolean;
 }
 
 /**
@@ -48,6 +57,8 @@ export function ChatInterface({
   deckMode: _deckMode,
   conversationId: externalConversationId,
   onConversationChange,
+  isAuthenticated = false,
+  isDeckEmpty = false,
 }: ChatInterfaceProps) {
   // Persist conversation state in localStorage to survive tab switches
   const storageKey = `deck-assistant-conversation-${currentDeck.id || 'temp'}`;
@@ -317,7 +328,7 @@ export function ChatInterface({
   };
 
   const handleSend = async () => {
-    if (!inputValue.trim() || isLoading) return;
+    if (!inputValue.trim() || isLoading || !isAuthenticated || isDeckEmpty) return;
 
     const userQuery = inputValue.trim();
     const userMessage: Message = {
@@ -462,9 +473,31 @@ export function ChatInterface({
             ))}
           </div>
         ) : messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full w-full text-center" style={{ minHeight: '100%' }}>
-            <p className="text-white/70 text-sm mb-2">Ask me anything about your deck!</p>
-            <p className="text-white/50 text-xs">I can help you find cards, improve consistency, or optimize ratios.</p>
+          <div className="flex flex-col items-center justify-center h-full w-full text-center px-4" style={{ minHeight: '100%' }}>
+            {!isAuthenticated ? (
+              <>
+                <Lock className="h-12 w-12 text-white/40 mb-4" />
+                <p className="text-white/70 text-sm mb-2 font-semibold">Authentication Required</p>
+                <p className="text-white/50 text-xs mb-4">Please log in to use the AI Assistant.</p>
+                <Button
+                  onClick={openLoginModal}
+                  className="bg-white/10 hover:bg-white/15 border border-white/20 text-white"
+                >
+                  Log In
+                </Button>
+              </>
+            ) : isDeckEmpty ? (
+              <>
+                <p className="text-white/70 text-sm mb-2 font-semibold">Start Building Your Deck</p>
+                <p className="text-white/50 text-xs mb-1">Add cards to your deck from the Card Browser to get started.</p>
+                <p className="text-white/50 text-xs">Once you have cards, I can help you optimize ratios, find synergies, and improve your deck!</p>
+              </>
+            ) : (
+              <>
+                <p className="text-white/70 text-sm mb-2">Ask me anything about your deck!</p>
+                <p className="text-white/50 text-xs">I can help you find cards, improve consistency, or optimize ratios.</p>
+              </>
+            )}
             {error && (
               <p className="text-red-400 text-xs mt-2">{error}</p>
             )}
@@ -519,23 +552,75 @@ export function ChatInterface({
       {/* Input Bar - Fixed at bottom */}
       <div className="border-t border-white/10 p-4 sm:p-6 flex-shrink-0">
         <div className="flex items-center gap-2">
-          <InputWithClear
-            placeholder="Ask about your deck..."
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            onClear={() => setInputValue("")}
-            onKeyPress={handleKeyPress}
-            disabled={isLoading}
-            className="flex-1 h-9 text-sm bg-white/5 border border-white/10 text-white placeholder:text-white/50 focus-visible:outline-none rounded-lg transition-all duration-200 focus:border-white/30 focus:bg-white/10"
-          />
-          <Button
-            onClick={handleSend}
-            disabled={!inputValue.trim() || isLoading}
-            size="icon"
-            className="h-9 w-9 flex-shrink-0 bg-white/10 hover:bg-white/15 border border-white/20 text-white disabled:opacity-50 disabled:cursor-not-allowed rounded-lg"
-          >
-            <Send className="h-4 w-4" />
-          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="flex-1 relative group">
+                  <InputWithClear
+                    placeholder={!isAuthenticated ? "Please log in to use AI Assistant..." : isDeckEmpty ? "Add cards to your deck first..." : "Ask about your deck..."}
+                    value={inputValue}
+                    onChange={(e) => setInputValue(e.target.value)}
+                    onClear={() => setInputValue("")}
+                    onKeyPress={handleKeyPress}
+                    disabled={isLoading || !isAuthenticated || isDeckEmpty}
+                    className={`flex-1 h-9 text-sm bg-white/5 border border-white/10 text-white placeholder:text-white/50 focus-visible:outline-none rounded-lg transition-all duration-200 focus:border-white/30 focus:bg-white/10 ${
+                      !isAuthenticated || isDeckEmpty ? "opacity-50 cursor-not-allowed" : ""
+                    }`}
+                  />
+                  {(!isAuthenticated || isDeckEmpty) && (
+                    <Lock className="h-3 w-3 absolute right-3 top-1/2 -translate-y-1/2 text-red-400 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+                  )}
+                </div>
+              </TooltipTrigger>
+              {!isAuthenticated && (
+                <TooltipContent>
+                  <p>Please log in to use this feature</p>
+                </TooltipContent>
+              )}
+              {isAuthenticated && isDeckEmpty && (
+                <TooltipContent>
+                  <p>Add cards to your deck first</p>
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  onClick={() => {
+                    if (!isAuthenticated) {
+                      openLoginModal();
+                    } else if (isDeckEmpty) {
+                      // Do nothing - tooltip will show message
+                    } else {
+                      handleSend();
+                    }
+                  }}
+                  disabled={!inputValue.trim() || isLoading || !isAuthenticated || isDeckEmpty}
+                  size="icon"
+                  className={`h-9 w-9 flex-shrink-0 bg-white/10 border border-white/20 text-white disabled:opacity-50 disabled:cursor-not-allowed rounded-lg relative group ${
+                    isAuthenticated && !isDeckEmpty ? "hover:bg-white/15" : ""
+                  }`}
+                >
+                  <Send className="h-4 w-4" />
+                  {(!isAuthenticated || isDeckEmpty) && (
+                    <Lock className="h-3 w-3 absolute -top-0.5 -right-0.5 text-red-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              {!isAuthenticated && (
+                <TooltipContent>
+                  <p>Please log in to use this feature</p>
+                </TooltipContent>
+              )}
+              {isAuthenticated && isDeckEmpty && (
+                <TooltipContent>
+                  <p>Add cards to your deck first</p>
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
         </div>
       </div>
     </div>

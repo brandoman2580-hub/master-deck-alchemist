@@ -15,40 +15,41 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { InputWithClear } from "@/components/ui/input-with-clear";
-import { Download, Upload, Trash2, Edit } from "lucide-react";
+import { Trash2, Edit, Share2 } from "lucide-react";
 import { DECK_MODES } from "@/lib/constants";
-import { DeckMode } from "@/types/types";
+import { DeckMode, DeckType } from "@/types/types";
 import { openLoginModal } from "@/lib/helpers";
 import { Badge } from "@/components/ui/badge";
+import { ShareLinkDialog } from "@/components/ui/share-link-dialog";
 
 interface DeckHeaderProps {
   currentDeckName: string;
+  currentDeck: DeckType;
   user: { id: string } | null;
   deckMode: DeckMode;
   setDeckMode: (mode: DeckMode) => void;
   updateDeckMode: (mode: DeckMode) => void;
-  handleExportDeck: () => void;
-  importDeck: (jsonData: string) => void;
   clearDeck: () => void;
   renameDeck: (name: string) => void;
+  hasCards?: boolean;
 }
 
 export function DeckHeader({
   currentDeckName,
+  currentDeck,
   user,
   deckMode,
   setDeckMode,
   updateDeckMode,
-  handleExportDeck,
-  importDeck,
   clearDeck,
   renameDeck,
+  hasCards = false,
 }: DeckHeaderProps) {
-  // Internal state for rename dialog and import
+  // Internal state for rename dialog
   const [isRenameOpen, setIsRenameOpen] = useState(false);
   const [deckName, setDeckName] = useState(currentDeckName || "");
-  const [importText, setImportText] = useState("");
   const [selectedMode, setSelectedMode] = useState<DeckMode>(deckMode);
+  const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
 
   // Sync deckName and mode when rename dialog opens
   useEffect(() => {
@@ -74,16 +75,18 @@ export function DeckHeader({
             {displayName}
           </span>
         )}
-        {/* Format Mode Badge */}
-        <Badge
-          variant="outline"
-          className={`px-3 py-1.5 font-semibold text-xs border-white/20 text-white flex-shrink-0 ${deckMode === "TCG"
-              ? "bg-red-500/80 border-red-400/50"
-              : "bg-blue-500/80 border-blue-400/50"
-            }`}
-        >
-          {deckMode}
-        </Badge>
+        {/* Format Mode Badge - Only show when deck has cards or has been renamed */}
+        {hasCards && (
+          <Badge
+            variant="outline"
+            className={`px-3 py-1.5 font-semibold text-xs border-white/20 text-white flex-shrink-0 ${deckMode === "TCG"
+                ? "bg-red-500/80 border-red-400/50"
+                : "bg-blue-500/80 border-blue-400/50"
+              }`}
+          >
+            {deckMode}
+          </Badge>
+        )}
       </div>
 
       {/* Second Row: Deck Actions with Labels */}
@@ -173,61 +176,46 @@ export function DeckHeader({
               if (!user) {
                 openLoginModal();
               } else {
-                handleExportDeck();
+                setIsShareDialogOpen(true);
               }
             }}
-            className="h-8 gap-2 flex-1 text-white/80 hover:text-white bg-white/10 hover:bg-white/15 border border-white/20 hover:border-white/30 transition-all focus:outline-none rounded-lg"
+            disabled={!user || !hasCards}
+            className="h-8 gap-2 flex-1 text-white/80 hover:text-white bg-white/10 hover:bg-white/15 border border-white/20 hover:border-white/30 transition-all focus:outline-none rounded-lg disabled:opacity-50"
           >
-            <Download className="h-4 w-4" />
-            <span className="text-xs">Export</span>
+            <Share2 className="h-4 w-4" />
+            <span className="text-xs">Share</span>
           </Button>
 
-          {!user ? (
-            <Button variant="ghost" size="sm" onClick={openLoginModal} className="h-8 gap-2 flex-1 text-white/80 hover:text-white bg-white/10 hover:bg-white/15 border border-white/20 hover:border-white/30 transition-all focus:outline-none rounded-lg">
-              <Upload className="h-4 w-4" />
-              <span className="text-xs">Import</span>
-            </Button>
-          ) : (
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-8 gap-2 flex-1 text-white/80 hover:text-white bg-white/10 hover:bg-white/15 border border-white/20 hover:border-white/30 transition-all focus:outline-none rounded-lg">
-                  <Upload className="h-4 w-4" />
-                  <span className="text-xs">Import</span>
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="bg-white/10 border border-white/20 backdrop-blur-xl">
-                <DialogHeader>
-                  <DialogTitle>Import Deck</DialogTitle>
-                  <DialogDescription>
-                    Paste the JSON data of a previously exported deck.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="py-4">
-                  <textarea
-                    className="w-full h-32 p-2 border rounded-md"
-                    placeholder="Paste JSON data here..."
-                    value={importText}
-                    onChange={(e) => setImportText(e.target.value)}
-                  />
-                </div>
-                <DialogFooter>
-                  <Button
-                    onClick={() => {
-                      try {
-                        importDeck(importText);
-                        setImportText("");
-                      } catch (error) {
-                        console.error("Failed to import deck:", error);
-                      }
-                    }}
-                    disabled={!importText.trim()}
-                  >
-                    Import
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          )}
+          <ShareLinkDialog
+            open={isShareDialogOpen}
+            onOpenChange={setIsShareDialogOpen}
+            deckName={currentDeckName}
+            deckData={{
+              name: currentDeck.name,
+              mainDeck: currentDeck.mainDeck.map((card) => ({
+                cardId: card.id,
+                deckInstanceId: card.deckInstanceId,
+                name: card.name,
+                type: card.type,
+                desc: card.desc,
+              })),
+              extraDeck: currentDeck.extraDeck.map((card) => ({
+                cardId: card.id,
+                deckInstanceId: card.deckInstanceId,
+                name: card.name,
+                type: card.type,
+                desc: card.desc,
+              })),
+              sideDeck: currentDeck.sideDeck.map((card) => ({
+                cardId: card.id,
+                deckInstanceId: card.deckInstanceId,
+                name: card.name,
+                type: card.type,
+                desc: card.desc,
+              })),
+              mode: currentDeck.mode,
+            }}
+          />
 
           <Button
             variant="ghost"

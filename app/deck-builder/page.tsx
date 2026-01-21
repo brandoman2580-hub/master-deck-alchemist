@@ -23,7 +23,6 @@ import DeckBuilderTips from "../../components/deck-builder-tips";
 import {
   analyzeDeck as analyzeDeckUtil,
   isExtraDeckCard,
-  exportDeckAsFile,
   getPlaystyleIcon,
   getDeckSectionFromTarget,
 } from "./utils";
@@ -45,8 +44,6 @@ export default function DeckBuilder() {
     currentDeck,
     removeCardFromDeck,
     clearDeck,
-    exportDeck,
-    importDeck,
     renameDeck,
     getDeckStats,
     addCardToDeck,
@@ -127,11 +124,6 @@ export default function DeckBuilder() {
 
     detectMeta();
   }, [currentDeck, deckMode]);
-
-  const handleExportDeck = () => {
-    const jsonData = exportDeck();
-    exportDeckAsFile(jsonData, currentDeck.name || "");
-  };
 
   // Phase 6: Wrapper for addCardToDeck with analytics
   const handleAddCardToDeck = useCallback(
@@ -363,14 +355,18 @@ export default function DeckBuilder() {
                     <CardUI className="bg-transparent h-full flex flex-col">
                       <DeckHeader
                         currentDeckName={currentDeck.name || ""}
+                        currentDeck={currentDeck}
                         user={user}
                         deckMode={deckMode}
                         setDeckMode={setDeckMode}
                         updateDeckMode={updateDeckMode}
-                        handleExportDeck={handleExportDeck}
-                        importDeck={importDeck}
                         clearDeck={clearDeck}
                         renameDeck={renameDeck}
+                        hasCards={
+                          currentDeck.mainDeck.length > 0 ||
+                          currentDeck.extraDeck.length > 0 ||
+                          currentDeck.sideDeck.length > 0
+                        }
                       />
                       <DeckTabs
                         stats={stats}

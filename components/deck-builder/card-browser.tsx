@@ -338,10 +338,10 @@ export function CardBrowser({
                       isFilterSidebarCollapsed ? "Show filters" : "Hide filters"
                     }
                   >
-                    <Filter className="h-4 w-4 mr-2" />
+                    <Filter className="h-4 w-4 mr-1" />
                     <span className="text-sm">Filters</span>
                     {activeFiltersCount > 0 && (
-                      <Badge className="ml-2 h-5 w-5 rounded-full bg-white/10 text-white text-[9px] flex items-center justify-center font-bold p-0 border border-white/20 backdrop-blur-sm">
+                      <Badge className="ml-1 h-5 w-5 rounded-full bg-white/10 text-white text-[9px] flex items-center justify-center font-bold p-0 border border-white/20 backdrop-blur-sm">
                         {activeFiltersCount}
                       </Badge>
                     )}
