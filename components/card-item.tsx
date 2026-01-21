@@ -81,7 +81,7 @@ export default function CardItem({
             <Image
               width={80}
               height={120}
-              src={card.card_images[0].image_url_small || "/placeholder.svg"}
+              src={card.card_images?.[0]?.image_url_small || "/placeholder.svg"}
               alt={card.name}
               className={`w-full h-auto object-contain ${
                 disabled ? "opacity-60" : ""
@@ -159,7 +159,7 @@ export default function CardItem({
             <Image
               width={80}
               height={120}
-              src={card.card_images[0].image_url || "/placeholder.svg"}
+              src={card.card_images?.[0]?.image_url || "/placeholder.svg"}
               alt={card.name}
               className="w-full sm:w-1/3 object-contain"
             />

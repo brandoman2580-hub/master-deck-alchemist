@@ -151,7 +151,7 @@ export function CardStack({
                           width={80}
                           height={120}
                           src={
-                            card.card_images[0].image_url_small ||
+                            card.card_images?.[0]?.image_url_small ||
                             "/placeholder.svg"
                           }
                           alt={card.name}

@@ -520,7 +520,7 @@ export default function DeckBuilderAgent() {
                               <Image
                                 width={60}
                                 height={88}
-                                src={card.card_images[0].image_url_small}
+                                src={card.card_images?.[0]?.image_url_small || "/placeholder.svg"}
                                 alt={card.name}
                                 className="w-12 h-auto object-contain rounded-md shadow-sm"
                               />

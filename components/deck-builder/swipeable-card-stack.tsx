@@ -131,7 +131,7 @@ export function SwipeableCardStack({
             {nextCard.card_images?.[0]?.image_url && (
               <div className="relative w-full h-64">
                 <Image
-                  src={nextCard.card_images[0].image_url}
+                  src={nextCard.card_images?.[0]?.image_url || "/placeholder.svg"}
                   alt={nextCard.name}
                   fill
                   sizes="400px"
@@ -164,7 +164,7 @@ export function SwipeableCardStack({
             {currentCard.card_images?.[0]?.image_url && (
               <div className="relative w-full h-64 bg-slate-900/50">
                 <Image
-                  src={currentCard.card_images[0].image_url}
+                  src={currentCard.card_images?.[0]?.image_url || "/placeholder.svg"}
                   alt={currentCard.name}
                   fill
                   sizes="400px"

@@ -51,6 +51,24 @@ export default function SharePage() {
               return {
                 ...fullCard,
                 deckInstanceId: card.deckInstanceId || uuidv4(),
+                // Ensure card_images is always an array, even if undefined or empty
+                card_images: Array.isArray(fullCard.card_images) && fullCard.card_images.length > 0
+                  ? fullCard.card_images
+                  : [],
+                // Ensure card_prices is always an array
+                card_prices: Array.isArray(fullCard.card_prices) ? fullCard.card_prices : [],
+                // Ensure misc_info is always an array with at least one element
+                misc_info: Array.isArray(fullCard.misc_info) && fullCard.misc_info.length > 0
+                  ? fullCard.misc_info
+                  : [{ md_rarity: "" }],
+                // Ensure card_sets is always an object
+                card_sets: fullCard.card_sets || {
+                  set_name: "",
+                  set_code: "",
+                  set_rarity: "",
+                  set_rarity_code: "",
+                  set_price: "",
+                },
               };
             }
             // Fallback: create minimal card if not found in store

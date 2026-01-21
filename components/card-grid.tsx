@@ -75,7 +75,7 @@ export default function CardGrid({ cards }: { cards: CardType[] }) {
                     width={80}
                     height={120}
                     src={
-                      card.card_images[0].image_url_small || "/placeholder.svg"
+                      card.card_images?.[0]?.image_url_small || "/placeholder.svg"
                     }
                     alt={card.name}
                     className="w-full h-auto object-cover"
@@ -114,7 +114,7 @@ export default function CardGrid({ cards }: { cards: CardType[] }) {
                                   width={80}
                                   height={120}
                                   src={
-                                    selectedCard.card_images[0].image_url ||
+                                    selectedCard.card_images?.[0]?.image_url ||
                                     "/placeholder.svg"
                                   }
                                   alt={selectedCard.name}

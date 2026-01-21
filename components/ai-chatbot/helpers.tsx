@@ -377,7 +377,7 @@ export function renderCategoryRecommendationCard(
                       <CardPreview card={card} banStatus={banStatus}>
                         <div className="relative w-20 h-[112px] flex-shrink-0 rounded-lg overflow-hidden border border-white/20 bg-slate-900/50 cursor-pointer group/image transition-transform hover:scale-105">
                           <Image
-                            src={card.card_images[0].image_url_small || card.card_images[0].image_url || "/placeholder.svg"}
+                            src={card.card_images?.[0]?.image_url_small || card.card_images?.[0]?.image_url || "/placeholder.svg"}
                             alt={card.name}
                             fill
                             className="object-cover"

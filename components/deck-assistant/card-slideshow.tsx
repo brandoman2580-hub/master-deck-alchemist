@@ -239,7 +239,7 @@ export function CardSlideshow({ recommendations, onAddCard }: CardSlideshowProps
               <CardPreview card={card}>
                 <div className="relative w-full h-full cursor-pointer">
                   <Image
-                    src={card.card_images[0].image_url_small || card.card_images[0].image_url || "/placeholder.svg"}
+                    src={card.card_images?.[0]?.image_url_small || card.card_images?.[0]?.image_url || "/placeholder.svg"}
                     alt={card.name}
                     fill
                     sizes="(max-width: 768px) 100vw, 400px"

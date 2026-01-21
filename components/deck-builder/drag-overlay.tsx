@@ -22,7 +22,7 @@ export function DragOverlayComponent({
               width={80}
               height={120}
               src={
-                activeDragCard.card_images[0].image_url_small ||
+                activeDragCard.card_images?.[0]?.image_url_small ||
                 "/placeholder.svg"
               }
               alt={activeDragCard.name}

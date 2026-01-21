@@ -33,7 +33,7 @@ export function CardPreview({ card, children, banStatus }: CardPreviewProps) {
                 <Image
                   width={160}
                   height={235}
-                  src={card.card_images[0].image_url || "/placeholder.svg"}
+                  src={card.card_images?.[0]?.image_url || "/placeholder.svg"}
                   alt={card.name}
                   className="w-[160px] h-auto object-contain rounded"
                 />
