@@ -1,10 +1,8 @@
 import { create } from "zustand";
-import type { RejectReason } from "@/components/ui/interactive-recommendation-card";
-
 export type AIRecommendationFeedbackEvent = {
   cardId: string;
   accepted: boolean;
-  reasons?: RejectReason[];
+  reasons?: string[];
   note?: string;
   timestamp: string; // ISO
 };

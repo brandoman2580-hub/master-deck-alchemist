@@ -1,5 +1,5 @@
 /**
- * Phase 4: Client-side helper functions for recommendation telemetry
+ * Client-side helper functions for recommendation telemetry
  */
 
 /**

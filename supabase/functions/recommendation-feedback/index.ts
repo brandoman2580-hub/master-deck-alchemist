@@ -49,7 +49,7 @@ function detectSpam(feedbackText: string | null): boolean {
 }
 
 // ============================================================================
-// Phase 4: Telemetry Schema
+//: Telemetry Schema
 // ============================================================================
 
 const TelemetryFeedbackZ = z.object({
@@ -58,7 +58,7 @@ const TelemetryFeedbackZ = z.object({
   accepted: z.boolean(),
   timestamp: z.string().optional(), // ISO string, defaults to now
   userId: z.string().optional(), // Optional, will use auth user if not provided
-  // Phase 5: Rich feedback fields
+  //: Rich feedback fields
   cardId: z.string().optional(),
   rejectionReasons: z.array(z.string()).optional(),
   feedbackText: z.string().optional(),
@@ -145,7 +145,7 @@ Deno.serve(async (req) => {
     // Parse and validate request body
     const body = await req.json();
 
-    // Phase 4: Try new telemetry schema first, fallback to legacy
+    //: Try new telemetry schema first, fallback to legacy
     console.log("Feedback request body:", JSON.stringify(body, null, 2));
     const telemetryResult = TelemetryFeedbackZ.safeParse(body);
     const legacyResult = LegacyFeedbackZ.safeParse(body);

@@ -64,9 +64,9 @@ export interface IntentAnalysis {
     excludeStaples: boolean;
     diversityLambda: number;
     archetypeSpecific: boolean;
-    requireMetaData?: boolean; // Phase 3: Flag for meta data requirement
+    requireMetaData?: boolean; //: Flag for meta data requirement
   };
-  targetDeck?: string; // Phase 3: Extracted target deck name for counter requests
+  targetDeck?: string; //: Extracted target deck name for counter requests
 }
 
 export function classifyIntent(
@@ -77,7 +77,7 @@ export function classifyIntent(
   const primaryArchetype = deckAnalysis?.primaryArchetype || null;
   
   // Intent keywords mapping
-  // Phase 3: Enhanced meta keywords
+  //: Enhanced meta keywords
   const intentKeywords: Record<RecommendationIntent, string[]> = {
     consistency: ['consistent', 'brick', 'draw', 'search', 'starter', 'ratio', 'opening hand', 'unplayable'],
     power: ['power', 'stronger', 'win', 'otk', 'end board', 'boss monster', 'ceiling', 'combo'],
@@ -118,7 +118,7 @@ export function classifyIntent(
   // Detect filters
   const detectedFilters = extractFilters(question);
 
-  // Phase 3: Extract target deck name for counter requests
+  //: Extract target deck name for counter requests
   let targetDeck: string | undefined;
   if (primary === 'meta' || primary === 'tech') {
     // Try to extract deck name from question
@@ -191,9 +191,9 @@ function buildSearchStrategy(
     meta: {
       boostTerms: [],
       excludeStaples: false,
-      diversityLambda: 0.5, // Phase 3: More focused for meta requests
+      diversityLambda: 0.5, //: More focused for meta requests
       archetypeSpecific: false,
-      requireMetaData: true, // Phase 3: Require meta data
+      requireMetaData: true, //: Require meta data
     },
     tech: {
       boostTerms: ['prevent', 'cannot', 'specific', 'counter', 'out'],

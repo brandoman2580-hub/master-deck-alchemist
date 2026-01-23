@@ -28,9 +28,9 @@ import {
 } from "../_shared/intentClassifier.ts";
 import { generateReasoning, type ReasoningOutput } from "./reasoningStage.ts";
 import { generateRecommendations } from "./recommendationStage.ts";
-// Phase 3: Meta context
+//: Meta context
 import { buildMetaContext, getCounterCards, getMetaTrends } from "./metaContext.ts";
-// Phase 2: Advanced retrieval and ranking
+//: Advanced retrieval and ranking
 import { generateMultipleQueries, performMultiQueryRetrieval } from "./multiQueryRetrieval.ts";
 import { expandQuery } from "./queryExpansion.ts";
 import { detectNegativeFilters, applyNegativeFilters } from "./negativeFiltering.ts";
@@ -43,7 +43,7 @@ import { getCachedEmbedding, setCachedEmbedding, getCachedRetrieval, setCachedRe
 // parallelCritical and parallelOptional not currently used
 // import { parallelCritical, parallelOptional } from "./parallelProcessing.ts";
 import { log, logStageStart, logStageEnd, logRetrieval, logScoring, logReasoning, logRecommendations, logCache } from "./logging.ts";
-// Phase 1: New utilities for robust JSON extraction, flexible validation, and telemetry
+//: New utilities for robust JSON extraction, flexible validation, and telemetry
 import { extractJsonRobust } from "./utils/json-extraction.ts";
 import { validateFlexible } from "./utils/flexible-schema.ts";
 import { sanitizeRecommendations } from "./utils/sanitization.ts";
@@ -88,14 +88,14 @@ const APPLY_CONF_THRESHOLD = 0.6;
 const INVESTIGATE_THRESHOLD = 0.45;
 const MAX_PROMPT_CARD_SUMMARY_CHARS = 700;
 
-// Phase 2: Feature flags
-// Phase 1: Disabled two-stage reasoning by default for better reliability
+//: Feature flags
+//: Disabled two-stage reasoning by default for better reliability
 // Two-stage adds complexity and latency without clear benefit after Phase 1 fixes
 // Can be re-enabled by setting ENABLE_TWO_STAGE=true environment variable
 const ENABLE_TWO_STAGE = Deno.env.get("ENABLE_TWO_STAGE") === "true"; // Default: false
 const MAX_STAGE_TIMEOUT_SECONDS = parseInt(Deno.env.get("MAX_STAGE_TIMEOUT_SECONDS") || "20", 10);
 
-// Phase 3: A/B Testing for Simplified Prompt
+//: A/B Testing for Simplified Prompt
 // Use simplified prompt for a percentage of requests (0.0-1.0)
 // Set USE_SIMPLE_PROMPT=1.0 to use simplified prompt for all requests
 // Set USE_SIMPLE_PROMPT=0.0 to use original prompt for all requests
@@ -133,7 +133,7 @@ const NumberConstraintZ = z
   .optional();
 
 
-// Phase 1: Conversation context (multi-turn memory) passed from client
+//: Conversation context (multi-turn memory) passed from client
 const ConversationFeedbackItemZ = z.object({
   cardId: z.string(),
   accepted: z.boolean(),
@@ -618,7 +618,7 @@ async function findCardsByArchetype(
 }
 
 // ============================================================================
-// Phase 1: Intent-Based Retrieval Functions
+//: Intent-Based Retrieval Functions
 // ============================================================================
 
 /**
@@ -653,7 +653,7 @@ function scoreCardByIntent(
       score *= (1 + powerCeiling);
       break;
     case 'meta':
-      // Phase 3: Enhanced meta boosting (1 + meta_relevance * 3)
+      //: Enhanced meta boosting (1 + meta_relevance * 3)
       score *= (1 + metaRelevance * 3);
       break;
     case 'tech':
@@ -683,7 +683,7 @@ function scoreCardByIntent(
     }
   }
 
-  // Phase 3: Slight boost for high meta_relevance cards even for non-meta intents
+  //: Slight boost for high meta_relevance cards even for non-meta intents
   if (intentAnalysis.primary !== 'meta' && metaRelevance > 0.5) {
     score *= 1.1;
   }
@@ -727,10 +727,10 @@ async function performIntentBasedRetrieval(
     return [];
   }
 
-  // Phase 3: Meta-specific filtering
+  //: Meta-specific filtering
   const metaRelevanceThreshold = 0.3;
   const isMetaIntent = intentAnalysis.primary === 'meta';
-  const targetDeck = (intentAnalysis as any).targetDeck; // Phase 3: targetDeck may not be in type yet
+  const targetDeck = (intentAnalysis as any).targetDeck; //: targetDeck may not be in type yet
 
   // Map results and add intent scores
   const candidates = data.map((row: any): CardCandidate & { metadata?: any; intentScore?: number } => {
@@ -754,7 +754,7 @@ async function performIntentBasedRetrieval(
     return candidate;
   });
 
-  // Phase 3: Apply meta-specific filtering
+  //: Apply meta-specific filtering
   let filteredCandidates = candidates;
   if (isMetaIntent) {
     if (targetDeck) {
@@ -793,7 +793,7 @@ async function performIntentBasedRetrieval(
 }
 
 // ============================================================================
-// Phase 2: New Helper Functions for Strict Schema
+//: New Helper Functions for Strict Schema
 // ============================================================================
 
 /**
@@ -1010,7 +1010,7 @@ function buildStrictPrompt(
  * Try to parse model output strictly as JSON; if it's a string with extra text,
  * attempt to find the first JSON object substring.
  */
-// Phase 1: Deprecated - use extractJsonRobust from utils/json-extraction.ts instead
+//: Deprecated - use extractJsonRobust from utils/json-extraction.ts instead
 // Keeping for backward compatibility during transition
 function extractJsonLike(text: string): any {
   return extractJsonRobust(text);
@@ -1024,14 +1024,14 @@ function validateRecommender(parsed: unknown): z.infer<typeof RecommenderZ> {
 }
 
 Deno.serve(async (req) => {
-  // Phase 4: Track which prompt type was used for A/B testing (declared early for error logging)
+  //: Track which prompt type was used for A/B testing (declared early for error logging)
   let promptType: "strict" | "simple" = "strict";
   
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
-  // Phase 1: Reset pipeline steps at start of each request
+  //: Reset pipeline steps at start of each request
   resetPipelineSteps();
   const requestStartTime = Date.now();
 
@@ -1260,7 +1260,7 @@ Deno.serve(async (req) => {
       maxOutputTokens = MAX_OUTPUT_TOKENS,
     } = reqVal;
 
-    // Phase 2: Deck Legality Check
+    //: Deck Legality Check
     const mainCount = (current_deck?.main || []).reduce(
       (s, c) => s + c.count,
       0,
@@ -1322,7 +1322,7 @@ Deno.serve(async (req) => {
       userProfile = await analyzeUserProfile(supabase, user.id, format);
     }
 
-    // Phase 2: Convert new deck format (main/extra/side with cardId/count) to old format for compatibility
+    //: Convert new deck format (main/extra/side with cardId/count) to old format for compatibility
     // First, collect all cardIds from the new format
     const deckCardIds: number[] = [];
     if (current_deck) {
@@ -1366,7 +1366,7 @@ Deno.serve(async (req) => {
     });
     const excludeArchetypes = Array.from(deckArchetypes);
 
-    // Phase 1: Perform intent classification if deck analysis is provided
+    //: Perform intent classification if deck analysis is provided
     let intentAnalysis: IntentAnalysis | undefined;
     if (reqVal.deckAnalysis) {
       intentAnalysis = classifyIntent(question, reqVal.deckAnalysis);
@@ -1418,7 +1418,7 @@ Deno.serve(async (req) => {
       ? buildDeckContextText(deckForContext, deckAnalysisForContext)
       : buildDeckContextText(deckForContext);
 
-    // Phase 2: Expand query with archetype/playstyle terms
+    //: Expand query with archetype/playstyle terms
     const expandedQuestion = expandQuery(
       question || "",
       reqVal.deckAnalysis,
@@ -1426,7 +1426,7 @@ Deno.serve(async (req) => {
     );
     const queryText = `${expandedQuestion}. ${deckContextText}`;
 
-    // Phase 2: Log context
+    //: Log context
     const logContext = {
       recommendationId,
       userId: user.id,
@@ -1482,7 +1482,7 @@ Deno.serve(async (req) => {
       try {
         const retrievalStart = logStageStart("RETRIEVAL", logContext);
 
-        // Phase 2: Check cache for retrieval results
+        //: Check cache for retrieval results
         const cacheKey = JSON.stringify({ query: expandedQuestion, intent: intentAnalysis?.primary, filters: questionFilters });
         let cachedResults = await getCachedRetrieval(expandedQuestion, intentAnalysis?.primary, questionFilters);
         
@@ -1493,10 +1493,10 @@ Deno.serve(async (req) => {
         } else {
           logCache("miss", cacheKey, logContext);
 
-          // Phase 2: Generate multiple queries if enabled
+          //: Generate multiple queries if enabled
           const queries = await generateMultipleQueries(expandedQuestion, intentAnalysis);
           
-          // Phase 2: Check cache for embeddings
+          //: Check cache for embeddings
           let queryEmbedding: number[] | null = null;
           const cachedEmbedding = await getCachedEmbedding(queryText);
           if (cachedEmbedding) {
@@ -1510,7 +1510,7 @@ Deno.serve(async (req) => {
           }
           console.log("✅ Generated/retrieved query embedding");
 
-          // Phase 2: Use multi-query retrieval if multiple queries generated
+          //: Use multi-query retrieval if multiple queries generated
           if (queries.length > 1) {
             console.log(`[MULTI-QUERY] Using ${queries.length} queries for retrieval`);
             const multiQueryResults = await performMultiQueryRetrieval(
@@ -1523,7 +1523,7 @@ Deno.serve(async (req) => {
             );
             candidateCards.push(...multiQueryResults);
           } else {
-            // Phase 1: Use intent-based retrieval if intent analysis is available
+            //: Use intent-based retrieval if intent analysis is available
             if (intentAnalysis && reqVal.deckAnalysis) {
               console.log("🎯 Using intent-based retrieval");
               const intentResults = await performIntentBasedRetrieval(
@@ -1582,7 +1582,7 @@ Deno.serve(async (req) => {
             }
           }
 
-          // Phase 2: Cache retrieval results
+          //: Cache retrieval results
           if (candidateCards.length > 0) {
             await setCachedRetrieval(expandedQuestion, intentAnalysis?.primary, questionFilters, candidateCards);
           }
@@ -1802,7 +1802,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Phase 2: Apply negative filtering
+    //: Apply negative filtering
     if (candidateCards.length > 0 && question) {
       const negativeFilters = detectNegativeFilters(question);
       const originalCount = candidateCards.length;
@@ -1812,7 +1812,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Phase 2: Apply synergy scoring and diminishing returns before MMR
+    //: Apply synergy scoring and diminishing returns before MMR
     let scoredCandidates: Array<CardCandidate & { synergyScore?: number; diminishingReturnsPenalty?: number }> = candidateCards;
     
     if (candidateCards.length > 0 && reqVal.deckAnalysis) {
@@ -2071,7 +2071,7 @@ Deno.serve(async (req) => {
           final_candidate_count: 0,
           response_version: "1.0",
           error_message: "TOON table is empty",
-          // Phase 4: Track prompt type even for errors
+          //: Track prompt type even for errors
           prompt_type: promptType,
           simple_prompt_rollout: SIMPLE_PROMPT_ROLLOUT,
         });
@@ -2105,7 +2105,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Phase 2: Convert finalCandidates to CardDoc format for strict schema (batch fetch)
+    //: Convert finalCandidates to CardDoc format for strict schema (batch fetch)
     const candidateIds = finalCandidates.map((c) => c.id);
     const deckCardIdsForFetch = allDeckCards.map((c) => c.id);
     const allIdsToFetch = [...new Set([...candidateIds, ...deckCardIdsForFetch.slice(0, 10)])].slice(0, RETRIEVAL_K);
@@ -2306,7 +2306,7 @@ Deno.serve(async (req) => {
 
     console.log(`📊 Fetched ${prioritizedCardDocs.length} card docs (${candidateCardDocs.length} candidates, ${deckCardDocs.length} deck cards)`);
 
-    // Phase 2: Check if we have card data before calling LLM
+    //: Check if we have card data before calling LLM
     if (prioritizedCardDocs.length === 0) {
       console.warn("⚠️ No card docs available - returning error response");
       const fingerprint = await fingerprintDeck(
@@ -2347,7 +2347,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Phase 2: Two-Stage LLM Architecture
+    //: Two-Stage LLM Architecture
     let reasoning: ReasoningOutput | undefined;
     let llmResp: { content: string; raw: any };
     let stage1Duration = 0;
@@ -2360,9 +2360,9 @@ Deno.serve(async (req) => {
         console.log("[TWO-STAGE] Starting Stage 1: Reasoning");
         const stage1Start = Date.now();
         
-        // Phase 3: Fetch meta context if needed
+        //: Fetch meta context if needed
         let metaContext: string | undefined;
-        const targetDeck = (intentAnalysis as any)?.targetDeck; // Phase 3: targetDeck may not be in type yet
+        const targetDeck = (intentAnalysis as any)?.targetDeck; //: targetDeck may not be in type yet
         if (intentAnalysis?.primary === 'meta' || targetDeck) {
           try {
             console.log("[META] Fetching meta context...");
@@ -2537,7 +2537,7 @@ Deno.serve(async (req) => {
       // Single-stage approach (Phase 1)
       console.log("[SINGLE-STAGE] Using single-stage approach");
       
-      // Phase 3: A/B Testing - Use simplified prompt based on rollout percentage
+      //: A/B Testing - Use simplified prompt based on rollout percentage
       let messages: Array<{ role: string; content: string }>;
       
       if (SIMPLE_PROMPT_ROLLOUT > 0 && Math.random() < SIMPLE_PROMPT_ROLLOUT) {
@@ -2628,7 +2628,7 @@ Deno.serve(async (req) => {
       llmResp.content.substring(0, 500),
     );
 
-    // Phase 1: Extract JSON from response using robust extraction
+    //: Extract JSON from response using robust extraction
     const jsonExtractionStart = Date.now();
     let parsed = extractJsonRobust(llmResp.content);
     logPipelineStep("JSON_EXTRACTION", {
@@ -2645,9 +2645,8 @@ Deno.serve(async (req) => {
       console.warn("⚠️ No candidate cards available for recommendations!");
     }
 
-    // Phase 2: Retry with salvage prompt if JSON extraction fails
-    let attempts = 0;
-    while (!parsed && attempts < 1) {
+    // Retry with salvage prompt if JSON extraction fails (max 1 attempt)
+    if (!parsed) {
       console.log("⚠️ JSON extraction failed, attempting salvage retry...");
       const salvagePrompt = [
         {
@@ -2692,7 +2691,6 @@ Deno.serve(async (req) => {
       } catch (salvageErr) {
         console.error("Salvage retry failed:", salvageErr);
       }
-      attempts++;
     }
 
     if (!parsed) {
@@ -2729,7 +2727,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Phase 1: Validate parsed JSON with flexible schema
+    //: Validate parsed JSON with flexible schema
     const validationStart = Date.now();
     let validated;
     try {
@@ -2886,7 +2884,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Phase 1: Server-side sanitization using new utility
+    //: Server-side sanitization using new utility
     const sanitizationStart = Date.now();
     let sanitizedRecs: any[] = sanitizeRecommendations(
       validated.recommendations,
@@ -2922,7 +2920,7 @@ Deno.serve(async (req) => {
       }, Date.now());
     }
 
-    // Phase 2: Post-process recommendations with quality enhancements
+    //: Post-process recommendations with quality enhancements
     if (sanitizedRecs.length > 0) {
       const postProcessStart = logStageStart("POST-PROCESSING", logContext);
 
@@ -3004,7 +3002,7 @@ Deno.serve(async (req) => {
       logStageEnd("POST-PROCESSING", postProcessStart, logContext);
     }
 
-    // Phase 2: Compute confidence gating for UI
+    //: Compute confidence gating for UI
     const confidence = (validated as any).confidence ?? 0.0;
     const actions: any = {};
 
@@ -3018,7 +3016,7 @@ Deno.serve(async (req) => {
       actions["investigateRecommended"] = false;
     }
 
-    // Phase 2: Calculate token usage (estimate for two-stage, exact for single-stage)
+    //: Calculate token usage (estimate for two-stage, exact for single-stage)
     let inputTokens = 0;
     let outputTokens = 0;
     if (ENABLE_TWO_STAGE && reasoning) {
@@ -3044,14 +3042,14 @@ Deno.serve(async (req) => {
       `Token usage: ${inputTokens} input + ${outputTokens} output = ${totalTokens} total (target: < 1500)`,
     );
 
-    // Phase 2: Build final payload with fingerprinting
+    //: Build final payload with fingerprinting
     const fingerprint = await fingerprintDeck(
       current_deck || {},
       explainTo || "novice",
       userPrefs || {},
     );
 
-    // Phase 2: Convert reasoning to schema format if available
+    //: Convert reasoning to schema format if available
     let reasoningForResponse: any = undefined;
     if (reasoning) {
       reasoningForResponse = {
@@ -3098,17 +3096,17 @@ Deno.serve(async (req) => {
         recommendation_id: recommendationId,
         tokens_used: totalTokens,
         cost_usd: estimatedCostUSD,
-        // Phase 3: Track which prompt type was used for A/B testing
+        //: Track which prompt type was used for A/B testing
         promptType: promptType,
         simplePromptRollout: SIMPLE_PROMPT_ROLLOUT,
-        // Phase 2: Add timing metadata
+        //: Add timing metadata
         ...(ENABLE_TWO_STAGE && reasoning ? {
           stage1Duration,
           stage2Duration,
           totalDuration: stage1Duration + stage2Duration,
           candidateCount: finalCandidates.length,
         } : {}),
-        // Phase 1: Add debug info when DEBUG_MODE is enabled
+        //: Add debug info when DEBUG_MODE is enabled
         ...(Deno.env.get("DEBUG_MODE") === "true" ? {
           _debug: {
             pipeline_steps: getPipelineDebugInfo().steps,
@@ -3136,8 +3134,8 @@ Deno.serve(async (req) => {
         final_candidate_count: cardDocs.length,
         tokens_used: totalTokens,
         cost_usd: estimatedCostUSD,
-        response_version: "2.0", // Phase 2 version
-        // Phase 4: Track prompt type for A/B testing analytics
+        response_version: "2.0", // version
+        //: Track prompt type for A/B testing analytics
         prompt_type: promptType,
         simple_prompt_rollout: SIMPLE_PROMPT_ROLLOUT,
         duration_ms: durationMs,

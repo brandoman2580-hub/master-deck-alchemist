@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "./ui/button";
-// import { ModeToggle } from "@/components/mode-toggle"
 import { cn } from "../lib/utils";
 import { Layers, Save, FlaskConical } from "lucide-react";
 import { openLoginModal } from "../lib/helpers";

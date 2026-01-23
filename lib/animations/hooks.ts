@@ -1,10 +1,4 @@
-/**
- * Animation Hooks
- * 
- * Custom React hooks for common animation patterns.
- */
-
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useInView } from "framer-motion";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { ANIMATION_DURATION, EASING, SCALE } from "./constants";
@@ -161,16 +155,23 @@ export function useCounterAnimation(
   duration: number = ANIMATION_DURATION.normal,
 ) {
   const prefersReducedMotion = useReducedMotion();
-  const [count, setCount] = useState(0);
+  const [count, setCount] = useState(targetValue);
+  const previousValueRef = useRef(targetValue);
 
   useEffect(() => {
     if (prefersReducedMotion) {
       setCount(targetValue);
+      previousValueRef.current = targetValue;
+      return;
+    }
+
+    // If value hasn't changed, don't animate
+    if (targetValue === previousValueRef.current) {
       return;
     }
 
     let startTime: number | null = null;
-    const startValue = 0;
+    const startValue = previousValueRef.current;
 
     const animate = (currentTime: number) => {
       if (startTime === null) startTime = currentTime;
@@ -189,6 +190,7 @@ export function useCounterAnimation(
         requestAnimationFrame(animate);
       } else {
         setCount(targetValue);
+        previousValueRef.current = targetValue;
       }
     };
 

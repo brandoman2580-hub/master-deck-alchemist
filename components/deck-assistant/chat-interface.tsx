@@ -1,43 +1,21 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { motion } from "framer-motion";
 import { DeckType, DeckMode } from "@/types/types";
-import { InputWithClear } from "@/components/ui/input-with-clear";
-import { Button } from "@/components/ui/button";
-import { Send, Lock } from "lucide-react";
 import { MessageList } from "./message-list";
-import { sendChatMessage, getConversationMessages, getConversationHistory, type DeckAssistantChatResponse } from "@/lib/api/deckAssistant";
 import { useDeck } from "@/context/deck-context";
 import { fingerprintDeck } from "@/lib/recommender-helpers";
-import { Skeleton } from "@/components/ui/skeleton";
 import type { Card } from "@/types/card";
 import type { DeckSection } from "@/types/types";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { openLoginModal } from "@/lib/helpers";
+import { ChatEmptyState } from "./chat-empty-state";
+import { ChatLoadingSkeleton } from "./chat-loading-skeleton";
+import { ChatLoadingIndicator } from "./chat-loading-indicator";
+import { ChatInputBar } from "./chat-input-bar";
+import { useConversationPersistence } from "@/hooks/useConversationPersistence";
+import { useChatMessage } from "@/hooks/useChatMessage";
+import type { Message } from "./chat-interface-types";
 
-export interface Message {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-  timestamp: Date;
-  recommendations?: Recommendation[];
-}
-
-export interface Recommendation {
-  cardId: number;
-  cardName: string;
-  reason: string;
-  priority: "high" | "medium" | "low";
-  canAdd: boolean;
-  impactEst?: number;
-  synergyScore?: number;
-}
+export type { Message, Recommendation } from "./chat-interface-types";
 
 interface ChatInterfaceProps {
   currentDeck: DeckType;
@@ -50,7 +28,7 @@ interface ChatInterfaceProps {
 
 /**
  * SMS-Style Chat Interface
- * Phase 6: Integrated with deck-assistant edge function API
+ * Integrated with deck-assistant edge function API
  */
 export function ChatInterface({ 
   currentDeck, 
@@ -60,77 +38,36 @@ export function ChatInterface({
   isAuthenticated = false,
   isDeckEmpty = false,
 }: ChatInterfaceProps) {
-  // Persist conversation state in localStorage to survive tab switches
-  const storageKey = `deck-assistant-conversation-${currentDeck.id || 'temp'}`;
-  
-  // Load persisted state from localStorage on mount
-  // Only load if we're not explicitly loading a different conversation
-  const [messages, setMessages] = useState<Message[]>(() => {
-    if (typeof window === 'undefined') return [];
-    // Don't load from localStorage if externalConversationId is provided (explicit conversation selection)
-    if (externalConversationId) {
-      return [];
-    }
-    try {
-      const saved = localStorage.getItem(storageKey);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed.messages && Array.isArray(parsed.messages)) {
-          // Convert timestamp strings back to Date objects
-          return parsed.messages.map((msg: any) => ({
-            ...msg,
-            timestamp: new Date(msg.timestamp),
-          }));
-        }
-      }
-    } catch (err) {
-      console.error("Failed to load persisted messages:", err);
-    }
-    return [];
-  });
-  
   const [inputValue, setInputValue] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [conversationId, setConversationId] = useState<string | undefined>(() => {
-    if (typeof window === 'undefined') return externalConversationId;
-    // If externalConversationId is provided, use it directly (don't load from localStorage)
-    if (externalConversationId) {
-      return externalConversationId;
-    }
-    try {
-      const saved = localStorage.getItem(storageKey);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        return parsed.conversationId;
-      }
-    } catch (err) {
-      console.error("Failed to load persisted conversationId:", err);
-    }
-    return undefined;
-  });
-  const [error, setError] = useState<string | null>(null);
   const [deckFingerprint, setDeckFingerprint] = useState<string | undefined>();
-  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { saveDeck, addCardToDeck } = useDeck();
 
-  // Persist messages and conversationId to localStorage whenever they change
-  useEffect(() => {
-    if (typeof window === 'undefined' || !currentDeck.id || currentDeck.id === "temp" || currentDeck.id === "") {
-      return;
-    }
-    try {
-      localStorage.setItem(storageKey, JSON.stringify({
-        messages: messages.map(msg => ({
-          ...msg,
-          timestamp: msg.timestamp.toISOString(), // Convert Date to string for JSON
-        })),
-        conversationId,
-      }));
-    } catch (err) {
-      console.error("Failed to persist conversation state:", err);
-    }
-  }, [messages, conversationId, storageKey, currentDeck.id]);
+  const {
+    messages,
+    setMessages,
+    conversationId,
+    setConversationId,
+    isLoadingHistory,
+  } = useConversationPersistence({
+    currentDeckId: currentDeck.id,
+    externalConversationId,
+    onConversationChange,
+  });
+
+  const {
+    sendMessage,
+    isLoading,
+    error,
+  } = useChatMessage({
+    currentDeckId: currentDeck.id || "",
+    conversationId,
+    onConversationChange: (id) => {
+      setConversationId(id);
+      onConversationChange?.(id);
+    },
+    saveDeck,
+  });
 
   // Generate deck fingerprint when deck changes
   useEffect(() => {
@@ -147,138 +84,6 @@ export function ChatInterface({
     generateFingerprint();
   }, [currentDeck]);
 
-  // Load conversation history when conversationId changes
-  useEffect(() => {
-    if (externalConversationId && externalConversationId !== conversationId) {
-      // Clear localStorage first to prevent mixing conversations
-      try {
-        localStorage.removeItem(storageKey);
-      } catch (err) {
-        console.error("Failed to clear conversation state:", err);
-      }
-      // Clear messages before loading new conversation
-      setMessages([]);
-      setConversationId(externalConversationId);
-      loadConversationHistory(externalConversationId);
-    } else if (externalConversationId === undefined && conversationId !== undefined) {
-      // Clear conversation when externalConversationId becomes undefined (New Conversation clicked)
-      setConversationId(undefined);
-      setMessages([]);
-      setError(null);
-      // Clear localStorage
-      try {
-        localStorage.removeItem(storageKey);
-      } catch (err) {
-        console.error("Failed to clear conversation state:", err);
-      }
-    }
-  }, [externalConversationId, conversationId, storageKey]);
-
-  // Track if we've loaded a conversation to prevent unnecessary reloads
-  // Use a key based on deck ID to persist across tab switches but reset on deck change
-  const conversationLoadKeyRef = useRef<string | null>(null);
-
-  // Load most recent conversation when deck changes (if no conversationId is set or externalConversationId is undefined)
-  // Only auto-load if we don't have messages from localStorage (to prevent mixing conversations)
-  useEffect(() => {
-    const loadMostRecentConversation = async () => {
-      // Only load if deck is valid and no external conversationId is provided
-      if (!currentDeck.id || currentDeck.id === "temp" || currentDeck.id === "" || externalConversationId !== undefined) {
-        return;
-      }
-
-      // If we already have a conversationId and messages, don't reload (persist state)
-      // This prevents reloading when switching tabs - messages are already loaded from localStorage
-      if (conversationId && messages.length > 0) {
-        conversationLoadKeyRef.current = currentDeck.id;
-        return;
-      }
-
-      // If we've already loaded a conversation for this deck, don't reload
-      // This prevents reloading when switching tabs
-      if (conversationLoadKeyRef.current === currentDeck.id) {
-        return;
-      }
-
-      // Don't auto-load if we have messages from localStorage (they might be from a different conversation)
-      // Only auto-load if we have no messages at all
-      if (messages.length > 0) {
-        return;
-      }
-
-      try {
-        const history = await getConversationHistory(currentDeck.id, 5);
-        if (history.length > 0) {
-          // Load the most recent conversation (first in the list since it's ordered by updated_at DESC)
-          const mostRecentId = history[0].id;
-          // Only load if it's different from what we have
-          if (mostRecentId !== conversationId) {
-            // Clear localStorage before loading to prevent mixing
-            try {
-              localStorage.removeItem(storageKey);
-            } catch (err) {
-              console.error("Failed to clear conversation state:", err);
-            }
-            await loadConversationHistory(mostRecentId);
-            conversationLoadKeyRef.current = currentDeck.id;
-          }
-        }
-      } catch (err) {
-        // Silently fail - user can start a new conversation
-        console.error("Failed to load most recent conversation:", err);
-      }
-    };
-
-    loadMostRecentConversation();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentDeck.id, externalConversationId]); // Load when deck changes or when externalConversationId becomes undefined
-
-  // Clear persisted state when deck changes
-  useEffect(() => {
-    const oldStorageKey = `deck-assistant-conversation-${conversationLoadKeyRef.current || 'temp'}`;
-    if (conversationLoadKeyRef.current && conversationLoadKeyRef.current !== currentDeck.id) {
-      // Clear old deck's conversation state
-      try {
-        localStorage.removeItem(oldStorageKey);
-      } catch (err) {
-        console.error("Failed to clear old conversation state:", err);
-      }
-      conversationLoadKeyRef.current = null;
-    }
-  }, [currentDeck.id]);
-
-  const loadConversationHistory = async (convId: string) => {
-    setIsLoadingHistory(true);
-    try {
-      // Clear any existing messages first to prevent mixing
-      setMessages([]);
-      
-      const historyMessages = await getConversationMessages(convId);
-      const formattedMessages: Message[] = historyMessages.map((msg) => ({
-        id: msg.id,
-        role: msg.role,
-        content: msg.content,
-        timestamp: new Date(msg.timestamp),
-        recommendations: msg.recommendations,
-      }));
-      setMessages(formattedMessages);
-      // Update conversationId if it changed
-      if (convId !== conversationId) {
-        setConversationId(convId);
-        onConversationChange?.(convId);
-      }
-    } catch (err) {
-      console.error("Failed to load conversation history:", err);
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Failed to load conversation history",
-      );
-    } finally {
-      setIsLoadingHistory(false);
-    }
-  };
-
   const handleAddCard = (card: Card, section: DeckSection) => {
     addCardToDeck(card, section);
   };
@@ -287,45 +92,6 @@ export function ChatInterface({
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
-
-  // Retry logic with exponential backoff
-  const sendMessageWithRetry = async (
-    deckId: string,
-    userQuery: string,
-    conversationId: string | undefined,
-    retries = 3
-  ): Promise<DeckAssistantChatResponse> => {
-    let lastError: Error | null = null;
-    
-    for (let attempt = 0; attempt < retries; attempt++) {
-      try {
-        const response = await sendChatMessage({
-          deckId,
-          userQuery,
-          conversationId,
-        });
-        return response;
-      } catch (error) {
-        lastError = error instanceof Error ? error : new Error(String(error));
-        
-        // Don't retry on authentication errors or client errors (4xx)
-        if (lastError.message.includes("Authentication") || 
-            lastError.message.includes("401") ||
-            lastError.message.includes("403") ||
-            lastError.message.includes("400")) {
-          throw lastError;
-        }
-        
-        // Exponential backoff: wait 1s, 2s, 4s
-        if (attempt < retries - 1) {
-          const delay = Math.pow(2, attempt) * 1000;
-          await new Promise(resolve => setTimeout(resolve, delay));
-        }
-      }
-    }
-    
-    throw lastError || new Error("Failed to send message after retries");
-  };
 
   const handleSend = async () => {
     if (!inputValue.trim() || isLoading || !isAuthenticated || isDeckEmpty) return;
@@ -340,83 +106,7 @@ export function ChatInterface({
 
     setMessages((prev) => [...prev, userMessage]);
     setInputValue("");
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      // Ensure deck is saved and has an ID
-      let deckId = currentDeck.id;
-      if (!deckId || deckId === "temp" || deckId === "") {
-        // Save deck first to get an ID
-        await saveDeck();
-        deckId = currentDeck.id;
-        
-        if (!deckId || deckId === "temp" || deckId === "") {
-          throw new Error("Please save your deck first before using the assistant.");
-        }
-      }
-
-      // Call deck-assistant API with retry logic
-      const response = await sendMessageWithRetry(
-        deckId,
-        userQuery,
-        conversationId,
-        3 // 3 retries with exponential backoff
-      );
-
-      // Update conversation ID if provided
-      if (response.conversation_id) {
-        setConversationId(response.conversation_id);
-        onConversationChange?.(response.conversation_id);
-      }
-
-      // Handle response based on type
-      if (response.type === "clarification") {
-        // Show clarification question
-        const clarificationMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          role: "assistant",
-          content: response.question || response.text,
-          timestamp: new Date(),
-        };
-        setMessages((prev) => [...prev, clarificationMessage]);
-      } else if (response.type === "recommendations" || response.type === "ratio_suggestions") {
-        // Show recommendations or ratio suggestions
-        const ratioText = response.ratioSuggestions 
-          ? "\n\n" + response.ratioSuggestions.map(rs => 
-              `${rs.cardName}: ${rs.currentCount} → ${rs.suggestedCount}\n${rs.reason}`
-            ).join("\n\n")
-          : "";
-        const assistantMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          role: "assistant",
-          content: response.text + ratioText,
-          timestamp: new Date(),
-          recommendations: response.recommendations,
-        };
-        setMessages((prev) => [...prev, assistantMessage]);
-      } else {
-        throw new Error(response.error || "Unknown response type");
-      }
-    } catch (error) {
-      console.error("Error sending message:", error);
-      const errorMessageText =
-        error instanceof Error
-          ? error.message
-          : "Sorry, I encountered an error. Please try again.";
-      
-      setError(errorMessageText);
-      
-             const errorMessage: Message = {
-               id: (Date.now() + 1).toString(),
-               role: "assistant",
-               content: errorMessageText,
-               timestamp: new Date(),
-             };
-             setMessages((prev) => [...prev, errorMessage]);
-    } finally {
-      setIsLoading(false);
-    }
+    await sendMessage(userQuery, setMessages);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -455,53 +145,13 @@ export function ChatInterface({
       {/* Message List - Scrollable */}
       <div className="flex-1 overflow-y-auto min-h-0 p-4 sm:p-6" style={{ minHeight: 0 }}>
         {isLoadingHistory ? (
-          // Loading skeletons - maintain consistent height to prevent layout shift
-          <div className="flex flex-col gap-4 h-full min-h-0">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="flex flex-col gap-2 flex-shrink-0">
-                <div className="flex justify-end">
-                  <Skeleton className="h-8 w-48 bg-white/10" />
-                </div>
-                <div className="flex justify-start">
-                  <div className="bg-white/10 border border-white/20 backdrop-blur-xl rounded-2xl px-4 py-3 max-w-[80%] space-y-2">
-                    <Skeleton className="h-4 w-full bg-white/10" />
-                    <Skeleton className="h-4 w-3/4 bg-white/10" />
-                    <Skeleton className="h-32 w-full bg-white/10 rounded-lg mt-2" />
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+          <ChatLoadingSkeleton />
         ) : messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full w-full text-center px-4" style={{ minHeight: '100%' }}>
-            {!isAuthenticated ? (
-              <>
-                <Lock className="h-12 w-12 text-white/40 mb-4" />
-                <p className="text-white/70 text-sm mb-2 font-semibold">Authentication Required</p>
-                <p className="text-white/50 text-xs mb-4">Please log in to use the AI Assistant.</p>
-                <Button
-                  onClick={openLoginModal}
-                  className="bg-white/10 hover:bg-white/15 border border-white/20 text-white"
-                >
-                  Log In
-                </Button>
-              </>
-            ) : isDeckEmpty ? (
-              <>
-                <p className="text-white/70 text-sm mb-2 font-semibold">Start Building Your Deck</p>
-                <p className="text-white/50 text-xs mb-1">Add cards to your deck from the Card Browser to get started.</p>
-                <p className="text-white/50 text-xs">Once you have cards, I can help you optimize ratios, find synergies, and improve your deck!</p>
-              </>
-            ) : (
-              <>
-                <p className="text-white/70 text-sm mb-2">Ask me anything about your deck!</p>
-                <p className="text-white/50 text-xs">I can help you find cards, improve consistency, or optimize ratios.</p>
-              </>
-            )}
-            {error && (
-              <p className="text-red-400 text-xs mt-2">{error}</p>
-            )}
-          </div>
+          <ChatEmptyState
+            isAuthenticated={isAuthenticated}
+            isDeckEmpty={isDeckEmpty}
+            error={error}
+          />
         ) : (
           <>
             <MessageList 
@@ -510,35 +160,7 @@ export function ChatInterface({
               deckFingerprint={deckFingerprint}
               conversationId={conversationId}
             />
-            {/* Loading indicator */}
-            {isLoading && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="flex items-start gap-3 mt-4"
-              >
-                <div className="bg-white/10 border border-white/20 backdrop-blur-xl rounded-2xl px-4 py-3 flex items-center gap-2">
-                  <div className="flex gap-1">
-                    <motion.div
-                      className="w-2 h-2 bg-white/60 rounded-full"
-                      animate={{ y: [0, -4, 0] }}
-                      transition={{ duration: 0.6, repeat: Infinity, delay: 0 }}
-                    />
-                    <motion.div
-                      className="w-2 h-2 bg-white/60 rounded-full"
-                      animate={{ y: [0, -4, 0] }}
-                      transition={{ duration: 0.6, repeat: Infinity, delay: 0.2 }}
-                    />
-                    <motion.div
-                      className="w-2 h-2 bg-white/60 rounded-full"
-                      animate={{ y: [0, -4, 0] }}
-                      transition={{ duration: 0.6, repeat: Infinity, delay: 0.4 }}
-                    />
-                  </div>
-                  <span className="text-white/70 text-sm">Thinking...</span>
-                </div>
-              </motion.div>
-            )}
+            {isLoading && <ChatLoadingIndicator />}
             {error && (
               <div className="mt-2 p-2 bg-red-500/10 border border-red-500/20 rounded-lg">
                 <p className="text-red-400 text-xs">{error}</p>
@@ -550,79 +172,16 @@ export function ChatInterface({
       </div>
 
       {/* Input Bar - Fixed at bottom */}
-      <div className="border-t border-white/10 p-4 sm:p-6 flex-shrink-0">
-        <div className="flex items-center gap-2">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="flex-1 relative group">
-                  <InputWithClear
-                    placeholder={!isAuthenticated ? "Please log in to use AI Assistant..." : isDeckEmpty ? "Add cards to your deck first..." : "Ask about your deck..."}
-                    value={inputValue}
-                    onChange={(e) => setInputValue(e.target.value)}
-                    onClear={() => setInputValue("")}
-                    onKeyPress={handleKeyPress}
-                    disabled={isLoading || !isAuthenticated || isDeckEmpty}
-                    className={`flex-1 h-9 text-sm bg-white/5 border border-white/10 text-white placeholder:text-white/50 focus-visible:outline-none rounded-lg transition-all duration-200 focus:border-white/30 focus:bg-white/10 ${
-                      !isAuthenticated || isDeckEmpty ? "opacity-50 cursor-not-allowed" : ""
-                    }`}
-                  />
-                  {(!isAuthenticated || isDeckEmpty) && (
-                    <Lock className="h-3 w-3 absolute right-3 top-1/2 -translate-y-1/2 text-red-400 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
-                  )}
-                </div>
-              </TooltipTrigger>
-              {!isAuthenticated && (
-                <TooltipContent>
-                  <p>Please log in to use this feature</p>
-                </TooltipContent>
-              )}
-              {isAuthenticated && isDeckEmpty && (
-                <TooltipContent>
-                  <p>Add cards to your deck first</p>
-                </TooltipContent>
-              )}
-            </Tooltip>
-          </TooltipProvider>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  onClick={() => {
-                    if (!isAuthenticated) {
-                      openLoginModal();
-                    } else if (isDeckEmpty) {
-                      // Do nothing - tooltip will show message
-                    } else {
-                      handleSend();
-                    }
-                  }}
-                  disabled={!inputValue.trim() || isLoading || !isAuthenticated || isDeckEmpty}
-                  size="icon"
-                  className={`h-9 w-9 flex-shrink-0 bg-white/10 border border-white/20 text-white disabled:opacity-50 disabled:cursor-not-allowed rounded-lg relative group ${
-                    isAuthenticated && !isDeckEmpty ? "hover:bg-white/15" : ""
-                  }`}
-                >
-                  <Send className="h-4 w-4" />
-                  {(!isAuthenticated || isDeckEmpty) && (
-                    <Lock className="h-3 w-3 absolute -top-0.5 -right-0.5 text-red-400 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  )}
-                </Button>
-              </TooltipTrigger>
-              {!isAuthenticated && (
-                <TooltipContent>
-                  <p>Please log in to use this feature</p>
-                </TooltipContent>
-              )}
-              {isAuthenticated && isDeckEmpty && (
-                <TooltipContent>
-                  <p>Add cards to your deck first</p>
-                </TooltipContent>
-              )}
-            </Tooltip>
-          </TooltipProvider>
-        </div>
-      </div>
+      <ChatInputBar
+        inputValue={inputValue}
+        isLoading={isLoading}
+        isAuthenticated={isAuthenticated}
+        isDeckEmpty={isDeckEmpty}
+        onInputChange={(e) => setInputValue(e.target.value)}
+        onInputClear={() => setInputValue("")}
+        onKeyPress={handleKeyPress}
+        onSend={handleSend}
+      />
     </div>
   );
 }

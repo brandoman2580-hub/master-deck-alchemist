@@ -52,7 +52,7 @@ interface FilterSidebarProps {
 }
 
 /**
- * Phase 2: Persistent filter sidebar (not modal)
+ * Persistent filter sidebar (not modal)
  * - Always visible (can be collapsed)
  * - Filters applied client-side
  * - Fast and composable

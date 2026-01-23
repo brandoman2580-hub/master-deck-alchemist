@@ -7,7 +7,7 @@ import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Card } from "@/types/card";
 import { DeckType, DeckMode, DeckSection } from "@/types/types";
 import { UniqueIdentifier } from "@dnd-kit/core";
-import { CartSection } from "./cart-section";
+import { CardSection } from "./card-section";
 import { Layers, Zap, Shield } from "lucide-react";
 import {
   SPRING_CONFIG,
@@ -25,6 +25,7 @@ interface DeckTabsProps {
   currentDeck: DeckType;
   deckMode: DeckMode;
   activeDragId: UniqueIdentifier | null;
+  removingDeckCardIds: Set<string>;
   removeCardFromDeck: (
     deckInstanceId: string,
     section: "mainDeck" | "extraDeck" | "sideDeck",
@@ -37,6 +38,7 @@ export function DeckTabs({
   currentDeck,
   deckMode,
   activeDragId,
+  removingDeckCardIds,
   removeCardFromDeck,
 }: DeckTabsProps) {
   // Internal state for active tab
@@ -214,10 +216,11 @@ export function DeckTabs({
             animate="visible"
             variants={fadeInVariants}
           >
-            <CartSection
+            <CardSection
               section="mainDeck"
               cards={currentDeck.mainDeck}
               activeDragId={activeDragId}
+              removingDeckCardIds={removingDeckCardIds}
               onRemove={handleRemove}
               count={stats.mainCount}
               maxCount={60}
@@ -232,10 +235,11 @@ export function DeckTabs({
             animate="visible"
             variants={fadeInVariants}
           >
-            <CartSection
+            <CardSection
               section="extraDeck"
               cards={currentDeck.extraDeck}
               activeDragId={activeDragId}
+              removingDeckCardIds={removingDeckCardIds}
               onRemove={handleRemove}
               count={stats.extraCount}
               maxCount={15}
@@ -250,10 +254,11 @@ export function DeckTabs({
             animate="visible"
             variants={fadeInVariants}
           >
-            <CartSection
+            <CardSection
               section="sideDeck"
               cards={currentDeck.sideDeck}
               activeDragId={activeDragId}
+              removingDeckCardIds={removingDeckCardIds}
               onRemove={handleRemove}
               count={stats.sideCount}
               maxCount={15}

@@ -1,10 +1,3 @@
-/**
- * Deck Validation Utility
- * 
- * Comprehensive validation for deck data to prevent security vulnerabilities
- * and ensure data integrity.
- */
-
 import { z } from "zod";
 
 export interface ValidationResult {

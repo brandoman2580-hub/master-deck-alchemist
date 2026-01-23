@@ -1,11 +1,4 @@
 /**
- * Animation Constants
- * 
- * Centralized animation timing, easing, and spring configurations
- * for consistent animations across the application.
- */
-
-/**
  * Animation durations in seconds
  */
 export const ANIMATION_DURATION = {

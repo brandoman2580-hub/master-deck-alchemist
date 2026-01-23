@@ -1,8 +1,3 @@
-/**
- * Meta Statistics API Client
- * Fetches tier list statistics and meta insights
- */
-
 export interface TierDistribution {
   tier: number;
   count: number;

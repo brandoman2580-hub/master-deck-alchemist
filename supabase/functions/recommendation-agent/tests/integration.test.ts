@@ -245,7 +245,7 @@ Deno.test("Integration: Response includes all required metadata", () => {
   assertEquals(response.meta.deckFingerprint.length, 6); // At least some length
 });
 
-// Phase 5.2: Additional Integration Tests
+//: Additional Integration Tests
 
 Deno.test("5.2.1: Valid request returns valid response structure", () => {
   const mockResponse = {

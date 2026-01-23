@@ -335,25 +335,10 @@ function Footer() {
             </div>
           </div>
 
-          <div className="flex items-center gap-8">
-            <a
-              href="#terms"
-              className="text-sm text-slate-300 hover:text-white transition-colors duration-200"
-            >
-              Terms of Service
-            </a>
-            <a
-              href="#privacy"
-              className="text-sm text-slate-300 hover:text-white transition-colors duration-200"
-            >
-              Privacy Policy
-            </a>
-            <a
-              href="#contact"
-              className="text-sm text-slate-300 hover:text-white transition-colors duration-200"
-            >
-              Contact
-            </a>
+          <div className="max-w-3xl text-sm text-slate-300 leading-relaxed">
+            <p>
+              The literal and graphical information presented on this site about Yu-Gi-Oh!, including card images, the attribute, level/rank and type symbols, and card text, is copyright 4K Media Inc, a subsidiary of Konami Digital Entertainment, Inc. This website is not produced by, endorsed by, supported by, or affiliated with 4k Media or Konami Digital Entertainment.
+            </p>
           </div>
         </div>
 

@@ -140,19 +140,26 @@ export async function scrapeMasterDuelMetaTierList(): Promise<ScrapeResult> {
     const tier3Regex = /TIER\s*3/gi;
     const trendingRegex = /TRENDING/gi;
     
-    let match;
-    while ((match = tier1Regex.exec(html)) !== null) {
+    // Use matchAll() instead of while loops with exec()
+    const tier1Matches = Array.from(html.matchAll(tier1Regex));
+    tier1Matches.forEach(match => {
       tierPositions.push({ tier: 1, position: match.index });
-    }
-    while ((match = tier2Regex.exec(html)) !== null) {
+    });
+    
+    const tier2Matches = Array.from(html.matchAll(tier2Regex));
+    tier2Matches.forEach(match => {
       tierPositions.push({ tier: 2, position: match.index });
-    }
-    while ((match = tier3Regex.exec(html)) !== null) {
+    });
+    
+    const tier3Matches = Array.from(html.matchAll(tier3Regex));
+    tier3Matches.forEach(match => {
       tierPositions.push({ tier: 3, position: match.index });
-    }
-    while ((match = trendingRegex.exec(html)) !== null) {
+    });
+    
+    const trendingMatches = Array.from(html.matchAll(trendingRegex));
+    trendingMatches.forEach(match => {
       tierPositions.push({ tier: 4, position: match.index });
-    }
+    });
     
     // Sort by position
     tierPositions.sort((a, b) => a.position - b.position);

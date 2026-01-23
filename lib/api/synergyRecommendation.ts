@@ -1,13 +1,3 @@
-/**
- * Card Recommendation Pipeline using Embeddings + MMR Reranking + LLM
- *
- * This module provides a sophisticated recommendation system that:
- * 1. Embeds deck context using Supabase AI embeddings
- * 2. Performs vector similarity search to find candidate cards
- * 3. Uses MMR (Maximal Marginal Relevance) to diversify results
- * 4. Formats candidates in TOON format for efficient LLM processing
- * 5. Calls LLM (Groq) to generate structured recommendations
- */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { CardCandidate } from "../schemas";
@@ -197,7 +187,8 @@ function mmrSelect(
   selected.push(pool.shift()!);
 
   // MMR selection: balance relevance and diversity
-  while (selected.length < k && pool.length > 0) {
+  const maxIterations = Math.min(k, pool.length);
+  for (let iteration = 0; iteration < maxIterations && selected.length < k && pool.length > 0; iteration++) {
     let bestIdx = -1;
     let bestScore = -Infinity;
 

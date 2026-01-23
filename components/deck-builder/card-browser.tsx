@@ -6,7 +6,7 @@ import { Card as CardUI, CardContent, CardHeader } from "@/components/ui/card";
 import { InputWithClear } from "@/components/ui/input-with-clear";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DeckDropZone } from "@/components/ui/deck-drop-zone";
-import { Virtuoso } from "react-virtuoso";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { Card } from "@/types/card";
 import { DeckType, DeckMode, BanStatus, DeckSection } from "@/types/types";
 import { UniqueIdentifier } from "@dnd-kit/core";
@@ -27,6 +27,8 @@ interface CardBrowserProps {
   currentDeck: DeckType;
   deckMode: DeckMode;
   activeDragId: UniqueIdentifier | null;
+  activeDragCard: Card | null;
+  droppedCardIds: Set<number>;
   handleCardDoubleClick: (card: Card) => void;
   addCardToDeck: (card: Card, section: DeckSection) => void;
 }
@@ -34,7 +36,7 @@ interface CardBrowserProps {
 export function CardBrowser({
   currentDeck,
   deckMode,
-  activeDragId,
+  droppedCardIds,
   handleCardDoubleClick,
   addCardToDeck,
 }: CardBrowserProps) {
@@ -51,9 +53,8 @@ export function CardBrowser({
   const tabsContainerRef = useRef<HTMLDivElement>(null);
   const [tabSliderStyle, setTabSliderStyle] = useState<React.CSSProperties>({});
 
-  // Virtuoso container ref for height calculation
-  const virtuosoContainerRef = useRef<HTMLDivElement>(null);
-  const [virtuosoHeight, setVirtuosoHeight] = useState<number>(600);
+  // Virtual list container ref
+  const virtualContainerRef = useRef<HTMLDivElement>(null);
 
   // Calculate tab slider position
   useLayoutEffect(() => {
@@ -135,7 +136,7 @@ export function CardBrowser({
     }
   }, []);
 
-  // Filter and sort cards using memoized selectors (Phase 1 optimization)
+  // Filter and sort cards using memoized selectors
   useEffect(() => {
     if (cardList.length === 0) {
       setFilteredCards([]);
@@ -148,43 +149,31 @@ export function CardBrowser({
       sortDirection: searchParams.sortDirection || "asc",
     });
 
-    // Phase 6: Removed debug logs for performance
     setFilteredCards(filtered);
   }, [debouncedSearchQuery, cardList, searchParams]);
 
-  // Calculate Virtuoso height dynamically (after filteredCards is declared)
+  // TanStack Virtual setup - only create when browser tab is active
+  const virtualizer = useVirtualizer({
+    count: filteredCards.length,
+    getScrollElement: () => (activeTab === "browser" ? virtualContainerRef.current : null),
+    estimateSize: () => 100, // Estimated height per card item (~100px)
+    overscan: 5, // Render 5 extra items outside viewport for smooth scrolling
+  });
+
+  // Reset scroll position when switching to browser tab
   useEffect(() => {
-    const updateHeight = () => {
-      if (virtuosoContainerRef.current) {
-        const rect = virtuosoContainerRef.current.getBoundingClientRect();
-        const parentRect = virtuosoContainerRef.current.parentElement?.getBoundingClientRect();
-        // Use parent height if available, otherwise use container height
-        const calculatedHeight = parentRect?.height || rect.height;
-        if (calculatedHeight > 0) {
-          // Add some buffer to ensure full height
-          setVirtuosoHeight(calculatedHeight);
-        }
-      }
-    };
-
-    // Initial calculation with multiple delays to ensure DOM is ready
-    const timeoutId1 = setTimeout(updateHeight, 50);
-    const timeoutId2 = setTimeout(updateHeight, 200);
-    const timeoutId3 = setTimeout(updateHeight, 500);
-
-    // Update on resize
-    window.addEventListener("resize", updateHeight);
-
-    // Update when tab changes or cards change
-    updateHeight();
-
-    return () => {
-      clearTimeout(timeoutId1);
-      clearTimeout(timeoutId2);
-      clearTimeout(timeoutId3);
-      window.removeEventListener("resize", updateHeight);
-    };
-  }, [filteredCards.length, activeTab]);
+    if (activeTab === "browser" && virtualContainerRef.current) {
+      // Use double requestAnimationFrame to ensure DOM is fully rendered
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (virtualContainerRef.current) {
+            // Reset scroll to top when switching to browser tab
+            virtualContainerRef.current.scrollTop = 0;
+          }
+        });
+      });
+    }
+  }, [activeTab]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -399,20 +388,20 @@ export function CardBrowser({
                         </motion.div>
                       ) : (
                         <div
-                          ref={virtuosoContainerRef}
-                          className="flex-1 min-h-0 h-full w-full"
+                          ref={virtualContainerRef}
+                          className="flex-1 min-h-0 h-full w-full overflow-auto"
                           style={{ height: "100%" }}
                         >
-                          <Virtuoso
-                            style={{
-                              height: `${Math.max(virtuosoHeight, 960)}px`,
-                              width: "100%",
-                            }}
-                            totalCount={filteredCards.length}
-                            // Phase 6: itemContent is already optimized by Virtuoso
-                            // CardStack is memoized, so re-renders are minimal
-                            itemContent={(index) => {
-                              const card = filteredCards[index];
+                          {activeTab === "browser" && (
+                            <div
+                              style={{
+                                height: `${virtualizer.getTotalSize()}px`,
+                                width: "100%",
+                                position: "relative",
+                              }}
+                            >
+                              {virtualizer.getVirtualItems().map((virtualItem) => {
+                              const card = filteredCards[virtualItem.index];
                               const banStatus =
                                 banlist[card.name] || "Unlimited";
                               let maxCopies = 3;
@@ -427,30 +416,69 @@ export function CardBrowser({
                               );
                               const currentCount = getCardCountInDeck(card.id);
 
-                              const stackProps = {
-                                card,
-                                remainingCopies: remaining,
-                                maxCopies,
-                                banStatus,
-                                isBeingDragged:
-                                  activeDragId === `browser-${card.id}`,
-                                currentCount,
-                                onStackClick: () => {
-                                  if (remaining > 0) {
-                                    handleAddCard(card);
-                                  }
-                                },
-                                onDoubleClick: () => {
-                                  if (remaining > 0) {
-                                    handleCardDoubleClick(card);
-                                  }
-                                },
-                              };
+                              // Hide card after drop: when card is in droppedCardIds set
+                              // CardStack component handles hiding during drag via isDragging
+                              const shouldHideAfterDrop = droppedCardIds.has(card.id);
+
+                              // Don't render the wrapper div if card should be hidden
+                              // This prevents layout issues with TanStack Virtual
+                              if (shouldHideAfterDrop) {
+                                return (
+                                  <div
+                                    key={virtualItem.key}
+                                    data-index={virtualItem.index}
+                                    ref={virtualizer.measureElement}
+                                    style={{
+                                      position: "absolute",
+                                      top: 0,
+                                      left: 0,
+                                      width: "100%",
+                                      height: `${virtualItem.size}px`,
+                                      transform: `translateY(${virtualItem.start}px)`,
+                                      visibility: "hidden",
+                                    }}
+                                    aria-hidden="true"
+                                  />
+                                );
+                              }
+
                               return (
-                                <CardStack key={card.id} {...stackProps} />
+                                <div
+                                  key={virtualItem.key}
+                                  data-index={virtualItem.index}
+                                  ref={virtualizer.measureElement}
+                                  style={{
+                                    position: "absolute",
+                                    top: 0,
+                                    left: 0,
+                                    width: "100%",
+                                    height: `${virtualItem.size}px`,
+                                    transform: `translateY(${virtualItem.start}px)`,
+                                  }}
+                                >
+                                  <CardStack
+                                    card={card}
+                                    remainingCopies={remaining}
+                                    maxCopies={maxCopies}
+                                    banStatus={banStatus}
+                                    shouldHideAfterDrop={shouldHideAfterDrop}
+                                    currentCount={currentCount}
+                                    onStackClick={() => {
+                                      if (remaining > 0) {
+                                        handleAddCard(card);
+                                      }
+                                    }}
+                                    onDoubleClick={() => {
+                                      if (remaining > 0) {
+                                        handleCardDoubleClick(card);
+                                      }
+                                    }}
+                                  />
+                                </div>
                               );
-                            }}
-                          />
+                            })}
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>

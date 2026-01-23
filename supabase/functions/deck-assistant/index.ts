@@ -315,7 +315,7 @@ Deno.serve(async (req) => {
         console.log(`📝 Raw user_query: "${user_query}"`);
         console.log(`🆔 Raw deck_id: ${deck_id}`);
         
-        // Phase 3: Self-querying retrieval with conversation
+        //: Self-querying retrieval with conversation
         if (!user_query) {
           return new Response(
             JSON.stringify({ error: "user_query required for chat action" }),

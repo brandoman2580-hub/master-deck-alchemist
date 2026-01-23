@@ -13,10 +13,13 @@ export function LoginModal() {
   return (
     <Dialog open={isOpen} onOpenChange={closeLoginModal}>
       <DialogContent className="max-w-md w-full">
-        <DialogTitle>
-          {showSignup
-            ? "Sign Up for Master Deck Alchemist"
-            : "Login to Master Deck Alchemist"}
+        <DialogTitle className="pb-4">
+            <>
+              {showSignup ? "Sign Up for " : "Login to "}
+              <span className="font-['Orbitron'] font-normal not-italic text-primary">
+                Master Deck Alchemist
+              </span>
+            </>
         </DialogTitle>
         {showSignup ? (
           <SignupForm onBack={() => setShowSignup(false)} />

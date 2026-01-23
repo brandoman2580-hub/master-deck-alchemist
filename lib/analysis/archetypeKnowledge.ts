@@ -1,5 +1,5 @@
 /**
- * Phase 2: Archetype Knowledge Base
+ * Archetype Knowledge Base
  * Contains knowledge about popular Yu-Gi-Oh! archetypes including key mechanics, related terms, and core cards
  */
 

@@ -153,152 +153,6 @@
   mix-blend-mode: overlay;
 }
 
-/* Streaks layer - static vertical cyan lines (max 30px height, thicker) */
-.streaks-layer {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  mix-blend-mode: screen;
-  opacity: 0.25;
-  background-image: 
-    linear-gradient(180deg, transparent 0%, rgba(20,239,255,0.8) 50%, transparent 100%),
-    linear-gradient(180deg, transparent 0%, rgba(20,239,255,0.7) 50%, transparent 100%),
-    linear-gradient(180deg, transparent 0%, rgba(20,239,255,0.9) 50%, transparent 100%),
-    linear-gradient(180deg, transparent 0%, rgba(20,239,255,0.6) 50%, transparent 100%),
-    linear-gradient(180deg, transparent 0%, rgba(20,239,255,0.75) 50%, transparent 100%),
-    linear-gradient(180deg, transparent 0%, rgba(20,239,255,0.85) 50%, transparent 100%),
-    linear-gradient(180deg, transparent 0%, rgba(20,239,255,0.65) 50%, transparent 100%),
-    linear-gradient(180deg, transparent 0%, rgba(20,239,255,0.8) 50%, transparent 100%),
-    linear-gradient(180deg, transparent 0%, rgba(20,239,255,0.7) 50%, transparent 100%),
-    linear-gradient(180deg, transparent 0%, rgba(20,239,255,0.75) 50%, transparent 100%),
-    linear-gradient(180deg, transparent 0%, rgba(20,239,255,0.6) 50%, transparent 100%),
-    linear-gradient(180deg, transparent 0%, rgba(20,239,255,0.8) 50%, transparent 100%);
-  background-size: 
-    2.5px 30px,
-    3px 28px,
-    2px 30px,
-    2.5px 25px,
-    3px 30px,
-    2px 27px,
-    2.5px 24px,
-    3px 30px,
-    2px 26px,
-    2.5px 29px,
-    3px 23px,
-    2px 30px;
-  background-position:
-    12% 8%,
-    25% 35%,
-    38% 15%,
-    52% 42%,
-    65% 22%,
-    78% 50%,
-    18% 60%,
-    88% 28%,
-    32% 55%,
-    72% 18%,
-    45% 38%,
-    82% 45%;
-  background-repeat: no-repeat;
-}
-
-/* === Cyberpunk Cut-Corner Geometry === */
-
-/* Small, medium, large corner cut variants */
-.cut-corner-sm {
-  clip-path: polygon(
-    8px 0,
-    100% 0,
-    100% calc(100% - 8px),
-    calc(100% - 8px) 100%,
-    0 100%,
-    0 8px
-  );
-}
-
-.cut-corner-md {
-  clip-path: polygon(
-    14px 0,
-    100% 0,
-    100% calc(100% - 14px),
-    calc(100% - 14px) 100%,
-    0 100%,
-    0 14px
-  );
-}
-
-.cut-corner-lg {
-  clip-path: polygon(
-    20px 0,
-    100% 0,
-    100% calc(100% - 20px),
-    calc(100% - 20px) 100%,
-    0 100%,
-    0 20px
-  );
-}
-
-/* Thin neon outline that matches the shape */
-.cut-border-cyan {
-  border: 1px solid rgba(20,239,255,0.28);
-  outline: 1px solid rgba(20,239,255,0.28);
-  outline-offset: -1px;
-}
-
-/* === Corner Tick Accents === */
-.corner-accent {
-  position: relative;
-}
-
-.corner-accent::before,
-.corner-accent::after {
-  content: "";
-  position: absolute;
-  width: 18px;
-  height: 2px;
-  background: rgba(20,239,255,0.7);
-  transition: transform 220ms cubic-bezier(.2,.9,.35,1),
-              opacity 220ms cubic-bezier(.2,.9,.35,1);
-}
-
-/* Top-left neon tick */
-.corner-accent::before {
-  top: 0;
-  left: 0;
-  transform: translate(6px, 6px) scaleX(0.65);
-}
-
-/* Bottom-right neon tick */
-.corner-accent::after {
-  bottom: 0;
-  right: 0;
-  transform: translate(-6px, -6px) scaleX(0.65);
-}
-
-/* Hover animates ticks outward and brightens them */
-.corner-accent:hover::before {
-  transform: translate(8px, 8px) scaleX(1);
-  opacity: 1;
-}
-
-.corner-accent:hover::after {
-  transform: translate(-8px, -8px) scaleX(1);
-  opacity: 1;
-}
-
-/* === Cyan Corner Triangle === */
-.cyan-corner-triangle::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 0;
-  height: 0;
-  border-left: 18px solid transparent;
-  border-bottom: 18px solid rgba(20,239,255,0.5);
-  pointer-events: none;
-}
-
 /* === Radix UI Dialog Overrides === */
 /* Remove default Radix UI dialog styles to allow glassmorphism */
 [data-radix-dialog-content] {
@@ -308,5 +162,12 @@
   box-shadow: none !important;
   padding: 0 !important;
   margin: 0 !important;
+}
+
+/* === Drag and Drop Fixes === */
+/* Prevent transitions and animations during drag operations */
+[data-dragging="true"] {
+  transition: none !important;
+  animation: none !important;
 }
 

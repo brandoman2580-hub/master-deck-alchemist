@@ -1,7 +1,7 @@
 import { useRef, useCallback } from "react";
 
 /**
- * Phase 6: Throttled callback hook
+ * Throttled callback hook
  * Ensures function is called at most once per delay period
  */
 export function useThrottledCallback<T extends (...args: any[]) => any>(

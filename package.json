@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "prepare": "husky",
     "dev": "start http://localhost:3000 & next dev",
     "build": "next build",
     "start": "next start",
@@ -39,6 +40,7 @@
     "@radix-ui/react-tooltip": "^1.2.7",
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.84.0",
+    "@tanstack/react-virtual": "^3.13.18",
     "@types/deno": "^2.3.0",
     "cheerio": "^1.1.2",
     "class-variance-authority": "^0.7.0",
@@ -54,7 +56,6 @@
     "react": "^18",
     "react-dom": "^18",
     "react-markdown": "^10.1.0",
-    "react-virtuoso": "^4.6.2",
     "recharts": "^3.1.0",
     "remark-gfm": "^4.0.1",
     "tailwind-merge": "^2.2.0",

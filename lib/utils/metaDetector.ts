@@ -1,8 +1,3 @@
-/**
- * Meta Deck Detector
- * Detects if a deck matches known meta decks from tier lists
- */
-
 import { DeckType } from "@/types/types";
 
 interface MetaDeckMatch {

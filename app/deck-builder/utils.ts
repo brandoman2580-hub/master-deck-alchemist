@@ -35,13 +35,13 @@ export interface EnhancedDeckAnalysis {
   playstyle: 'Combo' | 'Midrange' | 'Control' | 'Stun' | 'Beatdown' | 'Balanced';
   tier: number | null;
   
-  // NEW: Detailed counts
+  // Detailed counts
   deckSize: number;
   mainDeckSize: number;
   extraDeckSize: number;
   sideDeckSize: number;
   
-  // NEW: Ratios
+  // Ratios
   ratios: {
     monsters: number;
     spells: number;
@@ -51,7 +51,7 @@ export interface EnhancedDeckAnalysis {
     trapsPercent: number;
   };
   
-  // NEW: Archetype distribution
+  // Archetype distribution
   archetypes: {
     name: string;
     count: number;
@@ -59,7 +59,7 @@ export interface EnhancedDeckAnalysis {
   }[];
   primaryArchetype: string | null; // Most common archetype
   
-  // NEW: Card role detection
+  // Card role detection
   cardRoles: {
     starters: number;
     extenders: number;
@@ -68,13 +68,13 @@ export interface EnhancedDeckAnalysis {
     endBoardPieces: number;
   };
   
-  // NEW: Win condition inference
+  // Win condition inference
   winCondition: 'OTK' | 'Control' | 'Grind' | 'Lock' | 'Burn' | 'Unknown';
   
-  // NEW: Brick probability estimation
+  // Brick probability estimation
   estimatedBrickRate: number; // 0.0-1.0
   
-  // NEW: Missing staples (placeholder - will be populated by comparing against archetype_staples)
+  // Missing staples (placeholder - will be populated by comparing against archetype_staples)
   missingStaples: {
     cardName: string;
     reason: string;

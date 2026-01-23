@@ -1,5 +1,5 @@
-// Client API for recommendation feedback (Phase 4)
-// Rationale: Type-safe feedback submission with error handling
+// Client API for recommendation feedback
+// Type-safe feedback submission with error handling
 // Supports both legacy format and new telemetry schema
 
 import { getAccessToken } from "../supabaseClient";
@@ -12,14 +12,14 @@ export interface FeedbackRequest {
   feedback_text?: string;
 }
 
-// Phase 4: New telemetry format
+// New telemetry format
 export interface TelemetryFeedbackRequest {
   deckFingerprint: string;
   suggestionId: string;
   accepted: boolean;
   timestamp?: string; // ISO string, defaults to now
   userId?: string; // Optional, will use auth user if not provided
-  // Phase 5: Rich feedback fields
+  // Rich feedback fields
   cardId?: string; // Recommended card id (string to match recommender schema)
   rejectionReasons?: string[]; // Reason codes (e.g., ["no-synergy","too-complex"])
   feedbackText?: string; // Optional free-text note from the user
@@ -57,7 +57,7 @@ export async function submitFeedback(
 }
 
 /**
- * Submit telemetry feedback (Phase 4: new format)
+ * Submit telemetry feedback (new format)
  * Automatically generates deck fingerprint if not provided
  */
 export async function submitTelemetryFeedback(

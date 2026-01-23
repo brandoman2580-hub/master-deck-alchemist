@@ -188,7 +188,8 @@ function mmrSelect(
   selected.push(pool.shift()!);
 
   // MMR selection: balance relevance and diversity
-  while (selected.length < k && pool.length > 0) {
+  const maxIterations = Math.min(k, pool.length);
+  for (let iteration = 0; iteration < maxIterations && selected.length < k && pool.length > 0; iteration++) {
     let bestIdx = -1;
     let bestScore = -Infinity;
 

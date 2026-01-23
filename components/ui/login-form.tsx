@@ -2,12 +2,6 @@
 
 import { useState } from "react";
 import type { FormEvent } from "react";
-import {
-  signInWithGoogle,
-  signInWithFacebook,
-  signInWithDiscord,
-  signInWithApple,
-} from "../../app/login/actions";
 import { useLoginModalStore } from "../../store/useLoginModalStore";
 import { useUserStore } from "../../store/useUserStore";
 import { supabase } from "../../lib/supabaseClient";
@@ -21,7 +15,9 @@ export function LoginForm({ onSignupClick }: LoginFormProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [resetting, setResetting] = useState(false);
   const { closeLoginModal } = useLoginModalStore();
 
   const handleSubmit = async (e: FormEvent) => {
@@ -43,61 +39,8 @@ export function LoginForm({ onSignupClick }: LoginFormProps) {
     }
   };
 
-  // @TODO: Add social login buttons when backend is ready
   return (
     <div className="space-y-6 w-full max-w-sm mx-auto">
-      {/* Social Login Buttons */}
-      <form action={signInWithGoogle}>
-        <div className="w-full mb-2 bg-white/5 border border-white/10 backdrop-blur-xl shadow-lg rounded-lg">
-          <button
-            disabled
-            type="submit"
-            className="w-full bg-red-500 hover:bg-red-600 text-white font-semibold py-2 transition cursor-not-allowed"
-          >
-            Continue with Google
-          </button>
-        </div>
-      </form>
-      <form action={signInWithFacebook}>
-        <div className="w-full mb-2 bg-white/5 border border-white/10 backdrop-blur-xl shadow-lg rounded-lg">
-          <button
-            disabled
-            type="submit"
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 transition cursor-not-allowed"
-          >
-            Continue with Facebook
-          </button>
-        </div>
-      </form>
-      <form action={signInWithDiscord}>
-        <div className="w-full mb-2 bg-white/5 border border-white/10 backdrop-blur-xl shadow-lg rounded-lg">
-          <button
-            disabled
-            type="submit"
-            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 transition cursor-not-allowed"
-          >
-            Continue with Discord
-          </button>
-        </div>
-      </form>
-      <form action={signInWithApple}>
-        <div className="w-full mb-2 bg-white/5 border border-white/10 backdrop-blur-xl shadow-lg rounded-lg">
-          <button
-            disabled
-            type="submit"
-            className="w-full bg-black hover:bg-gray-800 text-white font-semibold py-2 transition cursor-not-allowed"
-          >
-            Continue with Apple
-          </button>
-        </div>
-      </form>
-
-      <div className="flex items-center my-4">
-        <div className="flex-grow border-t border-gray-200" />
-        <span className="mx-2 text-slate-300 text-xs">or</span>
-        <div className="flex-grow border-t border-gray-200" />
-      </div>
-
       {/* Email/Password Login */}
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
@@ -124,12 +67,48 @@ export function LoginForm({ onSignupClick }: LoginFormProps) {
           </div>
         </div>
         <div>
-          <label
-            htmlFor="login-password"
-            className="block text-sm font-medium text-gray-700 mb-1"
-          >
-            Password
-          </label>
+          <div className="flex items-center justify-between mb-1">
+            <label
+              htmlFor="login-password"
+              className="block text-sm font-medium text-gray-700"
+            >
+              Password
+            </label>
+            <button
+              type="button"
+              onClick={async () => {
+                if (!email) {
+                  setError("Please enter your email address first");
+                  setSuccess(null);
+                  return;
+                }
+                setResetting(true);
+                setError(null);
+                setSuccess(null);
+                try {
+                  const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+                    redirectTo: `${window.location.origin}/auth/reset-password`,
+                  });
+                  if (resetError) {
+                    setError(resetError.message);
+                    setSuccess(null);
+                  } else {
+                    setError(null);
+                    setSuccess("Password reset email sent! Please check your inbox.");
+                  }
+                } catch (err) {
+                  setError("Failed to send password reset email");
+                  setSuccess(null);
+                } finally {
+                  setResetting(false);
+                }
+              }}
+              disabled={resetting}
+              className="text-xs text-blue-600 hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {resetting ? "Sending..." : "Forgot password?"}
+            </button>
+          </div>
           <div className="w-full bg-white/5 border border-white/10 backdrop-blur-xl shadow-lg rounded-lg">
             <input
               id="login-password"
@@ -154,6 +133,15 @@ export function LoginForm({ onSignupClick }: LoginFormProps) {
             className="text-red-600 text-sm"
           >
             {error}
+          </div>
+        )}
+        {success && (
+          <div
+            role="alert"
+            aria-live="polite"
+            className="text-green-600 text-sm"
+          >
+            {success}
           </div>
         )}
         <div className="w-full bg-white/5 border border-white/10 backdrop-blur-xl shadow-lg rounded-lg">

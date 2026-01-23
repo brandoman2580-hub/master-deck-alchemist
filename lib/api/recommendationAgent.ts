@@ -3,7 +3,6 @@ import { DeckType } from "../../types/types";
 import type { RecommenderResponse } from "../../types/recommender";
 import { extractNumberConstraint } from "../utils/prompt-utils";
 
-// Phase 1: Enhanced deck analysis type
 export interface EnhancedDeckAnalysis {
   playstyle: 'Combo' | 'Midrange' | 'Control' | 'Stun' | 'Beatdown' | 'Balanced';
   tier: number | null;
@@ -40,11 +39,10 @@ export interface EnhancedDeckAnalysis {
   }[];
 }
 
-// Phase 1: Conversation context (multi-turn memory) passed to the edge function
 export interface ConversationFeedbackItem {
   cardId: string;
   accepted: boolean;
-  // Optional structured reason for accept/reject (phase 5+)
+  // Optional structured reason for accept/reject
   reason?: string;
 }
 
@@ -63,7 +61,6 @@ export interface ConversationContext {
   userGoals: string[];
 }
 
-// Phase 3: Updated to use types from types/recommender.ts
 export interface RecommendationRequest {
   question?: string;
   current_deck?: DeckType;
@@ -88,11 +85,10 @@ export interface RecommendationRequest {
     min?: number;
     max?: number;
   };
-  // Phase 1: Enhanced deck analysis
+  // Enhanced deck analysis
   deckAnalysis?: EnhancedDeckAnalysis;
 }
 
-// Phase 3: Use the new RecommenderResponse type from types/recommender.ts
 export type RecommendationResponse = RecommenderResponse;
 
 // Legacy types for backward compatibility (deprecated, use RecommenderResponse)
@@ -204,7 +200,7 @@ export async function getRecommendations(
 
   const url = `${supabaseUrl}/functions/v1/recommendation-agent`;
   
-  // Phase 3: Convert DeckType to new format (main/extra/side with cardId/count)
+  // Convert DeckType to new format (main/extra/side with cardId/count)
   const current_deck = request.current_deck
     ? {
         main:
@@ -241,7 +237,7 @@ export async function getRecommendations(
     conversationContext: request.conversationContext || undefined,
     maxOutputTokens: request.maxOutputTokens,
     numberConstraint: numberConstraint || undefined,
-    deckAnalysis: request.deckAnalysis || undefined, // Phase 1: Send enhanced analysis
+    deckAnalysis: request.deckAnalysis || undefined,
   });
 
   console.log("📤 Request:", {
@@ -322,7 +318,7 @@ export async function getRecommendations(
 
   const result = (await response.json()) as RecommenderResponse;
   
-  // Phase 3: Validate response structure
+  // Validate response structure
   if (!result.schemaVersion) {
     console.warn("⚠️ Response missing schemaVersion, may be legacy format");
   }
@@ -334,7 +330,7 @@ export async function getRecommendations(
     uiBlocksCount: result.ui?.length || 0,
     summary: result.summary?.substring(0, 100),
     hasDeckFingerprint: !!result.meta?.deckFingerprint,
-    // Phase 2: Log two-stage metadata
+    // Log two-stage metadata
     hasReasoning: !!result.reasoning,
     stage1Duration: result.meta?.stage1Duration,
     stage2Duration: result.meta?.stage2Duration,

@@ -28,7 +28,7 @@ interface CardSlideshowProps {
 
 /**
  * Card Slideshow Component
- * Phase 6: Displays card images and implements Add to Deck functionality
+ * Displays card images and implements Add to Deck functionality
  */
 export function CardSlideshow({ recommendations, onAddCard }: CardSlideshowProps) {
   const [currentIndex, setCurrentIndex] = useState(0);

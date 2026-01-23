@@ -1,0 +1,8 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Run linting on staged files only (faster than full lint)
+npx eslint --fix --ext .ts,.tsx $(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(ts|tsx)$') || exit 1
+
+# Run TypeScript type checking (Next.js handles this, but we can verify)
+npx tsc --noEmit || exit 1

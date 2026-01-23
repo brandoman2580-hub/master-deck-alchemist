@@ -146,25 +146,6 @@
       "labels": ["a11y", "wcag-2.1-aa", "priority:high", "component:button"]
     },
     {
-      "id": "A11Y-005",
-      "component_name": "AIChatbot",
-      "path": "components/ai-chatbot.tsx",
-      "priority": "High",
-      "owner": "engineer-2",
-      "state": "untested",
-      "notes": "New messages not announced to screen readers. Need aria-live region. Voice input button missing aria-label.",
-      "wcag_criteria_violations": ["4.1.3", "4.1.2"],
-      "automated_testable": false,
-      "estimated_effort_hours": 3,
-      "acceptance_criteria": [
-        "New messages announced via aria-live='polite'",
-        "Voice input button has aria-label='Voice input (coming soon)'",
-        "Loading states announced",
-        "Screen reader testing complete"
-      ],
-      "labels": ["a11y", "wcag-2.1-aa", "priority:high", "component:chat"]
-    },
-    {
       "id": "A11Y-006",
       "component_name": "Input",
       "path": "components/ui/input.tsx",

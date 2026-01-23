@@ -1,9 +1,3 @@
-/**
- * Page Transition Utilities
- * 
- * Utilities for smooth page transitions and route changes.
- */
-
 import type { Transition } from "framer-motion";
 import { ANIMATION_DURATION, EASING } from "./constants";
 

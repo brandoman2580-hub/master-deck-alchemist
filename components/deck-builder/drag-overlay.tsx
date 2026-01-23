@@ -15,7 +15,7 @@ export function DragOverlayComponent({
 }: DragOverlayComponentProps) {
   return (
     <TooltipProvider>
-      <DragOverlay>
+      <DragOverlay dropAnimation={null}>
         {activeDragCard && (
           <div className="w-[100px] h-[146px] opacity-80">
             <Image

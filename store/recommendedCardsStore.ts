@@ -1,7 +1,7 @@
 import { create } from "zustand";
 
 /**
- * Phase 5: Store for tracking AI-recommended cards
+ * Store for tracking AI-recommended cards
  * Used to show "Recommended" badges and highlights in the card browser
  */
 interface RecommendedCardsStore {

@@ -1,4 +1,3 @@
-// NOTE: extracted from app/deck-builder/page.tsx
 "use client";
 
 import { Badge } from "@/components/ui/badge";

@@ -63,6 +63,10 @@ export default function DeckBuilder() {
   const [activeDragId, setActiveDragId] = useState<UniqueIdentifier | null>(
     null,
   );
+  // Track cards that have been dropped and should be hidden during transition
+  const [droppedCardIds, setDroppedCardIds] = useState<Set<number>>(new Set());
+  // Track deck cards being removed (to hide during transition)
+  const [removingDeckCardIds, setRemovingDeckCardIds] = useState<Set<string>>(new Set());
 
   // Zustand Store -----------------------------------------
   const cardList = useCardStore((state) => state.cardList);
@@ -70,7 +74,7 @@ export default function DeckBuilder() {
   const deckMode = useModeStore((state) => state.deckMode);
   const setDeckMode = useModeStore((state) => state.setDeckMode);
   
-  // Phase 6: Analytics
+  // Analytics
   const { track } = useAnalytics();
 
   const sensors = useSensors(
@@ -125,7 +129,7 @@ export default function DeckBuilder() {
     detectMeta();
   }, [currentDeck, deckMode]);
 
-  // Phase 6: Wrapper for addCardToDeck with analytics
+  // Wrapper for addCardToDeck with analytics
   const handleAddCardToDeck = useCallback(
     async (card: Card, section: DeckSection) => {
       // Simulate small delay for UI feedback
@@ -146,7 +150,7 @@ export default function DeckBuilder() {
     [addCardToDeck, track],
   );
 
-  // Phase 6: Wrapper for removeCardFromDeck with analytics
+  // Wrapper for removeCardFromDeck with analytics
   const handleRemoveCardFromDeck = useCallback(
     (deckInstanceId: string, section: DeckSection) => {
       // Find card before removing for analytics
@@ -166,6 +170,7 @@ export default function DeckBuilder() {
     [currentDeck, removeCardFromDeck, track],
   );
 
+  // Drag and Drop Handlers
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;
     setActiveDragId(active.id);
@@ -193,12 +198,6 @@ export default function DeckBuilder() {
 
   const handleDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event;
-    setActiveDragId(null);
-    setActiveDragCard(null);
-
-    if (!over) return;
-
-    const targetId = over.id as string;
     const dragType = active.data?.current?.type;
 
     // Browser -> Deck
@@ -207,22 +206,105 @@ export default function DeckBuilder() {
       const browserCard = cardId
         ? cardList.find((c) => c.id === cardId)
         : null;
-      if (!browserCard) return;
+
+      if (!over || !browserCard) {
+        // Drop cancelled or invalid - clear drag state immediately
+        setActiveDragId(null);
+        setActiveDragCard(null);
+        return;
+      }
+
+      const targetId = over.id as string;
+      
+      // If dropped back into Card Browser zone, hide card image immediately
+      if (targetId === "card-browser") {
+        // Mark card as dropped immediately to hide it BEFORE dnd-kit animation starts
+        setDroppedCardIds((prev) => new Set(prev).add(browserCard.id));
+        // Clear drag overlay immediately to prevent any animation
+        setActiveDragCard(null);
+        setActiveDragId(null);
+        // Keep card hidden briefly to prevent visual "travel back"
+        setTimeout(() => {
+          setDroppedCardIds((prev) => {
+            const next = new Set(prev);
+            next.delete(browserCard.id);
+            return next;
+          });
+        }, 200);
+        return;
+      }
 
       const targetSection = getDeckSectionFromTarget(targetId, currentDeck);
 
-      if (targetSection === "mainDeck" && !isExtraDeckCard(browserCard)) {
-        handleAddCardToDeck(browserCard, "mainDeck");
-      } else if (
-        targetSection === "extraDeck" &&
-        isExtraDeckCard(browserCard)
-      ) {
-        handleAddCardToDeck(browserCard, "extraDeck");
-      } else if (targetSection === "sideDeck") {
-        handleAddCardToDeck(browserCard, "sideDeck");
+      // Check if dropping on a valid deck section
+      const isValidDrop = 
+        (targetSection === "mainDeck" && !isExtraDeckCard(browserCard)) ||
+        (targetSection === "extraDeck" && isExtraDeckCard(browserCard)) ||
+        targetSection === "sideDeck";
+
+      if (isValidDrop) {
+        // Mark card as dropped immediately to hide it during transition
+        setDroppedCardIds((prev) => new Set(prev).add(browserCard.id));
+
+        // Add card to deck immediately (optimistic update - no delay for drag operations)
+        // Use addCardToDeck directly for immediate state update
+        if (targetSection === "mainDeck" && !isExtraDeckCard(browserCard)) {
+          addCardToDeck(browserCard, "mainDeck");
+          track({
+            type: "card_added",
+            cardId: browserCard.id,
+            cardName: browserCard.name,
+            section: "mainDeck",
+          });
+        } else if (
+          targetSection === "extraDeck" &&
+          isExtraDeckCard(browserCard)
+        ) {
+          addCardToDeck(browserCard, "extraDeck");
+          track({
+            type: "card_added",
+            cardId: browserCard.id,
+            cardName: browserCard.name,
+            section: "extraDeck",
+          });
+        } else if (targetSection === "sideDeck") {
+          addCardToDeck(browserCard, "sideDeck");
+          track({
+            type: "card_added",
+            cardId: browserCard.id,
+            cardName: browserCard.name,
+            section: "sideDeck",
+          });
+        }
+
+        // Clear drag overlay immediately to prevent animation
+        setActiveDragCard(null);
+        setActiveDragId(null);
+        
+        // Clear dropped state after brief delay to ensure card stays hidden during transition
+        setTimeout(() => {
+          setDroppedCardIds((prev) => {
+            const next = new Set(prev);
+            next.delete(browserCard.id);
+            return next;
+          });
+        }, 200);
+      } else {
+        // Invalid drop - clear immediately
+        setActiveDragId(null);
+        setActiveDragCard(null);
       }
       return;
     }
+
+    if (!over) {
+      // Drop cancelled - clear immediately
+      setActiveDragId(null);
+      setActiveDragCard(null);
+      return;
+    }
+
+    const targetId = over.id as string;
 
     // Deck -> Browser or move section
     if (dragType === "deck") {
@@ -245,11 +327,29 @@ export default function DeckBuilder() {
           break;
         }
       }
-      if (!deckCard || !currentSection) return;
+      if (!deckCard || !currentSection) {
+        setActiveDragId(null);
+        setActiveDragCard(null);
+        return;
+      }
 
       // Deck -> Card Browser: remove card from deck
       if (targetId === "card-browser") {
+        // Mark card as being removed to hide it during transition
+        setRemovingDeckCardIds((prev) => new Set(prev).add(deckInstanceId));
+        // Clear drag overlay immediately to prevent animation
+        setActiveDragCard(null);
+        setActiveDragId(null);
+        // Remove card from deck immediately (optimistic update)
         handleRemoveCardFromDeck(deckInstanceId, currentSection);
+        // Clear removing state after brief delay
+        setTimeout(() => {
+          setRemovingDeckCardIds((prev) => {
+            const next = new Set(prev);
+            next.delete(deckInstanceId);
+            return next;
+          });
+        }, 200);
         return;
       }
 
@@ -283,7 +383,6 @@ export default function DeckBuilder() {
     },
     [handleAddCardToDeck],
   );
-
 
   const stats = getDeckStats();
   const pageRef = useRef<HTMLDivElement>(null);
@@ -373,6 +472,7 @@ export default function DeckBuilder() {
                         currentDeck={currentDeck}
                         deckMode={deckMode}
                         activeDragId={activeDragId}
+                        removingDeckCardIds={removingDeckCardIds}
                         removeCardFromDeck={handleRemoveCardFromDeck}
                         addCardToDeck={handleAddCardToDeck}
                       />
@@ -383,13 +483,15 @@ export default function DeckBuilder() {
 
               {/* Right side - Card Browser */}
               <div className="flex flex-col min-h-0">
-                <CardBrowser
-                  currentDeck={currentDeck}
-                  deckMode={deckMode}
-                  activeDragId={activeDragId}
-                  handleCardDoubleClick={handleCardDoubleClick}
-                  addCardToDeck={handleAddCardToDeck}
-                />
+                  <CardBrowser
+                    currentDeck={currentDeck}
+                    deckMode={deckMode}
+                    activeDragId={activeDragId}
+                    activeDragCard={activeDragCard}
+                    droppedCardIds={droppedCardIds}
+                    handleCardDoubleClick={handleCardDoubleClick}
+                    addCardToDeck={handleAddCardToDeck}
+                  />
               </div>
             </div>
           </div>

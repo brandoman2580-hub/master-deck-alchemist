@@ -1,9 +1,3 @@
-/**
- * Animation Utilities Index
- * 
- * Central export point for all animation utilities.
- */
-
 // Constants
 export * from "./constants";
 

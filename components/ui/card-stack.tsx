@@ -44,10 +44,11 @@ export interface CardStackProps {
   remainingCopies: number;
   maxCopies: number;
   banStatus: BanStatus;
-  isBeingDragged: boolean;
+  isBeingDragged?: boolean;
+  shouldHideAfterDrop?: boolean;
   onStackClick?: () => void;
   onDoubleClick?: (card: Card) => void;
-  currentCount?: number; // Optional: show how many copies are in deck
+  currentCount?: number; // Kept for backward compatibility, but badge is removed
 }
 
 export function CardStack({
@@ -56,9 +57,10 @@ export function CardStack({
   maxCopies,
   banStatus,
   isBeingDragged,
+  shouldHideAfterDrop = false,
   onStackClick,
   onDoubleClick,
-  currentCount = 0,
+  // currentCount removed - badge no longer displayed per user request
 }: CardStackProps) {
   // Consistent drag id per card row
   const dragInstanceId = useMemo(() => `browser-${card.id}`, [card.id]);
@@ -66,7 +68,7 @@ export function CardStack({
 
   const cardRef = useRef<HTMLDivElement>(null);
 
-  const { attributes, listeners, setNodeRef, transform } = useDraggable({
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: dragInstanceId,
     data: {
       type: "browser",
@@ -76,8 +78,13 @@ export function CardStack({
     disabled,
   });
 
-  const style = transform
+  // Hide card image immediately when dragging starts to prevent "travel back" effect
+  // Also don't apply transform if card should be hidden after drop
+  const isHidden = isDragging || shouldHideAfterDrop;
+  const style = transform && !isHidden
     ? { transform: CSS.Transform.toString(transform) }
+    : isHidden
+    ? { transform: "none" }
     : undefined;
 
   const getBanStatusColor = (status: BanStatus) => {
@@ -105,29 +112,31 @@ export function CardStack({
     <CardPreview card={card} banStatus={banStatus}>
       <motion.div
         className={`relative overflow-visible rounded-lg bg-white/5 border border-white/10 backdrop-blur-md p-2 transition-colors ${
-          isBeingDragged ? "opacity-50" : ""
-        } ${!disabled ? "cursor-pointer hover:bg-white/10 hover:border-white/20" : ""}`}
+          !disabled ? "cursor-pointer hover:bg-white/10 hover:border-white/20" : ""
+        }`}
         {...(disabled ? {} : hoverAnimation)}
       >
         <div ref={cardRef} onDoubleClick={handleDoubleClick}>
           <div className="flex gap-3 items-center p-1">
-            {/* DRAGGABLE STACK IMAGE -- IMAGES ARE HIDDEN WHILE isBeingDragged */}
+            {/* DRAGGABLE STACK IMAGE -- Only hide image when dropped, not whole card */}
             <div
               ref={setNodeRef}
+              data-dragging={isDragging}
               style={{
                 ...style,
                 position: "relative",
-                // Below: ensure pointer events remain (for future extensions)
+                visibility: isHidden ? "hidden" : "visible",
+                opacity: isHidden ? 0 : undefined,
+                pointerEvents: isHidden ? "none" : undefined,
               }}
               {...listeners}
               {...attributes}
-              className={`relative w-12 h-[72px] flex-shrink-0 flex items-center justify-center transition-all
+              className={`relative w-12 h-[72px] flex-shrink-0 flex items-center justify-center
     ${
       disabled
         ? "cursor-not-allowed opacity-60"
         : "cursor-grab active:cursor-grabbing"
     }
-    ${isBeingDragged ? "opacity-0 pointer-events-none" : ""}
   `}
               onClick={onStackClick}
             >
@@ -196,17 +205,6 @@ export function CardStack({
                 </div>
               )}
               
-              {/* In-deck count badge */}
-              {!isBeingDragged && currentCount > 0 && (
-                <div className="absolute -bottom-1 -left-1 z-10">
-                  <Badge
-                    variant="secondary"
-                    className="bg-white/10 text-white text-[10px] px-1 py-0 min-w-[16px] h-4 flex items-center justify-center border border-white/20 font-semibold backdrop-blur-sm"
-                  >
-                    {currentCount}x
-                  </Badge>
-                </div>
-              )}
             </div>
 
             {/* Card Info */}

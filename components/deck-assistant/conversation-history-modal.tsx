@@ -15,7 +15,7 @@ interface Conversation {
   name?: string | null;
 }
 
-interface ConversationHistorySidebarProps {
+interface ConversationHistoryModalProps {
   deckId: string;
   currentConversationId?: string;
   onSelectConversation: (conversationId: string) => void;
@@ -25,17 +25,17 @@ interface ConversationHistorySidebarProps {
 }
 
 /**
- * Conversation History Sidebar Component
- * Phase 6: Displays conversation history for a deck
+ * Conversation History Modal Component
+ * Displays conversation history for a deck
  */
-export function ConversationHistorySidebar({
+export function ConversationHistoryModal({
   deckId,
   currentConversationId,
   onSelectConversation,
   onNewConversation,
   isCollapsed,
   onToggleCollapse,
-}: ConversationHistorySidebarProps) {
+}: ConversationHistoryModalProps) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

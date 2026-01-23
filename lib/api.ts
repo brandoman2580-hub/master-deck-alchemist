@@ -89,10 +89,10 @@ async function fetchAllCards(params: CardSearchParams): Promise<Card[]> {
   console.log("Fetching all cards using pagination...");
   const allCards: Card[] = [];
   const batchSize = 1000;
+  const maxIterations = 1000; // Safety limit to prevent infinite loops
   let offset = 0;
-  let hasMore = true;
 
-  while (hasMore) {
+  for (let iteration = 0; iteration < maxIterations; iteration++) {
     const { data, error } = await supabase
       .from("cards")
       .select("*")
@@ -104,7 +104,6 @@ async function fetchAllCards(params: CardSearchParams): Promise<Card[]> {
     }
 
     if (!data || data.length === 0) {
-      hasMore = false;
       break;
     }
 
@@ -117,10 +116,10 @@ async function fetchAllCards(params: CardSearchParams): Promise<Card[]> {
 
     // If we got less than the batch size, we've reached the end
     if (data.length < batchSize) {
-      hasMore = false;
-    } else {
-      offset += batchSize;
+      break;
     }
+    
+    offset += batchSize;
   }
 
   console.log(`Fetched all ${allCards.length} cards from Supabase`);

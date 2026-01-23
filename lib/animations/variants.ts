@@ -1,10 +1,3 @@
-/**
- * Framer Motion Variants
- * 
- * Reusable animation variants for consistent animations across components.
- * All variants respect prefers-reduced-motion.
- */
-
 import type { Variants } from "framer-motion";
 import {
   ANIMATION_DURATION,

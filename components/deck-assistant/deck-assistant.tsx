@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { DeckType, DeckMode } from "@/types/types";
 import { ChatInterface } from "./chat-interface";
-import { ConversationHistorySidebar } from "./conversation-history-sidebar";
+import { ConversationHistoryModal } from "./conversation-history-modal";
 import { History, Info, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,11 +29,11 @@ interface DeckAssistantProps {
 
 /**
  * Main Deck Assistant Component
- * Phase 6: Integrated with conversation history sidebar
+ * Integrated with conversation history modal
  */
 export function DeckAssistant({ currentDeck, deckMode }: DeckAssistantProps) {
   const [conversationId, setConversationId] = useState<string | undefined>();
-  const [isHistorySidebarCollapsed, setIsHistorySidebarCollapsed] = useState(true);
+  const [isHistoryModalCollapsed, setIsHistoryModalCollapsed] = useState(true);
   const [isInfoDialogOpen, setIsInfoDialogOpen] = useState(false);
   const user = useUserStore((state) => state.user);
   
@@ -50,13 +50,13 @@ export function DeckAssistant({ currentDeck, deckMode }: DeckAssistantProps) {
 
   const handleSelectConversation = (convId: string) => {
     setConversationId(convId);
-    setIsHistorySidebarCollapsed(true);
+    setIsHistoryModalCollapsed(true);
   };
 
   const handleNewConversation = () => {
     // Clear conversation state - ChatInterface will handle clearing localStorage
     setConversationId(undefined);
-    setIsHistorySidebarCollapsed(true);
+    setIsHistoryModalCollapsed(true);
   };
 
   return (
@@ -73,7 +73,7 @@ export function DeckAssistant({ currentDeck, deckMode }: DeckAssistantProps) {
                   if (!isAuthenticated) {
                     openLoginModal();
                   } else {
-                    setIsHistorySidebarCollapsed(!isHistorySidebarCollapsed);
+                    setIsHistoryModalCollapsed(!isHistoryModalCollapsed);
                   }
                 }}
                 disabled={!isAuthenticated}
@@ -134,13 +134,13 @@ export function DeckAssistant({ currentDeck, deckMode }: DeckAssistantProps) {
 
       {/* Conversation History Dialog */}
       {isAuthenticated && currentDeck.id && currentDeck.id !== "temp" && currentDeck.id !== "" && (
-        <ConversationHistorySidebar
+        <ConversationHistoryModal
           deckId={currentDeck.id}
           currentConversationId={conversationId}
           onSelectConversation={handleSelectConversation}
           onNewConversation={handleNewConversation}
-          isCollapsed={isHistorySidebarCollapsed}
-          onToggleCollapse={() => setIsHistorySidebarCollapsed(true)}
+          isCollapsed={isHistoryModalCollapsed}
+          onToggleCollapse={() => setIsHistoryModalCollapsed(true)}
         />
       )}
 

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { ThumbsUp, ThumbsDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { Message } from "./chat-interface";
+import type { Message } from "./chat-interface-types";
 import { CardSlideshow } from "./card-slideshow";
 import type { Card } from "@/types/card";
 import type { DeckSection } from "@/types/types";
@@ -19,8 +19,8 @@ interface MessageListProps {
 
 /**
  * Message List Component
- * Phase 5: User messages are plain text (right-aligned), assistant messages are rounded bubbles (left-aligned)
- * Updated: Slideshows integrated into assistant message bubbles, feedback buttons added
+ * User messages are plain text (right-aligned), assistant messages are rounded bubbles (left-aligned)
+ * Slideshows integrated into assistant message bubbles, feedback buttons added
  */
 export function MessageList({ messages, onAddCard, deckFingerprint, conversationId }: MessageListProps) {
   const [feedbackStates, setFeedbackStates] = useState<Map<string, "approved" | "disapproved" | null>>(new Map());

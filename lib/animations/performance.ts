@@ -1,10 +1,4 @@
 /**
- * Animation Performance Utilities
- * 
- * Utilities for monitoring and optimizing animation performance.
- */
-
-/**
  * Check if device is low-end based on hardware concurrency
  */
 export function isLowEndDevice(): boolean {
@@ -76,7 +70,7 @@ export function throttleAnimation<T extends (...args: any[]) => void>(
   delay: number = 16, // ~60fps
 ): T {
   let lastCall = 0;
-  let timeoutId: NodeJS.Timeout | null = null;
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
   return ((...args: Parameters<T>) => {
     const now = Date.now();
@@ -102,7 +96,7 @@ export function debounceAnimation<T extends (...args: any[]) => void>(
   func: T,
   delay: number = 100,
 ): T {
-  let timeoutId: NodeJS.Timeout | null = null;
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
   return ((...args: Parameters<T>) => {
     if (timeoutId) clearTimeout(timeoutId);

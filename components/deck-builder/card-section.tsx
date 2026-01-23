@@ -14,7 +14,6 @@ import Image from "next/image";
 import { X } from "lucide-react";
 import {
   fadeInVariants,
-  staggerContainer,
   SCALE,
   ANIMATION_DURATION,
   EASING,
@@ -50,10 +49,11 @@ function getRarityBadge(rarity: string | undefined) {
   return { badgeClass, displayText };
 }
 
-interface CartSectionProps {
+interface CardSectionProps {
   section: DeckSection;
   cards: Card[];
   activeDragId: UniqueIdentifier | null;
+  removingDeckCardIds: Set<string>;
   onRemove: (deckInstanceId: string, section: DeckSection) => void;
   count?: number;
   maxCount?: number;
@@ -80,12 +80,14 @@ function DeckCardCopy({
   deckInstanceId,
   section,
   activeDragId,
+  isBeingRemoved,
   onRemove,
 }: {
   card: Card;
   deckInstanceId: string;
   section: DeckSection;
   activeDragId: UniqueIdentifier | null;
+  isBeingRemoved: boolean;
   onRemove: (deckInstanceId: string, section: DeckSection) => void;
 }) {
   const dragId = `deck-${section}-${deckInstanceId}`;
@@ -101,23 +103,35 @@ function DeckCardCopy({
     },
   });
 
-  const style = transform
+  // Hide card only when being removed (dropped to Card Browser), not when being dragged normally
+  // Don't apply transform if card is being removed - prevents "travel back" visual
+  const style = transform && !isBeingRemoved
     ? { transform: CSS.Transform.toString(transform) }
+    : isBeingRemoved
+    ? { transform: "none" }
     : undefined;
 
   return (
     <motion.div
       ref={setNodeRef}
-      style={style}
-      className={`relative ${isBeingDragged ? "opacity-30 scale-95" : ""}`}
+      style={{
+        ...style,
+        visibility: isBeingRemoved ? "hidden" : "visible",
+        pointerEvents: isBeingRemoved ? "none" : undefined,
+      }}
       initial={{ opacity: 0, scale: SCALE.initial }}
-      animate={{ opacity: 1, scale: 1 }}
+      animate={{ 
+        opacity: isBeingRemoved ? 0 : (isBeingDragged ? 0.3 : 1), 
+        scale: isBeingRemoved ? SCALE.initial : 1 
+      }}
       exit={{ opacity: 0, scale: SCALE.initial }}
       layout
       transition={{
-        duration: ANIMATION_DURATION.normal,
+        duration: isBeingRemoved ? ANIMATION_DURATION.fast : ANIMATION_DURATION.normal,
         ease: EASING.smooth,
       }}
+      // Force re-animation when card is added by using key prop
+      key={deckInstanceId}
     >
       {/* Card Thumbnail - Draggable */}
       <div
@@ -170,17 +184,18 @@ function DeckCardCopy({
 }
 
 /**
- * Shows individual card copies in the deck
- * Each copy has an X button to remove it
+ * Card section component for displaying cards in a deck section
+ * Shows individual card copies with remove functionality
  */
-export function CartSection({
+export function CardSection({
   section,
   cards,
   activeDragId,
+  removingDeckCardIds,
   onRemove,
   count = 0,
   maxCount = section === "mainDeck" ? 60 : 15,
-}: CartSectionProps) {
+}: CardSectionProps) {
   // Sort cards by name for consistent display
   const sortedCards = useMemo(() => {
     return [...cards].sort((a, b) => a.name.localeCompare(b.name));
@@ -226,11 +241,8 @@ export function CartSection({
           ) : (
             <motion.div
               className="grid grid-cols-4 sm:grid-cols-5 lg:grid-cols-6 xl:grid-cols-4 gap-3 p-4 justify-items-center"
-              initial="hidden"
-              animate="visible"
-              variants={staggerContainer(0.05)}
             >
-              <AnimatePresence>
+              <AnimatePresence mode="popLayout">
                 {sortedCards.map((card) => {
                   return (
                     <DeckCardCopy
@@ -239,6 +251,7 @@ export function CartSection({
                       deckInstanceId={card.deckInstanceId}
                       section={section}
                       activeDragId={activeDragId}
+                      isBeingRemoved={removingDeckCardIds.has(card.deckInstanceId)}
                       onRemove={onRemove}
                     />
                   );
@@ -251,4 +264,3 @@ export function CartSection({
     </div>
   );
 }
-

@@ -1,5 +1,5 @@
 /**
- * Phase 6: Lightweight analytics hooks
+ * Lightweight analytics hooks
  * Tracks user interactions for deck building and AI features
  */
 
@@ -19,22 +19,11 @@ export type AnalyticsEvent =
  */
 export function useAnalytics() {
   const track = (event: AnalyticsEvent) => {
-    // Phase 6: Lightweight - just log for now
+    // Lightweight - just log for now
     // In production, this would send to analytics service
     if (process.env.NODE_ENV === "development") {
       console.log("[Analytics]", event);
     }
-
-    // TODO: Send to analytics endpoint if configured
-    // if (process.env.NEXT_PUBLIC_ANALYTICS_ENABLED === "true") {
-    //   fetch("/api/analytics", {
-    //     method: "POST",
-    //     headers: { "Content-Type": "application/json" },
-    //     body: JSON.stringify(event),
-    //   }).catch(() => {
-    //     // Silently fail - analytics should never break the app
-    //   });
-    // }
   };
 
   return { track };

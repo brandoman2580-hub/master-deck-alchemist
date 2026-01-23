@@ -7,7 +7,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { TrendingUp, Shield } from "lucide-react";
+import { TrendingUp } from "lucide-react";
 
 interface MetaBadgeProps {
   metaMatch: {
@@ -62,55 +62,6 @@ export function MetaBadge({ metaMatch, format }: MetaBadgeProps) {
             <p className="text-xs text-muted-foreground">
               Confidence: {confidencePercent}%
             </p>
-          </div>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
-  );
-}
-
-interface MetaThreatBadgeProps {
-  threats: Array<{
-    deck_name: string;
-    tier: number;
-  }>;
-}
-
-export function MetaThreatBadge({ threats }: MetaThreatBadgeProps) {
-  if (!threats || threats.length === 0) return null;
-
-  const topThreats = threats.slice(0, 3);
-  const tier1Threats = threats.filter((t) => t.tier === 1);
-
-  return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Badge
-            variant="outline"
-            className="cursor-help border-amber-500/50 text-amber-300 hover:bg-amber-500/10"
-          >
-            <Shield className="h-3 w-3 mr-1" />
-            {tier1Threats.length > 0
-              ? `${tier1Threats.length} Tier 1 Threat${tier1Threats.length > 1 ? "s" : ""}`
-              : `${threats.length} Meta Threat${threats.length > 1 ? "s" : ""}`}
-          </Badge>
-        </TooltipTrigger>
-        <TooltipContent>
-          <div className="space-y-1">
-            <p className="font-semibold text-sm">Current Meta Threats</p>
-            <div className="space-y-0.5">
-              {topThreats.map((threat, idx) => (
-                <p key={idx} className="text-xs">
-                  <span className="font-medium">T{threat.tier}:</span> {threat.deck_name}
-                </p>
-              ))}
-              {threats.length > 3 && (
-                <p className="text-xs text-muted-foreground">
-                  +{threats.length - 3} more
-                </p>
-              )}
-            </div>
           </div>
         </TooltipContent>
       </Tooltip>

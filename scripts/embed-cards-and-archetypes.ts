@@ -62,8 +62,10 @@ function buildCardText(card: any): string {
 async function embedCards() {
   console.log("Embedding cards…");
 
+  const maxIterations = 10000; // Safety limit to prevent infinite loops
   let offset = 0;
-  for (;;) {
+  
+  for (let iteration = 0; iteration < maxIterations; iteration++) {
     const { data: cards, error } = await supabase
       .from("cards")
       .select("id, name, type, race, attribute, archetype, level, atk, def, desc")

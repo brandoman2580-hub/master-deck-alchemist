@@ -1,8 +1,4 @@
 /**
- * Utility functions for parsing and extracting information from user prompts
- */
-
-/**
  * Extract number constraints from user prompts
  * Examples:
  * - "3 other cards" -> 3

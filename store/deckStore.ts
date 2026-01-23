@@ -4,7 +4,7 @@ import { DeckType, DeckSection, DeckMode, BanStatus } from "@/types/types";
 import { v4 as uuidv4 } from "uuid";
 
 /**
- * Phase 1: Canonical deck state store with undo/redo support
+ * Canonical deck state store with undo/redo support
  * This store will eventually replace the React Context for deck management.
  */
 

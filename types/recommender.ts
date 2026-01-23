@@ -165,7 +165,7 @@ export const RecommenderZ = z.object({
   schemaVersion: z.string(),
   confidence: z.number().min(0).max(1),
   explainTo: z.enum(["novice", "intermediate", "advanced"]),
-  reasoning: ReasoningZ.optional(), // Phase 2: Optional reasoning field (may be missing in error responses)
+  reasoning: ReasoningZ.optional(), //: Optional reasoning field (may be missing in error responses)
   summary: z.string().optional(),
   recommendations: z.array(RecoItemZ),
   ui: z.array(UIBlockZ),
@@ -208,7 +208,7 @@ export interface RecommenderMeta {
   deckFingerprint?: string;
   usedCardIds?: number[];
   mainCount?: number;
-  // Phase 2: Two-stage timing metadata
+  //: Two-stage timing metadata
   stage1Duration?: number;
   stage2Duration?: number;
   totalDuration?: number;

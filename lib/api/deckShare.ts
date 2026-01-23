@@ -1,9 +1,3 @@
-/**
- * Deck Share API Client Functions
- * 
- * Client-side wrappers for deck sharing edge functions.
- */
-
 import { DeckType } from "@/types/types";
 import { getAccessToken } from "@/lib/supabaseClient";
 

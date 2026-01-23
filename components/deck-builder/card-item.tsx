@@ -11,7 +11,7 @@ import Image from "next/image";
 import { X, Sparkles } from "lucide-react";
 import { useRecommendedCardsStore } from "@/store/recommendedCardsStore";
 
-interface CartItemProps {
+interface CardItemProps {
   card: Card; // Representative card (all instances are the same card)
   quantity: number;
   maxCopies: number;
@@ -26,14 +26,14 @@ interface CartItemProps {
 }
 
 /**
- * Phase 3: Cart-style item showing grouped cards with quantity controls
- * Phase 6: Memoized for performance - only re-renders when props change
+ * Card item showing grouped cards with quantity controls
+ * Memoized for performance - only re-renders when props change
  * - Shows "2x Card Name" instead of individual instances
  * - +/- controls for quantity
  * - Quick remove button
  * - Live legality indicators
  */
-export const CartItem = memo(function CartItem({
+export const CardItem = memo(function CardItem({
   card,
   quantity,
   maxCopies,
@@ -45,13 +45,13 @@ export const CartItem = memo(function CartItem({
   onRemove,
   canIncrement: _canIncrement,
   canDecrement: _canDecrement,
-}: CartItemProps) {
-  // Phase 5: Check if card is recommended by AI
+}: CardItemProps) {
+  // Check if card is recommended by AI
   const isRecommended = useRecommendedCardsStore((state) => state.isRecommended(card.id));
   
   // Use first instance for drag (all instances are the same card)
   const dragInstanceId = useMemo(
-    () => `cart-${section}-${card.id}`,
+    () => `card-${section}-${card.id}`,
     [section, card.id],
   );
 
@@ -136,7 +136,7 @@ export const CartItem = memo(function CartItem({
               >
                 {quantity}x
               </Badge>
-              {/* Phase 5: Recommended Badge */}
+              {/* Recommended Badge */}
               {isRecommended && (
                 <Badge
                   variant="outline"
@@ -195,7 +195,7 @@ export const CartItem = memo(function CartItem({
     </div>
   );
 }, (prevProps, nextProps) => {
-  // Phase 6: Custom comparison for memoization
+  // Custom comparison for memoization
   // Only re-render if these props change
   return (
     prevProps.card.id === nextProps.card.id &&
@@ -208,4 +208,3 @@ export const CartItem = memo(function CartItem({
     prevProps.canDecrement === nextProps.canDecrement
   );
 });
-
