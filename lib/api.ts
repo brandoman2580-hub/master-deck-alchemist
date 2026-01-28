@@ -1,20 +1,6 @@
-import { createClient } from "@supabase/supabase-js";
 import { Card, CardSearchParams } from "../types/card";
 import { BanStatus } from "../types/types";
-
-// 1. Setup your Supabase client
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-if (!supabaseUrl) {
-  throw new Error("Missing env.NEXT_PUBLIC_SUPABASE_URL");
-}
-
-if (!supabaseAnonKey) {
-  throw new Error("Missing env.NEXT_PUBLIC_SUPABASE_ANON_KEY");
-}
-
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+import { supabase } from "./supabaseClient";
 
 // 2. Card data search, now from Supabase instead of YGOPRODeck
 export async function getCardData(params: CardSearchParams): Promise<Card[]> {

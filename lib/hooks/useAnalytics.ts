@@ -18,9 +18,10 @@ export type AnalyticsEvent =
  * Sends events to analytics endpoint (if configured) or logs locally
  */
 export function useAnalytics() {
-  const track = (event: AnalyticsEvent) => {
+  const track = (_event: AnalyticsEvent) => {
     // Analytics tracking - in production, this would send to analytics service
     // No client-side logging to avoid exposing user data
+    // Parameter prefixed with _ to indicate intentionally unused until analytics service is integrated
   };
 
   return { track };
