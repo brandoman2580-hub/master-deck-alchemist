@@ -126,7 +126,7 @@ export function TestSetupPanel({
             .map(formatDeck),
         );
       } catch (error) {
-        console.error("Failed to fetch decks:", error);
+        // Failed to fetch decks
       }
       setLoading(false);
     };

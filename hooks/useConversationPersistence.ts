@@ -39,7 +39,7 @@ export function useConversationPersistence({
       setConversationId(conversationIdToLoad);
       onConversationChangeRef.current?.(conversationIdToLoad);
     } catch (err) {
-      console.error("Failed to load conversation history:", err);
+      // Failed to load conversation history
       setMessages([]);
       setConversationId(undefined);
     } finally {
@@ -63,7 +63,7 @@ export function useConversationPersistence({
         }
       }
     } catch (err) {
-      console.error("Failed to load persisted messages:", err);
+      // Failed to load persisted messages
     }
     return [];
   });
@@ -78,7 +78,7 @@ export function useConversationPersistence({
         return parsed.conversationId;
       }
     } catch (err) {
-      console.error("Failed to load persisted conversationId:", err);
+      // Failed to load persisted conversationId
     }
     return undefined;
   });
@@ -97,7 +97,7 @@ export function useConversationPersistence({
         conversationId,
       }));
     } catch (err) {
-      console.error("Failed to persist conversation state:", err);
+      // Failed to persist conversation state
     }
   }, [messages, conversationId, storageKey, currentDeckId]);
 
@@ -107,7 +107,7 @@ export function useConversationPersistence({
       try {
         localStorage.removeItem(storageKey);
       } catch (err) {
-        console.error("Failed to clear conversation state:", err);
+        // Failed to clear conversation state
       }
       setMessages([]);
       setConversationId(externalConversationId);
@@ -118,7 +118,7 @@ export function useConversationPersistence({
       try {
         localStorage.removeItem(storageKey);
       } catch (err) {
-        console.error("Failed to clear conversation state:", err);
+        // Failed to clear conversation state
       }
     }
   }, [externalConversationId, conversationId, storageKey, loadConversationHistory]);
@@ -152,14 +152,14 @@ export function useConversationPersistence({
             try {
               localStorage.removeItem(storageKey);
             } catch (err) {
-              console.error("Failed to clear conversation state:", err);
+              // Failed to clear conversation state
             }
             await loadConversationHistory(mostRecentId);
             conversationLoadKeyRef.current = currentDeckId;
           }
         }
       } catch (err) {
-        console.error("Failed to load most recent conversation:", err);
+        // Failed to load most recent conversation
       }
     };
 
@@ -174,7 +174,7 @@ export function useConversationPersistence({
       try {
         localStorage.removeItem(oldStorageKey);
       } catch (err) {
-        console.error("Failed to clear old conversation state:", err);
+        // Failed to clear old conversation state
       }
       conversationLoadKeyRef.current = null;
     }

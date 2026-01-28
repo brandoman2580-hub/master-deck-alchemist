@@ -12,6 +12,8 @@ interface MetaDeckMatch {
  * Detect if a deck matches a known meta deck
  * This is a simplified version - in production, you'd use more sophisticated matching
  * (e.g., archetype detection, card name similarity, etc.)
+ * Returns null if no match found or service unavailable (expected)
+ * Throws error for unexpected failures
  */
 export async function detectMetaDeck(
   deck: DeckType,
@@ -20,7 +22,7 @@ export async function detectMetaDeck(
   try {
     // Check if Supabase URL is configured
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
-      console.warn("NEXT_PUBLIC_SUPABASE_URL not configured, skipping meta detection");
+      // Expected: Configuration missing - return null
       return null;
     }
 
@@ -33,17 +35,22 @@ export async function detectMetaDeck(
           "Content-Type": "application/json",
         },
       }
-    ).catch((error) => {
-      // Silently fail if endpoint is not available (e.g., not deployed yet)
-      console.warn("Meta stats endpoint not available:", error);
-      return null;
-    });
+    );
 
-    if (!response || !response.ok) {
-      return null;
+    // Expected: Endpoint not available (404) or service unavailable (503)
+    // Return null for graceful degradation
+    if (!response.ok) {
+      if (response.status === 404 || response.status === 503) {
+        return null;
+      }
+      // Unexpected error - throw to be caught by error boundary
+      throw new Error(
+        `Failed to fetch meta stats for detection: ${response.status} ${response.statusText}`
+      );
     }
 
     const metaStats = await response.json();
+    // Expected: No meta decks available yet
     if (!metaStats.topDecks || metaStats.topDecks.length === 0) {
       return null;
     }
@@ -92,8 +99,12 @@ export async function detectMetaDeck(
 
     return bestMatch;
   } catch (error) {
-    console.error("Error detecting meta deck:", error);
-    return null;
+    // Network errors or other unexpected failures - throw to bubble up
+    // Components can catch and handle gracefully
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error("Failed to detect meta deck");
   }
 }
 
@@ -125,11 +136,17 @@ export interface TierListComparison {
 
 /**
  * Compare current tier list with previous snapshot
+ * Returns null if service unavailable (expected)
+ * Throws error for unexpected failures
  */
 export async function compareTierLists(
   format: "tcg" | "master_duel"
 ): Promise<TierListComparison | null> {
   try {
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
+      return null;
+    }
+
     const response = await fetch(
       `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/meta-stats?format=${format}`,
       {
@@ -140,8 +157,15 @@ export async function compareTierLists(
       }
     );
 
+    // Expected: Endpoint not available (404) or service unavailable (503)
     if (!response.ok) {
-      return null;
+      if (response.status === 404 || response.status === 503) {
+        return null;
+      }
+      // Unexpected error - throw to be caught by error boundary
+      throw new Error(
+        `Failed to fetch meta stats for comparison: ${response.status} ${response.statusText}`
+      );
     }
 
     // This is a simplified version - in production, you'd fetch both snapshots
@@ -163,7 +187,10 @@ export async function compareTierLists(
       },
     };
   } catch (error) {
-    console.error("Error comparing tier lists:", error);
-    return null;
+    // Network errors or other unexpected failures - throw to bubble up
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error("Failed to compare tier lists");
   }
 }

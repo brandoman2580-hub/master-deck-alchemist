@@ -19,11 +19,8 @@ export type AnalyticsEvent =
  */
 export function useAnalytics() {
   const track = (event: AnalyticsEvent) => {
-    // Lightweight - just log for now
-    // In production, this would send to analytics service
-    if (process.env.NODE_ENV === "development") {
-      console.log("[Analytics]", event);
-    }
+    // Analytics tracking - in production, this would send to analytics service
+    // No client-side logging to avoid exposing user data
   };
 
   return { track };

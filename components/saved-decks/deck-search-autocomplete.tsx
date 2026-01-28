@@ -78,7 +78,7 @@ export function DeckSearchAutocomplete({
         await loadDeck(deck.id);
         router.push("/deck-builder");
       } catch (error) {
-        console.error("Failed to load deck:", error);
+        // Failed to load deck
       }
     }
   };

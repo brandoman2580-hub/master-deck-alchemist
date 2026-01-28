@@ -111,7 +111,8 @@ export function CardBrowser({
           setBanlist(masterDuelBanlist);
         }
       } catch (err) {
-        console.error("Error loading banlist:", err);
+        // Banlist loading failed - use empty banlist for graceful degradation
+        // This allows card browser to continue functioning without banlist validation
         setBanlist({});
       }
     };

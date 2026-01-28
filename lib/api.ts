@@ -56,18 +56,15 @@ async function fetchFilteredCards(params: CardSearchParams): Promise<Card[]> {
   if (params.archetype && params.archetype.trim())
     query = query.ilike("archetype", `%${params.archetype}%`);
 
-  console.log("Executing filtered Supabase query...");
   const { data, error } = await query;
 
   if (error) {
-    console.error("Error fetching filtered cards from Supabase:", error);
     return [];
   }
 
   if (!data) return [];
 
   let cards = data.map(mapCardData) as Card[];
-  console.log(`Fetched ${cards.length} filtered cards from Supabase`);
 
   // Apply effect filter
   if (params.effect && params.effect.trim() !== "") {
@@ -86,7 +83,6 @@ async function fetchFilteredCards(params: CardSearchParams): Promise<Card[]> {
 }
 
 async function fetchAllCards(params: CardSearchParams): Promise<Card[]> {
-  console.log("Fetching all cards using pagination...");
   const allCards: Card[] = [];
   const batchSize = 1000;
   const maxIterations = 1000; // Safety limit to prevent infinite loops
@@ -99,7 +95,6 @@ async function fetchAllCards(params: CardSearchParams): Promise<Card[]> {
       .range(offset, offset + batchSize - 1);
 
     if (error) {
-      console.error("Error fetching cards batch:", error);
       break;
     }
 
@@ -110,10 +105,6 @@ async function fetchAllCards(params: CardSearchParams): Promise<Card[]> {
     const batchCards = data.map(mapCardData) as Card[];
     allCards.push(...batchCards);
 
-    console.log(
-      `Fetched batch: ${data.length} cards (total: ${allCards.length})`,
-    );
-
     // If we got less than the batch size, we've reached the end
     if (data.length < batchSize) {
       break;
@@ -121,8 +112,6 @@ async function fetchAllCards(params: CardSearchParams): Promise<Card[]> {
     
     offset += batchSize;
   }
-
-  console.log(`Fetched all ${allCards.length} cards from Supabase`);
 
   // Sort results if needed
   if (params.sort) {
@@ -223,15 +212,14 @@ export async function getMasterDuelBanlist(): Promise<
       .select("card_name, ban_status");
 
     if (error) {
-      console.warn(
-        "Error fetching Master Duel banlist from Supabase:",
-        error.message,
+      // Database error - throw to be caught by error boundary
+      throw new Error(
+        `Failed to fetch Master Duel banlist: ${error.message}`
       );
-      return {};
     }
 
+    // Empty data is expected if banlist hasn't been populated yet
     if (!data || data.length === 0) {
-      console.warn("No Master Duel banlist data found in Supabase");
       return {};
     }
 
@@ -243,11 +231,10 @@ export async function getMasterDuelBanlist(): Promise<
     }
     return banlist;
   } catch (error) {
-    console.warn(
-      "Error fetching Master Duel banlist, using empty banlist:",
-      error,
-    );
-    return {};
+    // Re-throw to bubble up to error boundary
+    throw error instanceof Error
+      ? error
+      : new Error("Failed to fetch Master Duel banlist");
   }
 }
 
@@ -291,15 +278,12 @@ export async function getTCGBanlist(): Promise<Record<string, BanStatus>> {
       .not("ban_tcg", "is", null);
 
     if (error) {
-      console.warn(
-        "Error fetching TCG banlist from cards table:",
-        error.message,
-      );
-      return {};
+      // Database error - throw to be caught by error boundary
+      throw new Error(`Failed to fetch TCG banlist: ${error.message}`);
     }
 
+    // Empty data is expected if no cards have ban status set
     if (!data || data.length === 0) {
-      console.warn("No TCG ban status data found in cards table");
       return {};
     }
 
@@ -311,10 +295,11 @@ export async function getTCGBanlist(): Promise<Record<string, BanStatus>> {
       }
     }
 
-    console.log(`Loaded TCG banlist with ${Object.keys(banlist).length} entries`);
     return banlist;
   } catch (error) {
-    console.warn("Error fetching TCG banlist, using empty banlist:", error);
-    return {};
+    // Re-throw to bubble up to error boundary
+    throw error instanceof Error
+      ? error
+      : new Error("Failed to fetch TCG banlist");
   }
 }

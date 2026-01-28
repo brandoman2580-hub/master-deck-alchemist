@@ -35,7 +35,7 @@ export function MessageList({ messages, onAddCard, deckFingerprint, conversation
           const parsed = JSON.parse(saved) as Record<string, "approved" | "disapproved" | null>;
           setFeedbackStates(new Map(Object.entries(parsed)));
         } catch (err) {
-          console.error("Failed to load feedback states:", err);
+          // Failed to load feedback states
         }
       }
     }
@@ -78,7 +78,7 @@ export function MessageList({ messages, onAddCard, deckFingerprint, conversation
         });
       }
     } catch (error) {
-      console.error("Failed to submit feedback:", error);
+      // Failed to submit feedback
       // Revert optimistic update on error
       setFeedbackStates((prev) => {
         const newMap = new Map(prev);

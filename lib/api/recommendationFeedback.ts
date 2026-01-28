@@ -63,33 +63,21 @@ export async function submitFeedback(
 export async function submitTelemetryFeedback(
   request: TelemetryFeedbackRequestWithDeck,
 ): Promise<FeedbackResponse> {
-  console.log("📤 submitTelemetryFeedback called with:", {
-    hasDeckFingerprint: !!request.deckFingerprint,
-    deckFingerprintLength: request.deckFingerprint?.length || 0,
-    suggestionId: request.suggestionId,
-    accepted: request.accepted,
-    hasDeck: !!request.deck,
-  });
-
   // Generate fingerprint if not provided but deck data is available
   let deckFingerprint = request.deckFingerprint;
   if ((!deckFingerprint || deckFingerprint === "") && request.deck !== undefined) {
-    console.log("🔑 Generating deck fingerprint from deck data...");
     try {
       deckFingerprint = await fingerprintDeck(
         request.deck,
         request.explainTo || "novice",
         request.userPrefs || {},
       );
-      console.log("✅ Generated fingerprint:", deckFingerprint.substring(0, 16) + "...");
     } catch (error) {
-      console.error("❌ Failed to generate fingerprint:", error);
       throw new Error(`Failed to generate deck fingerprint: ${error instanceof Error ? error.message : "Unknown error"}`);
     }
   }
 
   if (!deckFingerprint || deckFingerprint === "") {
-    console.error("❌ No deckFingerprint available and no deck data to generate from");
     throw new Error("deckFingerprint is required. Provide either deckFingerprint or deck data.");
   }
 
@@ -109,7 +97,6 @@ export async function submitTelemetryFeedback(
     ...(request.context && { context: request.context }),
   };
 
-  console.log("📤 Sending telemetry request to Edge Function...");
   return submitFeedbackInternal(telemetryRequest);
 }
 
@@ -119,11 +106,9 @@ export async function submitTelemetryFeedback(
 async function submitFeedbackInternal(
   request: FeedbackRequest | TelemetryFeedbackRequest,
 ): Promise<FeedbackResponse> {
-  console.log("📡 submitFeedbackInternal called");
   const accessToken = await getAccessToken();
 
   if (!accessToken) {
-    console.error("❌ No access token available");
     throw new Error(
       "Authentication required. Please log in to submit feedback.",
     );
@@ -131,13 +116,10 @@ async function submitFeedbackInternal(
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   if (!supabaseUrl) {
-    console.error("❌ Missing NEXT_PUBLIC_SUPABASE_URL");
     throw new Error("Missing env.NEXT_PUBLIC_SUPABASE_URL");
   }
 
   const url = `${supabaseUrl}/functions/v1/recommendation-feedback`;
-  console.log("📡 Sending request to:", url);
-  console.log("📡 Request payload:", JSON.stringify(request, null, 2));
   
   const response = await fetch(url, {
     method: "POST",
@@ -147,8 +129,6 @@ async function submitFeedbackInternal(
     },
     body: JSON.stringify(request),
   });
-
-  console.log("📡 Response status:", response.status, response.statusText);
 
   if (!response.ok) {
     const errorText = await response.text();

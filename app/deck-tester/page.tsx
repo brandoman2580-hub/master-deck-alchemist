@@ -131,7 +131,7 @@ export default function DeckTester() {
       setAiResult(result);
       setIsCached((result as { _cached?: boolean })._cached === true);
     } catch (err: unknown) {
-      console.error("Test failed:", err);
+      // Test failed
       const errorMessage =
         err instanceof Error ? err.message : "Failed to run test. Please try again.";
       setError(errorMessage);

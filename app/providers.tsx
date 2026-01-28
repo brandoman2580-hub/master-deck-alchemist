@@ -24,16 +24,14 @@ export function Providers({ children }: { children: ReactNode }) {
     const fetchAllCards = async () => {
       setLoading(true);
       try {
-        console.log("Fetching card pool...");
         const results = await getCardData({
           name: "",
           sort: "name",
           sortDirection: "asc",
         });
-        console.log(`Loaded ${results.length} cards into store`);
         setCardList(results);
       } catch (error) {
-        console.error("Error fetching cards:", error);
+        // Silently handle errors - cards will remain empty
       } finally {
         setLoading(false);
       }

@@ -181,17 +181,10 @@ export async function getRecommendations(
   const accessToken = await getAccessToken();
 
   if (!accessToken) {
-    console.error("❌ No access token available - user may not be logged in");
     throw new Error(
       "Authentication required. Please log in to use recommendations.",
     );
   }
-
-  console.log(
-    "🔐 Making recommendation request with token (length:",
-    accessToken.length,
-    ")",
-  );
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   if (!supabaseUrl) {
@@ -240,12 +233,6 @@ export async function getRecommendations(
     deckAnalysis: request.deckAnalysis || undefined,
   });
 
-  console.log("📤 Request:", {
-    url,
-    question: request.question,
-    hasDeck: !!request.current_deck,
-    format: request.format,
-  });
 
   const response = await fetch(url, {
     method: "POST",
@@ -270,23 +257,10 @@ export async function getRecommendations(
           errorData = { error: errorText, message: errorText };
         }
       }
-    } catch (parseError) {
-      console.error("Failed to parse error response:", parseError);
+    } catch {
       errorText = "Failed to read error response";
       errorData = { error: "Unknown error", status: response.status };
     }
-
-    // Log more detailed error information
-    console.error("❌ Recommendation request failed:", {
-      status: response.status,
-      statusText: response.statusText,
-      url,
-      errorText: errorText || "No error text",
-      errorData:
-        Object.keys(errorData).length > 0 ? errorData : "Empty error object",
-      hasAccessToken: !!accessToken,
-      accessTokenLength: accessToken?.length || 0,
-    });
 
     if (response.status === 401) {
       throw new Error(
@@ -317,26 +291,6 @@ export async function getRecommendations(
   }
 
   const result = (await response.json()) as RecommenderResponse;
-  
-  // Validate response structure
-  if (!result.schemaVersion) {
-    console.warn("⚠️ Response missing schemaVersion, may be legacy format");
-  }
-
-  console.log("✅ Recommendation received:", {
-    schemaVersion: result.schemaVersion,
-    confidence: result.confidence,
-    recommendationsCount: result.recommendations?.length || 0,
-    uiBlocksCount: result.ui?.length || 0,
-    summary: result.summary?.substring(0, 100),
-    hasDeckFingerprint: !!result.meta?.deckFingerprint,
-    // Log two-stage metadata
-    hasReasoning: !!result.reasoning,
-    stage1Duration: result.meta?.stage1Duration,
-    stage2Duration: result.meta?.stage2Duration,
-    totalDuration: result.meta?.totalDuration,
-  });
-
   return result;
 }
 

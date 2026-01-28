@@ -1,0 +1,18 @@
+# robots.txt for Master Deck Alchemist
+# https://masterdeckalchemist.com/robots.txt
+
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /private/
+Disallow: /auth/
+Disallow: /_next/
+
+# Allow specific API endpoints that should be indexed (if any)
+# Allow: /api/public/
+
+# Sitemap location
+Sitemap: https://masterdeckalchemist.com/sitemap.xml
+
+# Crawl-delay (optional, adjust based on server capacity)
+# Crawl-delay: 1

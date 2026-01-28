@@ -116,13 +116,18 @@ export default function DeckBuilder() {
         const format = deckMode === "TCG" ? "tcg" : "master_duel";
         
         // Detect if deck matches a known meta deck
-        // This will gracefully handle if the endpoint is not available
+        // This will gracefully handle if the endpoint is not available (404/503)
+        // but will throw errors for unexpected failures (network errors, etc.)
         const match = await detectMetaDeck(currentDeck, format);
         setMetaMatch(match);
       } catch (error) {
-        // Silently handle errors - meta features are optional
-        console.debug("Meta detection unavailable:", error);
+        // Meta detection is an optional feature - gracefully degrade
+        // Expected errors (404, 503) are handled by detectMetaDeck and return null
+        // Unexpected errors (network failures) bubble up but we catch them here
+        // to prevent breaking the deck builder
         setMetaMatch(null);
+        // In production, you might want to log this to an error reporting service
+        // but not show it to users since meta detection is optional
       }
     };
 

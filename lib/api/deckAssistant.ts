@@ -85,7 +85,7 @@ export async function sendChatMessage(
         }
       }
     } catch (parseError) {
-      console.error("Failed to parse error response:", parseError);
+      // Failed to parse error response
       errorText = "Failed to read error response";
       errorData = { error: "Unknown error", status: response.status };
     }
@@ -192,23 +192,20 @@ export async function getConversationHistory(
           const generatedName = generateConversationName(messages.content);
           // Try to update conversation name in database (gracefully fail if column doesn't exist)
           try {
-            const { error: updateError } = await supabase
+            await supabase
               .from("chatbot_conversations")
               .update({ name: generatedName })
               .eq("id", conv.id);
             
-            if (updateError && !updateError.message.includes("column") && !updateError.message.includes("does not exist")) {
-              console.warn(`Failed to update conversation name: ${updateError.message}`);
-            }
+            // Silently handle update errors
           } catch (updateErr) {
             // Silently fail if name column doesn't exist
-            console.warn("Name column may not exist yet, skipping update");
           }
           
           return { ...conv, name: generatedName };
         }
       } catch (err) {
-        console.error(`Failed to generate name for conversation ${conv.id}:`, err);
+        // Failed to generate conversation name
       }
       
       return { ...conv, name: null };

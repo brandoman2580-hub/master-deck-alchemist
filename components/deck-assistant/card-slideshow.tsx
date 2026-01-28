@@ -49,7 +49,7 @@ export function CardSlideshow({ recommendations, onAddCard }: CardSlideshowProps
           : await getMasterDuelBanlist();
         setBanlist(banlistData);
       } catch (error) {
-        console.error("Error loading banlist:", error);
+        // Banlist loading failed - use empty banlist for graceful degradation
         setBanlist({});
       }
     };
@@ -174,7 +174,7 @@ export function CardSlideshow({ recommendations, onAddCard }: CardSlideshowProps
         setIsAdding(false);
       }, 300);
     } catch (error) {
-      console.error("Error adding card:", error);
+      // Error adding card
       setIsAdding(false);
     }
   };

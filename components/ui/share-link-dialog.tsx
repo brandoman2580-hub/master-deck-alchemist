@@ -165,7 +165,7 @@ export function ShareLinkDialog({
 
       setShareData(result);
     } catch (err) {
-      console.error("Failed to create share:", err);
+      // Failed to create share
       setError(err instanceof Error ? err.message : "Failed to create share link");
     } finally {
       setLoading(false);
@@ -182,7 +182,7 @@ export function ShareLinkDialog({
         setAccessCount(result.metadata.accessCount);
       }
     } catch (err) {
-      console.error("Failed to fetch metadata:", err);
+      // Failed to fetch metadata
     } finally {
       setRefreshingMetadata(false);
     }
@@ -199,7 +199,7 @@ export function ShareLinkDialog({
       setError(null);
       // Optionally show success message
     } catch (err) {
-      console.error("Failed to revoke share:", err);
+      // Failed to revoke share
       setError(err instanceof Error ? err.message : "Failed to revoke share");
     } finally {
       setRevoking(false);

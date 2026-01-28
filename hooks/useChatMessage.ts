@@ -124,7 +124,7 @@ export function useChatMessage({
         throw new Error(response.error || "Unknown response type");
       }
     } catch (error) {
-      console.error("Error sending message:", error);
+      // Error sending message
       const errorMessageText =
         error instanceof Error
           ? error.message

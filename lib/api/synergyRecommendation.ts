@@ -86,10 +86,7 @@ async function fetchCandidates(
       return data;
     }
   } catch (err) {
-    console.warn(
-      "Vector search RPC not available, falling back to text search:",
-      err,
-    );
+    // Vector search RPC not available, falling back to text search
   }
 
   // Fallback: Use text-based search if vector RPC doesn't exist
@@ -120,7 +117,7 @@ async function fetchCandidates(
         }));
       }
     } catch (fallbackErr) {
-      console.warn("Text search fallback also failed:", fallbackErr);
+      // Text search fallback also failed
     }
   }
 
@@ -146,7 +143,7 @@ async function fetchCandidates(
       return data as CandidateRow[];
     }
   } catch (err) {
-    console.error("Final fallback query failed:", err);
+    // Final fallback query failed
   }
 
   return [];
@@ -476,8 +473,7 @@ Task: Return the top ${picks} picks as strict JSON: { "picks":[...] }`;
     const safe2 = LlmResponseSchema.parse(parsed);
     return safe2;
   } catch (err) {
-    // Give up and return empty with diagnostics
-    console.error("LLM parse failed twice", { llmText, fallbackText, err });
+    // Give up and return empty
     return { picks: [] };
   }
 }

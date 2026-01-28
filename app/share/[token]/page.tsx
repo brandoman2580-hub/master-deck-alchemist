@@ -117,7 +117,7 @@ export default function SharePage() {
           setErrorMessage("Failed to load deck");
         }
       } catch (error) {
-        console.error("Error loading share:", error);
+        // Error loading share
         setStatus("error");
         if (error instanceof Error) {
           setErrorMessage(error.message);

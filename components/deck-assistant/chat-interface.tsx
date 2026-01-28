@@ -77,7 +77,7 @@ export function ChatInterface({
           const fp = await fingerprintDeck(currentDeck, "novice", {});
           setDeckFingerprint(fp);
         } catch (err) {
-          console.error("Failed to generate deck fingerprint:", err);
+          // Failed to generate deck fingerprint - silently continue
         }
       }
     };

@@ -56,7 +56,6 @@ export function ConversationHistoryModal({
         const history = await getConversationHistory(deckId, 5);
         setConversations(history);
       } catch (err) {
-        console.error("Failed to load conversation history:", err);
         setError(
           err instanceof Error
             ? err.message
@@ -118,7 +117,7 @@ export function ConversationHistoryModal({
       );
       setEditingId(null);
     } catch (err) {
-      console.error("Failed to update conversation name:", err);
+      // Failed to update conversation name
       setError(err instanceof Error ? err.message : "Failed to update name");
       setEditingId(null);
     }
@@ -212,7 +211,7 @@ export function ConversationHistoryModal({
                         document.body.removeChild(a);
                         URL.revokeObjectURL(url);
                       } catch (err) {
-                        console.error("Failed to export conversation:", err);
+                        // Failed to export conversation
                         alert("Failed to export conversation. Please try again.");
                       }
                     }}

@@ -88,7 +88,7 @@ export function useDeckBuilderAnalysis({
         }
       }
     } catch (error: any) {
-      console.error("Error analyzing deck:", error);
+      // Error analyzing deck
       setAnalysis(`Error: ${error.message || "Failed to analyze deck"}`);
       setSuggestions([]);
       setDeckAssessment(null);

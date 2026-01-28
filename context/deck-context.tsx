@@ -78,8 +78,12 @@ export function DeckProvider({ children }: { children: ReactNode }) {
           : await getMasterDuelBanlist();
         setBanlist(banlistData);
       } catch (error) {
-        console.error("Error loading banlist:", error);
+        // Banlist loading failed - use empty banlist for graceful degradation
+        // This allows the app to continue functioning without banlist validation
+        // Errors are expected if database is unavailable or banlist hasn't been populated
         setBanlist({});
+        // Optionally set error state if you want to show a warning to users
+        // setError("Unable to load banlist. Some features may be limited.");
       }
     };
     loadBanlist();
@@ -202,7 +206,7 @@ export function DeckProvider({ children }: { children: ReactNode }) {
           err?.details ||
           "Failed to save deck";
         setError(errorMessage);
-        console.error("saveDeck error:", err);
+        // Error saving deck - error message already set above
       } finally {
         setLoading(false);
       }
@@ -275,7 +279,6 @@ export function DeckProvider({ children }: { children: ReactNode }) {
         }
       } catch (error) {
         // Silently fail if user check fails - don't auto-save
-        console.log("Auto-save skipped: user not authenticated");
       }
     };
 

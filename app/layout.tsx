@@ -6,12 +6,38 @@ import { Providers } from "./providers";
 import { LoginModal } from "../components/ui/login-modal";
 import { FocusManager } from "./(lib)/FocusManager";
 import { SkipLink } from "../components/skip-link";
+import { StructuredData } from "../components/seo/structured-data";
+import {
+  generateOrganizationSchema,
+  generateWebApplicationSchema,
+} from "../lib/seo/structured-data";
 
 const inter = Inter({ subsets: ["latin"] });
 
+const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL || "https://masterdeckalchemist.com";
+
 export const metadata: Metadata = {
-  title: "Master Deck Alchemist",
-  description: "Build and optimize your Yu-Gi-Oh! decks",
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: "Master Deck Alchemist",
+    template: "%s | Master Deck Alchemist",
+  },
+  description:
+    "Build and optimize your Yu-Gi-Oh! decks with AI-powered recommendations, deck analysis, and testing tools. Support for Master Duel and TCG formats.",
+  keywords: [
+    "yu-gi-oh",
+    "yugioh",
+    "deck builder",
+    "master duel",
+    "tcg",
+    "deck analysis",
+    "yugioh deck",
+    "card game",
+  ],
+  authors: [{ name: "Master Deck Alchemist" }],
+  creator: "Master Deck Alchemist",
+  publisher: "Master Deck Alchemist",
   manifest: "/site.webmanifest",
   icons: {
     icon: [
@@ -31,6 +57,41 @@ export const metadata: Metadata = {
       { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
     ],
   },
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: siteUrl,
+    siteName: "Master Deck Alchemist",
+    title: "Master Deck Alchemist",
+    description:
+      "Build and optimize your Yu-Gi-Oh! decks with AI-powered recommendations, deck analysis, and testing tools.",
+    images: [
+      {
+        url: "/images/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Master Deck Alchemist",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Master Deck Alchemist",
+    description:
+      "Build and optimize your Yu-Gi-Oh! decks with AI-powered recommendations, deck analysis, and testing tools.",
+    images: ["/images/twitter-card.png"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
@@ -44,6 +105,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           overflow-x-hidden
         `}
       >
+        <StructuredData
+          data={[generateOrganizationSchema(), generateWebApplicationSchema()]}
+        />
         <Providers>
           <SkipLink />
           <FocusManager />

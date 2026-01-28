@@ -191,11 +191,6 @@ export function BlockRenderer({
                     <Button
                       size="sm"
                       onClick={() => {
-                        console.log("🔵 Apply button clicked:", {
-                          suggestionId: suggestionContent.suggestionId,
-                          cardId: suggestionContent.cardId,
-                          hasCallback: !!onApplySuggestion,
-                        });
                         onApplySuggestion(
                           suggestionContent.suggestionId,
                           suggestionContent.cardId
