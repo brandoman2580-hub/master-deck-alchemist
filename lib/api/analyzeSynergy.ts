@@ -25,7 +25,7 @@ export async function analyzeSynergy(
   const accessToken = await getAccessToken();
 
   const response = await fetch(
-    `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/analyze-synergy`,
+    `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/ai-synergy`,
     {
       method: "POST",
       headers: {

@@ -245,7 +245,7 @@
   "testing_strategy": {
     "automated": {
       "unit_tests": "jest-axe with React Testing Library",
-      "e2e_tests": "Playwright with axe-playwright",
+      "e2e_tests": "Cypress with cypress-axe",
       "static_analysis": "ESLint jsx-a11y plugin",
       "runtime_scanning": "pa11y-ci, Lighthouse CI"
     },

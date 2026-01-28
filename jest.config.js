@@ -19,6 +19,9 @@ const customJestConfig = {
     "!**/dist/**",
   ],
   setupFilesAfterEnv: ["<rootDir>/jest.setup.js"],
+  transformIgnorePatterns: [
+    "node_modules/(?!(react-markdown|remark-gfm|unified|bail|is-plain-obj|trough|vfile|unist-util-stringify-position|mdast-util-from-markdown|mdast-util-to-string|micromark|decode-named-character-reference|character-entities|character-reference-invalid|character-entities-legacy|markdown-table|escape-string-regexp|longest-streak|gemoji|ccount)/)",
+  ],
 };
 
 module.exports = createJestConfig(customJestConfig);

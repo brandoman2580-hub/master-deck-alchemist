@@ -42,8 +42,6 @@
     "**/*.test.ts",
     "**/*.test.tsx",
     "**/e2e/**",
-    "**/e2e-playwright/**",
-    "tests/e2e-playwright/**",
     "**/cypress/**",
     "cleanup/**"
   ]

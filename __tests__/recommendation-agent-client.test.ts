@@ -6,7 +6,7 @@
 import type { RecommenderResponse } from "../types/recommender";
 
 // Mock the dependencies
-jest.mock("../supabaseClient", () => ({
+jest.mock("@/lib/supabaseClient", () => ({
   getAccessToken: jest.fn(() => Promise.resolve("mock-access-token")),
 }));
 

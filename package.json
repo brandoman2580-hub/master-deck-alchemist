@@ -16,6 +16,8 @@
     "a11y:lighthouse": "lhci autorun || true",
     "a11y:scan-full": "npm run build && npx start-server-and-test start http://localhost:3000 30000 'npm run a11y:scan'",
     "a11y:baseline": "mkdir -p baseline && cp reports/pa11y-report.json baseline/pa11y-baseline.json 2>/dev/null || true && cp reports/jest-a11y-results.json baseline/jest-a11y-baseline.json 2>/dev/null || true",
+    "test": "jest --json --outputFile=reports/jest-results.json --runInBand && node scripts/generate-test-report.js",
+    "test:watch": "jest --watch",
     "test:a11y": "jest --testPathPattern=a11y",
     "test:deck-share": "tsx scripts/test-deck-share-standalone.ts",
     "seed:metadata": "tsx scripts/seed-card-metadata.ts",
@@ -65,7 +67,6 @@
     "zustand": "^5.0.5"
   },
   "devDependencies": {
-    "@axe-core/playwright": "^4.11.0",
     "@axe-core/react": "^4.11.0",
     "@lhci/cli": "^0.12.0",
     "@next/eslint-plugin-next": "^16.0.7",

@@ -19,7 +19,7 @@ import { DeckMode, DeckSection } from "../../types/types";
 import { useCardStore } from "../../store/cardStore";
 import { useUserStore } from "../../store/useUserStore";
 import { useModeStore } from "../../store/modeStore";
-import DeckBuilderTips from "../../components/deck-builder-tips";
+import DeckBuilderTips from "@/components/deck-builder/deck-builder-tips";
 import {
   analyzeDeck as analyzeDeckUtil,
   isExtraDeckCard,

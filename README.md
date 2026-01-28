@@ -41,7 +41,7 @@ npm start
 - **Zustand** (State Management)
 - **Groq API** (AI via Supabase Edge Functions)
 - **@dnd-kit** (Drag & Drop)
-- **react-virtuoso** (Virtualization)
+- **@tanstack/react-virtual** (Virtualization)
 - **Radix UI** (via Shadcn UI components)
 
 ## Project structure
@@ -118,7 +118,7 @@ Run `npm run lint` before committing.
 ## Contributing
 
 1. Fork the repository
-2. Create a feature branch: `refactor/your-thing` or `feat/your-feature`
+2. Create a feature branch: `feature/your-feature`
 3. Make your changes following the project structure guidelines
 4. Run `npm run lint` and `npm run build` to ensure everything works
 5. Submit a PR with a clear description and screenshots if UI changed

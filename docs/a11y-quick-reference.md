@@ -143,7 +143,4 @@ npm run a11y:pa11y
 - [WebAIM Contrast Checker](https://webaim.org/resources/contrastchecker/)
 - [ARIA Authoring Practices](https://www.w3.org/WAI/ARIA/apg/)
 
----
-
-**See full plan:** `docs/a11y-audit-remediation-plan.md`
 

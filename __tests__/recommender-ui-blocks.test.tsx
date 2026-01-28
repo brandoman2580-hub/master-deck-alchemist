@@ -4,12 +4,25 @@
  */
 
 import { render, screen } from "@testing-library/react";
-import { RecommenderUIBlocks } from "../components/ui/recommender-ui-blocks";
-import type { UIBlock, SuggestionContent } from "../types/recommender";
-import type { Card } from "../types/card";
+import { RecommenderUIBlocks } from "@/components/ui/recommender-ui-blocks";
+import type { UIBlock, SuggestionContent } from "@/types/recommender";
+import type { Card } from "@/types/card";
+
+// Mock react-markdown to avoid ESM issues
+jest.mock("react-markdown", () => ({
+  __esModule: true,
+  default: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="react-markdown">{children}</div>
+  ),
+}));
+
+jest.mock("remark-gfm", () => ({
+  __esModule: true,
+  default: () => {},
+}));
 
 // Mock dependencies
-jest.mock("../store/cardStore", () => ({
+jest.mock("@/store/cardStore", () => ({
   useCardStore: jest.fn(() => ({
     getCardById: jest.fn((id: number) => ({
       id,
@@ -20,7 +33,23 @@ jest.mock("../store/cardStore", () => ({
   })),
 }));
 
-jest.mock("../components/ui/card-preview", () => ({
+jest.mock("@/context/deck-context", () => ({
+  useDeck: jest.fn(() => ({
+    currentDeck: {
+      id: "test-deck",
+      name: "Test Deck",
+      mainDeck: [],
+      extraDeck: [],
+      sideDeck: [],
+      mode: "Master Duel",
+      isPinned: false,
+    },
+    saveDeck: jest.fn(),
+    addCardToDeck: jest.fn(),
+  })),
+}));
+
+jest.mock("@/components/ui/card-preview", () => ({
   CardPreview: ({ card }: { card: Card }) => (
     <div data-testid={`card-preview-${card.id}`}>{card.name}</div>
   ),
