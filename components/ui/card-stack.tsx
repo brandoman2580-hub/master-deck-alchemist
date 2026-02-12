@@ -10,6 +10,7 @@ import { Card } from "../../types/card";
 import { BanStatus } from "../../types/types";
 import { CardPreview } from "./card-preview";
 import Image from "next/image";
+import { Minus, Plus } from "lucide-react";
 import { useHoverAnimation } from "@/lib/animations";
 import { getRarityBadge } from "@/lib/utils/rarityBadges";
 import type { DeckMode } from "@/types/types";
@@ -23,6 +24,7 @@ export interface CardStackProps {
   shouldHideAfterDrop?: boolean;
   onStackClick?: () => void;
   onDoubleClick?: (card: Card) => void;
+  onRemove?: (card: Card) => void;
   currentCount?: number; // Kept for backward compatibility, but badge is removed
   deckMode?: DeckMode;
   mdRarityOverride?: string | null;
@@ -37,9 +39,10 @@ export function CardStack({
   shouldHideAfterDrop = false,
   onStackClick,
   onDoubleClick,
+  onRemove,
   deckMode,
   mdRarityOverride,
-  // currentCount removed - badge no longer displayed per user request
+  currentCount = 0,
 }: CardStackProps) {
   // Consistent drag id per card row
   const dragInstanceId = useMemo(() => `browser-${card.id}`, [card.id]);
@@ -118,7 +121,7 @@ export function CardStack({
               }}
               {...listeners}
               {...attributes}
-              className={`relative w-16 h-[96px] flex-shrink-0 flex items-center justify-center
+              className={`relative w-24 h-36 flex-shrink-0 flex items-center justify-center
     ${
       disabled
         ? "cursor-not-allowed opacity-60"
@@ -144,8 +147,8 @@ export function CardStack({
                         }}
                       >
                         <Image
-                          width={96}
-                          height={140}
+                          width={120}
+                          height={180}
                           src={
                             card.card_images?.[0]?.image_url_small ||
                             "/placeholder.svg"
@@ -172,7 +175,39 @@ export function CardStack({
                   </Badge>
                 </div>
               )}
-              
+              {/* Plus/minus controls - 16px from bottom, inset from edges */}
+              {!isBeingDragged && (
+                <div
+                  className="absolute left-1 right-1 flex items-center justify-center gap-1 z-20"
+                  style={{ bottom: 16 }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRemove?.(card);
+                    }}
+                    disabled={!currentCount || !onRemove}
+                    className="h-6 w-6 rounded bg-slate-800 border border-slate-600 text-white hover:bg-slate-700 transition-colors flex items-center justify-center shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-slate-800"
+                    aria-label="Remove one copy"
+                  >
+                    <Minus className="h-3 w-3" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onStackClick?.();
+                    }}
+                    disabled={disabled}
+                    className="h-6 w-6 rounded bg-slate-800 border border-slate-600 text-white hover:bg-slate-700 transition-colors flex items-center justify-center shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-slate-800"
+                    aria-label="Add one copy"
+                  >
+                    <Plus className="h-3 w-3" />
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Card Info */}

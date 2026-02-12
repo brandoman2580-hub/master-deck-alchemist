@@ -2,7 +2,7 @@
  * RAG Retrieval: Retrieves cards using structured query + deck context
  */
 
-import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Card, DeckAnalysis } from "./types.ts";
 import type { StructuredQuery } from "./self-query.ts";
 // Note: detectCardRole is not exported from deck-analyzer, so we'll define it here
@@ -83,14 +83,17 @@ async function generateQueryEmbedding(text: string): Promise<number[]> {
   }
 }
 
+/** Banlist format for RPC: Master Duel or TCG */
+export type BanlistFormat = "MASTER_DUEL" | "TCG";
+
 /**
  * Retrieve cards using structured query and deck context
  */
 export async function retrieveCards(
   structuredQuery: StructuredQuery,
-  deckEmbedding: number[],
   deckAnalysis: DeckAnalysis,
-  supabase: SupabaseClient
+  supabase: SupabaseClient,
+  banlistFormat: BanlistFormat = "MASTER_DUEL"
 ): Promise<Card[]> {
   const {
     searchTerms,
@@ -140,7 +143,7 @@ export async function retrieveCards(
       exclude_ids: excludeCardIds,
       exclude_types: null,
       exclude_races: null,
-      banlist_format: "MASTER_DUEL", // Default, can be made configurable
+      banlist_format: banlistFormat,
       vector_weight: 0.7,
       fts_weight: 0.3,
       match_count: 50, // Request 50 candidates

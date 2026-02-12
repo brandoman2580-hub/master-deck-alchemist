@@ -32,6 +32,7 @@ interface CardBrowserProps {
   droppedCardIds: Set<number>;
   handleCardDoubleClick: (card: Card) => void;
   addCardToDeck: (card: Card, section: DeckSection) => void;
+  removeCardFromDeck?: (card: Card) => void;
 }
 
 export function CardBrowser({
@@ -40,6 +41,7 @@ export function CardBrowser({
   droppedCardIds,
   handleCardDoubleClick,
   addCardToDeck,
+  removeCardFromDeck,
 }: CardBrowserProps) {
   // Zustand store
   const cardList = useCardStore((state) => state.cardList);
@@ -171,8 +173,8 @@ export function CardBrowser({
 
   // TanStack Virtual setup - only create when browser tab is active
   // Note: gap option has a bug with dynamic measurement - bake spacing into estimateSize instead
-  const ROW_GAP = 4;
-  const CONTENT_HEIGHT = 122;
+  const ROW_GAP = 8;
+  const CONTENT_HEIGHT = 170;
   const virtualizer = useVirtualizer({
     count: filteredCards.length,
     getScrollElement: () => (activeTab === "browser" ? virtualContainerRef.current : null),
@@ -502,6 +504,7 @@ export function CardBrowser({
                                         handleCardDoubleClick(card);
                                       }
                                     }}
+                                    onRemove={removeCardFromDeck}
                                   />
                                   </div>
                                 </div>

@@ -12,24 +12,26 @@ import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { CardPreview } from "@/components/ui/card-preview";
 import Image from "next/image";
-import { X } from "lucide-react";
 import {
   fadeInVariants,
   SCALE,
   ANIMATION_DURATION,
   EASING,
 } from "@/lib/animations";
+import { getAllowedCopies } from "@/lib/helpers";
+import { Minus, Plus } from "lucide-react";
 import { AnimatePresence } from "framer-motion";
 import { getRarityBadge } from "@/lib/utils/rarityBadges";
 import { RarityBadge } from "@/components/ui/rarity-badge";
 import type { BanStatus, DeckMode } from "@/types/types";
 
-interface CardSectionProps {
+export interface CardSectionProps {
   section: DeckSection;
   cards: Card[];
   activeDragId: UniqueIdentifier | null;
   removingDeckCardIds: Set<string>;
   onRemove: (deckInstanceId: string, section: DeckSection) => void;
+  onAdd?: (card: Card, section: DeckSection) => void;
   count?: number;
   maxCount?: number;
   deckMode?: DeckMode;
@@ -55,7 +57,7 @@ const sectionHeadlines = {
 
 /**
  * Individual card copy component for deck builder
- * Shows one card instance with X button in upper right
+ * Shows one card instance with ban status badge (if limited) and plus/minus controls
  */
 function DeckCardCopy({
   card,
@@ -64,6 +66,8 @@ function DeckCardCopy({
   activeDragId,
   isBeingRemoved,
   onRemove,
+  onAdd,
+  canAddMore,
   deckMode,
   mdRarityOverride,
   banStatus = "Unlimited",
@@ -74,6 +78,8 @@ function DeckCardCopy({
   activeDragId: UniqueIdentifier | null;
   isBeingRemoved: boolean;
   onRemove: (deckInstanceId: string, section: DeckSection) => void;
+  onAdd?: (card: Card, section: DeckSection) => void;
+  canAddMore: boolean;
   deckMode?: DeckMode;
   mdRarityOverride?: string;
   banStatus?: string;
@@ -96,8 +102,8 @@ function DeckCardCopy({
   const style = transform && !isBeingRemoved
     ? { transform: CSS.Transform.toString(transform) }
     : isBeingRemoved
-    ? { transform: "none" }
-    : undefined;
+      ? { transform: "none" }
+      : undefined;
 
   return (
     <motion.div
@@ -108,9 +114,9 @@ function DeckCardCopy({
         pointerEvents: isBeingRemoved ? "none" : undefined,
       }}
       initial={{ opacity: 0, scale: SCALE.initial }}
-      animate={{ 
-        opacity: isBeingRemoved ? 0 : (isBeingDragged ? 0.3 : 1), 
-        scale: isBeingRemoved ? SCALE.initial : 1 
+      animate={{
+        opacity: isBeingRemoved ? 0 : (isBeingDragged ? 0.3 : 1),
+        scale: isBeingRemoved ? SCALE.initial : 1
       }}
       exit={{ opacity: 0, scale: SCALE.initial }}
       layout
@@ -125,7 +131,7 @@ function DeckCardCopy({
       <div
         {...listeners}
         {...attributes}
-        className="relative w-16 h-24 cursor-grab active:cursor-grabbing"
+        className="relative w-24 h-36 cursor-grab active:cursor-grabbing"
       >
         <CardPreview
           card={card}
@@ -135,8 +141,8 @@ function DeckCardCopy({
         >
           <div className="relative w-full h-full">
             <Image
-              width={64}
-              height={96}
+              width={120}
+              height={180}
               src={card.card_images?.[0]?.image_url_small || "/placeholder.svg"}
               alt={card.name}
               className="w-full h-full object-contain rounded shadow-sm"
@@ -148,7 +154,7 @@ function DeckCardCopy({
                 const rarity = mdRarityOverride ?? card.misc_info?.[0]?.md_rarity;
                 const rarityBadge = getRarityBadge(rarity, mdRarityOverride);
                 return rarityBadge ? (
-                  <div className="absolute top-0 right-0 z-20 transform translate-x-1/2 -translate-y-1/2">
+                  <div className="absolute top-1 right-1.5 z-20 drop-shadow-lg">
                     <RarityBadge
                       result={rarityBadge}
                       size="sm"
@@ -157,18 +163,49 @@ function DeckCardCopy({
                   </div>
                 ) : null;
               })()}
-            {/* X button in top-left corner of thumbnail */}
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onRemove(deckInstanceId, section);
-              }}
-              className="absolute -top-1.5 -left-1.5 h-5 w-5 rounded-full bg-white/10 border border-white/20 text-white hover:bg-white/20 hover:border-white/30 backdrop-blur-sm transition-colors flex items-center justify-center z-20 shadow-md"
-              aria-label="Remove card"
+            {/* Ban status badge for non-unlimited cards */}
+            {banStatus !== "Unlimited" && (
+              <div
+                className="absolute top-1.5 left-1.5 z-20 flex h-6 w-6 items-center justify-center rounded-full border-2 border-red-500 bg-black text-sm font-bold text-yellow-500 drop-shadow-lg"
+                aria-label={`Ban status: ${banStatus}`}
+              >
+                {banStatus === "Limited"
+                  ? "1"
+                  : banStatus === "Semi-Limited"
+                    ? "2"
+                    : "0"}
+              </div>
+            )}
+            {/* Plus/minus controls - 16px from bottom, inset from edges */}
+            <div
+              className="absolute left-1 right-1 flex items-center justify-center gap-1 z-20"
+              style={{ bottom: 16 }}
+              onClick={(e) => e.stopPropagation()}
             >
-              <X className="h-3 w-3" />
-            </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRemove(deckInstanceId, section);
+                }}
+                className="h-6 w-6 rounded bg-slate-800 border border-slate-600 text-white hover:bg-slate-700 transition-colors flex items-center justify-center shadow-md"
+                aria-label="Remove one copy"
+              >
+                <Minus className="h-3 w-3" />
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onAdd?.(card, section);
+                }}
+                disabled={!canAddMore || !onAdd}
+                className="h-6 w-6 rounded bg-slate-800 border border-slate-600 text-white hover:bg-slate-700 transition-colors flex items-center justify-center shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-slate-800"
+                aria-label="Add one copy"
+              >
+                <Plus className="h-3 w-3" />
+              </button>
+            </div>
           </div>
         </CardPreview>
       </div>
@@ -186,6 +223,7 @@ export function CardSection({
   activeDragId,
   removingDeckCardIds,
   onRemove,
+  onAdd,
   count = 0,
   maxCount = section === "mainDeck" ? 60 : 15,
   deckMode,
@@ -211,34 +249,25 @@ export function CardSection({
         <DeckDropZone id={section} isEmpty={cards.length === 0}>
           {cards.length === 0 ? (
             <motion.div
-              className="flex flex-col items-center justify-center text-muted-50 py-16 h-full min-h-[400px]"
+              className="flex flex-col items-center justify-center text-muted-50 py-16 h-full min-h-[400px] px-4"
               initial="hidden"
               animate="visible"
               variants={fadeInVariants}
             >
-              <motion.div
-                animate={{
-                  scale: [1, 1.05, 1],
-                  opacity: [0.4, 0.6, 0.4],
-                }}
-                transition={{
-                  duration: 2,
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                }}
-              >
-                <Icon className="h-16 w-16 mb-4 text-white/40" />
-              </motion.div>
+              <Icon className="h-16 w-16 mb-4 text-white/40" />
               <span className="text-base font-semibold text-white/60 mb-2">
                 {sectionHeadlines[section]}
               </span>
-              <span className="text-sm text-white/60 font-medium">
+              <span className="text-sm text-white/60 font-medium mb-2">
                 {count} / {maxCount}
               </span>
+              <p className="text-xs text-white/50 text-center max-w-xs mt-2">
+                Drag and drop cards here, or click a card in the browser to add it to your deck.
+              </p>
             </motion.div>
           ) : (
             <motion.div
-              className="grid grid-cols-4 sm:grid-cols-5 lg:grid-cols-6 xl:grid-cols-4 gap-3 p-4 justify-items-center"
+              className="grid grid-cols-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-6 p-4 justify-items-center"
             >
               <AnimatePresence mode="popLayout">
                 {sortedCards.map((card) => {
@@ -246,6 +275,10 @@ export function CardSection({
                   const enrichedCard = poolCard
                     ? { ...card, card_prices: poolCard.card_prices ?? card.card_prices }
                     : card;
+                  const countOfCard = cards.filter((c) => c.id === card.id).length;
+                  const allowed = getAllowedCopies(card, banlist);
+                  const canAddMore =
+                    countOfCard < allowed && count < (maxCount ?? 0);
                   return (
                     <DeckCardCopy
                       key={card.deckInstanceId}
@@ -255,6 +288,8 @@ export function CardSection({
                       activeDragId={activeDragId}
                       isBeingRemoved={removingDeckCardIds.has(card.deckInstanceId)}
                       onRemove={onRemove}
+                      onAdd={onAdd}
+                      canAddMore={canAddMore}
                       deckMode={deckMode}
                       mdRarityOverride={mdRarityMap?.get(card.id)}
                       banStatus={banlist[card.name] || "Unlimited"}

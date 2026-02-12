@@ -1,10 +1,18 @@
 /**
- * Phase 4: LLM Response Generation
+ * LLM Response Generation
  * Generates natural language response with card recommendations
+ * Uses optimized system prompt for high-quality Yu-Gi-Oh! deck building guidance.
  */
 
 import type { DeckAnalysis, Card } from "./types.ts";
 import type { Message } from "./self-query.ts";
+import {
+  DECK_ASSISTANT_SYSTEM_PROMPT,
+  buildDeckContextText,
+  buildConversationContext,
+  toDeckContextForPrompt,
+  type DeckFormat,
+} from "./prompts.ts";
 
 export interface Recommendation {
   cardId: number;
@@ -30,10 +38,10 @@ export interface ResponseOutput {
 }
 
 /**
- * Call Groq LLM API
+ * Call Groq LLM API with configurable system and user messages
  */
 async function callGroqLLM(
-  prompt: string,
+  messages: Array<{ role: "system" | "user"; content: string }>,
   apiKey: string,
   modelName: string
 ): Promise<string> {
@@ -56,19 +64,10 @@ async function callGroqLLM(
       },
       body: JSON.stringify({
         model: modelName,
-        messages: [
-          {
-            role: "system",
-            content: "You are a helpful Yu-Gi-Oh deck assistant. Return only valid JSON.",
-          },
-          {
-            role: "user",
-            content: prompt,
-          },
-        ],
-        temperature: 0.3,
+        messages,
+        temperature: 0.7, // Slightly higher for conversational tone
         top_p: 0.9,
-        max_tokens: 2000, // Increased to support up to 15 cards (each card needs ~100-150 tokens)
+        max_tokens: 2000, // Support up to 15 cards
         response_format: { type: "json_object" },
       }),
     },
@@ -123,19 +122,6 @@ function isRatioQuestion(query: string): boolean {
 }
 
 /**
- * Get current card counts from deck
- */
-function getCardCounts(deck: { mainDeck: Array<{ cardId: number; count?: number }> }): Map<string, number> {
-  const counts = new Map<string, number>();
-  deck.mainDeck.forEach(dc => {
-    // We'll need card names, but for now we'll use cardId as placeholder
-    // This will be enriched with actual card names in the calling function
-    counts.set(String(dc.cardId), dc.count || 1);
-  });
-  return counts;
-}
-
-/**
  * Generate natural language response with card recommendations
  */
 export async function generateRecommendations(
@@ -146,20 +132,21 @@ export async function generateRecommendations(
   apiKey: string,
   modelName: string = "llama-3.3-70b-versatile",
   deckCardIds: number[] = [],
-  deckCards?: Array<{ cardId: number; cardName: string; count: number }> // Current deck cards with names
+  deckCards?: Array<{ cardId: number; cardName: string; count: number }>,
+  deckFormat: DeckFormat = "Master Duel"
 ): Promise<ResponseOutput> {
   // Check if this is a ratio question
   const isRatio = isRatioQuestion(userQuery);
-  
+
   if (isRatio && deckCards && deckCards.length > 0) {
-    // Handle ratio suggestions
     return await generateRatioSuggestions(
       userQuery,
       deckAnalysis,
       deckCards,
       history,
       apiKey,
-      modelName
+      modelName,
+      deckFormat,
     );
   }
 
@@ -170,61 +157,51 @@ export async function generateRecommendations(
     };
   }
 
-  // Build candidate list for prompt with archetype info
+  const allCardNames = deckCards?.map((dc) => dc.cardName) ?? [];
+  const deckContext = toDeckContextForPrompt(deckAnalysis, deckFormat, allCardNames);
+  const deckContextText = buildDeckContextText(deckContext);
+  const conversationContext = buildConversationContext(history, 5);
+
   const candidateList = candidates.slice(0, 15).map((c, i) => {
-    const archetypeInfo = c.archetype ? `, Archetype: ${c.archetype}` : '';
-    const raceInfo = c.race ? `, Race: ${c.race}` : '';
+    const archetypeInfo = c.archetype ? `, Archetype: ${c.archetype}` : "";
+    const raceInfo = c.race ? `, Race: ${c.race}` : "";
     return `${i + 1}. ${c.name} (ID: ${c.id}, ${c.type}${archetypeInfo}${raceInfo}) - ${(c.desc || "").substring(0, 150)}`;
-  }).join('\n');
+  }).join("\n");
 
-  // Build conversation history context
-  const historyContext = history.length > 0
-    ? `\nRecent conversation:\n${history.slice(-3).map(m => `${m.role}: ${m.content}`).join('\n')}`
-    : "";
-
-  // Get deck archetypes for emphasis
-  const deckArchetypes = deckAnalysis.archetype ? [deckAnalysis.archetype] : [];
-  const deckRaces = deckAnalysis.cardRoles ? Object.keys(deckAnalysis.cardRoles).filter(k => k.includes('dragon') || k.includes('fiend')) : [];
-  
-  // Extract number from user query (e.g., "10 cards", "show me 5", etc.)
-  const numberMatch = userQuery.match(/\b(\d+)\s*(?:cards?|card|recommendations?|suggestions?)\b/i) || 
-                      userQuery.match(/\b(?:show|give|recommend|suggest)\s+(?:me\s+)?(\d+)\b/i) ||
-                      userQuery.match(/\b(\d+)\b/);
+  const numberMatch =
+    userQuery.match(/\b(\d+)\s*(?:cards?|card|recommendations?|suggestions?)\b/i) ||
+    userQuery.match(/\b(?:show|give|recommend|suggest)\s+(?:me\s+)?(\d+)\b/i) ||
+    userQuery.match(/\b(\d+)\b/);
   const requestedCount = numberMatch ? parseInt(numberMatch[1], 10) : null;
-  const recommendationCount = requestedCount && requestedCount > 0 && requestedCount <= 15 
-    ? requestedCount 
-    : (requestedCount && requestedCount > 15 ? 15 : 5); // Default to 5, max 15
-  
-  const prompt = `You are a helpful Yu-Gi-Oh deck assistant. The user asked: "${userQuery}"
+  const recommendationCount =
+    requestedCount && requestedCount > 0 && requestedCount <= 15
+      ? requestedCount
+      : requestedCount && requestedCount > 15
+        ? 15
+        : 5;
 
-Their deck:
-- ${deckAnalysis.deckSize.main} cards in main deck
-- Primary Archetype: ${deckAnalysis.archetype || "Mixed"} ${deckArchetypes.length > 0 ? `(PRIORITY: Prefer cards from ${deckArchetypes.join(', ')} archetype)` : ''}
-- Playstyle: ${deckAnalysis.playstyle}
-- Weaknesses: ${deckAnalysis.weaknesses.join(', ') || 'None identified'}
-- Card roles: ${JSON.stringify(deckAnalysis.cardRoles)}
-${historyContext}
+  const userPrompt = `${deckContextText}${conversationContext}
 
-CRITICAL: The user's deck uses ${deckAnalysis.archetype || "mixed"} archetype. When suggesting cards:
-- STRONGLY prefer cards that match their archetype (${deckAnalysis.archetype || "mixed"})
-- If no archetype matches exist, prefer cards with compatible races/types
-- Only suggest cards from different archetypes if they provide critical utility AND have high synergy
-- Dark Spellcaster monsters are NOT appropriate for Dragon/Fiend decks unless they provide essential utility
+# USER REQUEST
+"${userQuery}"
 
-Available cards to recommend (choose from these IDs only):
+# AVAILABLE CANDIDATE CARDS (MUST use cardId from this list only - NEVER invent IDs or card names)
 ${candidateList}
 
-Provide:
-1. A brief, friendly response (2-3 sentences) explaining your recommendations
-2. Recommend ${recommendationCount} cards from the list above with:
-   - Why each card helps their specific request
-   - Priority (high/medium/low) based on how well it addresses their need
-   - Impact estimate (0.0-1.0) - how much this will improve their deck
-   - Synergy score (0.0-1.0) - how well it fits their deck archetype/playstyle (MUST be high for archetype matches)
+Valid card IDs: [${candidates.slice(0, 15).map((c) => c.id).join(", ")}]
+CRITICAL: Every recommendation MUST use a cardId from the valid list above. Any other cardId will be rejected.
 
-Return JSON:
+# INSTRUCTIONS
+1. Acknowledge the user's deck and request
+2. Provide a brief, friendly response (2-3 sentences) explaining your recommendations
+3. Recommend exactly ${recommendationCount} cards from the list above
+4. For each recommendation: explain WHY it addresses their need, assign priority (high/medium/low), impactEst (0.0-1.0), synergyScore (0.0-1.0)
+5. Synergy over power: prefer archetype-specific cards when the deck supports them
+6. NEVER suggest cards already in the deck (see "Cards Currently in Deck" above)
+
+Return JSON only:
 {
-  "text": "Your friendly response here (2-3 sentences)",
+  "text": "Your friendly response (2-3 sentences)",
   "recommendations": [
     {
       "cardId": 12345,
@@ -235,35 +212,33 @@ Return JSON:
       "synergyScore": 0.8
     }
   ]
-}
+}`;
 
-RULES:
-1. CRITICAL: You MUST return exactly ${recommendationCount} cards in the recommendations array. Do not return fewer cards.
-2. Pick ${recommendationCount} cards from the list above (use exact cardId and cardName from the list)
-3. Explain how each card addresses "${userQuery}"
-4. CRITICAL: Prioritize cards matching ${deckAnalysis.archetype || "the deck's"} archetype
-5. If suggesting non-archetype cards, ensure synergyScore > 0.7 and explain why it's essential
-6. Priority should reflect urgency: "high" for critical improvements, "medium" for good options, "low" for alternatives
-7. Return ONLY the JSON object, no markdown, no code blocks
-8. Ensure all cardIds match cards from the available list
-9. The recommendations array MUST contain exactly ${recommendationCount} items`;
+  const messages = [
+    { role: "system" as const, content: DECK_ASSISTANT_SYSTEM_PROMPT },
+    { role: "user" as const, content: userPrompt },
+  ];
 
   try {
-    const response = await callGroqLLM(prompt, apiKey, modelName);
+    const response = await callGroqLLM(messages, apiKey, modelName);
     const parsed = extractJson(response);
 
     console.log(`🔍 LLM Response: ${JSON.stringify(parsed).substring(0, 500)}...`);
     console.log(`📋 Parsed recommendations count: ${parsed.recommendations?.length || 0}`);
     console.log(`📋 Available candidates count: ${candidates.length}`);
 
-    // Validate and normalize recommendations
+    // Validate and normalize recommendations - STRICT: only accept cardIds from candidate pool (anti-hallucination)
+    const validCardIds = new Set(candidates.map((c) => c.id));
+    const candidateById = new Map(candidates.map((c) => [c.id, c]));
     const seenCardIds = new Set<number>();
     const recommendations: Recommendation[] = (parsed.recommendations || []).map((rec: any) => {
-      // Find the candidate card to validate
-      const candidate = candidates.find(c => c.id === rec.cardId || c.name === rec.cardName);
-      
+      const recCardId = typeof rec.cardId === "number" ? rec.cardId : parseInt(rec.cardId, 10);
+      if (!Number.isInteger(recCardId) || !validCardIds.has(recCardId)) {
+        console.warn(`⚠️ Hallucination rejected: cardId ${rec.cardId} not in candidate pool`);
+        return null;
+      }
+      const candidate = candidateById.get(recCardId);
       if (!candidate) {
-        console.warn(`⚠️ Recommendation references unknown card: ${rec.cardId || rec.cardName}`);
         return null;
       }
 
@@ -400,33 +375,34 @@ async function generateRatioSuggestions(
   deckCards: Array<{ cardId: number; cardName: string; count: number }>,
   history: Message[],
   apiKey: string,
-  modelName: string
+  modelName: string,
+  deckFormat: DeckFormat = "Master Duel"
 ): Promise<ResponseOutput> {
-  // Build deck card list with counts
   const deckCardList = deckCards
     .map((dc, i) => `${i + 1}. ${dc.cardName}: ${dc.count} copies`)
-    .join('\n');
+    .join("\n");
 
-  const historyContext = history.length > 0
-    ? `\nRecent conversation:\n${history.slice(-3).map(m => `${m.role}: ${m.content}`).join('\n')}`
-    : "";
+  const allCardNames = deckCards.map((dc) => dc.cardName);
+  const deckContext = toDeckContextForPrompt(deckAnalysis, deckFormat, allCardNames);
+  const deckContextText = buildDeckContextText(deckContext);
+  const conversationContext = buildConversationContext(history, 5);
 
-  const prompt = `You are a helpful Yu-Gi-Oh deck assistant. The user asked: "${userQuery}"
+  const userPrompt = `${deckContextText}${conversationContext}
 
-Their deck:
-- ${deckAnalysis.deckSize.main} cards in main deck
-- Archetype: ${deckAnalysis.archetype || "Mixed"}
-- Playstyle: ${deckAnalysis.playstyle}
-- Weaknesses: ${deckAnalysis.weaknesses.join(', ') || 'None identified'}
-- Card roles: ${JSON.stringify(deckAnalysis.cardRoles)}
-${historyContext}
+# USER REQUEST
+"${userQuery}"
 
-Current deck composition:
+# CURRENT DECK COMPOSITION (with counts)
 ${deckCardList}
 
+# INSTRUCTIONS
 The user is asking about card ratios. Analyze their deck and provide specific ratio adjustment suggestions.
+- Consider deck size: 40-card decks maximize consistency; 60-card decks need more starters
+- Starters: aim for 9-12 in 40-card decks
+- For combo decks: prioritize extenders and starters; avoid cutting key combo pieces
+- For control decks: prioritize hand traps and removal
 
-Return JSON:
+Return JSON only:
 {
   "text": "Your friendly response explaining the ratio adjustments (2-3 sentences)",
   "ratioSuggestions": [
@@ -434,7 +410,7 @@ Return JSON:
       "cardName": "Exact card name from deck",
       "currentCount": 3,
       "suggestedCount": 2,
-      "reason": "Why this adjustment helps (e.g., 'Too many copies causing bricking', 'Reduce for consistency')"
+      "reason": "Why this adjustment helps"
     }
   ]
 }
@@ -442,21 +418,32 @@ Return JSON:
 RULES:
 1. Only suggest adjustments for cards that are actually in their deck (use exact card names from the list above)
 2. Provide 3-8 ratio suggestions
-3. Format: "Card Name: X → Y" where X is current count and Y is suggested count
-4. Explain why each adjustment improves the deck
-5. Consider deck size constraints (main deck must stay at ${deckAnalysis.deckSize.main} cards)
-6. Return ONLY the JSON object, no markdown, no code blocks`;
+3. Main deck must stay at ${deckAnalysis.deckSize.main} cards total
+4. Return ONLY the JSON object, no markdown, no code blocks`;
+
+  const messages = [
+    { role: "system" as const, content: DECK_ASSISTANT_SYSTEM_PROMPT },
+    { role: "user" as const, content: userPrompt },
+  ];
 
   try {
-    const response = await callGroqLLM(prompt, apiKey, modelName);
+    const response = await callGroqLLM(messages, apiKey, modelName);
     const parsed = extractJson(response);
 
-    const ratioSuggestions: RatioSuggestion[] = (parsed.ratioSuggestions || []).map((rs: any) => ({
-      cardName: rs.cardName || "",
-      currentCount: typeof rs.currentCount === "number" ? rs.currentCount : 0,
-      suggestedCount: typeof rs.suggestedCount === "number" ? rs.suggestedCount : 0,
-      reason: rs.reason || "This adjustment may improve deck consistency.",
-    })).filter((rs: RatioSuggestion) => rs.cardName && rs.currentCount > 0);
+    const deckCardNames = new Set(deckCards.map((dc) => dc.cardName));
+    const ratioSuggestions: RatioSuggestion[] = (parsed.ratioSuggestions || [])
+      .map((rs: any) => ({
+        cardName: String(rs.cardName || "").trim(),
+        currentCount: typeof rs.currentCount === "number" ? rs.currentCount : 0,
+        suggestedCount: typeof rs.suggestedCount === "number" ? rs.suggestedCount : 0,
+        reason: rs.reason || "This adjustment may improve deck consistency.",
+      }))
+      .filter(
+        (rs: RatioSuggestion) =>
+          rs.cardName &&
+          deckCardNames.has(rs.cardName) &&
+          rs.currentCount > 0
+      );
 
     return {
       text: parsed.text || `Here are some ratio adjustments that may improve your deck:`,

@@ -3,31 +3,9 @@
  * Uses database function for efficient computation (no API calls needed)
  */
 
-import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Deck, DeckAnalysis } from "./types.ts";
 import { analyzeDeck } from "./deck-analyzer.ts";
-
-/**
- * Generate deck fingerprint (client-side version)
- * Should match the database function logic
- */
-function generateDeckFingerprint(deck: Deck): string {
-  // Sort cards by ID for deterministic hashing
-  const sortedMain = [...deck.mainDeck].sort((a, b) => a.cardId - b.cardId);
-  const sortedExtra = [...deck.extraDeck].sort((a, b) => a.cardId - b.cardId);
-  const sortedSide = [...deck.sideDeck].sort((a, b) => a.cardId - b.cardId);
-  
-  const deckString = JSON.stringify({
-    main: sortedMain,
-    extra: sortedExtra,
-    side: sortedSide,
-  });
-  
-  // Simple hash (in production, use crypto.subtle.digest for SHA-256)
-  // For now, we'll rely on the database function for fingerprint generation
-  // This is just a placeholder - actual fingerprint should come from DB
-  return deckString; // Will be replaced by DB function call
-}
 
 /**
  * Gets or computes deck embedding and analysis

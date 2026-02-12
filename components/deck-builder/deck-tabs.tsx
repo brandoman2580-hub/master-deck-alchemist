@@ -12,7 +12,6 @@ import { Layers, Zap, Shield } from "lucide-react";
 import {
   SPRING_CONFIG,
   useCounterAnimation,
-  useHoverAnimation,
   fadeInVariants,
 } from "@/lib/animations";
 
@@ -46,6 +45,7 @@ export function DeckTabs({
   activeDragId,
   removingDeckCardIds,
   removeCardFromDeck,
+  addCardToDeck,
   mdRarityMap,
   banlist = {},
   cardLookup,
@@ -119,9 +119,6 @@ export function DeckTabs({
   const extraCount = useCounterAnimation(stats.extraCount);
   const sideCount = useCounterAnimation(stats.sideCount);
 
-  // Hover animation for tab buttons
-  const tabHover = useHoverAnimation(1.02, 0);
-
   return (
     <CardContent className="p-0">
       <Tabs
@@ -163,7 +160,6 @@ export function DeckTabs({
                 background: "transparent",
                 position: "relative",
               }}
-              {...tabHover}
             >
               <Layers className="h-4 w-4" />
               <span>Main</span>
@@ -185,7 +181,6 @@ export function DeckTabs({
                 background: "transparent",
                 position: "relative",
               }}
-              {...tabHover}
             >
               <Zap className="h-4 w-4" />
               <span>Extra</span>
@@ -208,7 +203,6 @@ export function DeckTabs({
                   background: "transparent",
                   position: "relative",
                 }}
-                {...tabHover}
               >
                 <Shield className="h-4 w-4" />
                 <span>Side</span>
@@ -233,6 +227,7 @@ export function DeckTabs({
               activeDragId={activeDragId}
               removingDeckCardIds={removingDeckCardIds}
               onRemove={handleRemove}
+              onAdd={addCardToDeck}
               count={stats.mainCount}
               maxCount={60}
               deckMode={deckMode}
@@ -258,6 +253,7 @@ export function DeckTabs({
               activeDragId={activeDragId}
               removingDeckCardIds={removingDeckCardIds}
               onRemove={handleRemove}
+              onAdd={addCardToDeck}
               count={stats.extraCount}
               maxCount={15}
               deckMode={deckMode}
@@ -283,6 +279,7 @@ export function DeckTabs({
               activeDragId={activeDragId}
               removingDeckCardIds={removingDeckCardIds}
               onRemove={handleRemove}
+              onAdd={addCardToDeck}
               count={stats.sideCount}
               maxCount={15}
               deckMode={deckMode}

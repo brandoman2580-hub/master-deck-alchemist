@@ -128,7 +128,20 @@ export async function generateStructuredQuery(
   const isVague = vaguePatterns.some(pattern => pattern.test(userQuery.trim()));
   
   if (isVague && conversationHistory.length === 0) {
-    // First message and vague - ask for clarification
+    // First message and vague - ask for clarification with actionable options
+    const starterCount = deckAnalysis.cardRoles?.starters ?? 0;
+    const handTrapCount = deckAnalysis.cardRoles?.interruptions ?? 0;
+    const mainSize = deckAnalysis.deckSize?.main ?? 40;
+
+    let contextualHint = "";
+    if (starterCount < 6 && mainSize >= 40) {
+      contextualHint =
+        " I notice you have relatively few starters—consistency might be a good focus.";
+    } else if (handTrapCount < 6 && mainSize >= 40) {
+      contextualHint =
+        " I notice you have few hand traps—interaction could help when going second.";
+    }
+
     return {
       searchTerms: [],
       filters: {},
@@ -136,7 +149,15 @@ export async function generateStructuredQuery(
       excludeArchetypes: deckArchetypes,
       intent: "general",
       needsClarification: true,
-      clarificationQuestion: "What specific aspect of your deck would you like to improve? For example:\n- Consistency (draw power, search effects)\n- Power (stronger combos, boss monsters)\n- Interaction (hand traps, interruptions)\n- Tech choices (side deck options, counters)",
+      clarificationQuestion: `What would you like to focus on?${contextualHint}
+
+**Consistency** – Draw power, search effects, more starters
+**Interaction** – Hand traps to disrupt opponents
+**Power** – Stronger combos, boss monsters, extenders
+**Going Second** – Board breakers for when you lose the coin flip
+**Tech Choices** – Side deck options, meta counters
+
+Let me know and I'll recommend specific cards!`,
     };
   }
 

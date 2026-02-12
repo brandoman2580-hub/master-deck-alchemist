@@ -12,6 +12,8 @@ import { loadEnv } from "./load-env.ts";
 // Load environment variables from .env files
 await loadEnv();
 
+const apiKey = Deno.env.get("GROQ_API_KEY") || "test-key";
+
 // Mock deck analysis
 const mockDeckAnalysis: DeckAnalysis = {
   archetype: "Blue-Eyes",
@@ -75,13 +77,15 @@ Deno.test("generateRecommendations - empty candidates returns fallback", async (
     mockDeckAnalysis,
     [],
     history,
+    apiKey,
+    "llama-3.3-70b-versatile",
     deckCardIds,
   );
 
   assertExists(result);
   assertEquals(typeof result.text, "string");
   assertEquals(Array.isArray(result.recommendations), true);
-  assertEquals(result.recommendations.length, 0);
+  assertEquals(result.recommendations?.length ?? 0, 0);
   assertEquals(result.text.includes("Could you provide more details"), true);
 });
 
@@ -95,6 +99,8 @@ Deno.test("generateRecommendations - with candidates returns recommendations", a
     mockDeckAnalysis,
     mockCards,
     history,
+    apiKey,
+    "llama-3.3-70b-versatile",
     deckCardIds,
   );
 
@@ -102,9 +108,9 @@ Deno.test("generateRecommendations - with candidates returns recommendations", a
   assertEquals(typeof result.text, "string");
   assertEquals(result.text.length > 0, true);
   assertEquals(Array.isArray(result.recommendations), true);
-  
+
   // Should have recommendations (either from LLM or fallback)
-  if (result.recommendations.length > 0) {
+  if (result.recommendations && result.recommendations.length > 0) {
     const rec = result.recommendations[0];
     assertExists(rec.cardId);
     assertExists(rec.cardName);
@@ -125,13 +131,15 @@ Deno.test("generateRecommendations - validates card IDs", async () => {
     mockDeckAnalysis,
     mockCards,
     history,
+    apiKey,
+    "llama-3.3-70b-versatile",
     deckCardIds,
   );
 
   assertExists(result);
-  
+
   // All recommendations should reference valid card IDs
-  result.recommendations.forEach(rec => {
+  (result.recommendations ?? []).forEach(rec => {
     const cardExists = mockCards.some(c => c.id === rec.cardId);
     assertEquals(cardExists, true, `Card ID ${rec.cardId} not found in candidates`);
   });
@@ -147,13 +155,15 @@ Deno.test("generateRecommendations - excludes deck cards", async () => {
     mockDeckAnalysis,
     mockCards,
     history,
+    apiKey,
+    "llama-3.3-70b-versatile",
     deckCardIds,
   );
 
   assertExists(result);
-  
+
   // Recommendations should mark cards already in deck as canAdd: false
-  result.recommendations.forEach(rec => {
+  (result.recommendations ?? []).forEach(rec => {
     if (rec.cardId === 12345) {
       assertEquals(rec.canAdd, false, "Card in deck should have canAdd: false");
     }
@@ -174,6 +184,8 @@ Deno.test("generateRecommendations - includes conversation history", async () =>
     mockDeckAnalysis,
     mockCards,
     history,
+    apiKey,
+    "llama-3.3-70b-versatile",
     deckCardIds,
   );
 
@@ -192,12 +204,14 @@ Deno.test("generateRecommendations - normalizes priority values", async () => {
     mockDeckAnalysis,
     mockCards,
     history,
+    apiKey,
+    "llama-3.3-70b-versatile",
     deckCardIds,
   );
 
   assertExists(result);
-  
-  result.recommendations.forEach(rec => {
+
+  (result.recommendations ?? []).forEach(rec => {
     assertEquals(
       ["high", "medium", "low"].includes(rec.priority),
       true,
@@ -216,12 +230,14 @@ Deno.test("generateRecommendations - clamps impact and synergy scores", async ()
     mockDeckAnalysis,
     mockCards,
     history,
+    apiKey,
+    "llama-3.3-70b-versatile",
     deckCardIds,
   );
 
   assertExists(result);
-  
-  result.recommendations.forEach(rec => {
+
+  (result.recommendations ?? []).forEach(rec => {
     if (rec.impactEst !== undefined) {
       assertEquals(rec.impactEst >= 0, true);
       assertEquals(rec.impactEst <= 1, true);
@@ -233,7 +249,7 @@ Deno.test("generateRecommendations - clamps impact and synergy scores", async ()
   });
 });
 
-Deno.test("generateRecommendations - limits recommendations to 10", async () => {
+Deno.test("generateRecommendations - limits recommendations to 15", async () => {
   const query = "I need cards";
   const history: Message[] = [];
   const deckCardIds: number[] = [];
@@ -251,11 +267,13 @@ Deno.test("generateRecommendations - limits recommendations to 10", async () => 
     mockDeckAnalysis,
     manyCards,
     history,
+    apiKey,
+    "llama-3.3-70b-versatile",
     deckCardIds,
   );
 
   assertExists(result);
-  assertEquals(result.recommendations.length <= 10, true);
+  assertEquals((result.recommendations ?? []).length <= 15, true);
 });
 
 Deno.test("generateRecommendations - fallback when LLM fails", async () => {
@@ -270,6 +288,8 @@ Deno.test("generateRecommendations - fallback when LLM fails", async () => {
     mockDeckAnalysis,
     mockCards,
     history,
+    apiKey,
+    "llama-3.3-70b-versatile",
     deckCardIds,
   );
 
@@ -277,5 +297,5 @@ Deno.test("generateRecommendations - fallback when LLM fails", async () => {
   assertEquals(typeof result.text, "string");
   assertEquals(result.text.length > 0, true);
   // Should always have recommendations (either from LLM or fallback)
-  assertEquals(result.recommendations.length > 0, true);
+  assertEquals((result.recommendations ?? []).length > 0, true);
 });

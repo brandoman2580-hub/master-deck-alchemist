@@ -1,6 +1,6 @@
 /**
  * Deck Assistant Edge Function
- * Phase 2 & 3: Deck Analysis, Embedding System, and Self-Querying Retrieval
+ * Deck Analysis, Embedding System, and Self-Querying Retrieval
  * 
  * Provides endpoints for:
  * - Getting/computing deck embeddings
@@ -13,10 +13,10 @@ import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { corsHeaders } from "../_shared/cors.ts";
 import { getOrComputeDeckEmbedding } from "./deck-embedder.ts";
 import { analyzeDeck } from "./deck-analyzer.ts";
-import { generateStructuredQuery, type StructuredQuery } from "./self-query.ts";
+import { generateStructuredQuery } from "./self-query.ts";
 import { retrieveCards } from "./rag-retrieval.ts";
-import { generateRecommendations } from "./response-generator.ts";
-import type { Deck, DeckAnalysis, Card } from "./types.ts";
+import { generateRecommendations } from "./response-generator.ts"; // Uses prompts.ts
+import type { Deck, Card } from "./types.ts";
 import type { Message } from "./self-query.ts";
 
 Deno.serve(async (req) => {
@@ -191,11 +191,12 @@ Deno.serve(async (req) => {
     // Load deck from database if deck_id provided
     let deckData: Deck | null = null;
     let actualDeckId: string | null = null;
+    let deckMode: string | undefined;
 
     if (deck_id) {
       const { data: deckRecord, error: deckError } = await supabase
         .from("decks")
-        .select("id, cards, user_id")
+        .select("id, cards, user_id, mode")
         .eq("id", deck_id)
         .eq("user_id", user.id)
         .single();
@@ -211,6 +212,7 @@ Deno.serve(async (req) => {
       }
 
       actualDeckId = deckRecord.id;
+      deckMode = deckRecord.mode as string | undefined;
       const cards = deckRecord.cards as any;
       deckData = {
         mainDeck: (cards?.main || []).map((c: any) => ({
@@ -227,8 +229,10 @@ Deno.serve(async (req) => {
         })),
       };
     } else if (deck) {
-      // Use provided deck data
-      deckData = deck as Deck;
+      // Use provided deck data (mode may be in deck object from client)
+      const deckFromClient = deck as Deck & { mode?: string };
+      deckData = deckFromClient;
+      deckMode = deckFromClient.mode;
       actualDeckId = null; // Will need to be provided or created
     }
 
@@ -336,6 +340,9 @@ Deno.serve(async (req) => {
           );
         }
 
+        const deckFormat: "TCG" | "Master Duel" =
+          deckMode === "TCG" ? "TCG" : "Master Duel"; // Default to Master Duel if mode unknown
+
         return await handleChatRequest(
           user_query,
           actualDeckId,
@@ -346,6 +353,7 @@ Deno.serve(async (req) => {
           supabase,
           groqApiKey,
           modelName,
+          deckFormat,
         );
 
       default:
@@ -383,7 +391,8 @@ async function handleChatRequest(
   conversationId: string | undefined,
   supabase: SupabaseClient,
   apiKey: string,
-  modelName: string
+  modelName: string,
+  deckFormat: "TCG" | "Master Duel" = "Master Duel"
 ): Promise<Response> {
   console.log("🚀 [deck-assistant/index.ts] handleChatRequest called");
   console.log(`📝 User query: "${userQuery}"`);
@@ -431,9 +440,8 @@ async function handleChatRequest(
       content: m.content,
     }));
 
-    // 3. Get or compute deck embedding + analysis
-    const { embedding: deckEmbedding, analysis: deckAnalysis } =
-      await getOrComputeDeckEmbedding(
+    // 3. Get or compute deck embedding + analysis (embedding cached for consistency)
+    const { analysis: deckAnalysis } = await getOrComputeDeckEmbedding(
         deck,
         deckId,
         userId,
@@ -553,11 +561,14 @@ async function handleChatRequest(
     console.log(`🔍 [deck-assistant/index.ts] Retrieving cards (isRatioQuestion: ${isRatioQuestion})`);
     console.log(`📊 [deck-assistant/index.ts] Structured query: ${JSON.stringify(structuredQuery)}`);
     
+    const banlistFormat =
+      deckFormat === "TCG" ? "TCG" : "MASTER_DUEL";
+
     const candidates = isRatioQuestion ? [] : await retrieveCards(
       structuredQuery,
-      deckEmbedding,
       deckAnalysis,
       supabase,
+      banlistFormat,
     );
     
     console.log(`📊 [deck-assistant/index.ts] RAG retrieval returned ${candidates.length} candidates`);
@@ -579,6 +590,7 @@ async function handleChatRequest(
       modelName,
       deckCardIds,
       deckCardsWithNames, // Pass deck cards for ratio suggestions
+      deckFormat,
     );
     
     console.log(`✅ [deck-assistant/index.ts] Response received:`);

@@ -327,9 +327,9 @@ Deno.test({
     console.log("🎯 Step 3: Retrieving cards...");
     const candidates = await retrieveCards(
       structuredQuery,
-      deckEmbedding,
       deckAnalysis,
       supabase,
+      "MASTER_DUEL",
     );
 
     assertExists(candidates);

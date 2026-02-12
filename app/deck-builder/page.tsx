@@ -400,6 +400,27 @@ export default function DeckBuilder() {
     [handleAddCardToDeck],
   );
 
+  // Remove one copy of a card from the deck (for card browser minus button)
+  const handleRemoveOneCopy = useCallback(
+    (card: Card) => {
+      const mainMatch = currentDeck.mainDeck.find((c) => c.id === card.id);
+      if (mainMatch) {
+        handleRemoveCardFromDeck(mainMatch.deckInstanceId, "mainDeck");
+        return;
+      }
+      const extraMatch = currentDeck.extraDeck.find((c) => c.id === card.id);
+      if (extraMatch) {
+        handleRemoveCardFromDeck(extraMatch.deckInstanceId, "extraDeck");
+        return;
+      }
+      const sideMatch = currentDeck.sideDeck.find((c) => c.id === card.id);
+      if (sideMatch) {
+        handleRemoveCardFromDeck(sideMatch.deckInstanceId, "sideDeck");
+      }
+    },
+    [currentDeck, handleRemoveCardFromDeck],
+  );
+
   const stats = getDeckStats();
   const pageRef = useRef<HTMLDivElement>(null);
 
@@ -533,6 +554,7 @@ export default function DeckBuilder() {
                     droppedCardIds={droppedCardIds}
                     handleCardDoubleClick={handleCardDoubleClick}
                     addCardToDeck={handleAddCardToDeck}
+                    removeCardFromDeck={handleRemoveOneCopy}
                   />
               </div>
             </div>
