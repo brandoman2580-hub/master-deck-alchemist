@@ -112,6 +112,7 @@ export type SearchParams = {
   effect?: string;
   atkRange?: string;
   defRange?: string;
+  banStatus?: string;
 };
 
 export type SignupFormState = {

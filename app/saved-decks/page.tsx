@@ -4,8 +4,8 @@ import { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent } from "../../components/ui/card";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Plus } from "lucide-react";
 import {
   getUserDecks,
   deleteDeck,
@@ -32,7 +32,7 @@ export default function SavedDecks() {
 
   const user = useUserStore((state) => state.user);
   const router = useRouter();
-  const { loadDeck } = useDeck();
+  const { loadDeck, copyDeck, clearDeck } = useDeck();
 
   // Ensure page starts at top on initial load
   useEffect(() => {
@@ -118,6 +118,16 @@ export default function SavedDecks() {
     }
   };
 
+  const handleCreateNew = () => {
+    clearDeck();
+    router.push("/deck-builder");
+  };
+
+  const handleCopyDeck = (deck: DeckType, options?: { targetMode?: "TCG" | "Master Duel"; name?: string }) => {
+    copyDeck(deck, options);
+    router.push("/deck-builder");
+  };
+
   const handleTogglePin = async (id: string, isPinned: boolean) => {
     if (!user) return;
     try {
@@ -159,8 +169,9 @@ export default function SavedDecks() {
             <h1 className="text-2xl sm:text-3xl font-bold text-white font-display tracking-wider">
               SAVED DECKS
             </h1>
-            <Button asChild>
-              <Link href="/deck-builder">Create New Deck</Link>
+            <Button onClick={handleCreateNew}>
+              <Plus className="h-4 w-4 mr-2" />
+              Create New Deck
             </Button>
           </motion.div>
 
@@ -186,8 +197,9 @@ export default function SavedDecks() {
                   <p className="text-sm text-white/60 mt-2">
                     Start building a deck and save it to see it here
                   </p>
-                  <Button className="mt-4" asChild>
-                    <Link href="/deck-builder">Create Your First Deck</Link>
+                  <Button className="mt-4" onClick={handleCreateNew}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Your First Deck
                   </Button>
                 </CardContent>
               </Card>
@@ -206,6 +218,7 @@ export default function SavedDecks() {
                 <PinnedDecksSection
                   decks={decks}
                   onLoad={handleLoadDeck}
+                  onCopy={handleCopyDeck}
                   onDelete={handleDeleteDeck}
                   onTogglePin={handleTogglePin}
                   loading={loading}
@@ -218,6 +231,7 @@ export default function SavedDecks() {
                   decks={decks}
                   mode="TCG"
                   onLoad={handleLoadDeck}
+                  onCopy={handleCopyDeck}
                   onDelete={handleDeleteDeck}
                   onTogglePin={handleTogglePin}
                   loading={loading}
@@ -230,6 +244,7 @@ export default function SavedDecks() {
                   decks={decks}
                   mode="Master Duel"
                   onLoad={handleLoadDeck}
+                  onCopy={handleCopyDeck}
                   onDelete={handleDeleteDeck}
                   onTogglePin={handleTogglePin}
                   loading={loading}

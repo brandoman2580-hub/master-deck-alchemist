@@ -19,6 +19,7 @@ import {
   useInViewAnimation,
   useHoverAnimation,
 } from "@/lib/animations";
+import { ScrollIndicator } from "@/components/landing/scroll-indicator";
 
 export default function Home() {
   // Ensure page starts at top on initial load
@@ -63,15 +64,21 @@ function Hero() {
   const hoverAnimation = useHoverAnimation();
 
   return (
-    <section className="relative min-h-screen overflow-hidden">
+    <section className="relative min-h-[60vh] overflow-hidden">
       <div
         className="absolute inset-0 bg-[url('/images/mda_hero_bg.svg')] bg-cover bg-right lg:bg-center"
         aria-hidden
       />
+      {/* Gradient hint that more content exists below */}
+      <div
+        className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-slate-950 to-transparent pointer-events-none z-10"
+        aria-hidden
+      />
+      <ScrollIndicator />
 
       <div
         ref={containerRef}
-        className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-28"
+        className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-20"
       >
         <motion.div
           className="flex flex-col lg:flex-row items-start lg:items-center gap-12 lg:gap-16"
@@ -164,13 +171,13 @@ function Features() {
   ];
 
   return (
-    <section className="relative bg-slate-950 py-20">
+    <section id="features" className="relative bg-slate-950 py-14 scroll-mt-4">
       <div
         ref={containerRef}
         className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10"
       >
         <motion.div
-          className="text-center mb-14"
+          className="text-center mb-10"
           initial="hidden"
           animate={isInView ? "visible" : "hidden"}
           variants={fadeInUpVariants}
@@ -256,7 +263,7 @@ function StatsStrip() {
   ];
 
   return (
-    <section className="relative bg-slate-950 py-12">
+    <section className="relative bg-slate-950 py-10">
       <div ref={containerRef} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"

@@ -8,6 +8,7 @@ interface ModeDecksSectionProps {
   decks: DeckType[];
   mode: DeckMode;
   onLoad: (id: string) => void;
+  onCopy: (deck: DeckType, options?: { targetMode?: "TCG" | "Master Duel"; name?: string }) => void;
   onDelete: (id: string) => void;
   onTogglePin: (id: string, isPinned: boolean) => void;
   loading?: boolean;
@@ -18,6 +19,7 @@ export function ModeDecksSection({
   decks,
   mode,
   onLoad,
+  onCopy,
   onDelete,
   onTogglePin,
   loading = false,
@@ -64,6 +66,7 @@ export function ModeDecksSection({
             key={deck.id}
             deck={deck}
             onLoad={onLoad}
+            onCopy={onCopy}
             onDelete={onDelete}
             onTogglePin={onTogglePin}
             loading={loading}

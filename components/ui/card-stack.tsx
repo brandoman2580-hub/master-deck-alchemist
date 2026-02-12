@@ -5,39 +5,14 @@ import { motion } from "framer-motion";
 import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { Badge } from "./badge";
+import { RarityBadge } from "./rarity-badge";
 import { Card } from "../../types/card";
 import { BanStatus } from "../../types/types";
 import { CardPreview } from "./card-preview";
 import Image from "next/image";
 import { useHoverAnimation } from "@/lib/animations";
-
-// Helper function to get rarity badge styling
-function getRarityBadge(rarity: string | undefined) {
-  if (!rarity || rarity.trim() === "") return null;
-  
-  const rarityUpper = rarity.toUpperCase().trim();
-  let badgeClass = "";
-  let displayText = "";
-  
-  // Check for exact matches first, then partial matches
-  if (rarityUpper === "N" || rarityUpper === "NORMAL" || rarityUpper.includes("NORMAL")) {
-    badgeClass = "bg-gray-400/90 border-gray-300/60 text-white";
-    displayText = "N";
-  } else if (rarityUpper === "R" || (rarityUpper.includes("RARE") && !rarityUpper.includes("SUPER") && !rarityUpper.includes("ULTRA"))) {
-    badgeClass = "bg-blue-500/90 border-blue-400/60 text-white";
-    displayText = "R";
-  } else if (rarityUpper === "SR" || rarityUpper.includes("SUPER RARE") || rarityUpper.includes("SUPERRARE")) {
-    badgeClass = "bg-gradient-to-r from-yellow-400 via-orange-400 to-yellow-500 border-yellow-300/60 text-white";
-    displayText = "SR";
-  } else if (rarityUpper === "UR" || rarityUpper.includes("ULTRA RARE") || rarityUpper.includes("ULTRARARE")) {
-    badgeClass = "bg-gradient-to-r from-purple-500 via-pink-500 to-blue-500 border-purple-400/60 text-white";
-    displayText = "UR";
-  } else {
-    return null;
-  }
-  
-  return { badgeClass, displayText };
-}
+import { getRarityBadge } from "@/lib/utils/rarityBadges";
+import type { DeckMode } from "@/types/types";
 
 export interface CardStackProps {
   card: Card;
@@ -49,6 +24,8 @@ export interface CardStackProps {
   onStackClick?: () => void;
   onDoubleClick?: (card: Card) => void;
   currentCount?: number; // Kept for backward compatibility, but badge is removed
+  deckMode?: DeckMode;
+  mdRarityOverride?: string | null;
 }
 
 export function CardStack({
@@ -60,6 +37,8 @@ export function CardStack({
   shouldHideAfterDrop = false,
   onStackClick,
   onDoubleClick,
+  deckMode,
+  mdRarityOverride,
   // currentCount removed - badge no longer displayed per user request
 }: CardStackProps) {
   // Consistent drag id per card row
@@ -108,8 +87,16 @@ export function CardStack({
 
   const hoverAnimation = useHoverAnimation(1.02, -2);
 
+  const rarity = mdRarityOverride ?? card.misc_info?.[0]?.md_rarity;
+  const rarityBadge = getRarityBadge(rarity, mdRarityOverride ?? rarity);
+
   return (
-    <CardPreview card={card} banStatus={banStatus}>
+    <CardPreview
+      card={card}
+      banStatus={banStatus}
+      deckMode={deckMode}
+      mdRarityOverride={mdRarityOverride ?? rarity}
+    >
       <motion.div
         className={`relative overflow-visible rounded-lg bg-white/5 border border-white/10 backdrop-blur-md p-2 transition-colors ${
           !disabled ? "cursor-pointer hover:bg-white/10 hover:border-white/20" : ""
@@ -131,7 +118,7 @@ export function CardStack({
               }}
               {...listeners}
               {...attributes}
-              className={`relative w-12 h-[72px] flex-shrink-0 flex items-center justify-center
+              className={`relative w-16 h-[96px] flex-shrink-0 flex items-center justify-center
     ${
       disabled
         ? "cursor-not-allowed opacity-60"
@@ -157,8 +144,8 @@ export function CardStack({
                         }}
                       >
                         <Image
-                          width={80}
-                          height={120}
+                          width={96}
+                          height={140}
                           src={
                             card.card_images?.[0]?.image_url_small ||
                             "/placeholder.svg"
@@ -174,28 +161,9 @@ export function CardStack({
                   )}
                 </>
               )}
-              {/* Rarity Badge - Top Right Corner of Card Image */}
-              {!isBeingDragged && (() => {
-                const rarity = card.misc_info?.[0]?.md_rarity;
-                const rarityBadge = getRarityBadge(rarity);
-                return rarityBadge ? (
-                  <div className="absolute top-0 right-0 z-20 transform translate-x-1/2 -translate-y-1/2">
-                    <Badge
-                      variant="secondary"
-                      className={`text-[10px] px-1.5 py-0.5 min-w-[22px] h-5 flex items-center justify-center border-2 font-bold shadow-lg ${rarityBadge.badgeClass}`}
-                    >
-                      {rarityBadge.displayText}
-                    </Badge>
-                  </div>
-                ) : null;
-              })()}
-              
               {/* Available Count Badge */}
               {!isBeingDragged && remainingCopies > 0 && (
-                <div className={`absolute z-10 ${(() => {
-                  const rarity = card.misc_info?.[0]?.md_rarity;
-                  return getRarityBadge(rarity) ? "-bottom-1 -left-1" : "-top-1 -right-1";
-                })()}`}>
+                <div className="absolute -top-1 -right-1 z-10">
                   <Badge
                     variant="secondary"
                     className="text-xs px-1.5 py-0.5 min-w-[20px] h-5 flex items-center justify-center border font-semibold bg-white/10 border-white/20 text-white backdrop-blur-sm"
@@ -213,18 +181,9 @@ export function CardStack({
                 <h4 className="font-medium text-sm truncate text-slate-50">
                   {card.name}
                 </h4>
-                {(() => {
-                  const rarity = card.misc_info?.[0]?.md_rarity;
-                  const rarityBadge = getRarityBadge(rarity);
-                  return rarityBadge ? (
-                    <Badge
-                      variant="secondary"
-                      className={`text-[10px] px-1.5 py-0.5 border font-bold ${rarityBadge.badgeClass}`}
-                    >
-                      {rarityBadge.displayText}
-                    </Badge>
-                  ) : null;
-                })()}
+                {deckMode !== "TCG" && rarityBadge && (
+                  <RarityBadge result={rarityBadge} size="sm" />
+                )}
               </div>
               <div className="flex flex-wrap gap-1 mt-1.5">
                 <Badge
@@ -244,18 +203,6 @@ export function CardStack({
                 <Badge className={`text-xs ${getBanStatusColor(banStatus)}`}>
                   {banStatus}
                 </Badge>
-                {(() => {
-                  const rarity = card.misc_info?.[0]?.md_rarity;
-                  const rarityBadge = getRarityBadge(rarity);
-                  return rarityBadge ? (
-                    <Badge
-                      variant="secondary"
-                      className={`text-xs px-1.5 py-0.5 border font-bold ${rarityBadge.badgeClass}`}
-                    >
-                      {rarityBadge.displayText}
-                    </Badge>
-                  ) : null;
-                })()}
               </div>
               <p className="text-xs text-slate-400 mt-1.5 line-clamp-2">
                 {card.desc}

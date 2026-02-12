@@ -132,6 +132,45 @@ function filterBySearchParams(cards: Card[], params: SearchParams): Card[] {
 }
 
 /**
+ * Master Duel rarity sort order.
+ * Higher number = higher rarity. N=0, R=1, SR=2, UR=3.
+ * Check most specific strings first to avoid "R" matching "Super Rare" or "Ultra Rare".
+ */
+function getRaritySortValue(rarity: string | undefined): number {
+  if (!rarity?.trim()) return 999;
+  const upper = rarity.toUpperCase().trim();
+
+  if (upper === "UR" || upper.includes("ULTRA RARE") || upper.includes("ULTRARARE")) {
+    return 3;
+  }
+  if (upper === "SR" || upper.includes("SUPER RARE") || upper.includes("SUPERRARE")) {
+    return 2;
+  }
+  if (
+    upper === "R" ||
+    (upper.includes("RARE") && !upper.includes("SUPER") && !upper.includes("ULTRA") && !upper.includes("SECRET"))
+  ) {
+    return 1;
+  }
+  if (upper === "N" || upper === "C" || upper.includes("NORMAL") || upper.includes("COMMON")) {
+    return 0;
+  }
+  return 999;
+}
+
+/** Extract numeric value for atk/def (handles "?" and missing) */
+function getNumericStat(
+  val: number | string | undefined,
+): number {
+  if (typeof val === "number") return val;
+  if (val === "?") return -1;
+  return 0;
+}
+
+/** Card with optional linkval from YGOPRODeck API */
+type CardWithLink = Card & { linkval?: number };
+
+/**
  * Sort cards by given criteria
  */
 function sortCards(
@@ -140,39 +179,87 @@ function sortCards(
   sortDirection: "asc" | "desc" = "asc",
 ): Card[] {
   const sorted = [...cards];
+  const mult = sortDirection === "asc" ? 1 : -1;
 
   sorted.sort((a, b) => {
-    let aValue: string | number | undefined;
-    let bValue: string | number | undefined;
+    let cmp = 0;
 
     switch (sortKey) {
-      case "name":
-        aValue = a.name.toLowerCase();
-        bValue = b.name.toLowerCase();
+      case "name": {
+        const aVal = a.name.toLowerCase();
+        const bVal = b.name.toLowerCase();
+        cmp = aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
         break;
-      case "atk":
-        aValue =
-          typeof a.atk === "number" ? a.atk : a.atk === "?" ? -1 : 0;
-        bValue =
-          typeof b.atk === "number" ? b.atk : b.atk === "?" ? -1 : 0;
+      }
+      case "id": {
+        cmp = a.id - b.id;
         break;
-      case "def":
-        aValue =
-          typeof a.def === "number" ? a.def : a.def === "?" ? -1 : 0;
-        bValue =
-          typeof b.def === "number" ? b.def : b.def === "?" ? -1 : 0;
+      }
+      case "type": {
+        const aVal = a.type ?? "";
+        const bVal = b.type ?? "";
+        cmp = aVal.localeCompare(bVal);
         break;
-      case "level":
-        aValue = a.level ?? 0;
-        bValue = b.level ?? 0;
+      }
+      case "level": {
+        const aVal = a.level ?? 0;
+        const bVal = b.level ?? 0;
+        cmp = aVal - bVal;
         break;
+      }
+      case "atk": {
+        const aVal = getNumericStat(a.atk);
+        const bVal = getNumericStat(b.atk);
+        cmp = aVal - bVal;
+        break;
+      }
+      case "def": {
+        const aVal = getNumericStat(a.def);
+        const bVal = getNumericStat(b.def);
+        cmp = aVal - bVal;
+        break;
+      }
+      case "md_rarity": {
+        const aRarity = a.misc_info?.[0]?.md_rarity;
+        const bRarity = b.misc_info?.[0]?.md_rarity;
+        const aVal = getRaritySortValue(aRarity);
+        const bVal = getRaritySortValue(bRarity);
+        cmp = aVal - bVal;
+        if (cmp === 0) cmp = (a.name ?? "").localeCompare(b.name ?? "");
+        break;
+      }
+      case "attribute": {
+        const aVal = a.attribute ?? "";
+        const bVal = b.attribute ?? "";
+        cmp = aVal.localeCompare(bVal);
+        if (cmp === 0) cmp = (a.name ?? "").localeCompare(b.name ?? "");
+        break;
+      }
+      case "race": {
+        const aVal = a.race ?? "";
+        const bVal = b.race ?? "";
+        cmp = aVal.localeCompare(bVal);
+        if (cmp === 0) cmp = (a.name ?? "").localeCompare(b.name ?? "");
+        break;
+      }
+      case "archetype": {
+        const aVal = (a.archetype ?? "").toLowerCase();
+        const bVal = (b.archetype ?? "").toLowerCase();
+        cmp = aVal.localeCompare(bVal);
+        if (cmp === 0) cmp = (a.name ?? "").localeCompare(b.name ?? "");
+        break;
+      }
+      case "link_rating": {
+        const aVal = (a as CardWithLink).linkval ?? 0;
+        const bVal = (b as CardWithLink).linkval ?? 0;
+        cmp = aVal - bVal;
+        break;
+      }
       default:
         return 0;
     }
 
-    if (aValue < bValue) return sortDirection === "asc" ? -1 : 1;
-    if (aValue > bValue) return sortDirection === "asc" ? 1 : -1;
-    return 0;
+    return cmp * mult;
   });
 
   return sorted;

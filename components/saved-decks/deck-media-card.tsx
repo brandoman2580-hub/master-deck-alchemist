@@ -23,13 +23,20 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "../ui/tooltip";
-import { Edit, Trash2, Clock, Pin, Layers, Zap, Shield } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../ui/dropdown-menu";
+import { Edit, Trash2, Clock, Pin, Layers, Zap, Shield, Copy, ChevronDown } from "lucide-react";
 import { DeckType } from "../../types/types";
 import type { Card as CardType } from "../../types/card";
 
 interface DeckMediaCardProps {
   deck: DeckType;
   onLoad: (id: string) => void;
+  onCopy: (deck: DeckType, options?: { targetMode?: "TCG" | "Master Duel"; name?: string }) => void;
   onDelete: (id: string) => void;
   onTogglePin: (id: string, isPinned: boolean) => void;
   loading?: boolean;
@@ -43,6 +50,7 @@ interface DeckMediaCardProps {
 export function DeckMediaCard({
   deck,
   onLoad,
+  onCopy,
   onDelete,
   onTogglePin,
   loading = false,
@@ -221,6 +229,47 @@ export function DeckMediaCard({
                 <Edit className="h-4 w-4 mr-2" />
                 Edit
               </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={loading}
+                    className="bg-white/10 hover:bg-white/20 border-white/20 text-white hover:text-white"
+                  >
+                    <Copy className="h-4 w-4 mr-2" />
+                    Copy
+                    <ChevronDown className="h-4 w-4 ml-1" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="min-w-[180px]">
+                  <DropdownMenuItem
+                    onClick={() => onCopy(deck)}
+                    className="text-white focus:bg-white/10 focus:text-white cursor-pointer"
+                  >
+                    <Copy className="h-4 w-4 mr-2" />
+                    Copy (same format)
+                  </DropdownMenuItem>
+                  {deck.mode === "TCG" && (
+                    <DropdownMenuItem
+                      onClick={() => onCopy(deck, { targetMode: "Master Duel", name: `${deck.name} (Master Duel)` })}
+                      className="text-white focus:bg-white/10 focus:text-white cursor-pointer"
+                    >
+                      <Copy className="h-4 w-4 mr-2" />
+                      Copy as Master Duel
+                    </DropdownMenuItem>
+                  )}
+                  {deck.mode === "Master Duel" && (
+                    <DropdownMenuItem
+                      onClick={() => onCopy(deck, { targetMode: "TCG", name: `${deck.name} (TCG)` })}
+                      className="text-white focus:bg-white/10 focus:text-white cursor-pointer"
+                    >
+                      <Copy className="h-4 w-4 mr-2" />
+                      Copy as TCG
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button

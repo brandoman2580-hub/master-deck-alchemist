@@ -42,6 +42,7 @@ interface FilterSidebarProps {
       sort: string;
       sortDirection: "asc" | "desc";
       misc: string;
+      banStatus: string;
     }>
   >;
   setSearchQuery: React.Dispatch<React.SetStateAction<string>>;
@@ -117,6 +118,7 @@ export function FilterSidebar({
       sort: "name",
       sortDirection: "asc",
       misc: "",
+      banStatus: "",
     });
     setSearchQuery("");
   };

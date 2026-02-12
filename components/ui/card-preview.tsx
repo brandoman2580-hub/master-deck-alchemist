@@ -2,24 +2,37 @@
 
 import { Card } from "../../types/card";
 import { Badge } from "./badge";
+import { RarityBadge } from "./rarity-badge";
 import Image from "next/image";
 import * as Tooltip from "@radix-ui/react-tooltip";
 import { getArchetypeName } from "../../lib/helpers";
+import { getRarityBadge, getCardRarityForDisplay } from "@/lib/utils/rarityBadges";
+import { getCardTCGPrices, MASTER_DUEL_CP_PER_CARD } from "@/lib/utils/cardPricing";
+import { Gem } from "lucide-react";
+import type { DeckMode } from "@/types/types";
 
 interface CardPreviewProps {
   card: Card;
   children: React.ReactNode;
   banStatus?: string;
+  deckMode?: DeckMode;
+  mdRarityOverride?: string | null;
 }
 
-export function CardPreview({ card, children, banStatus }: CardPreviewProps) {
+export function CardPreview({
+  card,
+  children,
+  banStatus,
+  deckMode,
+  mdRarityOverride,
+}: CardPreviewProps) {
   return (
-    <Tooltip.Provider delayDuration={0}>
+    <Tooltip.Provider delayDuration={0} disableHoverableContent>
       <Tooltip.Root>
         <Tooltip.Trigger asChild>{children}</Tooltip.Trigger>
         <Tooltip.Portal>
           <Tooltip.Content
-            className="z-50 w-[480px] max-w-[calc(100vw-3rem)] rounded-xl border border-white/20 bg-white/10 backdrop-blur-xl shadow-lg p-4"
+            className="z-50 w-[480px] max-w-[calc(100vw-3rem)] rounded-xl border border-white/20 bg-white/10 backdrop-blur-xl shadow-lg p-4 pointer-events-none"
             side="right"
             sideOffset={10}
             align="start"
@@ -86,8 +99,76 @@ export function CardPreview({ card, children, banStatus }: CardPreviewProps) {
                         {banStatus}
                       </Badge>
                     )}
+                    {/* Rarity badge - Master Duel only; TCG focuses on price */}
+                    {deckMode !== "TCG" &&
+                      (() => {
+                        const rarity = getCardRarityForDisplay(
+                          card,
+                          deckMode ?? "Master Duel",
+                          mdRarityOverride,
+                        );
+                        const rarityBadge = getRarityBadge(rarity, mdRarityOverride ?? rarity);
+                        return rarityBadge ? (
+                          <RarityBadge result={rarityBadge} size="md" />
+                        ) : null;
+                      })()}
                   </div>
                 </div>
+
+                {/* Price / Craft Cost */}
+                {deckMode === "TCG" && (() => {
+                  const prices = getCardTCGPrices(card);
+                  const hasAny =
+                    prices.tcgplayer ||
+                    prices.cardmarket ||
+                    prices.amazon ||
+                    prices.ebay;
+                  if (!hasAny) return null;
+                  return (
+                    <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm text-white/90">
+                      {prices.tcgplayer && (
+                        <span>
+                          <span className="text-white/60">TCGPlayer</span>{" "}
+                          <span className="font-medium text-cyan-300">
+                            {prices.tcgplayer.formatted}
+                          </span>
+                        </span>
+                      )}
+                      {prices.cardmarket && (
+                        <span>
+                          <span className="text-white/60">Cardmarket</span>{" "}
+                          <span className="font-medium text-cyan-300">
+                            {prices.cardmarket.formatted}
+                          </span>
+                        </span>
+                      )}
+                      {prices.amazon && (
+                        <span>
+                          <span className="text-white/60">Amazon</span>{" "}
+                          <span className="font-medium text-cyan-300">
+                            {prices.amazon.formatted}
+                          </span>
+                        </span>
+                      )}
+                      {prices.ebay && (
+                        <span>
+                          <span className="text-white/60">eBay</span>{" "}
+                          <span className="font-medium text-cyan-300">
+                            {prices.ebay.formatted}
+                          </span>
+                        </span>
+                      )}
+                    </div>
+                  );
+                })()}
+                {deckMode === "Master Duel" && (
+                  <p className="text-sm text-white/90 flex items-center gap-1.5">
+                    <Gem className="h-3.5 w-3.5 text-cyan-400/90" aria-hidden />
+                    <span className="font-medium text-cyan-300">
+                      {MASTER_DUEL_CP_PER_CARD} CP
+                    </span>
+                  </p>
+                )}
 
                 {/* Stats */}
                 {(card.atk !== undefined ||
@@ -97,28 +178,33 @@ export function CardPreview({ card, children, banStatus }: CardPreviewProps) {
                   card.type !== "Trap Card" && (
                     <div className="space-y-1">
                       {card.level !== undefined && (
-                        <p className="text-sm text-white/90">
-                          <span className="font-medium text-white/80">
-                            Level:
-                          </span>{" "}
-                          {card.level}
+                        <p className="text-sm flex items-baseline gap-1.5">
+                          <span className="text-xs uppercase tracking-wider text-white/50 font-medium">
+                            Level
+                          </span>
+                          <span className="font-semibold text-white/95">
+                            {card.level}
+                          </span>
                         </p>
                       )}
                       {card.atk !== undefined && (
-                        <p className="text-sm text-white/90">
-                          <span className="font-medium text-white/80">
-                            ATK:
-                          </span>{" "}
-                          {card.atk}
+                        <p className="text-sm flex items-baseline gap-1.5 flex-wrap">
+                          <span className="text-xs uppercase tracking-wider text-white/50 font-medium">
+                            ATK
+                          </span>
+                          <span className="font-semibold text-white/95">
+                            {card.atk}
+                          </span>
                           {card.def !== undefined && (
-                            <span>
-                              {" "}
-                              /{" "}
-                              <span className="font-medium text-white/80">
-                                DEF:
-                              </span>{" "}
-                              {card.def}
-                            </span>
+                            <>
+                              <span className="text-white/40">/</span>
+                              <span className="text-xs uppercase tracking-wider text-white/50 font-medium">
+                                DEF
+                              </span>
+                              <span className="font-semibold text-white/95">
+                                {card.def}
+                              </span>
+                            </>
                           )}
                         </p>
                       )}
@@ -129,11 +215,13 @@ export function CardPreview({ card, children, banStatus }: CardPreviewProps) {
                 {(() => {
                   const archetypeName = getArchetypeName(card);
                   return archetypeName ? (
-                    <p className="text-sm text-white/90">
-                      <span className="font-medium text-white/80">
-                        Archetype:
-                      </span>{" "}
-                      {archetypeName}
+                    <p className="text-sm flex items-baseline gap-1.5">
+                      <span className="text-xs uppercase tracking-wider text-white/50 font-medium">
+                        Archetype
+                      </span>
+                      <span className="font-semibold text-white/95">
+                        {archetypeName}
+                      </span>
                     </p>
                   ) : null;
                 })()}

@@ -254,6 +254,48 @@ function normalizeTCGBanStatus(status: string | null | undefined): BanStatus {
   return "Unlimited";
 }
 
+const RARITY_BATCH_SIZE = 1000;
+
+/**
+ * Fetch Master Duel rarity map (card_id -> md_rarity) for given card IDs.
+ * Used for rarity badges when deck mode is Master Duel.
+ * Batches requests for large ID sets to avoid query limits.
+ */
+export async function getMasterDuelRarityMap(
+  cardIds: number[],
+): Promise<Map<number, string>> {
+  const map = new Map<number, string>();
+  if (cardIds.length === 0) return map;
+
+  try {
+    for (let i = 0; i < cardIds.length; i += RARITY_BATCH_SIZE) {
+      const batch = cardIds.slice(i, i + RARITY_BATCH_SIZE);
+      const { data, error } = await supabase
+        .from("master_duel_rarity")
+        .select("card_id, md_rarity")
+        .in("card_id", batch);
+
+      if (error) {
+        console.warn("Failed to fetch Master Duel rarity:", error.message);
+        break;
+      }
+
+      if (data) {
+        for (const row of data) {
+          if (row.card_id != null && row.md_rarity != null) {
+            map.set(row.card_id, String(row.md_rarity).trim());
+          }
+        }
+      }
+    }
+
+    return map;
+  } catch (err) {
+    console.warn("Error fetching Master Duel rarity:", err);
+    return map;
+  }
+}
+
 // 4. Banlist fetch—for TCG, fetch from cards table ban_tcg column
 export async function getTCGBanlist(): Promise<Record<string, BanStatus>> {
   try {

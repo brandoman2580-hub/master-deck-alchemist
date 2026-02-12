@@ -27,11 +27,13 @@ interface DeckContextType {
   currentDeck: DeckType;
   setCurrentDeck: React.Dispatch<React.SetStateAction<DeckType>>;
   savedDecks: Deck[];
+  banlist: Record<string, BanStatus>;
   addCardToDeck: (card: Card, deckType: DeckSection) => void;
   removeCardFromDeck: (cardId: string, deckType: DeckSection) => void;
   clearDeck: () => void;
   saveDeck: (deckData?: DeckType) => Promise<void>;
   loadDeck: (id: string) => Promise<void>;
+  copyDeck: (sourceDeck: DeckType, options?: { targetMode?: DeckMode; name?: string }) => void;
   deleteDeck: (id: string) => Promise<void>;
   getUserDecks: () => Promise<void>;
   exportDeck: () => string;
@@ -181,6 +183,13 @@ export function DeckProvider({ children }: { children: ReactNode }) {
 
         const deckToSave = deckData || currentDeck;
 
+        // Don't save decks named "New Deck" - user must rename first
+        if (deckToSave.name === "New Deck") {
+          setError("Please rename your deck before saving.");
+          setLoading(false);
+          return;
+        }
+
         // Validate deck data before saving
         if (!deckToSave.id || !deckToSave.name) {
           throw new Error("Invalid deck data: missing id or name");
@@ -212,6 +221,26 @@ export function DeckProvider({ children }: { children: ReactNode }) {
       }
     },
     [currentDeck, getUserDecks],
+  );
+
+  const copyDeck = useCallback(
+    (
+      sourceDeck: DeckType,
+      options?: { targetMode?: DeckMode; name?: string }
+    ) => {
+      const targetMode = options?.targetMode ?? sourceDeck.mode;
+      const baseName = options?.name ?? `Copy of ${sourceDeck.name}`;
+      const newDeck: DeckType = {
+        id: uuidv4(),
+        name: baseName,
+        mainDeck: sourceDeck.mainDeck.map((c) => ({ ...c, deckInstanceId: uuidv4() })),
+        extraDeck: sourceDeck.extraDeck.map((c) => ({ ...c, deckInstanceId: uuidv4() })),
+        sideDeck: sourceDeck.sideDeck.map((c) => ({ ...c, deckInstanceId: uuidv4() })),
+        mode: targetMode,
+      };
+      setCurrentDeck(newDeck);
+    },
+    []
   );
 
   const loadDeck = useCallback(async (id: string) => {
@@ -258,13 +287,8 @@ export function DeckProvider({ children }: { children: ReactNode }) {
   // Debounced auto-save effect
   useEffect(() => {
     if (saveTimeout.current) clearTimeout(saveTimeout.current);
-    // Don't auto-save if the deck is empty and named "New Deck"
-    if (
-      currentDeck.name === "New Deck" &&
-      currentDeck.mainDeck.length === 0 &&
-      currentDeck.extraDeck.length === 0 &&
-      currentDeck.sideDeck.length === 0
-    ) {
+    // Don't auto-save decks named "New Deck" - user must rename before saving to DB
+    if (currentDeck.name === "New Deck") {
       return;
     }
 
@@ -402,11 +426,13 @@ export function DeckProvider({ children }: { children: ReactNode }) {
     currentDeck,
     setCurrentDeck,
     savedDecks,
+    banlist,
     addCardToDeck,
     removeCardFromDeck,
     clearDeck,
     saveDeck,
     loadDeck,
+    copyDeck,
     deleteDeck,
     getUserDecks,
     exportDeck,

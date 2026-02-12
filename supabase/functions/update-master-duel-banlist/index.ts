@@ -150,44 +150,52 @@ async function upsertBanlistEntries(entries: BanlistRow[]) {
     }
   }
 
-  const upsertPayload: Array<{
-    id?: number;
-    card_name: string;
-    ban_status: string;
-  }> = [];
+  const toInsert: BanlistRow[] = [];
+  const toUpdate: Array<{ id: number; card_name: string; ban_status: string }> = [];
 
   for (const entry of deduplicatedEntries) {
     const existing = existingMap.get(entry.card_name);
     if (existing) {
-      upsertPayload.push({
+      toUpdate.push({
         id: existing.id,
         card_name: entry.card_name,
         ban_status: entry.ban_status,
       });
     } else {
-      upsertPayload.push({
-        card_name: entry.card_name,
-        ban_status: entry.ban_status,
-      });
+      toInsert.push(entry);
     }
   }
 
-  const { data, error } = await supabase
-    .from("master_duel_banlist")
-    .upsert(upsertPayload)
-    .select();
+  let insertedCount = 0;
+  let updatedCount = 0;
 
-  if (error) {
-    throw new Error(`Supabase upsert error: ${error.message}`);
+  if (toInsert.length > 0) {
+    const { error: insertError } = await supabase
+      .from("master_duel_banlist")
+      .insert(toInsert.map((e) => ({ card_name: e.card_name, ban_status: e.ban_status })));
+
+    if (insertError) {
+      throw new Error(`Supabase insert error: ${insertError.message}`);
+    }
+    insertedCount = toInsert.length;
   }
 
-  const existingCount = existingMap.size;
-  const totalCount = data?.length ?? upsertPayload.length;
-  const insertedCount = totalCount - existingCount;
-  const updatedCount = existingCount;
+  if (toUpdate.length > 0) {
+    for (const row of toUpdate) {
+      const { error: updateError } = await supabase
+        .from("master_duel_banlist")
+        .update({ ban_status: row.ban_status })
+        .eq("id", row.id);
+
+      if (updateError) {
+        throw new Error(`Supabase update error: ${updateError.message}`);
+      }
+    }
+    updatedCount = toUpdate.length;
+  }
 
   console.log(
-    `Upserted ${insertedCount} new entries and updated ${updatedCount} existing entries`,
+    `Inserted ${insertedCount} new entries and updated ${updatedCount} existing entries`,
   );
 
   return { inserted: insertedCount, updated: updatedCount };
@@ -278,7 +286,7 @@ Deno.serve(async (req: Request) => {
       },
     );
   } catch (error) {
-    console.error("Error in update-banlist function:", error);
+    console.error("Error in update-master-duel-banlist function:", error);
     return new Response(
       JSON.stringify({
         status: "error",

@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Card } from "@/types/card";
-import { DeckType, DeckMode, DeckSection } from "@/types/types";
+import { DeckType, DeckMode, DeckSection, BanStatus } from "@/types/types";
 import { UniqueIdentifier } from "@dnd-kit/core";
 import { CardSection } from "./card-section";
 import { Layers, Zap, Shield } from "lucide-react";
@@ -31,6 +31,12 @@ interface DeckTabsProps {
     section: "mainDeck" | "extraDeck" | "sideDeck",
   ) => void;
   addCardToDeck: (card: Card, section: DeckSection) => void;
+  mdRarityMap?: Map<number, string>;
+  banlist?: Record<string, BanStatus>;
+  /** Card pool lookup to enrich deck cards with prices for TCG previews */
+  cardLookup?: Map<number, Card>;
+  deckSort?: string;
+  deckSortDirection?: "asc" | "desc";
 }
 
 export function DeckTabs({
@@ -40,6 +46,11 @@ export function DeckTabs({
   activeDragId,
   removingDeckCardIds,
   removeCardFromDeck,
+  mdRarityMap,
+  banlist = {},
+  cardLookup,
+  deckSort = "name",
+  deckSortDirection = "asc",
 }: DeckTabsProps) {
   // Internal state for active tab
   const [activeTab, setActiveTab] = useState("main");
@@ -224,6 +235,12 @@ export function DeckTabs({
               onRemove={handleRemove}
               count={stats.mainCount}
               maxCount={60}
+              deckMode={deckMode}
+              mdRarityMap={mdRarityMap}
+              banlist={banlist}
+              cardLookup={cardLookup}
+              sort={deckSort}
+              sortDirection={deckSortDirection}
             />
           </motion.div>
         </TabsContent>
@@ -243,6 +260,12 @@ export function DeckTabs({
               onRemove={handleRemove}
               count={stats.extraCount}
               maxCount={15}
+              deckMode={deckMode}
+              mdRarityMap={mdRarityMap}
+              banlist={banlist}
+              cardLookup={cardLookup}
+              sort={deckSort}
+              sortDirection={deckSortDirection}
             />
           </motion.div>
         </TabsContent>
@@ -262,6 +285,12 @@ export function DeckTabs({
               onRemove={handleRemove}
               count={stats.sideCount}
               maxCount={15}
+              deckMode={deckMode}
+              mdRarityMap={mdRarityMap}
+              banlist={banlist}
+              cardLookup={cardLookup}
+              sort={deckSort}
+              sortDirection={deckSortDirection}
             />
           </motion.div>
         </TabsContent>

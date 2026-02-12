@@ -1,9 +1,13 @@
 /**
  * Supabase Edge Function: Sync Yu-Gi-Oh! Card Pool from YGOPRODeck API
  *
- * This function fetches all card data from YGOPRODeck and upserts it into
- * the Supabase "cards" table in batches. Designed to be run via cron job
- * every 3 months to keep the card database up to date.
+ * Fetches all card data from YGOPRODeck (https://ygoprodeck.com/api-guide/) and
+ * upserts it into the Supabase "cards" table. Uses paginated fetching to ensure
+ * complete card_prices data (TCGPlayer, Cardmarket) is acquired.
+ *
+ * API: card_prices array contains cardmarket_price (€), tcgplayer_price ($),
+ * coolstuffinc_price ($), ebay_price ($), amazon_price ($).
+ * Rate limit: 20 requests/second.
  */
 
 import { createClient } from "@supabase/supabase-js";
@@ -12,8 +16,18 @@ import { corsHeaders } from "../_shared/cors.ts";
 // Configuration constants
 const YGO_API = "https://db.ygoprodeck.com/api/v7/cardinfo.php";
 const BATCH_SIZE = 1000;
+const API_FETCH_SIZE = 500; // Cards per API request (pagination)
+const API_DELAY_MS = 100; // Delay between API requests (respect 20 req/sec limit)
 
-// Type definitions
+// Type definitions - per YGOPRODeck API v7 spec
+interface YGOCardPrices {
+  cardmarket_price?: string;
+  tcgplayer_price?: string;
+  coolstuffinc_price?: string;
+  ebay_price?: string;
+  amazon_price?: string;
+}
+
 interface YGOCard {
   id: number;
   name?: string;
@@ -28,11 +42,16 @@ interface YGOCard {
   banlist_info?: {
     ban_tcg?: string;
   };
+  card_images?: Array<{ id: number; image_url: string; image_url_small?: string }>;
+  card_sets?: Array<{ set_name: string; set_code: string; set_rarity: string; set_rarity_code?: string; set_price?: string }>;
+  card_prices?: Array<YGOCardPrices>;
+  misc_info?: Array<{ md_rarity?: string }>;
 }
 
 interface SyncStats {
   success: boolean;
   totalCardsFetched: number;
+  cardsWithPrices: number;
   batchesProcessed: number;
   insertedOrUpdated: number;
   warnings: number;
@@ -41,30 +60,81 @@ interface SyncStats {
   timestamp: string;
 }
 
+/** Delay helper for rate limiting */
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 /**
- * Fetches all card data from YGOPRODeck API
+ * Fetches all card data from YGOPRODeck API using pagination.
+ * Uses num/offset to fetch in chunks - ensures complete card_prices data.
+ * @see https://ygoprodeck.com/api-guide/
  */
 async function fetchYGOCards(): Promise<YGOCard[]> {
-  console.log("Fetching card data from YGOPRODeck...");
+  const allCards: YGOCard[] = [];
+  let offset = 0;
+  let totalRows = 0;
 
-  const response = await fetch(YGO_API);
+  console.log(
+    `Fetching card data from YGOPRODeck (paginated, misc=yes for prices/rarity)...`,
+  );
 
-  if (!response.ok) {
-    throw new Error(
-      `YGOPRODeck API error: ${response.status} ${response.statusText}`,
+  for (let page = 0; ; page++) {
+    const url = `${YGO_API}?misc=yes&num=${API_FETCH_SIZE}&offset=${offset}`;
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      throw new Error(
+        `YGOPRODeck API error: ${response.status} ${response.statusText}`,
+      );
+    }
+
+    const json = await response.json();
+
+    if (!json.data || !Array.isArray(json.data)) {
+      throw new Error("Unexpected YGOPRODeck API response structure");
+    }
+
+    const batch = json.data as YGOCard[];
+    allCards.push(...batch);
+
+    if (json.meta) {
+      totalRows = json.meta.total_rows ?? totalRows;
+    }
+
+    console.log(
+      `Fetched page ${page + 1}: ${batch.length} cards (total: ${allCards.length})`,
     );
+
+    if (batch.length < API_FETCH_SIZE) {
+      break;
+    }
+
+    offset += API_FETCH_SIZE;
+    await delay(API_DELAY_MS);
   }
 
-  const json = await response.json();
+  console.log(`Fetched ${allCards.length} cards total.`);
 
-  if (!json.data || !Array.isArray(json.data)) {
-    throw new Error("Unexpected YGOPRODeck API response structure");
+  return allCards;
+}
+
+/**
+ * Normalizes card_prices from API for storage.
+ * API returns array with one object containing vendor prices.
+ * We preserve the full structure for TCGPlayer ($) and Cardmarket (€).
+ */
+function normalizeCardPrices(
+  card_prices: YGOCardPrices[] | undefined,
+): YGOCardPrices[] | null {
+  if (!card_prices || card_prices.length === 0) {
+    return null;
   }
-
-  const cards = json.data as YGOCard[];
-  console.log(`Fetched ${cards.length} cards.`);
-
-  return cards;
+  const first = card_prices[0];
+  if (!first || (typeof first !== "object")) {
+    return null;
+  }
+  return [first];
 }
 
 /**
@@ -85,6 +155,10 @@ function transformCardToRecord(card: YGOCard): Record<string, unknown> {
     desc: card.desc,
     archetype: card.archetype,
     ban_tcg: banlist.ban_tcg,
+    card_images: card.card_images ?? null,
+    card_sets: card.card_sets ?? null,
+    card_prices: normalizeCardPrices(card.card_prices),
+    misc_info: card.misc_info ?? null,
   };
 }
 
@@ -181,11 +255,22 @@ async function syncCardPool(): Promise<SyncStats> {
     }
   }
 
-  console.log("✅ Card pool sync complete!");
+  const cardsWithPrices = cards.filter(
+    (c) =>
+      c.card_prices &&
+      c.card_prices.length > 0 &&
+      c.card_prices[0] &&
+      (c.card_prices[0].tcgplayer_price || c.card_prices[0].cardmarket_price),
+  ).length;
+
+  console.log(
+    `✅ Card pool sync complete! ${cardsWithPrices}/${totalCards} cards have price data.`,
+  );
 
   return {
     success: errors.length === 0,
     totalCardsFetched: totalCards,
+    cardsWithPrices,
     batchesProcessed,
     insertedOrUpdated,
     warnings,

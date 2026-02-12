@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { motion } from "framer-motion";
 import { useDeck } from "../../context/deck-context";
 import {
@@ -38,6 +38,7 @@ import {
   scaleInVariants,
 } from "@/lib/animations";
 import { detectMetaDeck } from "../../lib/utils/metaDetector";
+import { useMasterDuelRarity } from "../../hooks/useMasterDuelRarity";
 
 export default function DeckBuilder() {
   const {
@@ -48,6 +49,7 @@ export default function DeckBuilder() {
     getDeckStats,
     addCardToDeck,
     updateDeckMode,
+    banlist,
   } = useDeck();
 
   // State -----------------------------------------------
@@ -67,6 +69,8 @@ export default function DeckBuilder() {
   const [droppedCardIds, setDroppedCardIds] = useState<Set<number>>(new Set());
   // Track deck cards being removed (to hide during transition)
   const [removingDeckCardIds, setRemovingDeckCardIds] = useState<Set<string>>(new Set());
+  const [deckSort, setDeckSort] = useState("name");
+  const [deckSortDirection, setDeckSortDirection] = useState<"asc" | "desc">("asc");
 
   // Zustand Store -----------------------------------------
   const cardList = useCardStore((state) => state.cardList);
@@ -91,6 +95,13 @@ export default function DeckBuilder() {
       setDeckMode(currentDeck.mode as DeckMode);
     }
   }, [currentDeck.mode, deckMode, setDeckMode]);
+
+  // Reset Rarity sort when switching to TCG (Rarity only applies to Master Duel)
+  useEffect(() => {
+    if (deckMode === "TCG" && deckSort === "md_rarity") {
+      setDeckSort("name");
+    }
+  }, [deckMode, deckSort]);
 
   const analyzeDeck = useCallback(() => {
     const stats = getDeckStats();
@@ -392,6 +403,20 @@ export default function DeckBuilder() {
   const stats = getDeckStats();
   const pageRef = useRef<HTMLDivElement>(null);
 
+  // Fetch Master Duel rarity for deck cards (display in badges & cost)
+  const deckCardIds = [
+    ...currentDeck.mainDeck,
+    ...currentDeck.extraDeck,
+    ...currentDeck.sideDeck,
+  ].map((c) => c.id);
+  const mdRarityMap = useMasterDuelRarity(deckCardIds, deckMode);
+
+  // Card lookup for deck cost: enrich deck cards with prices from pool when missing
+  const cardLookup = useMemo(
+    () => new Map(cardList.map((c) => [c.id, c])),
+    [cardList],
+  );
+
   return (
     <DndContext
       sensors={sensors}
@@ -471,6 +496,13 @@ export default function DeckBuilder() {
                           currentDeck.extraDeck.length > 0 ||
                           currentDeck.sideDeck.length > 0
                         }
+                        mdRarityMap={mdRarityMap}
+                        cardLookup={cardLookup}
+                        banlist={banlist}
+                        deckSort={deckSort}
+                        deckSortDirection={deckSortDirection}
+                        onDeckSortChange={setDeckSort}
+                        onDeckSortDirectionChange={setDeckSortDirection}
                       />
                       <DeckTabs
                         stats={stats}
@@ -480,6 +512,11 @@ export default function DeckBuilder() {
                         removingDeckCardIds={removingDeckCardIds}
                         removeCardFromDeck={handleRemoveCardFromDeck}
                         addCardToDeck={handleAddCardToDeck}
+                        mdRarityMap={mdRarityMap}
+                        banlist={banlist}
+                        cardLookup={cardLookup}
+                        deckSort={deckSort}
+                        deckSortDirection={deckSortDirection}
                       />
                     </CardUI>
                   </div>

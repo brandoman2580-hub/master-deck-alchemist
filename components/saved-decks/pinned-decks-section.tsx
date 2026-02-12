@@ -7,6 +7,7 @@ import { Card, CardContent } from "../ui/card";
 interface PinnedDecksSectionProps {
   decks: DeckType[];
   onLoad: (id: string) => void;
+  onCopy: (deck: DeckType, options?: { targetMode?: "TCG" | "Master Duel"; name?: string }) => void;
   onDelete: (id: string) => void;
   onTogglePin: (id: string, isPinned: boolean) => void;
   loading?: boolean;
@@ -16,6 +17,7 @@ interface PinnedDecksSectionProps {
 export function PinnedDecksSection({
   decks,
   onLoad,
+  onCopy,
   onDelete,
   onTogglePin,
   loading = false,
@@ -59,6 +61,7 @@ export function PinnedDecksSection({
             key={deck.id}
             deck={deck}
             onLoad={onLoad}
+            onCopy={onCopy}
             onDelete={onDelete}
             onTogglePin={onTogglePin}
             loading={loading}

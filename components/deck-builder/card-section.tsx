@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { motion } from "framer-motion";
+import { sortDeckCards } from "@/lib/utils/deckSort";
 import { DeckDropZone } from "@/components/ui/deck-drop-zone";
 import { Layers, Zap, Shield } from "lucide-react";
 import { Card } from "@/types/card";
@@ -19,35 +20,9 @@ import {
   EASING,
 } from "@/lib/animations";
 import { AnimatePresence } from "framer-motion";
-import { Badge } from "@/components/ui/badge";
-
-// Helper function to get rarity badge styling
-function getRarityBadge(rarity: string | undefined) {
-  if (!rarity || rarity.trim() === "") return null;
-  
-  const rarityUpper = rarity.toUpperCase().trim();
-  let badgeClass = "";
-  let displayText = "";
-  
-  // Check for exact matches first, then partial matches
-  if (rarityUpper === "N" || rarityUpper === "NORMAL" || rarityUpper.includes("NORMAL")) {
-    badgeClass = "bg-gray-400/90 border-gray-300/60 text-white";
-    displayText = "N";
-  } else if (rarityUpper === "R" || (rarityUpper.includes("RARE") && !rarityUpper.includes("SUPER") && !rarityUpper.includes("ULTRA"))) {
-    badgeClass = "bg-blue-500/90 border-blue-400/60 text-white";
-    displayText = "R";
-  } else if (rarityUpper === "SR" || rarityUpper.includes("SUPER RARE") || rarityUpper.includes("SUPERRARE")) {
-    badgeClass = "bg-gradient-to-r from-yellow-400 via-orange-400 to-yellow-500 border-yellow-300/60 text-white";
-    displayText = "SR";
-  } else if (rarityUpper === "UR" || rarityUpper.includes("ULTRA RARE") || rarityUpper.includes("ULTRARARE")) {
-    badgeClass = "bg-gradient-to-r from-purple-500 via-pink-500 to-blue-500 border-purple-400/60 text-white";
-    displayText = "UR";
-  } else {
-    return null;
-  }
-  
-  return { badgeClass, displayText };
-}
+import { getRarityBadge } from "@/lib/utils/rarityBadges";
+import { RarityBadge } from "@/components/ui/rarity-badge";
+import type { BanStatus, DeckMode } from "@/types/types";
 
 interface CardSectionProps {
   section: DeckSection;
@@ -57,6 +32,13 @@ interface CardSectionProps {
   onRemove: (deckInstanceId: string, section: DeckSection) => void;
   count?: number;
   maxCount?: number;
+  deckMode?: DeckMode;
+  mdRarityMap?: Map<number, string>;
+  banlist?: Record<string, BanStatus>;
+  /** Card pool lookup to enrich deck cards with prices for TCG previews */
+  cardLookup?: Map<number, Card>;
+  sort?: string;
+  sortDirection?: "asc" | "desc";
 }
 
 const sectionIcons = {
@@ -82,6 +64,9 @@ function DeckCardCopy({
   activeDragId,
   isBeingRemoved,
   onRemove,
+  deckMode,
+  mdRarityOverride,
+  banStatus = "Unlimited",
 }: {
   card: Card;
   deckInstanceId: string;
@@ -89,6 +74,9 @@ function DeckCardCopy({
   activeDragId: UniqueIdentifier | null;
   isBeingRemoved: boolean;
   onRemove: (deckInstanceId: string, section: DeckSection) => void;
+  deckMode?: DeckMode;
+  mdRarityOverride?: string;
+  banStatus?: string;
 }) {
   const dragId = `deck-${section}-${deckInstanceId}`;
   const isBeingDragged = activeDragId === dragId;
@@ -137,33 +125,38 @@ function DeckCardCopy({
       <div
         {...listeners}
         {...attributes}
-        className="relative w-14 h-20 cursor-grab active:cursor-grabbing"
+        className="relative w-16 h-24 cursor-grab active:cursor-grabbing"
       >
-        <CardPreview card={card} banStatus="Unlimited">
+        <CardPreview
+          card={card}
+          banStatus={banStatus}
+          deckMode={deckMode}
+          mdRarityOverride={mdRarityOverride}
+        >
           <div className="relative w-full h-full">
             <Image
-              width={56}
-              height={80}
+              width={64}
+              height={96}
               src={card.card_images?.[0]?.image_url_small || "/placeholder.svg"}
               alt={card.name}
               className="w-full h-full object-contain rounded shadow-sm"
               loading="lazy"
             />
-            {/* Rarity Badge - Top Right Corner of Card Image */}
-            {(() => {
-              const rarity = card.misc_info?.[0]?.md_rarity;
-              const rarityBadge = getRarityBadge(rarity);
-              return rarityBadge ? (
-                <div className="absolute top-0 right-0 z-20 transform translate-x-1/2 -translate-y-1/2">
-                  <Badge
-                    variant="secondary"
-                    className={`text-[8px] px-1 py-0 min-w-[18px] h-4 flex items-center justify-center border-2 font-bold shadow-lg ${rarityBadge.badgeClass}`}
-                  >
-                    {rarityBadge.displayText}
-                  </Badge>
-                </div>
-              ) : null;
-            })()}
+            {/* Rarity Badge - Master Duel only; TCG focuses on price */}
+            {deckMode !== "TCG" &&
+              (() => {
+                const rarity = mdRarityOverride ?? card.misc_info?.[0]?.md_rarity;
+                const rarityBadge = getRarityBadge(rarity, mdRarityOverride);
+                return rarityBadge ? (
+                  <div className="absolute top-0 right-0 z-20 transform translate-x-1/2 -translate-y-1/2">
+                    <RarityBadge
+                      result={rarityBadge}
+                      size="sm"
+                      className="border shadow-lg"
+                    />
+                  </div>
+                ) : null;
+              })()}
             {/* X button in top-left corner of thumbnail */}
             <button
               type="button"
@@ -195,11 +188,16 @@ export function CardSection({
   onRemove,
   count = 0,
   maxCount = section === "mainDeck" ? 60 : 15,
+  deckMode,
+  mdRarityMap,
+  banlist = {},
+  cardLookup,
+  sort = "name",
+  sortDirection = "asc",
 }: CardSectionProps) {
-  // Sort cards by name for consistent display
   const sortedCards = useMemo(() => {
-    return [...cards].sort((a, b) => a.name.localeCompare(b.name));
-  }, [cards]);
+    return sortDeckCards(cards, sort, sortDirection, mdRarityMap);
+  }, [cards, sort, sortDirection, mdRarityMap]);
 
   const Icon = sectionIcons[section];
 
@@ -244,15 +242,22 @@ export function CardSection({
             >
               <AnimatePresence mode="popLayout">
                 {sortedCards.map((card) => {
+                  const poolCard = cardLookup?.get(card.id);
+                  const enrichedCard = poolCard
+                    ? { ...card, card_prices: poolCard.card_prices ?? card.card_prices }
+                    : card;
                   return (
                     <DeckCardCopy
                       key={card.deckInstanceId}
-                      card={card}
+                      card={enrichedCard}
                       deckInstanceId={card.deckInstanceId}
                       section={section}
                       activeDragId={activeDragId}
                       isBeingRemoved={removingDeckCardIds.has(card.deckInstanceId)}
                       onRemove={onRemove}
+                      deckMode={deckMode}
+                      mdRarityOverride={mdRarityMap?.get(card.id)}
+                      banStatus={banlist[card.name] || "Unlimited"}
                     />
                   );
                 })}

@@ -16,6 +16,7 @@ import { getTCGBanlist, getMasterDuelBanlist } from "@/lib/api";
 import { selectFilteredCards } from "@/store/cardPoolSelectors";
 import { CardStack } from "@/components/ui/card-stack";
 import { FilterSidebar } from "./filter-sidebar";
+import { useMasterDuelRarity } from "@/hooks/useMasterDuelRarity";
 import { Search, Filter, Bot } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -97,6 +98,7 @@ export function CardBrowser({
     atkRange: "",
     defRange: "",
     rarity: "",
+    banStatus: "",
   });
 
   // Load banlist based on deck mode
@@ -144,20 +146,37 @@ export function CardBrowser({
       return;
     }
 
-    const filtered = selectFilteredCards(cardList, debouncedSearchQuery, {
+    let filtered = selectFilteredCards(cardList, debouncedSearchQuery, {
       ...searchParams,
       sort: searchParams.sort || "name",
       sortDirection: searchParams.sortDirection || "asc",
     });
 
+    // Apply banlist filter (uses deck mode's banlist - TCG or Master Duel)
+    if (searchParams.banStatus?.trim() && Object.keys(banlist).length > 0) {
+      const selectedStatuses = searchParams.banStatus
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+      if (selectedStatuses.length > 0) {
+        filtered = filtered.filter((card) => {
+          const status = banlist[card.name] || "Unlimited";
+          return selectedStatuses.includes(status);
+        });
+      }
+    }
+
     setFilteredCards(filtered);
-  }, [debouncedSearchQuery, cardList, searchParams]);
+  }, [debouncedSearchQuery, cardList, searchParams, banlist]);
 
   // TanStack Virtual setup - only create when browser tab is active
+  // Note: gap option has a bug with dynamic measurement - bake spacing into estimateSize instead
+  const ROW_GAP = 4;
+  const CONTENT_HEIGHT = 122;
   const virtualizer = useVirtualizer({
     count: filteredCards.length,
     getScrollElement: () => (activeTab === "browser" ? virtualContainerRef.current : null),
-    estimateSize: () => 100, // Estimated height per card item (~100px)
+    estimateSize: () => CONTENT_HEIGHT + ROW_GAP,
     overscan: 5, // Render 5 extra items outside viewport for smooth scrolling
   });
 
@@ -208,6 +227,13 @@ export function CardBrowser({
     },
     [addCardToDeck]
   );
+
+  // Fetch Master Duel rarity for card browser when in Master Duel mode
+  const filteredCardIds = useMemo(
+    () => filteredCards.map((c) => c.id),
+    [filteredCards],
+  );
+  const mdRarityMap = useMasterDuelRarity(filteredCardIds, deckMode);
 
   // Get active filters count for badge
   const activeFiltersCount = useMemo(() => {
@@ -428,7 +454,6 @@ export function CardBrowser({
                                   <div
                                     key={virtualItem.key}
                                     data-index={virtualItem.index}
-                                    ref={virtualizer.measureElement}
                                     style={{
                                       position: "absolute",
                                       top: 0,
@@ -447,7 +472,7 @@ export function CardBrowser({
                                 <div
                                   key={virtualItem.key}
                                   data-index={virtualItem.index}
-                                  ref={virtualizer.measureElement}
+                                  className="flex flex-col"
                                   style={{
                                     position: "absolute",
                                     top: 0,
@@ -457,13 +482,16 @@ export function CardBrowser({
                                     transform: `translateY(${virtualItem.start}px)`,
                                   }}
                                 >
-                                  <CardStack
+                                  <div className="flex-shrink-0" style={{ marginBottom: ROW_GAP }}>
+                                    <CardStack
                                     card={card}
                                     remainingCopies={remaining}
                                     maxCopies={maxCopies}
                                     banStatus={banStatus}
                                     shouldHideAfterDrop={shouldHideAfterDrop}
                                     currentCount={currentCount}
+                                    deckMode={deckMode}
+                                    mdRarityOverride={mdRarityMap?.get(card.id)}
                                     onStackClick={() => {
                                       if (remaining > 0) {
                                         handleAddCard(card);
@@ -475,6 +503,7 @@ export function CardBrowser({
                                       }
                                     }}
                                   />
+                                  </div>
                                 </div>
                               );
                             })}

@@ -119,12 +119,19 @@ const CARD_RACE_FILTERS = [
   { value: "Zombie", label: "Zombie" },
 ];
 
+// Master Duel rarities only: N, R, SR, UR (no C or U)
 const CARD_RARITY_FILTERS = [
   { value: "Normal", label: "N" },
-  { value: "Uncommon", label: "U" },
   { value: "Rare", label: "R" },
   { value: "Super Rare", label: "SR" },
   { value: "Ultra Rare", label: "UR" },
+];
+
+const BANLIST_STATUS_FILTERS = [
+  { value: "Forbidden", label: "Forbidden" },
+  { value: "Limited", label: "Limited" },
+  { value: "Semi-Limited", label: "Semi-Limited" },
+  { value: "Unlimited", label: "Unlimited" },
 ];
 
 const CARD_LEVEL_FILTERS = [
@@ -856,6 +863,21 @@ export const CARD_ARCHETYPE_FILTERS: { value: string; label: string }[] = [
   { value: "Zoodiac", label: "Zoodiac" },
 ];
 
+// -------- SORT OPTIONS --------
+
+export const SORT_OPTIONS: { value: string; label: string }[] = [
+  { value: "name", label: "Name" },
+  { value: "type", label: "Card Type" },
+  { value: "md_rarity", label: "Rarity" },
+  { value: "level", label: "Level/Rank" },
+  { value: "atk", label: "ATK" },
+  { value: "def", label: "DEF" },
+  { value: "link_rating", label: "Link Rating" },
+  { value: "attribute", label: "Attribute" },
+  { value: "race", label: "Race" },
+  { value: "archetype", label: "Archetype" },
+];
+
 // -------- FILTER CONFIGS --------
 
 export const FILTER_CONFIGS: FilterConfig[] = [
@@ -866,6 +888,7 @@ export const FILTER_CONFIGS: FilterConfig[] = [
   { label: "Race", key: "race", options: CARD_RACE_FILTERS },
   { label: "Rarity", key: "rarity", options: CARD_RARITY_FILTERS },
   { label: "Level", key: "level", options: CARD_LEVEL_FILTERS },
+  { label: "Banlist Status", key: "banStatus", options: BANLIST_STATUS_FILTERS },
 ];
 
 // -------- MODE COLORS ---------

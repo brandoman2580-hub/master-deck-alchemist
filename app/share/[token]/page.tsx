@@ -13,6 +13,25 @@ import { v4 as uuidv4 } from "uuid";
 import { useCardStore } from "@/store/cardStore";
 import type { DeckCard, DeckType } from "@/types/types";
 import Image from "next/image";
+import { DeckCostDisplay } from "@/components/deck-builder/deck-cost-display";
+import { useMasterDuelRarity } from "@/hooks/useMasterDuelRarity";
+
+function SharePageDeckCost({ deck }: { deck: DeckType }) {
+  const deckMode = deck.mode ?? "Master Duel";
+  const cardIds = [
+    ...deck.mainDeck,
+    ...deck.extraDeck,
+    ...deck.sideDeck,
+  ].map((c) => c.id);
+  const mdRarityMap = useMasterDuelRarity(cardIds, deckMode);
+  return (
+    <DeckCostDisplay
+      deck={deck}
+      deckMode={deckMode}
+      mdRarityMap={mdRarityMap}
+    />
+  );
+}
 
 export default function SharePage() {
   const params = useParams();
@@ -227,6 +246,9 @@ export default function SharePage() {
             <div className="text-sm text-white/70">
               <span className="font-medium">Mode:</span> {previewDeck.mode}
             </div>
+
+            {/* Deck Cost */}
+            <SharePageDeckCost deck={previewDeck} />
 
             {/* Card Preview - Show first few cards */}
             {previewDeck.mainDeck.length > 0 && (

@@ -21,16 +21,16 @@ entrypoint = "./functions/duel-simulation/index.ts"
 # For example, if you want to serve static HTML pages in your function:
 # static_files = [ "./functions/duel-simulation/*.html" ]
 
-[functions.update-banlist]
+[functions.update-master-duel-banlist]
 enabled = true
 verify_jwt = true
-import_map = "./functions/update-banlist/deno.json"
+import_map = "./functions/update-master-duel-banlist/deno.json"
 # Uncomment to specify a custom file path to the entrypoint.
 # Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
-entrypoint = "./functions/update-banlist/index.ts"
+entrypoint = "./functions/update-master-duel-banlist/index.ts"
 # Specifies static files to be bundled with the function. Supports glob patterns.
 # For example, if you want to serve static HTML pages in your function:
-# static_files = [ "./functions/update-banlist/*.html" ]
+# static_files = [ "./functions/update-master-duel-banlist/*.html" ]
 
 [functions.sync-card-pool]
 enabled = true
