@@ -95,17 +95,16 @@ import { useDeck } from '@/context/deck-context';
 ## Testing & CI
 
 ```bash
-# Run accessibility tests
-npm run test:a11y
-
-# Run linting
+npm run test:unit    # Vitest
+npm run test:edge    # Supabase edge function tests (Deno)
 npm run lint
-
-# Build validation
 npm run build
+npm run test:e2e     # Playwright (after build)
 ```
 
-CI must run `npm run build` to validate TypeScript and Next.js build.
+**Bitbucket Pipelines** (`bitbucket-pipelines.yml`) runs on pull requests and on pushes to `develop` / `master`. Enable Pipelines in the Bitbucket repo settings.
+
+**Deployments**: feature branches → Preview; `develop` → staging; `master` → production. See [docs/deployment-environments.md](docs/deployment-environments.md).
 
 ## Linters & formatting
 
@@ -117,11 +116,13 @@ Run `npm run lint` before committing.
 
 ## Contributing
 
-1. Fork the repository
-2. Create a feature branch: `feature/your-feature`
-3. Make your changes following the project structure guidelines
-4. Run `npm run lint` and `npm run build` to ensure everything works
-5. Submit a PR with a clear description and screenshots if UI changed
+1. Branch from `develop`: `git checkout develop && git pull && git checkout -b feature/your-feature`
+2. Make changes following the project structure guidelines
+3. Run `npm run lint`, `npm run test:unit`, and `npm run build` locally
+4. Open a PR **into `develop`** (not `master`)
+5. After staging QA, merge `develop` → `master` for production
+
+See [docs/deployment-environments.md](docs/deployment-environments.md) for Vercel and Supabase setup.
 
 ### Commit message format
 

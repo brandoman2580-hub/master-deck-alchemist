@@ -54,6 +54,7 @@ next-env.d.ts
 !docs/api/*.md
 !docs/environment-variables.md
 !docs/deployment-checklist.md
+!docs/deployment-environments.md
 !docs/monitoring-guide.md
 !docs/*guide.md
 !docs/*reference.md

@@ -84,19 +84,24 @@ supabase functions list
 
 ### Step 3: Update Client Application
 
-#### For Vercel/Next.js
-```bash
-# Build and deploy
-npm run build
-vercel deploy --prod
+See **[deployment-environments.md](./deployment-environments.md)** for the full dev → staging → production flow.
 
-# Or push to main branch (if auto-deploy enabled)
-git push origin main
+#### Release path (Vercel Hobby)
+
+1. Merge feature branch → **`develop`** (staging Preview deploy)
+2. QA on the stable `develop` branch URL in Vercel
+3. Merge **`develop` → `master`** for production (or `vercel promote <staging-deployment-url>`)
+
+```bash
+# Optional: promote a validated staging build without rebuilding
+vercel promote https://master-deck-alchemist-<deployment-id>.vercel.app
 ```
+
+**Do not** push directly to `master`. Production deploys only via PR merge or explicit promote.
 
 #### Verify Client Environment Variables
 1. Go to Vercel Dashboard → Project → Settings → Environment Variables
-2. Verify:
+2. Verify per environment (Preview/`develop` vs Production):
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 
