@@ -1,5 +1,6 @@
 import { Card, CardSearchParams } from "../types/card";
 import { BanStatus } from "../types/types";
+import { normalizeCardImages } from "./card-image-url";
 import { supabase } from "./supabaseClient";
 
 // 2. Card data search, now from Supabase instead of YGOPRODeck
@@ -112,13 +113,7 @@ function mapCardData(card: any) {
     ...card,
     deckInstanceId: "", // This will be set when added to deck
     // Add missing fields with default values to match Card interface
-    card_images: card.card_images || [
-      {
-        id: card.id,
-        image_url: `https://images.ygoprodeck.com/images/cards/${card.id}.jpg`,
-        image_url_small: `https://images.ygoprodeck.com/images/cards_small/${card.id}.jpg`,
-      },
-    ],
+    card_images: normalizeCardImages(card.id, card.card_images),
     card_sets: card.card_sets || [],
     card_prices: card.card_prices || [
       {

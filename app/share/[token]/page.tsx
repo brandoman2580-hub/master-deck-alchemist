@@ -14,6 +14,7 @@ import { useCardStore } from "@/store/cardStore";
 import type { DeckCard, DeckType } from "@/types/types";
 import Image from "next/image";
 import { DeckCostDisplay } from "@/components/deck-builder/deck-cost-display";
+import { resolveCardImageUrl } from "@/lib/card-image-url";
 import { useMasterDuelRarity } from "@/hooks/useMasterDuelRarity";
 
 function SharePageDeckCost({ deck }: { deck: DeckType }) {
@@ -166,19 +167,10 @@ export default function SharePage() {
   }
 
   function getCardImageUrl(card: DeckCard): string | null {
-    if (card.card_images && Array.isArray(card.card_images) && card.card_images.length > 0) {
-      const firstImage = card.card_images[0];
-      if (firstImage?.image_url_small) {
-        return firstImage.image_url_small;
-      }
-      if (firstImage?.image_url) {
-        return firstImage.image_url;
-      }
-    }
-    if (card.id) {
-      return `https://images.ygoprodeck.com/images/cards/${card.id}.jpg`;
-    }
-    return null;
+    const url = resolveCardImageUrl(card.id, card.card_images, {
+      preferSmall: false,
+    });
+    return url === "/placeholder.svg" ? null : url;
   }
 
   return (

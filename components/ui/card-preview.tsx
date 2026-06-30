@@ -3,7 +3,7 @@
 import { Card } from "../../types/card";
 import { Badge } from "./badge";
 import { RarityBadge } from "./rarity-badge";
-import Image from "next/image";
+import { CardImage } from "./card-image";
 import * as Tooltip from "@radix-ui/react-tooltip";
 import { getArchetypeName } from "../../lib/helpers";
 import { getRarityBadge, getCardRarityForDisplay } from "@/lib/utils/rarityBadges";
@@ -43,10 +43,11 @@ export function CardPreview({
             <div className="flex gap-3">
               {/* Card Image */}
               <div className="flex-shrink-0">
-                <Image
+                <CardImage
+                  card={card}
+                  preferSmall={false}
                   width={160}
                   height={235}
-                  src={card.card_images?.[0]?.image_url || "/placeholder.svg"}
                   alt={card.name}
                   className="w-[160px] h-auto object-contain rounded"
                 />

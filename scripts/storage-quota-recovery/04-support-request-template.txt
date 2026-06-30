@@ -1,0 +1,21 @@
+Subject: Orphaned storage objects after quota overage — request physical purge
+
+Project ref: izshwywgfaozmisedwxm
+Project name: supabase-md-alchemist
+
+Hello,
+
+My project exceeded the 1 GB free storage quota (~3.26 GB). I attempted to
+reduce usage by deleting rows from storage.objects via SQL with
+storage.allow_delete_query = 'true'.
+
+Dashboard → Usage still shows ~3.26 GB, but storage.objects metadata now only
+lists ~14,149 objects (~370 MB) in the card-images bucket. This suggests
+~2.9 GB of orphaned files remain on the storage backend.
+
+I have [ / have not ] run the S3 sync delete for bucket card-images.
+
+Please purge orphaned storage objects for this project so billed usage reflects
+actual bucket contents, or advise the correct recovery procedure.
+
+Thank you.

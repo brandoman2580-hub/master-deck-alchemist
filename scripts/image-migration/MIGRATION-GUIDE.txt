@@ -1,0 +1,204 @@
+================================================================================
+MIGRATE CARD IMAGES: Supabase Storage → AWS S3 (stay under Supabase 1 GB free)
+================================================================================
+
+Goal
+----
+- Keep ~14,149 thumbnail images (~370 MB) on AWS S3
+- Remove them from Supabase Storage so you can downgrade to Free
+- Stay YGOPRODeck-compliant (images self-hosted, not hotlinked)
+
+What you migrate
+----------------
+Only cards_small/ thumbnails (enough for deck builder UI). Skip full-size cards/
+until you monetize and need zoom/slideshow quality.
+
+Architecture after migration
+----------------------------
+  Browser → AWS S3 public URLs (or CloudFront later)
+  Postgres (Supabase) → card_image_assets + cards.card_images point to S3 URLs
+  Supabase Storage → empty (metadata cleaned)
+
+================================================================================
+PART A — AWS S3 SETUP (one time, ~15 min)
+================================================================================
+
+1. Create bucket (AWS Console → S3 → Create bucket)
+   - Name: e.g. mda-card-images-prod (globally unique)
+   - Region: us-east-1 (match Supabase region)
+   - Block Public Access: OFF for this dev bucket (see policy below)
+     OR keep blocked and use CloudFront later (more setup)
+
+2. Bucket policy (public read for cards_small only — dev/testing)
+
+   Replace BUCKET_NAME:
+
+   {
+     "Version": "2012-10-17",
+     "Statement": [
+       {
+         "Sid": "PublicReadCardThumbs",
+         "Effect": "Allow",
+         "Principal": "*",
+         "Action": "s3:GetObject",
+         "Resource": "arn:aws:s3:::BUCKET_NAME/cards_small/*"
+       }
+     ]
+   }
+
+3. IAM user for CLI uploads (IAM → Users → mda-image-migration)
+   Attach this INLINE policy (two statements — required for ListBucket):
+
+   {
+     "Version": "2012-10-17",
+     "Statement": [
+       {
+         "Sid": "ListBucket",
+         "Effect": "Allow",
+         "Action": ["s3:ListBucket"],
+         "Resource": "arn:aws:s3:::mda-card-images-prod"
+       },
+       {
+         "Sid": "ObjectReadWrite",
+         "Effect": "Allow",
+         "Action": ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"],
+         "Resource": "arn:aws:s3:::mda-card-images-prod/*"
+       }
+     ]
+   }
+
+   Replace bucket name if yours differs. ListBucket MUST use the bucket ARN
+   without /* — object actions use /*.
+
+   - Create access key → save Access Key ID + Secret (never commit to git)
+
+4. Configure AWS CLI profile (PowerShell):
+
+   aws configure --profile mda-aws
+   # Access Key ID / Secret from step 3
+   # Region: us-east-1
+   # Output: json
+
+5. Public base URL (note for later):
+
+   https://BUCKET_NAME.s3.us-east-1.amazonaws.com/cards_small
+
+   Example image:
+   https://BUCKET_NAME.s3.us-east-1.amazonaws.com/cards_small/483.jpg
+
+================================================================================
+PART B — COPY FILES Supabase → AWS (local cache, most reliable on Windows)
+================================================================================
+
+Prerequisites:
+  - Supabase Pro active (or restrictions lifted) so S3 API works
+  - Supabase S3 profile: supabase-md-alchemist (from storage-quota-recovery)
+  - AWS profile: mda-aws
+
+Run from repo root:
+
+   .\scripts\image-migration\migrate-supabase-to-aws-s3.ps1 `
+     -AwsBucket "YOUR_BUCKET_NAME"
+
+The script:
+  1. Downloads cards_small/ from Supabase to .image-migration-cache/
+  2. Uploads to s3://YOUR_BUCKET/cards_small/
+  3. Prints object counts — both sides should be ~14149
+
+Manual equivalent (PowerShell — run from repo root):
+
+   cd C:\Projects\master-deck-alchemist
+
+   $SUPABASE_ENDPOINT = "https://izshwywgfaozmisedwxm.storage.supabase.co/storage/v1/s3"
+   $CACHE = "C:\Projects\master-deck-alchemist\.image-migration-cache\cards_small"
+   $AWS_BUCKET = "YOUR_BUCKET_NAME"
+
+   New-Item -ItemType Directory -Force -Path $CACHE | Out-Null
+
+   # NOTE: aws s3 sync does NOT use --recursive (that flag is for aws s3 cp only)
+
+   aws s3 sync "s3://card-images/cards_small/" $CACHE `
+     --profile supabase-md-alchemist --endpoint-url $SUPABASE_ENDPOINT --region us-east-1
+
+   aws s3 sync $CACHE "s3://$AWS_BUCKET/cards_small/" `
+     --profile mda-aws --region us-east-1
+
+   (aws s3 ls "s3://$AWS_BUCKET/cards_small/" --recursive --profile mda-aws --region us-east-1 | Measure-Object -Line).Lines
+
+Verify in AWS Console: bucket → cards_small/ → ~14,149 .jpg files
+
+Spot-check in browser:
+   https://YOUR_BUCKET.s3.us-east-1.amazonaws.com/cards_small/483.jpg
+
+================================================================================
+PART C — UPDATE SUPABASE DATABASE (SQL Editor)
+================================================================================
+
+Run 04-update-card-image-urls.sql after replacing YOUR_BUCKET_NAME.
+
+This updates card_image_assets to AWS URLs. Do NOT truncate card_image_assets
+if you run this before wiping Supabase.
+
+================================================================================
+PART D — REMOVE FILES FROM SUPABASE STORAGE
+================================================================================
+
+Only after Part B verify succeeds.
+
+1. Wipe Supabase bucket (physical delete):
+
+   ..\storage-quota-recovery\02-wipe-bucket-via-s3.ps1
+   Type DELETE when prompted.
+
+2. Clean storage metadata only (does NOT truncate card_image_assets):
+
+   Run 05-wipe-supabase-metadata-only.sql in SQL Editor
+
+3. Wait 15–60 min → Dashboard Usage → Storage should be ~0 GB
+
+4. Downgrade Supabase to Free when comfortable
+
+================================================================================
+PART E — APP CONFIG (Phase 2 — wire Next.js to S3)
+================================================================================
+
+Add to .env.local and Vercel (all environments):
+
+   NEXT_PUBLIC_CARD_IMAGE_BASE_URL=https://mda-card-images-prod.s3.us-east-1.amazonaws.com/cards_small
+   NEXT_PUBLIC_DISABLE_EXTERNAL_CARD_IMAGE_FALLBACK=true
+
+Phase 2 steps (code + database):
+
+  1. Run 06-backfill-cards-card-images.sql (copies AWS URLs into cards.card_images)
+  2. lib/card-image-url.ts — shared resolver (S3 base URL, no YGOPRODeck in prod)
+  3. lib/api.ts mapCardData uses normalizeCardImages()
+  4. Share page + deck-media-card use resolveCardImageUrl()
+  5. next.config.mjs images.remotePatterns → mda-card-images-prod.s3.us-east-1.amazonaws.com
+
+After deploy, spot-check deck builder and /share/* pages load thumbnails from S3.
+
+Note: sync-card-pool edge function still ingests YGOPRODeck card_images from API.
+Re-run 06-backfill after bulk syncs, or update sync to map URLs to S3 in a follow-up.
+
+================================================================================
+COST NOTES (free-tier dev)
+================================================================================
+
+AWS S3 (12-month free tier): 5 GB storage — your ~370 MB fits easily
+Egress: 100 GB/month free — fine for dev; add CloudFront when you launch
+Supabase Free: 1 GB storage — DB + auth only after migration
+
+================================================================================
+ORDER CHECKLIST
+================================================================================
+
+ [ ] A. Create AWS bucket + IAM + public read policy
+ [ ] B. migrate-supabase-to-aws-s3.ps1 → ~14149 files on AWS
+ [ ] C. Spot-check 3 image URLs in browser
+ [ ] D. 04-update-card-image-urls.sql
+ [ ] E. 02-wipe-bucket-via-s3.ps1 (Supabase)
+ [ ] F. 05-wipe-supabase-metadata-only.sql
+ [ ] G. Confirm Supabase Usage < 1 GB
+ [ ] H. Phase 2: env vars + 06-backfill-cards-card-images.sql + deploy
+
+================================================================================

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence, useMotionValue, useTransform, PanInfo } from "framer-motion";
 import { X, Plus, Eye } from "lucide-react";
-import Image from "next/image";
+import { CardImage, hasDisplayableCardImage } from "@/components/ui/card-image";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/types/card";
 
@@ -128,10 +128,11 @@ export function SwipeableCardStack({
           animate={{ scale: 0.95, opacity: 0.5 }}
         >
           <div className="w-full max-w-sm h-[450px] rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm overflow-hidden">
-            {nextCard.card_images?.[0]?.image_url && (
+            {hasDisplayableCardImage(nextCard, false) && (
               <div className="relative w-full h-64">
-                <Image
-                  src={nextCard.card_images?.[0]?.image_url || "/placeholder.svg"}
+                <CardImage
+                  card={nextCard}
+                  preferSmall={false}
                   alt={nextCard.name}
                   fill
                   sizes="400px"
@@ -161,10 +162,11 @@ export function SwipeableCardStack({
         >
           <div className="w-full max-w-sm h-[450px] rounded-2xl bg-white/10 border border-white/20 backdrop-blur-xl shadow-2xl overflow-hidden">
             {/* Card Image */}
-            {currentCard.card_images?.[0]?.image_url && (
+            {hasDisplayableCardImage(currentCard, false) && (
               <div className="relative w-full h-64 bg-slate-900/50">
-                <Image
-                  src={currentCard.card_images?.[0]?.image_url || "/placeholder.svg"}
+                <CardImage
+                  card={currentCard}
+                  preferSmall={false}
                   alt={currentCard.name}
                   fill
                   sizes="400px"

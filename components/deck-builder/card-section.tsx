@@ -11,7 +11,7 @@ import { UniqueIdentifier } from "@dnd-kit/core";
 import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { CardPreview } from "@/components/ui/card-preview";
-import Image from "next/image";
+import { CardImage } from "@/components/ui/card-image";
 import {
   fadeInVariants,
   SCALE,
@@ -140,10 +140,10 @@ function DeckCardCopy({
           mdRarityOverride={mdRarityOverride}
         >
           <div className="relative w-full h-full">
-            <Image
+            <CardImage
+              card={card}
               width={120}
               height={180}
-              src={card.card_images?.[0]?.image_url_small || "/placeholder.svg"}
               alt={card.name}
               className="w-full h-full object-contain rounded shadow-sm"
               loading="lazy"

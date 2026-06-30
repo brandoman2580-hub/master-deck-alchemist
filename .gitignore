@@ -33,6 +33,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# image migration cache (Supabase → AWS S3)
+.image-migration-cache/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

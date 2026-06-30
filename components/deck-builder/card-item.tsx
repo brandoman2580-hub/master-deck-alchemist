@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/types/card";
 import { BanStatus, DeckSection } from "@/types/types";
 import { CardPreview } from "@/components/ui/card-preview";
-import Image from "next/image";
+import { CardImage } from "@/components/ui/card-image";
 import { X, Sparkles } from "lucide-react";
 import { useRecommendedCardsStore } from "@/store/recommendedCardsStore";
 
@@ -102,10 +102,10 @@ export const CardItem = memo(function CardItem({
       >
         <CardPreview card={card} banStatus={banStatus}>
           <div className="relative">
-            <Image
+            <CardImage
+              card={card}
               width={80}
               height={120}
-              src={card.card_images?.[0]?.image_url_small || "/placeholder.svg"}
               alt={card.name}
               className="w-full h-full object-contain rounded shadow-sm"
               loading="lazy"

@@ -1,6 +1,6 @@
- "use client";
+"use client";
 
-import Image from "next/image";
+import { CardImage } from "@/components/ui/card-image";
 import { motion } from "framer-motion";
 import { Loader2, Plus } from "lucide-react";
 
@@ -52,12 +52,8 @@ export function QuickSuggestionCard({
       <div className="flex items-start gap-3">
         <CardPreview card={card}>
           <div className="relative w-10 h-[58px] flex-shrink-0 cursor-pointer rounded-md overflow-hidden border border-white/10 bg-slate-950/40">
-            <Image
-              src={
-                card.card_images?.[0]?.image_url_small ||
-                card.card_images?.[0]?.image_url ||
-                "/placeholder.svg"
-              }
+            <CardImage
+              card={card}
               alt={card.name}
               fill
               className="object-cover"

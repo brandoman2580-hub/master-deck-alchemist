@@ -30,6 +30,7 @@ import {
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 import { Edit, Trash2, Clock, Pin, Layers, Zap, Shield, Copy, ChevronDown } from "lucide-react";
+import { resolveCardImageUrl } from "../../lib/card-image-url";
 import { DeckType } from "../../types/types";
 import type { Card as CardType } from "../../types/card";
 
@@ -72,25 +73,13 @@ export function DeckMediaCard({
     return null;
   }, [deck]);
 
-  // Get card image URL
   const cardImageUrl = useMemo(() => {
     if (!previewCard) return null;
     const card = previewCard as CardType;
-    // Try to get image from card_images array
-    if (card.card_images && Array.isArray(card.card_images) && card.card_images.length > 0) {
-      const firstImage = card.card_images[0];
-      if (firstImage?.image_url) {
-        return firstImage.image_url;
-      }
-      if (firstImage?.image_url_small) {
-        return firstImage.image_url_small;
-      }
-    }
-    // Fallback to YGOPRODeck image URL pattern
-    if (card.id) {
-      return `https://images.ygoprodeck.com/images/cards/${card.id}.jpg`;
-    }
-    return null;
+    const url = resolveCardImageUrl(card.id, card.card_images, {
+      preferSmall: false,
+    });
+    return url === "/placeholder.svg" ? null : url;
   }, [previewCard]);
 
   const shouldTruncate = deck.name.length > 30;

@@ -1,7 +1,7 @@
 import { X } from "lucide-react";
 import { CardPreview } from "./ui/card-preview";
+import { CardImage } from "./ui/card-image";
 import { Card } from "../types/card";
-import Image from "next/image";
 
 interface DeckCardProps {
   card: Card;
@@ -12,10 +12,10 @@ export default function DeckCard({ card, onRemove }: DeckCardProps) {
   return (
     <CardPreview card={card}>
       <div className="relative group">
-        <Image
+        <CardImage
+          card={card}
           width={80}
           height={120}
-          src={card.card_images?.[0]?.image_url_small || "/placeholder.svg"}
           alt={card.name}
           className="w-full rounded-lg"
         />

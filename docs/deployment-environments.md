@@ -82,6 +82,7 @@ Bookmark that URL as **staging**.
 | `NEXT_PUBLIC_SUPABASE_URL` | Dev project URL | Staging project URL (when ready) | Prod project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Dev anon key | Staging anon key | Prod anon key |
 | `NEXT_PUBLIC_CARD_IMAGE_BASE_URL` | Dev storage URL | Staging | Prod |
+| `NEXT_PUBLIC_DISABLE_EXTERNAL_CARD_IMAGE_FALLBACK` | `true` | `true` | `true` |
 | Server-only secrets | Preview scope | `develop` branch override | Production |
 
 CLI examples (run from project root after `vercel link`):

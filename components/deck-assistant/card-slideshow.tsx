@@ -5,7 +5,7 @@ import { motion, AnimatePresence, useMotionValue, useTransform, PanInfo } from "
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import Image from "next/image";
+import { CardImage, hasDisplayableCardImage } from "@/components/ui/card-image";
 import { useCardStore } from "@/store/cardStore";
 import { useDeck } from "@/context/deck-context";
 import { useModeStore } from "@/store/modeStore";
@@ -235,11 +235,11 @@ export function CardSlideshow({ recommendations, onAddCard }: CardSlideshowProps
             </Button>
 
             {/* Card Image */}
-            {card && card.card_images?.[0] ? (
+            {card && hasDisplayableCardImage(card) ? (
               <CardPreview card={card}>
                 <div className="relative w-full h-full cursor-pointer">
-                  <Image
-                    src={card.card_images?.[0]?.image_url_small || card.card_images?.[0]?.image_url || "/placeholder.svg"}
+                  <CardImage
+                    card={card}
                     alt={card.name}
                     fill
                     sizes="(max-width: 768px) 100vw, 400px"

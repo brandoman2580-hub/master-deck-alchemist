@@ -9,7 +9,7 @@ import { RarityBadge } from "./rarity-badge";
 import { Card } from "../../types/card";
 import { BanStatus } from "../../types/types";
 import { CardPreview } from "./card-preview";
-import Image from "next/image";
+import { CardImage } from "./card-image";
 import { Minus, Plus } from "lucide-react";
 import { useHoverAnimation } from "@/lib/animations";
 import { getRarityBadge } from "@/lib/utils/rarityBadges";
@@ -146,13 +146,10 @@ export function CardStack({
                           zIndex: maxCopies - index,
                         }}
                       >
-                        <Image
+                        <CardImage
+                          card={card}
                           width={120}
                           height={180}
-                          src={
-                            card.card_images?.[0]?.image_url_small ||
-                            "/placeholder.svg"
-                          }
                           alt={card.name}
                           className="w-full h-auto object-contain"
                           style={{

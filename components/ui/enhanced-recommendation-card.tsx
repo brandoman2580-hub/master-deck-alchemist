@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import Image from "next/image";
+import { CardImage } from "@/components/ui/card-image";
 import {
   Plus,
   Eye,
@@ -112,8 +112,8 @@ export function EnhancedRecommendationCard({
             >
               <CardPreview card={card}>
                 <div className="relative w-16 h-22 rounded-lg overflow-hidden border border-white/20 bg-slate-900/50 cursor-pointer group/image">
-                  <Image
-                    src={card.card_images?.[0]?.image_url_small || card.card_images?.[0]?.image_url || '/placeholder.svg'}
+                  <CardImage
+                    card={card}
                     alt={card.name}
                     fill
                     className="object-cover transition-transform duration-300 group-hover/image:scale-110"
