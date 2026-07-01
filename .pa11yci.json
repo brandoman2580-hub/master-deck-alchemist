@@ -1,0 +1,14 @@
+{
+  "defaults": {
+    "timeout": 60000,
+    "standard": "WCAG2AA",
+    "chromeLaunchConfig": {
+      "args": ["--no-sandbox", "--disable-setuid-sandbox"]
+    }
+  },
+  "urls": [
+    "http://localhost:3000/",
+    "http://localhost:3000/deck-builder",
+    "http://localhost:3000/saved-decks"
+  ]
+}
