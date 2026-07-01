@@ -95,9 +95,9 @@ import { useDeck } from '@/context/deck-context';
 ## Testing & CI
 
 ```bash
-npm run test:unit    # Vitest
-npm run test:edge    # Supabase edge function tests (Deno)
-npm run lint
+npm run test:unit    # Jest
+npm run test:edge    # Deno edge function unit tests
+npm run lint         # TypeScript check (tsc --noEmit; Next.js 16 removed next lint)
 npm run build
 npm run test:e2e     # Playwright (after build)
 ```

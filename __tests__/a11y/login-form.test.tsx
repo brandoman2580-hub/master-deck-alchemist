@@ -10,10 +10,30 @@
  * Run: npm run test:a11y
  */
 
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { axe, toHaveNoViolations } from "jest-axe";
 import { LoginForm } from "@/components/ui/login-form";
+
+jest.mock("@/lib/supabaseClient", () => ({
+  supabase: {
+    auth: {
+      signInWithPassword: jest.fn().mockResolvedValue({
+        data: { user: null },
+        error: { message: "Invalid login credentials" },
+      }),
+      resetPasswordForEmail: jest.fn().mockResolvedValue({ error: null }),
+    },
+  },
+}));
+
+jest.mock("@/store/useLoginModalStore", () => ({
+  useLoginModalStore: () => ({ closeLoginModal: jest.fn() }),
+}));
+
+jest.mock("@/store/useUserStore", () => ({
+  useUserStore: { getState: () => ({ setUser: jest.fn() }) },
+}));
 
 // Extend Jest matchers
 expect.extend(toHaveNoViolations);
@@ -21,6 +41,9 @@ expect.extend(toHaveNoViolations);
 describe("LoginForm accessibility", () => {
   it("should have no accessibility violations", async () => {
     const { container } = render(<LoginForm onSignupClick={() => {}} />);
+    if (typeof HTMLCanvasElement.prototype.getContext !== "function") {
+      HTMLCanvasElement.prototype.getContext = jest.fn(() => null);
+    }
     const results = await axe(container, {
       rules: {
         // Allow color-contrast to be checked separately if needed
@@ -46,25 +69,22 @@ describe("LoginForm accessibility", () => {
     const user = userEvent.setup();
     render(<LoginForm onSignupClick={() => {}} />);
 
-    const submitButton = screen.getByRole("button", { name: /log in/i });
-    await user.click(submitButton);
+    await user.type(screen.getByLabelText(/email/i), "user@example.com");
+    await user.type(screen.getByLabelText(/password/i), "wrong-password");
+    await user.click(screen.getByRole("button", { name: /log in/i }));
 
     await waitFor(() => {
       const emailInput = screen.getByLabelText(/email/i);
-      
-      // Check that error association exists - use getAttribute for more reliable checking
+
       const ariaInvalid = emailInput.getAttribute("aria-invalid");
       const ariaDescribedBy = emailInput.getAttribute("aria-describedby");
-      
-      expect(ariaInvalid).toBeTruthy();
+
+      expect(ariaInvalid).toBe("true");
       expect(ariaDescribedBy).toBeTruthy();
 
-      // Check that error message is present and has alert role
-      const errorMessage = screen.queryByRole("alert");
+      const errorMessage = screen.getByRole("alert");
       expect(errorMessage).toBeInTheDocument();
-      if (errorMessage) {
-        expect(errorMessage.textContent).toMatch(/required|invalid/i);
-      }
+      expect(errorMessage.textContent).toMatch(/invalid|failed|credentials/i);
     });
   });
 
@@ -72,25 +92,22 @@ describe("LoginForm accessibility", () => {
     const user = userEvent.setup();
     render(<LoginForm onSignupClick={() => {}} />);
 
-    // Tab to email input
     await user.tab();
     await waitFor(() => {
-      const emailInput = screen.getByLabelText(/email/i);
-      expect(document.activeElement).toBe(emailInput);
+      expect(document.activeElement).toBe(screen.getByLabelText(/email/i));
     });
 
-    // Tab to password input
+    await user.tab();
     await user.tab();
     await waitFor(() => {
-      const passwordInput = screen.getByLabelText(/password/i);
-      expect(document.activeElement).toBe(passwordInput);
+      expect(document.activeElement).toBe(screen.getByLabelText(/password/i));
     });
 
-    // Tab to submit button
     await user.tab();
     await waitFor(() => {
-      const submitButton = screen.getByRole("button", { name: /log in/i });
-      expect(document.activeElement).toBe(submitButton);
+      expect(document.activeElement).toBe(
+        screen.getByRole("button", { name: /log in/i })
+      );
     });
   });
 

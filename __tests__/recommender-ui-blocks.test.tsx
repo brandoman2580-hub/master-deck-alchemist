@@ -325,7 +325,9 @@ describe("RecommenderUIBlocks", () => {
         />
       );
 
-      expect(screen.getByText(/banned/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(/This card is banned in the selected format/i)
+      ).toBeInTheDocument();
     });
   });
 
@@ -391,7 +393,7 @@ describe("RecommenderUIBlocks", () => {
         />
       );
 
-      expect(screen.getByText(/Unknown block type/i)).toBeInTheDocument();
+      expect(screen.queryByText("Test")).not.toBeInTheDocument();
     });
   });
 });

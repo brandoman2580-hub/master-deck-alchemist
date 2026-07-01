@@ -46,7 +46,7 @@ jobs:
       - run: npm run test:edge
 
   lint:
-    name: Lint
+    name: Typecheck
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
