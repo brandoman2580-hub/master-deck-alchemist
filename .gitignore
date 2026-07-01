@@ -58,6 +58,7 @@ next-env.d.ts
 !docs/environment-variables.md
 !docs/deployment-checklist.md
 !docs/deployment-environments.md
+!docs/github-migration.md
 !docs/monitoring-guide.md
 !docs/*guide.md
 !docs/*reference.md

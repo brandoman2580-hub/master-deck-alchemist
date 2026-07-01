@@ -102,7 +102,7 @@ npm run build
 npm run test:e2e     # Playwright (after build)
 ```
 
-**Bitbucket Pipelines** (`bitbucket-pipelines.yml`) runs on pull requests and on pushes to `develop` / `master`. Enable Pipelines in the Bitbucket repo settings.
+**GitHub Actions** (`.github/workflows/ci.yml`) runs on pull requests and on pushes to `develop` / `master`. Enable Actions in the GitHub repo settings.
 
 **Deployments**: feature branches → Preview; `develop` → staging; `master` → production. See [docs/deployment-environments.md](docs/deployment-environments.md).
 
