@@ -76,8 +76,9 @@ jobs:
 
             const pa11yPath = path.join('reports', 'pa11y-report.json');
             if (fs.existsSync(pa11yPath)) {
-              const pa11y = JSON.parse(fs.readFileSync(pa11yPath, 'utf-8'));
-              const issues = pa11y.flatMap(r => r.issues || []);
+              const pa11yRaw = JSON.parse(fs.readFileSync(pa11yPath, 'utf-8'));
+              const pa11yPages = Array.isArray(pa11yRaw) ? pa11yRaw : [pa11yRaw];
+              const issues = pa11yPages.flatMap(r => r.issues || []);
               const critical = issues.filter(i => i.type === 'error').length;
               const warnings = issues.filter(i => i.type === 'warning').length;
               summary += `- **Pa11y:** ${critical} critical, ${warnings} warnings\n`;
