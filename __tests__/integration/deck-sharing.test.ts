@@ -1,20 +1,25 @@
 /**
  * Integration tests for deck sharing flow
  * Tests the complete flow: create share → get share → verify data
+ *
+ * Requires real Supabase credentials. Skipped in CI (placeholder env vars).
  */
 
 import { describe, it, expect, beforeAll } from "@jest/globals";
 import { createDeckShare, getDeckShare } from "@/lib/api/deckShare";
 import { DeckType } from "@/types/types";
 
-// Mock fetch globally
-global.fetch = jest.fn() as jest.Mock;
-
 // Mock environment
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
 
-const hasRequiredEnv = SUPABASE_URL && SUPABASE_ANON_KEY;
+const hasRequiredEnv =
+  Boolean(SUPABASE_URL) &&
+  Boolean(SUPABASE_ANON_KEY) &&
+  SUPABASE_URL !== "https://placeholder.supabase.co" &&
+  SUPABASE_ANON_KEY !== "placeholder";
+
+const describeIntegration = hasRequiredEnv ? describe : describe.skip;
 
 // Test deck data
 const testDeck: DeckType = {
@@ -41,13 +46,8 @@ const testDeck: DeckType = {
   isPinned: false,
 };
 
-describe("Deck Sharing Integration", () => {
+describeIntegration("Deck Sharing Integration", () => {
   let shareToken: string | null = null;
-
-  beforeEach(() => {
-    jest.clearAllMocks();
-    (global.fetch as jest.Mock).mockClear();
-  });
 
   beforeAll(() => {
     if (!hasRequiredEnv) {

@@ -95,14 +95,14 @@ import { useDeck } from '@/context/deck-context';
 ## Testing & CI
 
 ```bash
-npm run test:unit    # Vitest
-npm run test:edge    # Supabase edge function tests (Deno)
-npm run lint
+npm run test:unit    # Jest
+npm run test:edge    # Deno edge function unit tests
+npm run lint         # TypeScript check (tsc --noEmit; Next.js 16 removed next lint)
 npm run build
 npm run test:e2e     # Playwright (after build)
 ```
 
-**Bitbucket Pipelines** (`bitbucket-pipelines.yml`) runs on pull requests and on pushes to `develop` / `master`. Enable Pipelines in the Bitbucket repo settings.
+**GitHub Actions** (`.github/workflows/ci.yml`) runs on pull requests and on pushes to `develop` / `master`. Enable Actions in the GitHub repo settings.
 
 **Deployments**: feature branches → Preview; `develop` → staging; `master` → production. See [docs/deployment-environments.md](docs/deployment-environments.md).
 

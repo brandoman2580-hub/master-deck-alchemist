@@ -1,5 +1,7 @@
-// Jest setup file
-// This file is loaded before all tests
+// Mock HTMLCanvasElement for jest-axe in jsdom
+if (typeof HTMLCanvasElement !== "undefined") {
+  HTMLCanvasElement.prototype.getContext = jest.fn(() => null);
+}
 
 // Import jest-dom matchers for better assertions
 require("@testing-library/jest-dom");

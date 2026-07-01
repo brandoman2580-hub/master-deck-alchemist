@@ -17,38 +17,62 @@ feature/my-change  →  PR → develop  →  QA on staging URL  →  PR → mast
 ```
 
 1. Branch from `develop`: `git checkout develop && git pull && git checkout -b feature/my-change`
-2. Push and open a PR **into `develop`** (Bitbucket Pipelines runs unit, edge, lint).
+2. Push and open a PR **into `develop`** (GitHub Actions runs unit, edge, lint).
 3. After merge, Vercel deploys `develop` to the **stable staging alias**.
 4. QA on staging; when ready, open a PR **`develop` → `master`**.
 5. After merge, Vercel deploys production.
 
-**Never push directly to `master`.** Use Bitbucket branch permissions (see below).
+**Never push directly to `master`.** Use GitHub branch protection (see below).
 
 ---
 
-## Bitbucket setup
+## GitHub setup
 
-### Branch permissions (manual — dashboard)
+### Create the repository
 
-1. Bitbucket → **Repository settings** → **Branch permissions**
-2. Add rule for **`master`**:
-   - Prevent rewriting history
-   - Prevent deletion
-   - **Require pull request** before merge
-   - Require **minimum 1 approval** (optional but recommended)
-   - Require **passing builds** (after Pipelines is enabled)
-3. Optional: add a lighter rule for **`develop`** (require PR, no direct pushes).
+1. GitHub → **New repository** → `master-deck-alchemist` (private recommended)
+2. Do **not** initialize with README, `.gitignore`, or license (history is pushed from Bitbucket)
+3. Follow [docs/github-migration.md](./github-migration.md) to mirror branches and reconnect Vercel
 
-### Enable Pipelines
+### Branch protection (manual — dashboard)
 
-1. **Repository settings** → **Pipelines** → **Settings** → Enable Pipelines
-2. The repo root `bitbucket-pipelines.yml` defines:
-   - **All PRs**: unit tests, edge tests, lint
-   - **`develop` / `master` pushes**: above + build + Playwright e2e
+1. GitHub → **Settings** → **Branches** → **Add branch protection rule**
+2. Branch name pattern: **`master`**
+   - Require a pull request before merging
+   - Require status checks to pass: **Unit tests**, **Edge function tests**, **Lint** (and **Build** / **E2E** when enabled)
+   - Do not allow bypassing the above settings
+   - Restrict force pushes
+3. Optional: add a lighter rule for **`develop`** (require PR, no direct pushes)
+
+### CI workflows
+
+The repo root `.github/workflows/` defines:
+
+| Workflow | Triggers | Jobs |
+|----------|----------|------|
+| `ci.yml` | All PRs; pushes to `develop`, `master`, `feature/**`, `fix/**` | Unit, edge, lint; build + e2e on `develop`/`master` pushes |
+| `a11y-ci.yml` | PRs and pushes to `develop` / `master` | Accessibility scans |
+
+E2E runs only when `playwright.config.ts` exists on the branch.
 
 ### Default branch for new work
 
 Set **`develop`** as the default branch for day-to-day PRs, or keep `master` as default but always target `develop` in feature PRs.
+
+### Agent PR automation (`gh` CLI)
+
+Install the [GitHub CLI](https://cli.github.com/) and authenticate once:
+
+```bash
+winget install GitHub.cli
+gh auth login
+```
+
+Then PRs can be created from the terminal or Cursor agent:
+
+```bash
+gh pr create --base develop --head feature/my-change --title "feat: ..." --body "..."
+```
 
 ---
 
@@ -60,7 +84,7 @@ Project: [master-deck-alchemist](https://vercel.com/brandondieselyakima-4396s-pr
 
 1. Vercel → Project → **Settings** → **Git**
 2. **Production Branch**: `master`
-3. Ensure Bitbucket repo `armenta-projects/master-deck-alchemist` is connected
+3. Ensure GitHub repo `brandoman2580-hub/master-deck-alchemist` is connected
 
 ### 2. Staging via `develop` (no custom environment on Hobby)
 
@@ -226,8 +250,8 @@ vercel pull --environment=production                        # production (carefu
 
 ## Checklist: first staging deploy
 
-- [ ] `develop` branch exists on Bitbucket
-- [ ] Bitbucket Pipelines enabled; PR checks pass
+- [ ] `develop` branch exists on GitHub
+- [ ] GitHub Actions enabled; PR checks pass
 - [ ] Branch protection on `master`
 - [ ] Vercel production branch = `master`
 - [ ] Staging branch alias bookmarked from first `develop` deploy
@@ -239,5 +263,6 @@ vercel pull --environment=production                        # production (carefu
 
 ## Related docs
 
+- [github-migration.md](./github-migration.md) — Bitbucket → GitHub cutover steps
 - [deployment-checklist.md](./deployment-checklist.md) — feature release verification
 - [environment-variables.md](./environment-variables.md) — full env var reference
