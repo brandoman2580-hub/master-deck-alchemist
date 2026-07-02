@@ -4,6 +4,7 @@ import type { CardCandidate } from "../schemas";
 import { createClient } from "@supabase/supabase-js";
 import { CardCandidateSchema, LlmResponseSchema } from "../schemas";
 import { toTOON } from "../toon";
+import { DEFAULT_GROQ_MODEL } from "@/lib/ai/groq-model";
 
 // Helper functions for vector similarity
 function dot(a: number[], b: number[]): number {
@@ -229,7 +230,7 @@ async function callLLM({
   user,
   max_tokens = 400,
   groqApiKey,
-  modelName = "llama-3.3-70b-versatile",
+  modelName = DEFAULT_GROQ_MODEL,
 }: {
   system: string;
   user: string;
@@ -427,7 +428,7 @@ Task: Analyze the deck context and candidate cards. Return the top ${picks} card
     user,
     max_tokens: 400,
     groqApiKey,
-    modelName: modelName || "llama-3.3-70b-versatile",
+    modelName: modelName || DEFAULT_GROQ_MODEL,
   });
   const llmText = llmRaw?.text?.trim?.() ?? String(llmRaw);
 
@@ -465,7 +466,7 @@ Task: Return the top ${picks} picks as strict JSON: { "picks":[...] }`;
     user: fallbackUser,
     max_tokens: 600,
     groqApiKey,
-    modelName: modelName || "llama-3.3-70b-versatile",
+    modelName: modelName || DEFAULT_GROQ_MODEL,
   });
   const fallbackText = fallbackRes?.text ?? String(fallbackRes);
   try {

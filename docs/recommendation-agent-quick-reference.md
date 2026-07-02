@@ -100,7 +100,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 ### Edge Function (Supabase Dashboard)
 ```
 GROQ_API_KEY=your-groq-key
-MODEL_NAME=llama-3.3-70b-versatile  # Optional
+MODEL_NAME=openai/gpt-oss-120b  # Optional
 ```
 
 ---
