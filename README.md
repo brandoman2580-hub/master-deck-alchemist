@@ -104,7 +104,7 @@ npm run test:e2e     # Playwright (after build)
 
 **GitHub Actions** (`.github/workflows/ci.yml`) runs on pull requests and on pushes to `develop` / `master`. Enable Actions in the GitHub repo settings.
 
-**Deployments**: feature branches → Preview; `develop` → staging; `master` → production. See [docs/deployment-environments.md](docs/deployment-environments.md).
+**Deployments**: feature branches → Preview; `develop` → staging (`development.masterdeckalchemist.com`); `master` → production. Deployment notes live locally under `docs/` (not committed by default).
 
 ## Linters & formatting
 
@@ -122,7 +122,20 @@ Run `npm run lint` before committing.
 4. Open a PR **into `develop`** (not `master`)
 5. After staging QA, merge `develop` → `master` for production
 
-See [docs/deployment-environments.md](docs/deployment-environments.md) for Vercel and Supabase setup.
+### Documentation
+
+Files under `docs/` are **gitignored by default** (setup/planning notes stay local). Only `README.md` files and paths listed in `docs/.tracked` are versioned.
+
+To track a doc required for build or final ops:
+
+```bash
+# 1. Add the path (relative to docs/) in docs/.tracked
+# 2. Regenerate ignore rules
+npm run docs:git-sync
+# 3. git add the doc file
+```
+
+Pre-commit runs `npm run docs:check` and blocks commits of unlisted `docs/` files.
 
 ### Commit message format
 

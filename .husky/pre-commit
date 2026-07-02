@@ -1,5 +1,8 @@
 #!/usr/bin/env sh
 
+# Block setup/planning docs from being committed unless listed in docs/.tracked
+npm run docs:check || exit 1
+
 # Run TypeScript type checking only
 # ESLint is run separately via `npm run lint` or in CI
 npx tsc --noEmit || exit 1

@@ -8,6 +8,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "tsc --noEmit",
+    "docs:git-sync": "node scripts/sync-docs-gitignore.mjs",
+    "docs:check": "node scripts/check-staged-docs.mjs",
     "a11y:inventory": "tsx scripts/generate-a11y-inventory.ts",
     "a11y:lint": "eslint . --ext .ts,.tsx --format json --output-file reports/eslint-a11y-report.json || true",
     "a11y:scan": "npm run a11y:axe && npm run a11y:pa11y && npm run a11y:lighthouse",
