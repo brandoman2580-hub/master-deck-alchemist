@@ -44,7 +44,7 @@ SUPABASE_SERVICE_ROLE_KEY=your-service-role-key-here
 GROQ_API_KEY=your-groq-api-key-here
 
 # Model Configuration (Optional)
-MODEL_NAME=llama-3.3-70b-versatile
+MODEL_NAME=openai/gpt-oss-120b
 ```
 
 ### Variable Descriptions
@@ -73,13 +73,12 @@ MODEL_NAME=llama-3.3-70b-versatile
 
 #### `MODEL_NAME`
 - **Type**: String
-- **Required**: No (defaults to `llama-3.3-70b-versatile`)
+- **Required**: No (defaults to `openai/gpt-oss-120b`)
 - **Description**: Groq model to use for recommendations
 - **Options**:
-  - `llama-3.3-70b-versatile` (default, recommended)
-  - `llama-3.1-70b-versatile`
-  - `mixtral-8x7b-32768`
-- **Example**: `llama-3.3-70b-versatile`
+  - `openai/gpt-oss-120b` (default, recommended — replaces deprecated `llama-3.3-70b-versatile`)
+  - `qwen/qwen3.6-27b` (Groq alternative)
+- **Example**: `openai/gpt-oss-120b`
 
 ---
 
@@ -97,7 +96,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
    - Go to: Project Settings → Edge Functions → Secrets
    - Add each variable:
      - `GROQ_API_KEY` = `your-groq-key`
-     - `MODEL_NAME` = `llama-3.3-70b-versatile` (optional)
+     - `MODEL_NAME` = `openai/gpt-oss-120b` (optional)
 
 ### For Production Deployment
 
@@ -105,7 +104,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 1. Navigate to: **Project Settings** → **Edge Functions** → **Secrets**
 2. Add/update the following secrets:
    - `GROQ_API_KEY` (required)
-   - `MODEL_NAME` (optional, defaults to `llama-3.3-70b-versatile`)
+   - `MODEL_NAME` (optional, defaults to `openai/gpt-oss-120b`)
 
 #### Vercel/Next.js Deployment
 1. Navigate to your project settings
@@ -187,7 +186,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzd
 
 ```
 GROQ_API_KEY=gsk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-MODEL_NAME=llama-3.3-70b-versatile
+MODEL_NAME=openai/gpt-oss-120b
 ```
 
 Note: `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are automatically provided by Supabase and do not need to be set manually.

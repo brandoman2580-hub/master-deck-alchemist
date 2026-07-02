@@ -465,7 +465,7 @@ if (!validated.success) {
 - **Typical Response Time**: 2-4 seconds
 - **P95 Response Time**: < 5 seconds
 - **Token Usage**: ~800-1200 tokens per request
-- **Cost**: ~$0.0003 per request (Groq API)
+- **Cost**: ~$0.00015 per request (Groq `openai/gpt-oss-120b`)
 
 ---
 

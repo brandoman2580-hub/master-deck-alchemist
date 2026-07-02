@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { corsHeaders } from "../_shared/cors.ts";
+import { resolveGroqModel } from "../_shared/groq-model.ts";
 
 type Card = {
   id: number;
@@ -28,7 +29,7 @@ interface MasterDuelBanlistEntry {
 }
 
 const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
-const MODEL_NAME = Deno.env.get("MODEL_NAME");
+const MODEL_NAME = resolveGroqModel();
 
 // Helper: dedup by name
 function onlyUniqueByName(arr: Card[]): Card[] {
@@ -533,16 +534,6 @@ STRONG RULES (MUST FOLLOW):
     if (!GROQ_API_KEY) {
       return new Response(
         JSON.stringify({ error: "GROQ_API_KEY not configured." }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
-    }
-
-    if (!MODEL_NAME) {
-      return new Response(
-        JSON.stringify({ error: "MODEL_NAME not configured." }),
         {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },

@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { corsHeaders } from "../_shared/cors.ts";
+import { resolveGroqModel } from "../_shared/groq-model.ts";
 
 type Card = {
   id: number;
@@ -25,7 +26,7 @@ interface MasterDuelBanlistEntry {
 }
 
 const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
-const MODEL_NAME = Deno.env.get("MODEL_NAME") || "llama3-70b-8192";
+const MODEL_NAME = resolveGroqModel();
 const MAX_SIMULATIONS = 20;
 
 // Helper: safely extract archetype as string

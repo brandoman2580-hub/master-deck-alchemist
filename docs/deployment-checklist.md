@@ -31,7 +31,8 @@ SELECT * FROM pg_policies WHERE tablename = 'recommendation_telemetry';
 
 ### ✅ Environment Variables
 - [ ] `GROQ_API_KEY` set in Supabase Edge Function secrets
-- [ ] `MODEL_NAME` set (optional, defaults to `llama-3.3-70b-versatile`)
+- [ ] `MODEL_NAME` set (optional, defaults to `openai/gpt-oss-120b`)
+- [ ] If `MODEL_NAME` was previously `llama-3.3-70b-versatile`, update the secret before 2026-08-16
 - [ ] `NEXT_PUBLIC_SUPABASE_URL` set in client deployment
 - [ ] `NEXT_PUBLIC_SUPABASE_ANON_KEY` set in client deployment
 
