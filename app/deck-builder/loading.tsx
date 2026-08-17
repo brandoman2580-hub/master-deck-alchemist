@@ -1,5 +1,7 @@
-import { LoaderFullScreen } from "@/components/ui/custom-loader";
+"use client";
 
-export default function Loading() {
-  return <LoaderFullScreen message="Loading Deck Builder..." />;
+import { MdaLoadingScreen } from "@/components/mda/mda-loading-screen";
+
+export default function Loading(): React.ReactNode {
+  return <MdaLoadingScreen open status="Loading deck builder…" />;
 }

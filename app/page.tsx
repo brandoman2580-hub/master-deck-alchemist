@@ -1,356 +1,493 @@
 "use client";
 
-import { useRef, useEffect } from "react";
-import { motion } from "framer-motion";
 import {
-  ArrowRight,
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+  type ReactNode,
+} from "react";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { motion, useReducedMotion } from "framer-motion";
+import {
   Brain,
-  MessageSquare,
-  Target,
-  Sparkles,
+  ChevronDown,
+  Gauge,
+  ScatterChart,
+  List,
+  Route,
+  Search,
 } from "lucide-react";
 import MDAIcon from "@/public/images/MDA_Logo_One.svg";
-import { Button } from "../components/ui/button";
-import Link from "next/link";
 import {
-  fadeInUpVariants,
-  staggerContainer,
-  staggerItem,
-  useInViewAnimation,
-  useHoverAnimation,
-} from "@/lib/animations";
-import { ScrollIndicator } from "@/components/landing/scroll-indicator";
+  LandingAuthModal,
+  type AuthMode,
+} from "@/components/mda/landing-auth-modal";
+import { LandingFeatureRow } from "@/components/mda/landing-feature-row";
+import { LandingLoginButton } from "@/components/mda/landing-login-button";
+import {
+  LandingTransmutationStage,
+  useLandingScrollContainer,
+} from "@/components/mda/landing-transmutation-stage";
+import { LandingSideNav } from "@/components/mda/landing-side-nav";
+import { MdaLoadingScreen } from "@/components/mda/mda-loading-screen";
+import { signup } from "@/app/login/actions";
+import { supabase } from "@/lib/supabaseClient";
+import { useUserStore } from "@/store/useUserStore";
+import { cn } from "@/lib/utils";
 
-export default function Home() {
-  // Ensure page starts at top on initial load
+const SECTIONS = [
+  { id: "section-1", label: "01" },
+  { id: "section-2", label: "02" },
+  { id: "section-3", label: "03" },
+  { id: "section-4", label: "04" },
+] as const;
+
+const HERO_COPY =
+  "Master Deck Alchemist is the AI-powered deck engineering platform for competitive Yu-Gi-Oh! players—combining intelligent deck optimization, guided combo learning, matchup preparation, and versioned deck management in one precision-built workspace.";
+
+const FOOTER_LEGAL =
+  "The literal and graphical information presented on this site about Yu-Gi-Oh!, including card images, the attribute, level/rank and type symbols, and card text, is copyright 4K Media Inc, a subsidiary of Konami Digital Entertainment, Inc. This website is not produced by, endorsed by, supported by, or affiliated with 4k Media or Konami Digital Entertainment.";
+
+const MOCKUPS = {
+  build: encodeURI("/images/MDA - Workshop, Build View, Assistant Tab.png"),
+  matchups: encodeURI("/images/MDA - Workshop, Matchups View.png"),
+  combos: encodeURI("/images/MDA - Workshop, Combos View.png"),
+} as const;
+
+/**
+ * Landing — Figma MDA Login Page (Alternative 2) v2:
+ * dark multi-section scroll with side indicators + modal auth.
+ */
+export default function HomePage(): ReactNode {
+  const router = useRouter();
+  const reduceMotion = useReducedMotion();
+  const setUser = useUserStore((state) => state.setUser);
+  const [authOpen, setAuthOpen] = useState(false);
+  const [mode, setMode] = useState<AuthMode>("login");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [remember, setRemember] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [authLoading, setAuthLoading] = useState(false);
+  const [activeSection, setActiveSection] = useState(0);
+  const sectionRefs = useRef<Array<HTMLElement | null>>([]);
+  const scrollContainer = useLandingScrollContainer();
+  const scrollContainerRef = useRef<HTMLElement | null>(null);
+
+  const openLogin = (): void => {
+    setError(null);
+    setMessage(null);
+    setMode("login");
+    setAuthOpen(true);
+  };
+
+  const closeAuth = (): void => {
+    setAuthOpen(false);
+    setError(null);
+    setMessage(null);
+  };
+
+  const handleModeChange = (next: AuthMode): void => {
+    setError(null);
+    setMessage(null);
+    if (next === "signup") {
+      setEmail("");
+      setPassword("");
+      setConfirm("");
+      setShowPassword(false);
+    }
+    setMode(next);
+  };
+
+  const handleLogin = async (
+    event: FormEvent<HTMLFormElement>,
+  ): Promise<void> => {
+    event.preventDefault();
+    setError(null);
+    setAuthOpen(false);
+    setAuthLoading(true);
+    setSubmitting(true);
+
+    const { data, error: authError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (authError || !data.user) {
+      setSubmitting(false);
+      setAuthLoading(false);
+      setError(authError?.message ?? "Login failed");
+      setAuthOpen(true);
+      return;
+    }
+
+    setUser(data.user);
+    setSubmitting(false);
+    router.push("/deck-archives");
+  };
+
+  const handleSignup = async (
+    event: FormEvent<HTMLFormElement>,
+  ): Promise<void> => {
+    event.preventDefault();
+    setSubmitting(true);
+    setError(null);
+    setMessage(null);
+    if (password !== confirm) {
+      setSubmitting(false);
+      setError("Passwords do not match");
+      return;
+    }
+    const formData = new FormData();
+    formData.append("email", email);
+    formData.append("password", password);
+    const result = await signup({ success: false }, formData);
+    setSubmitting(false);
+    if (!result.success) {
+      setError(result.error ?? "Signup failed");
+      return;
+    }
+    setMessage(
+      `Confirmation email sent to ${result.email ?? email}. Check your inbox, then log in.`,
+    );
+    setPassword("");
+    setConfirm("");
+    setMode("login");
+  };
+
+  const handleForgotPassword = async (): Promise<void> => {
+    if (!email) {
+      setError("Enter your email above first");
+      return;
+    }
+    setError(null);
+    const origin =
+      typeof window !== "undefined" ? window.location.origin : "";
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(
+      email,
+      { redirectTo: `${origin}/auth/reset-password` },
+    );
+    if (resetError) {
+      setError(resetError.message);
+      return;
+    }
+    setMessage("Password reset email sent.");
+  };
+
+  const scrollToSection = (index: number): void => {
+    const node = sectionRefs.current[index];
+    if (!node) return;
+    // Lock indicator immediately so smooth-scroll doesn't twitch mid-flight
+    setActiveSection(index);
+    const scrollRoot =
+      scrollContainerRef.current ??
+      document.getElementById("main-content");
+    if (scrollRoot) {
+      const rootRect = scrollRoot.getBoundingClientRect();
+      const nodeRect = node.getBoundingClientRect();
+      const nextTop =
+        scrollRoot.scrollTop + (nodeRect.top - rootRect.top);
+      scrollRoot.scrollTo({
+        top: nextTop,
+        behavior: reduceMotion ? "auto" : "smooth",
+      });
+      return;
+    }
+    node.scrollIntoView({
+      behavior: reduceMotion ? "auto" : "smooth",
+      block: "start",
+    });
+  };
+
   useEffect(() => {
-    // Disable scroll restoration to prevent browser from restoring scroll position
-    if ('scrollRestoration' in window.history) {
-      window.history.scrollRestoration = 'manual';
-    }
-    
-    // Scroll to top immediately on mount (synchronous)
-    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-    
-    // Also set scroll position directly for cross-browser compatibility
-    if (document.documentElement) {
-      document.documentElement.scrollTop = 0;
-    }
-    if (document.body) {
-      document.body.scrollTop = 0;
-    }
-  }, []);
+    scrollContainerRef.current = scrollContainer;
+
+    const nodes = sectionRefs.current.filter(Boolean) as HTMLElement[];
+    if (!scrollContainer || nodes.length === 0) return;
+
+    // Thin center band — only one section intersects at a time (no threshold flicker)
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const hit = entries.find((entry) => entry.isIntersecting);
+        if (!hit?.target) return;
+        const index = nodes.indexOf(hit.target as HTMLElement);
+        if (index >= 0) {
+          setActiveSection((prev) => (prev === index ? prev : index));
+        }
+      },
+      {
+        root: scrollContainer,
+        rootMargin: "-42% 0px -42% 0px",
+        threshold: 0,
+      },
+    );
+
+    nodes.forEach((node) => observer.observe(node));
+    return () => observer.disconnect();
+  }, [scrollContainer]);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
-      <main
-        id="main-content"
-        tabIndex={-1}
-        aria-label="Main content"
-        role="main"
-      >
-        <Hero />
-        <Features />
-        <StatsStrip />
-        <Footer />
-      </main>
-    </div>
-  );
-}
-
-function Hero() {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const isInView = useInViewAnimation(containerRef, { once: true, amount: 0.3 });
-  const hoverAnimation = useHoverAnimation();
-
-  return (
-    <section className="relative min-h-[60vh] overflow-hidden">
-      <div
-        className="absolute inset-0 bg-[url('/images/mda_hero_bg.svg')] bg-cover bg-right lg:bg-center"
-        aria-hidden
+    <div className="relative min-h-screen bg-black text-white">
+      <MdaLoadingScreen
+        open={authLoading}
+        status="Signing in and opening Deck Archives…"
       />
-      {/* Gradient hint that more content exists below */}
-      <div
-        className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-slate-950 to-transparent pointer-events-none z-10"
-        aria-hidden
-      />
-      <ScrollIndicator />
 
-      <div
-        ref={containerRef}
-        className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-20"
-      >
-        <motion.div
-          className="flex flex-col lg:flex-row items-start lg:items-center gap-12 lg:gap-16"
-          initial="hidden"
-          animate={isInView ? "visible" : "hidden"}
-          variants={staggerContainer(0.1)}
+      {/* Sticky chrome: brand + login + side nav */}
+      <header className="pointer-events-none fixed inset-x-0 top-0 z-30 flex items-center justify-between px-6 py-2.5">
+        <div
+          className="pointer-events-auto flex items-center gap-4"
+          aria-label="Master Deck Alchemist"
         >
-          <div className="max-w-xl space-y-8">
-            <motion.div className="space-y-4" variants={staggerItem}>
-              <motion.h1
-                className="text-5xl md:text-6xl lg:text-7xl leading-tight tracking-[0.08em]"
-                style={{ fontFamily: "var(--font-heading)" }}
-                variants={fadeInUpVariants}
-              >
-                Master Deck Alchemist
-              </motion.h1>
-              <motion.p
-                className="max-w-cxl text-lg md:text-xl text-slate-200 leading-relaxed"
-                variants={fadeInUpVariants}
-              >
-                Analyze consistency, synergies, and weaknesses with AI that explains its reasoning — so every change makes sense.
-              </motion.p>
-            </motion.div>
-
-            <motion.div
-              className="flex flex-col sm:flex-row items-center gap-4"
-              variants={staggerItem}
-            >
-              <motion.div {...hoverAnimation}>
-                <Button
-                  asChild
-                  size="lg"
-                  className="h-14 px-8"
-                >
-                  <Link href="/deck-builder" className="flex items-center gap-3">
-                    Launch Deck Builder
-                    <ArrowRight className="h-5 w-5" aria-hidden />
-                  </Link>
-                </Button>
-              </motion.div>
-
-              <motion.div {...hoverAnimation}>
-                <Button
-                  asChild
-                  size="lg"
-                  variant="outline"
-                  className="h-14 px-8"
-                >
-                  <Link href="/saved-decks">View Saved Decks</Link>
-                </Button>
-              </motion.div>
-            </motion.div>
-          </div>
-        </motion.div>
-      </div>
-    </section>
-  );
-}
-
-function Features() {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const isInView = useInViewAnimation(containerRef, { once: true, amount: 0.2 });
-  const hoverAnimation = useHoverAnimation(1.02, -2);
-
-  const features = [
-    {
-      icon: Sparkles,
-      title: "AI Recommender",
-      description:
-        "Hybrid RAG pulls archetype staples, tech calls, and flex slots tuned to your list.",
-    },
-    {
-      icon: Brain,
-      title: "Deck Analysis",
-      description:
-        "Power, consistency, resilience, and matchup grades with actionable fixes.",
-    },
-    {
-      icon: Target,
-      title: "Deck Tester",
-      description:
-        "Simulate lines, analyze brick rates, and surface mulligan guidance instantly.",
-    },
-    {
-      icon: MessageSquare,
-      title: "AI Chatbot",
-      description:
-        "Context-aware assistant that answers rulings, combos, and sideboarding plans.",
-    },
-  ];
-
-  return (
-    <section id="features" className="relative bg-slate-950 py-14 scroll-mt-4">
-      <div
-        ref={containerRef}
-        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10"
-      >
-        <motion.div
-          className="text-center mb-10"
-          initial="hidden"
-          animate={isInView ? "visible" : "hidden"}
-          variants={fadeInUpVariants}
-        >
-          <span
-            className="text-white/60 tracking-[0.1em] uppercase text-sm mb-3 block"
-            style={{ fontFamily: "var(--font-heading)" }}
-          >
-            Core Systems
+          <MDAIcon className="h-[30px] w-[29px] shrink-0" aria-hidden />
+          <span className="font-open-sans text-[22px] font-semibold uppercase tracking-wide text-white sm:text-2xl">
+            Master Deck Alchemist
           </span>
-          <h2
-            className="text-4xl md:text-5xl font-bold mb-3 text-white"
-            style={{ fontFamily: "var(--font-heading)" }}
+        </div>
+        <div className="pointer-events-auto">
+          <LandingLoginButton
+            onClick={openLogin}
+            size="header"
+            hidden={authOpen}
+          />
+        </div>
+      </header>
+
+      <div className="pointer-events-none fixed bottom-[12%] right-4 top-[98px] z-30 hidden items-start justify-end lg:flex xl:right-10">
+        <LandingSideNav
+          activeIndex={activeSection}
+          onSelect={scrollToSection}
+          className="pointer-events-auto"
+        />
+      </div>
+
+      <div className="relative">
+        {/* Sticky transmutation stage — card/platform fixed in viewport; sprites/burst track page scroll */}
+        {scrollContainer ? (
+          <div
+            className="pointer-events-none absolute inset-0 z-[1] hidden lg:block"
+            aria-hidden
           >
-            Deck Forging Arsenal
-          </h2>
-          <p className="text-slate-300 text-lg max-w-2xl mx-auto">
-            Precision tools for competitive deck building.
-          </p>
-        </motion.div>
+            <div className="sticky top-[74px] ml-auto mr-10 h-[calc(100dvh-74px)] w-[min(821px,52vw)] xl:mr-16">
+              <LandingTransmutationStage
+                container={scrollContainer}
+                className="h-full w-full"
+              />
+            </div>
+          </div>
+        ) : null}
 
-        <motion.div
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
-          initial="hidden"
-          animate={isInView ? "visible" : "hidden"}
-          variants={staggerContainer(0.1)}
+        {/* Section 1 — Hero */}
+        <section
+          id={SECTIONS[0].id}
+          ref={(node) => {
+            sectionRefs.current[0] = node;
+          }}
+          className="relative z-10 flex min-h-[100dvh] flex-col overflow-visible bg-transparent pt-[74px]"
         >
-          {features.map((feature, index) => (
+          <div className="relative flex flex-1 flex-col lg:flex-row lg:items-start lg:px-16 lg:pt-6">
             <motion.div
-              key={index}
-              className="rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 backdrop-blur-xl p-6 transition-all duration-300 shadow-lg hover:shadow-xl"
-              variants={staggerItem}
-              {...hoverAnimation}
+              className="relative z-10 flex max-w-[420px] flex-col px-6 pt-6 lg:px-0 lg:pt-0"
+              initial={reduceMotion ? false : { opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.45, ease: "easeOut" }}
             >
-              <div className="flex flex-col gap-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center border border-white/20">
-                      <feature.icon className="w-6 h-6 text-white" />
-                    </div>
-                    <h3
-                      className="text-lg font-semibold text-white"
-                      style={{ fontFamily: "var(--font-heading)" }}
-                    >
-                      {feature.title}
-                    </h3>
-                  </div>
-                </div>
-                <p className="text-slate-300 leading-relaxed">
-                  {feature.description}
-                </p>
+              <h1 className="font-anton text-[64px] uppercase leading-none sm:text-[80px] lg:text-[96px]">
+                <span className="block text-white">Build.</span>
+                <span className="block text-white">Optimize.</span>
+                <span className="block text-[#7ee8ff]">Dominate.</span>
+              </h1>
+              <p className="mt-6 max-w-[373px] font-open-sans text-base leading-6 text-white">
+                {HERO_COPY}
+              </p>
+              <div className="mt-10">
+                <LandingLoginButton
+                  onClick={openLogin}
+                  size="hero"
+                  hidden={authOpen}
+                />
               </div>
             </motion.div>
-          ))}
-        </motion.div>
-      </div>
-    </section>
-  );
-}
 
-function StatsStrip() {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const isInView = useInViewAnimation(containerRef, { once: true, amount: 0.2 });
-  const hoverAnimation = useHoverAnimation(1.02, -2);
-
-  const steps = [
-    {
-      label: "Explore uncharted decks",
-      detail: "Start with AI baselines tuned for your archetype.",
-    },
-    {
-      label: "Feel the pace",
-      detail: "Stress-test ratios with realistic draw + combo physics.",
-    },
-    {
-      label: "Compete globally",
-      detail: "Compare against live meta lists and side plans.",
-    },
-    {
-      label: "Rewrite the story",
-      detail: "Lock your tournament-ready version and export fast.",
-    },
-  ];
-
-  return (
-    <section className="relative bg-slate-950 py-10">
-      <div ref={containerRef} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <motion.div
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
-          initial="hidden"
-          animate={isInView ? "visible" : "hidden"}
-          variants={staggerContainer(0.1)}
-        >
-          {steps.map((step, index) => (
-            <motion.div
-              key={step.label}
-              className="rounded-xl bg-white/5 border border-white/10 backdrop-blur-md px-5 py-6 hover:bg-white/10 hover:border-white/20 transition-all duration-300"
-              variants={staggerItem}
-              {...hoverAnimation}
-            >
-              <div className="flex items-start gap-4">
-                <div
-                  className="text-3xl font-semibold text-white/80"
-                  style={{ fontFamily: "var(--font-heading)" }}
-                  aria-hidden
-                >
-                  {index + 1}
-                </div>
-                <div className="space-y-1">
-                  <div
-                    className="text-sm font-semibold text-white"
-                    style={{ fontFamily: "var(--font-heading)" }}
-                  >
-                    {step.label}
-                  </div>
-                  <p className="text-slate-300 text-sm leading-relaxed">
-                    {step.detail}
-                  </p>
-                </div>
-              </div>
-            </motion.div>
-          ))}
-        </motion.div>
-      </div>
-    </section>
-  );
-}
-
-function Footer() {
-  const containerRef = useRef<HTMLElement>(null);
-  const isInView = useInViewAnimation(containerRef, { once: true, amount: 0.2 });
-
-  return (
-    <footer
-      ref={containerRef}
-      className="relative bg-slate-950 border-t border-white/10 py-12"
-      aria-label="Footer"
-      role="contentinfo"
-    >
-      <motion.div
-        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
-        initial="hidden"
-        animate={isInView ? "visible" : "hidden"}
-        variants={fadeInUpVariants}
-      >
-        <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-3">
-            <MDAIcon
-              className="w-24 h-24"
-              aria-label="Master Deck Alchemist logo"
-            />
-            <div>
-              <div
-                className="tracking-wider uppercase text-sm text-white"
-                style={{ fontFamily: "var(--font-heading)" }}
-              >
-                Master Deck Alchemist
-              </div>
-              <div className="text-xs text-slate-400">
-                © 2025 All rights reserved
-              </div>
+            {/* Mobile — stage in-flow under copy */}
+            <div className="relative z-0 mx-auto mt-4 aspect-[821/864] w-full max-w-[820px] flex-1 lg:hidden">
+              {scrollContainer ? (
+                <LandingTransmutationStage container={scrollContainer} />
+              ) : null}
             </div>
           </div>
 
-          <div className="max-w-3xl text-sm text-slate-300 leading-relaxed">
-            <p>
-              The literal and graphical information presented on this site about Yu-Gi-Oh!, including card images, the attribute, level/rank and type symbols, and card text, is copyright 4K Media Inc, a subsidiary of Konami Digital Entertainment, Inc. This website is not produced by, endorsed by, supported by, or affiliated with 4k Media or Konami Digital Entertainment.
+          <div className="relative z-10 flex flex-col items-center gap-2 pb-8 pt-4">
+            <p className="font-share-tech text-sm uppercase tracking-[0.2em] text-white/80">
+              Scroll down
             </p>
+            <motion.div
+              aria-hidden
+              animate={
+                reduceMotion ? undefined : { y: [0, 6, 0] }
+              }
+              transition={
+                reduceMotion
+                  ? undefined
+                  : { duration: 1.4, repeat: Infinity, ease: "easeInOut" }
+              }
+            >
+              <ChevronDown className="size-6 text-white" />
+            </motion.div>
           </div>
-        </div>
+        </section>
 
-        <div className="mt-8 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-      </motion.div>
-    </footer>
+        {/* Section 2 — AI deck building */}
+        <section
+          id={SECTIONS[1].id}
+          ref={(node) => {
+            sectionRefs.current[1] = node;
+          }}
+          className="relative z-10 flex min-h-[100dvh] items-start bg-black/80 px-6 py-12 backdrop-blur-[2px] lg:bg-transparent lg:px-16 lg:py-16 lg:backdrop-blur-none"
+        >
+          <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-10 lg:flex-row lg:items-start lg:gap-6 lg:pr-28">
+            <div className="relative aspect-[789/526] w-full overflow-hidden rounded-sm bg-[#1a1d22] lg:max-w-[789px] lg:flex-1">
+              <Image
+                src={MOCKUPS.build}
+                alt="Workshop build view with AI assistant"
+                fill
+                className="object-cover object-top"
+                sizes="(max-width: 1024px) 100vw, 789px"
+              />
+            </div>
+            <div className="flex w-full max-w-[381px] flex-col lg:pt-2">
+              <h2 className="font-anton text-5xl uppercase leading-none text-white sm:text-6xl lg:text-[72px]">
+                AI-Powered Deck Building
+              </h2>
+              <div className="mt-2 flex flex-col gap-2.5 py-2.5">
+                <LandingFeatureRow
+                  icon={Brain}
+                  label="Intelligent Suggestions"
+                />
+                <LandingFeatureRow
+                  icon={Gauge}
+                  label="Practical Optimizations"
+                />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Section 3 — Matchups */}
+        <section
+          id={SECTIONS[2].id}
+          ref={(node) => {
+            sectionRefs.current[2] = node;
+          }}
+          className="relative z-10 flex min-h-[100dvh] items-start bg-black/80 px-6 py-12 backdrop-blur-[2px] lg:bg-transparent lg:px-16 lg:py-16 lg:backdrop-blur-none"
+        >
+          <div className="mx-auto flex w-full max-w-[1440px] flex-col-reverse gap-10 lg:flex-row lg:items-start lg:gap-6 lg:pr-28">
+            <div className="flex w-full max-w-[381px] flex-col lg:pt-2">
+              <h2 className="font-anton text-5xl uppercase leading-none text-white sm:text-6xl lg:text-[72px]">
+                Meta Matchup Analysis
+              </h2>
+              <div className="mt-2 flex flex-col gap-2.5 py-2.5">
+                <LandingFeatureRow
+                  icon={ScatterChart}
+                  label="Insightful Matchup Data"
+                />
+                <LandingFeatureRow
+                  icon={Search}
+                  label="Real Meta Comparisons"
+                />
+              </div>
+            </div>
+            <div className="relative aspect-[789/526] w-full overflow-hidden rounded-sm bg-[#1a1d22] lg:max-w-[789px] lg:flex-1">
+              <Image
+                src={MOCKUPS.matchups}
+                alt="Workshop matchups analytics view"
+                fill
+                className="object-cover object-top"
+                sizes="(max-width: 1024px) 100vw, 789px"
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* Section 4 — Combos */}
+        <section
+          id={SECTIONS[3].id}
+          ref={(node) => {
+            sectionRefs.current[3] = node;
+          }}
+          className="relative z-10 flex min-h-[100dvh] items-start bg-black/80 px-6 py-12 backdrop-blur-[2px] lg:bg-transparent lg:px-16 lg:py-16 lg:backdrop-blur-none"
+        >
+          <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-10 lg:flex-row lg:items-start lg:gap-6 lg:pr-28">
+            <div className="relative aspect-[789/526] w-full overflow-hidden rounded-sm bg-[#1a1d22] lg:max-w-[789px] lg:flex-1">
+              <Image
+                src={MOCKUPS.combos}
+                alt="Workshop combos lines view"
+                fill
+                className="object-cover object-top"
+                sizes="(max-width: 1024px) 100vw, 789px"
+              />
+            </div>
+            <div className="flex w-full max-w-[381px] flex-col lg:pt-2">
+              <h2 className="font-anton text-5xl uppercase leading-none text-white sm:text-6xl lg:text-[72px]">
+                Real Time Combo Lines
+              </h2>
+              <div className="mt-2 flex flex-col gap-2.5 py-2.5">
+                <LandingFeatureRow
+                  icon={Route}
+                  label="Effective Combo Strategies"
+                />
+                <LandingFeatureRow
+                  icon={List}
+                  label="Informative Weakness Data"
+                />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <footer
+          className={cn(
+            "relative z-10 flex flex-col gap-4 bg-black px-6 py-8 font-open-sans text-white/70",
+            "sm:flex-row sm:items-center sm:justify-between sm:px-6",
+          )}
+        >
+          <p className="text-base uppercase text-white">
+            ©2026 Master Deck Alchemist
+          </p>
+          <p className="max-w-[747px] text-sm leading-normal text-white/45">
+            {FOOTER_LEGAL}
+          </p>
+        </footer>
+      </div>
+
+      <LandingAuthModal
+        open={authOpen}
+        mode={mode}
+        onModeChange={handleModeChange}
+        onClose={closeAuth}
+        email={email}
+        password={password}
+        confirm={confirm}
+        showPassword={showPassword}
+        remember={remember}
+        error={error}
+        message={message}
+        submitting={submitting}
+        onEmailChange={setEmail}
+        onPasswordChange={setPassword}
+        onConfirmChange={setConfirm}
+        onShowPasswordToggle={() => setShowPassword((value) => !value)}
+        onRememberChange={setRemember}
+        onLogin={(event) => void handleLogin(event)}
+        onSignup={(event) => void handleSignup(event)}
+        onForgotPassword={() => void handleForgotPassword()}
+      />
+    </div>
   );
 }

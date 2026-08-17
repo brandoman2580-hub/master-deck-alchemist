@@ -10,6 +10,14 @@
   font-display: swap;
 }
 
+@font-face {
+  font-family: 'Space Armor';
+  src: url('./fonts/SpaceArmor-vmlv4.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;
@@ -33,11 +41,26 @@
     --ring: 221.2 83.2% 53.3%;
     --radius: 0.5rem;
     --font-heading: 'Orbitron', system-ui, sans-serif;
+    --font-mda: 'Roboto Condensed', 'Arial Narrow', sans-serif;
     /* Cyberpunk theme variables */
     --cyb-900: #06121a;
     --cyb-800: #0b2633;
     --accent-cyan: #14EFFF;
     --muted-50: #B7C6D6;
+    /* MDA v2 design tokens (Figma) */
+    --mda-bg: #2a2d32;
+    --mda-bg-deep: #1a1d22;
+    --mda-surface: #32363c;
+    --mda-surface-raised: #3a3f46;
+    --mda-cyan: #38d6ff;
+    --mda-cyan-soft: #7ee8ff;
+    --mda-cyan-muted: rgba(126, 232, 255, 0.25);
+    --mda-purple: #e0b6ff;
+    --mda-text: #eaf7ff;
+    --mda-text-muted: rgba(234, 247, 255, 0.65);
+    --mda-danger: #e95e70;
+    --mda-success: #4ade80;
+    --mda-header-bar: #6b8ead;
   }
 
   .dark {
@@ -162,6 +185,36 @@
   box-shadow: none !important;
   padding: 0 !important;
   margin: 0 !important;
+}
+
+/* === MDA magnetic cursor (desktop fine pointer) === */
+html.mda-magnetic-cursor,
+html.mda-magnetic-cursor * {
+  cursor: none !important;
+}
+
+/* === MDA scroll-driven parallax (legacy band stack removed) ===
+   Transmutation stage lives in LandingTransmutationStage. */
+
+/* Autofill detection + neutralize browser yellow so filled fields
+   don't look "focused" until the user actually focuses them. */
+@keyframes onAutoFillStart {
+  from {
+    opacity: 0.99;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  animation-name: onAutoFillStart;
+  -webkit-text-fill-color: #ffffff;
+  caret-color: #ffffff;
+  transition: background-color 99999s ease-in-out 0s;
+  box-shadow: 0 0 0 1000px transparent inset;
 }
 
 /* === Drag and Drop Fixes === */

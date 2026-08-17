@@ -18,7 +18,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 1.0,
     },
     {
-      url: `${baseUrl}/deck-builder`,
+      url: `${baseUrl}/workshop`,
       lastModified: currentDate,
       changeFrequency: "weekly",
       priority: 0.9,
@@ -30,7 +30,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.8,
     },
     {
-      url: `${baseUrl}/saved-decks`,
+      url: `${baseUrl}/deck-archives`,
       lastModified: currentDate,
       changeFrequency: "weekly",
       priority: 0.7,

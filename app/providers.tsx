@@ -2,26 +2,39 @@
 
 import { useEffect } from "react";
 import type { ReactNode } from "react";
+import { usePathname } from "next/navigation";
 import { ThemeProvider } from "next-themes";
 import { DeckProvider } from "../context/deck-context";
 import Navbar from "../components/navbar";
 import { useCardStore } from "../store/cardStore";
 import { getCardData } from "../lib/api";
 import { useSupabaseUserSync } from "../hooks/useSupabaseUserSync";
+import { MagneticCursor } from "@/components/mda/magnetic-cursor";
+
+function usesMdaShell(pathname: string): boolean {
+  return (
+    pathname === "/" ||
+    pathname.startsWith("/deck-archives") ||
+    pathname.startsWith("/workshop") ||
+    pathname.startsWith("/auth/reset-password")
+  );
+}
 
 export function Providers({ children }: { children: ReactNode }) {
+  const pathname = usePathname() ?? "/";
+  const hideLegacyNavbar = usesMdaShell(pathname);
+  const showMagneticCursor = hideLegacyNavbar;
   const setCardList = useCardStore((state) => state.setCardList);
   const setLoading = useCardStore((state) => state.setLoading);
   const cardList = useCardStore((state) => state.cardList);
   useSupabaseUserSync();
 
   useEffect(() => {
-    // Only fetch cards once, on client, if not already loaded
     if (cardList.length > 0) {
-      return; // Cards already loaded
+      return;
     }
 
-    const fetchAllCards = async () => {
+    const fetchAllCards = async (): Promise<void> => {
       setLoading(true);
       try {
         const results = await getCardData({
@@ -30,15 +43,15 @@ export function Providers({ children }: { children: ReactNode }) {
           sortDirection: "asc",
         });
         setCardList(results);
-      } catch (error) {
-        // Silently handle errors - cards will remain empty
+      } catch {
+        // Cards remain empty on failure
       } finally {
         setLoading(false);
       }
     };
-    fetchAllCards();
+    void fetchAllCards();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Empty deps - only run once on mount
+  }, []);
 
   return (
     <ThemeProvider
@@ -48,11 +61,12 @@ export function Providers({ children }: { children: ReactNode }) {
       disableTransitionOnChange
     >
       <DeckProvider>
-        <div className="relative z-20 flex flex-col min-h-screen">
-          <Navbar />
+        <div className="relative z-20 flex h-dvh max-h-dvh flex-col overflow-hidden">
+          {hideLegacyNavbar ? null : <Navbar />}
+          {showMagneticCursor ? <MagneticCursor /> : null}
           <main
             id="main-content"
-            className="flex-1"
+            className="min-h-0 flex-1 overflow-y-auto scroll-smooth"
             tabIndex={-1}
             aria-label="Main content"
             role="main"

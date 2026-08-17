@@ -1,6 +1,20 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  pageExtensions: ["tsx", "ts"], // or simply ['tsx', 'ts']
+  pageExtensions: ["tsx", "ts"],
+  async redirects() {
+    return [
+      {
+        source: "/deck-builder",
+        destination: "/workshop",
+        permanent: false,
+      },
+      {
+        source: "/saved-decks",
+        destination: "/deck-archives",
+        permanent: false,
+      },
+    ];
+  },
   images: {
     remotePatterns: [
       {
@@ -13,8 +27,6 @@ const nextConfig = {
   },
   turbopack: {
     rules: {
-      // Handle SVG files as React components using @svgr/webpack
-      // SVG files with ?url query parameter will be handled by Next.js default behavior
       "*.svg": {
         loaders: ["@svgr/webpack"],
         as: "*.js",
