@@ -16,13 +16,13 @@ export default function Navbar() {
 
   const navItems = [
     {
-      name: "Deck Builder",
-      href: "/deck-builder",
+      name: "Workshop",
+      href: "/workshop",
       icon: <Layers className="h-4 w-4 mr-2" />,
     },
     {
-      name: "Saved Decks",
-      href: "/saved-decks",
+      name: "Deck Archives",
+      href: "/deck-archives",
       icon: <Save className="h-4 w-4 mr-2" />,
     },
     {

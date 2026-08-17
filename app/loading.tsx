@@ -1,5 +1,10 @@
-import { LoaderFullScreen } from "@/components/ui/custom-loader";
+"use client";
 
-export default function Loading() {
-  return <LoaderFullScreen message="Loading..." />;
+import { MdaLoadingScreen } from "@/components/mda/mda-loading-screen";
+
+/**
+ * Route-level loading UI — MDA loader (replaces legacy cyberpunk LoaderFullScreen).
+ */
+export default function Loading(): React.ReactNode {
+  return <MdaLoadingScreen open status="Loading…" />;
 }

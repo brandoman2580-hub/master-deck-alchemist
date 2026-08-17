@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { Inter } from "next/font/google";
+import { Inter, Roboto_Condensed } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import { Providers } from "./providers";
 import { LoginModal } from "../components/ui/login-modal";
@@ -12,7 +13,29 @@ import {
   generateWebApplicationSchema,
 } from "../lib/seo/structured-data";
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
+const robotoCondensed = Roboto_Condensed({
+  subsets: ["latin"],
+  weight: ["300", "400", "700", "900"],
+  variable: "--font-mda",
+});
+const anton = localFont({
+  src: "./fonts/Anton-Regular.ttf",
+  variable: "--font-anton",
+  weight: "400",
+  display: "swap",
+});
+const openSans = localFont({
+  src: "./fonts/OpenSans-VariableFont_wdth,wght.ttf",
+  variable: "--font-open-sans",
+  display: "swap",
+});
+const shareTechMono = localFont({
+  src: "./fonts/ShareTechMono-Regular.ttf",
+  variable: "--font-share-tech",
+  weight: "400",
+  display: "swap",
+});
 
 const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL || "https://masterdeckalchemist.com";
@@ -100,6 +123,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body
         className={`
           ${inter.className}
+          ${robotoCondensed.variable}
+          ${anton.variable}
+          ${openSans.variable}
+          ${shareTechMono.variable}
           min-h-screen
           flex flex-col
           overflow-x-hidden
