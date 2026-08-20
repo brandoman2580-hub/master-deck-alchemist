@@ -26,6 +26,7 @@ import {
 } from "@/components/mda/landing-auth-modal";
 import { LandingFeatureRow } from "@/components/mda/landing-feature-row";
 import { LandingLoginButton } from "@/components/mda/landing-login-button";
+import { MdaBrandTitle } from "@/components/mda/brand-lockup";
 import {
   LandingTransmutationStage,
   useLandingScrollContainer,
@@ -246,9 +247,7 @@ export default function HomePage(): ReactNode {
           aria-label="Master Deck Alchemist"
         >
           <MDAIcon className="h-[30px] w-[29px] shrink-0" aria-hidden />
-          <span className="font-open-sans text-[22px] font-semibold uppercase tracking-wide text-white sm:text-2xl">
-            Master Deck Alchemist
-          </span>
+          <MdaBrandTitle />
         </div>
         <div className="pointer-events-auto">
           <LandingLoginButton

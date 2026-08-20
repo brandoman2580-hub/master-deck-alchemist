@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { usePathname } from "next/navigation";
 import { ThemeProvider } from "next-themes";
 import { DeckProvider } from "../context/deck-context";
@@ -10,6 +11,16 @@ import { useCardStore } from "../store/cardStore";
 import { getCardData } from "../lib/api";
 import { useSupabaseUserSync } from "../hooks/useSupabaseUserSync";
 import { MagneticCursor } from "@/components/mda/magnetic-cursor";
+
+function createQueryClient(): QueryClient {
+  return new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: 1,
+      },
+    },
+  });
+}
 
 function usesMdaShell(pathname: string): boolean {
   return (
@@ -27,6 +38,7 @@ export function Providers({ children }: { children: ReactNode }) {
   const setCardList = useCardStore((state) => state.setCardList);
   const setLoading = useCardStore((state) => state.setLoading);
   const cardList = useCardStore((state) => state.cardList);
+  const [queryClient] = useState(createQueryClient);
   useSupabaseUserSync();
 
   useEffect(() => {
@@ -54,27 +66,29 @@ export function Providers({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <ThemeProvider
-      attribute="class"
-      defaultTheme="dark"
-      enableSystem
-      disableTransitionOnChange
-    >
-      <DeckProvider>
-        <div className="relative z-20 flex h-dvh max-h-dvh flex-col overflow-hidden">
-          {hideLegacyNavbar ? null : <Navbar />}
-          {showMagneticCursor ? <MagneticCursor /> : null}
-          <main
-            id="main-content"
-            className="min-h-0 flex-1 overflow-y-auto scroll-smooth"
-            tabIndex={-1}
-            aria-label="Main content"
-            role="main"
-          >
-            {children}
-          </main>
-        </div>
-      </DeckProvider>
-    </ThemeProvider>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider
+        attribute="class"
+        defaultTheme="dark"
+        enableSystem
+        disableTransitionOnChange
+      >
+        <DeckProvider>
+          <div className="relative z-20 flex h-dvh max-h-dvh flex-col overflow-hidden">
+            {hideLegacyNavbar ? null : <Navbar />}
+            {showMagneticCursor ? <MagneticCursor /> : null}
+            <main
+              id="main-content"
+              className="min-h-0 flex-1 overflow-y-auto scroll-smooth"
+              tabIndex={-1}
+              aria-label="Main content"
+              role="main"
+            >
+              {children}
+            </main>
+          </div>
+        </DeckProvider>
+      </ThemeProvider>
+    </QueryClientProvider>
   );
 }

@@ -9,6 +9,7 @@ import { openLoginModal } from "../lib/helpers";
 import { useUserStore } from "../store/useUserStore";
 import { UserMenu } from "./ui/user-menu";
 import MDAIcon from "@/public/images/MDA_Logo_One.svg";
+import { MdaBrandTitle } from "@/components/mda/brand-lockup";
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -43,12 +44,7 @@ export default function Navbar() {
             >
               <div className="flex items-center gap-3">
                 <MDAIcon className="w-14 h-14" aria-hidden="true" />
-                <span
-                  className="tracking-wider uppercase text-white"
-                  style={{ fontFamily: "var(--font-heading)" }}
-                >
-                  Master Deck Alchemist
-                </span>
+                <MdaBrandTitle />
               </div>
             </Link>
             <nav

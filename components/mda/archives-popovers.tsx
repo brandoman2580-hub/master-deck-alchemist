@@ -7,22 +7,26 @@ import {
   type ReactNode,
   type RefObject,
 } from "react";
-import { Check, Copy, Gamepad2, Share2, Trash2, X } from "lucide-react";
+import { Check, Copy, Gamepad2, Loader2, QrCode, Share2, Trash2, X } from "lucide-react";
 import { Crown } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  ARCHIVE_POPOVER_CONTENT_CLASS,
+  ARCHIVE_POPOVER_EDGE_PAD,
+  ARCHIVE_POPOVER_PANEL_CLASS,
+} from "@/components/mda/archives-popover-styles";
 import type { DeckMode } from "@/types/types";
 import { cn } from "@/lib/utils";
-
-const EDGE_PAD = 16;
 
 function preferSide(trigger: HTMLButtonElement | null): "left" | "right" {
   if (typeof window === "undefined" || !trigger) return "right";
   const spaceRight = window.innerWidth - trigger.getBoundingClientRect().right;
-  return spaceRight < 280 + EDGE_PAD ? "left" : "right";
+  return spaceRight < 280 + ARCHIVE_POPOVER_EDGE_PAD ? "left" : "right";
 }
 
 function usePreferLeft(): {
@@ -41,7 +45,7 @@ function usePreferLeft(): {
 }
 
 const iconBtn =
-  "rounded p-1 text-white/70 transition-[background-color,color,transform] duration-200 ease-in-out hover:bg-white hover:text-[color:var(--mda-bg-deep)] active:scale-95";
+  "rounded p-1 text-white/70 transition-[background-color,color,transform] duration-200 ease-in-out hover:bg-white hover:text-[color:var(--mda-bg-deep)] active:scale-95 disabled:pointer-events-none disabled:opacity-40";
 
 export type DeckArchiveActionPopoversProps = {
   deckName: string;
@@ -68,30 +72,55 @@ export function DeckArchiveActionPopovers({
   const [copyMode, setCopyMode] = useState<DeckMode>(initialMode);
   const [shareUrl, setShareUrl] = useState("");
   const [shareLoading, setShareLoading] = useState(false);
+  const [shareError, setShareError] = useState<string | null>(null);
+  const [showShareQr, setShowShareQr] = useState(false);
+  const shareRequestRef = useRef<Promise<string> | null>(null);
 
   const copy = usePreferLeft();
   const share = usePreferLeft();
   const del = usePreferLeft();
 
+  const beginShareGeneration = useCallback(async (): Promise<void> => {
+    if (shareRequestRef.current) return;
+
+    setShareLoading(true);
+    setShareError(null);
+    setShareUrl("");
+
+    const request = onShareOpen();
+    shareRequestRef.current = request;
+
+    try {
+      const url = await request;
+      setShareUrl(url);
+    } catch (err) {
+      setShareError(
+        err instanceof Error ? err.message : "Failed to generate share link",
+      );
+    } finally {
+      shareRequestRef.current = null;
+      setShareLoading(false);
+    }
+  }, [onShareOpen]);
+
   const handleShareOpenChange = useCallback(
-    async (next: boolean): Promise<void> => {
-      if (next) share.captureSide();
-      setShareOpen(next);
-      if (!next) {
-        setShareUrl("");
+    (next: boolean): void => {
+      if (next) {
+        if (shareLoading || shareRequestRef.current) return;
+        share.captureSide();
+        setShareOpen(true);
+        void beginShareGeneration();
         return;
       }
-      setShareLoading(true);
-      try {
-        const url = await onShareOpen();
-        setShareUrl(url);
-      } catch {
-        setShareOpen(false);
-      } finally {
-        setShareLoading(false);
-      }
+
+      if (shareLoading || shareRequestRef.current) return;
+
+      setShareOpen(false);
+      setShareUrl("");
+      setShareError(null);
+      setShowShareQr(false);
     },
-    [onShareOpen, share],
+    [beginShareGeneration, share, shareLoading],
   );
 
   return (
@@ -118,10 +147,11 @@ export function DeckArchiveActionPopovers({
           side={copy.side}
           align="center"
           sideOffset={10}
-          collisionPadding={EDGE_PAD}
-          className="w-auto border-0 p-0"
+          collisionPadding={ARCHIVE_POPOVER_EDGE_PAD}
+          className={ARCHIVE_POPOVER_CONTENT_CLASS}
+          data-mda-action-popover
         >
-          <div className="flex items-center gap-3 bg-[color:var(--mda-surface)] p-3">
+          <div className={ARCHIVE_POPOVER_PANEL_CLASS}>
             <div className="flex overflow-hidden rounded">
               {(
                 [
@@ -172,17 +202,14 @@ export function DeckArchiveActionPopovers({
         </PopoverContent>
       </Popover>
 
-      <Popover
-        open={shareOpen}
-        onOpenChange={(next) => {
-          void handleShareOpenChange(next);
-        }}
-      >
+      <Popover open={shareOpen} onOpenChange={handleShareOpenChange}>
         <PopoverTrigger asChild>
           <button
             ref={share.triggerRef}
             type="button"
             aria-label={`Share ${deckName}`}
+            aria-busy={shareLoading}
+            disabled={shareLoading}
             className={iconBtn}
           >
             <Share2 className="h-5 w-5" aria-hidden />
@@ -192,36 +219,79 @@ export function DeckArchiveActionPopovers({
           side={share.side}
           align="center"
           sideOffset={10}
-          collisionPadding={EDGE_PAD}
-          className="w-auto border-0 p-0"
+          collisionPadding={ARCHIVE_POPOVER_EDGE_PAD}
+          className={ARCHIVE_POPOVER_CONTENT_CLASS}
+          data-mda-action-popover
+          onOpenAutoFocus={(event) => event.preventDefault()}
+          onInteractOutside={(event) => {
+            if (shareLoading || shareRequestRef.current) {
+              event.preventDefault();
+            }
+          }}
+          onEscapeKeyDown={(event) => {
+            if (shareLoading || shareRequestRef.current) {
+              event.preventDefault();
+            }
+          }}
         >
-          <div className="flex items-center gap-3 bg-[color:var(--mda-surface)] p-3">
-            <div className="flex min-w-[260px] max-w-[320px] items-center gap-2 bg-[color:var(--mda-bg-deep)] px-3 py-2">
-              <span className="flex-1 truncate font-mda text-sm text-white/80">
-                {shareLoading
-                  ? "Generating share link…"
-                  : shareUrl || "Share link unavailable"}
-              </span>
+          <div className="flex flex-col bg-[color:var(--mda-surface-raised)]">
+            <div className={ARCHIVE_POPOVER_PANEL_CLASS}>
+              <div
+                className="flex min-w-[260px] max-w-[320px] items-center gap-2 rounded border border-white/10 bg-[color:var(--mda-bg-deep)] px-3 py-2"
+                aria-live="polite"
+              >
+                {shareLoading ? (
+                  <Loader2
+                    className="h-4 w-4 shrink-0 animate-spin text-[color:var(--mda-cyan)]"
+                    aria-hidden
+                  />
+                ) : null}
+                <span className="flex-1 truncate font-mda text-sm text-white/80">
+                  {shareLoading
+                    ? "Generating share link…"
+                    : shareError
+                      ? shareError
+                      : shareUrl || "Share link unavailable"}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (shareUrl) void navigator.clipboard.writeText(shareUrl);
+                  }}
+                  disabled={!shareUrl || shareLoading}
+                  aria-label="Copy share link"
+                  className="rounded p-1 text-white/70 hover:bg-white/10 hover:text-white disabled:opacity-40"
+                >
+                  <Copy className="h-5 w-5" aria-hidden />
+                </button>
+              </div>
               <button
                 type="button"
-                onClick={() => {
-                  if (shareUrl) void navigator.clipboard.writeText(shareUrl);
-                }}
-                disabled={!shareUrl}
-                aria-label="Copy share link"
-                className="rounded p-1 text-white/70 hover:bg-white/10 hover:text-white disabled:opacity-40"
+                onClick={() => handleShareOpenChange(false)}
+                disabled={shareLoading}
+                aria-label="Close share"
+                className="rounded p-2 text-[color:var(--mda-danger)] hover:bg-white/10 disabled:opacity-40"
               >
-                <Copy className="h-5 w-5" aria-hidden />
+                <X className="h-6 w-6" aria-hidden />
               </button>
             </div>
-            <button
-              type="button"
-              onClick={() => setShareOpen(false)}
-              aria-label="Close share"
-              className="rounded p-2 text-[color:var(--mda-danger)] hover:bg-white/10"
-            >
-              <X className="h-6 w-6" aria-hidden />
-            </button>
+            {shareUrl && !shareLoading && !shareError ? (
+              <div className="border-t border-white/10 px-3 pb-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowShareQr((prev) => !prev)}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded border border-white/15 bg-white/5 px-3 py-2 font-mda text-xs font-bold uppercase tracking-wide text-white/80 transition-colors hover:bg-white/10"
+                >
+                  <QrCode className="h-4 w-4" aria-hidden />
+                  {showShareQr ? "Hide QR Code" : "Show QR Code"}
+                </button>
+                {showShareQr ? (
+                  <div className="mt-2 flex justify-center rounded bg-white p-3">
+                    <QRCodeSVG value={shareUrl} size={160} />
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
           </div>
         </PopoverContent>
       </Popover>
@@ -247,10 +317,16 @@ export function DeckArchiveActionPopovers({
           side={del.side}
           align="center"
           sideOffset={10}
-          collisionPadding={EDGE_PAD}
-          className="w-auto border-0 p-0"
+          collisionPadding={ARCHIVE_POPOVER_EDGE_PAD}
+          className={ARCHIVE_POPOVER_CONTENT_CLASS}
+          data-mda-action-popover
         >
-          <div className="flex max-w-[360px] items-center gap-3 bg-[color:var(--mda-surface)] px-4 py-3">
+          <div
+            className={cn(
+              ARCHIVE_POPOVER_PANEL_CLASS,
+              "max-w-[360px] px-4 py-3",
+            )}
+          >
             <p className="font-mda text-sm text-white">
               Delete <span className="font-bold">{deckName}</span>?
             </p>

@@ -6,25 +6,20 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { createPortal } from "react-dom";
 import {
   motion,
   useMotionValue,
   useSpring,
 } from "framer-motion";
+import { nearestMagneticTarget } from "@/lib/magnetic-targets";
 
-const MAGNET_RADIUS = 10;
 const IDLE_RING = 16;
 /** Alchemy Sun cursor size (outer ring diameter). */
 const SUN_SIZE = 22;
-
-type MagTarget = {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  /** Pixel border-radius for the morph ring (0 = square). */
-  radius: number;
-};
+/** Ring sits below Radix popovers (z-100); sun stays above menus. */
+const RING_Z = 90;
+const SUN_Z = 101;
 
 function prefersReducedMotion(): boolean {
   if (typeof window === "undefined") return true;
@@ -37,53 +32,6 @@ function isFinePointerDesktop(): boolean {
     window.matchMedia("(pointer: fine)").matches &&
     window.matchMedia("(min-width: 768px)").matches
   );
-}
-
-/** Distance from point to rectangle (0 when inside). */
-function distanceToRect(
-  clientX: number,
-  clientY: number,
-  rect: DOMRect,
-): number {
-  const nearestX = Math.max(rect.left, Math.min(clientX, rect.right));
-  const nearestY = Math.max(rect.top, Math.min(clientY, rect.bottom));
-  return Math.hypot(clientX - nearestX, clientY - nearestY);
-}
-
-function nearestMagneticTarget(
-  clientX: number,
-  clientY: number,
-): MagTarget | null {
-  const nodes = document.querySelectorAll<HTMLElement>("[data-magnetic]");
-  let bestDist = Number.POSITIVE_INFINITY;
-  let best: MagTarget | null = null;
-
-  nodes.forEach((node) => {
-    const rect = node.getBoundingClientRect();
-    if (rect.width < 4 || rect.height < 4) return;
-    const dist = distanceToRect(clientX, clientY, rect);
-    // Only snap when the pointer is on/nearly on the target — avoids
-    // nearby links (e.g. "Create one") lighting up adjacent CTAs.
-    if (dist > MAGNET_RADIUS) return;
-    if (dist < bestDist) {
-      bestDist = dist;
-      const computed = window.getComputedStyle(node).borderRadius;
-      const parsed = Number.parseFloat(computed);
-      const radius =
-        Number.isFinite(parsed) && parsed > 0
-          ? Math.min(parsed + 7, Math.max(rect.height, rect.width) / 2 + 7)
-          : 0;
-      best = {
-        x: rect.left + rect.width / 2,
-        y: rect.top + rect.height / 2,
-        width: rect.width,
-        height: rect.height,
-        radius,
-      };
-    }
-  });
-
-  return best;
 }
 
 /** True when hovering a clickable control that is not itself magnetic. */
@@ -99,9 +47,12 @@ function isNonMagneticInteractive(target: EventTarget | null): boolean {
 /**
  * Desktop magnetic cursor: alchemy Sun pointer + lagging outline ring
  * that morphs onto `[data-magnetic]` targets.
+ *
+ * Portaled to `document.body` so stacking order is predictable vs popovers.
  */
 export function MagneticCursor(): ReactNode {
   const [enabled, setEnabled] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const [active, setActive] = useState(false);
   const ringFaceRef = useRef<HTMLDivElement>(null);
 
@@ -122,6 +73,10 @@ export function MagneticCursor(): ReactNode {
   const width = useSpring(rawW, spring);
   const height = useSpring(rawH, spring);
   const borderRadius = useSpring(rawR, spring);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     const sync = (): void => {
@@ -162,8 +117,6 @@ export function MagneticCursor(): ReactNode {
       rawDotX.set(event.clientX);
       rawDotY.set(event.clientY);
 
-      // Prefer the control under the pointer when it isn't magnetic
-      // (auth mode links sit just below the submit CTA).
       const target = isNonMagneticInteractive(event.target)
         ? null
         : nearestMagneticTarget(event.clientX, event.clientY);
@@ -202,15 +155,15 @@ export function MagneticCursor(): ReactNode {
     rawR,
   ]);
 
-  if (!enabled) return null;
+  if (!enabled || !mounted) return null;
 
-  return (
+  return createPortal(
     <>
-      {/* Lagging magnetic morph ring */}
       <motion.div
         aria-hidden
-        className="pointer-events-none fixed left-0 top-0 z-[9999]"
+        className="pointer-events-none fixed left-0 top-0"
         style={{
+          zIndex: RING_Z,
           left: ringX,
           top: ringY,
           width,
@@ -232,11 +185,11 @@ export function MagneticCursor(): ReactNode {
         />
       </motion.div>
 
-      {/* Alchemy Sun cursor */}
       <motion.div
         aria-hidden
-        className="pointer-events-none fixed left-0 top-0 z-[10000]"
+        className="pointer-events-none fixed left-0 top-0"
         style={{
+          zIndex: SUN_Z,
           left: sunX,
           top: sunY,
           width: SUN_SIZE,
@@ -264,6 +217,7 @@ export function MagneticCursor(): ReactNode {
           <circle cx="11" cy="11" r="2.75" fill="#A0FBFF" />
         </svg>
       </motion.div>
-    </>
+    </>,
+    document.body,
   );
 }
