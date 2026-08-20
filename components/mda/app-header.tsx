@@ -6,6 +6,7 @@ import MDAIcon from "@/public/images/MDA_Logo_One.svg";
 import { useUserStore } from "@/store/useUserStore";
 import { UserMenu } from "@/components/ui/user-menu";
 import { ClipButton } from "@/components/mda/clip-button";
+import { MdaBrandTitle } from "@/components/mda/brand-lockup";
 import { cn } from "@/lib/utils";
 
 export type MdaAppHeaderProps = {
@@ -23,28 +24,11 @@ export type MdaAppHeaderProps = {
   logoHref?: string | null;
 };
 
-function BrandMark({ isLight }: { isLight: boolean }): ReactNode {
+function BrandMark(): ReactNode {
   return (
     <>
       <MDAIcon className="h-8 w-8 shrink-0" aria-hidden />
-      <span className="font-mda text-2xl uppercase tracking-wide">
-        <span
-          className={cn(
-            "font-bold",
-            isLight ? "text-[#89a7b8]" : "text-white",
-          )}
-        >
-          Master Deck
-        </span>{" "}
-        <span
-          className={cn(
-            "font-light",
-            isLight ? "text-[#8565e4]" : "text-[color:var(--mda-purple)]",
-          )}
-        >
-          Alchemist
-        </span>
-      </span>
+      <MdaBrandTitle />
     </>
   );
 }
@@ -74,11 +58,11 @@ export function MdaAppHeader({
           className={brandClassName}
           aria-label="Master Deck Alchemist home"
         >
-          <BrandMark isLight={isLight} />
+          <BrandMark />
         </Link>
       ) : (
         <div className={brandClassName} aria-label="Master Deck Alchemist">
-          <BrandMark isLight={isLight} />
+          <BrandMark />
         </div>
       )}
 

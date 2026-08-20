@@ -1,4 +1,5 @@
 import { DeckType } from "@/types/types";
+import type { DeckCard } from "@/types/types";
 import { getAccessToken } from "@/lib/supabaseClient";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
@@ -28,6 +29,52 @@ export interface CreateDeckShareResponse {
   expiresAt: string | null;
   maxAccessCount: number | null;
   createdAt: string;
+}
+
+export type DeckShareCardPayload = {
+  cardId: number;
+  deckInstanceId?: string;
+  name: string;
+  type?: string;
+  desc?: string;
+};
+
+export function mapDeckCardToSharePayload(card: DeckCard): DeckShareCardPayload {
+  return {
+    cardId: card.id,
+    deckInstanceId: card.deckInstanceId,
+    name: card.name,
+    type: card.type,
+    desc: card.desc,
+  };
+}
+
+export function toDeckShareRequest(
+  deck: DeckType,
+): CreateDeckShareRequest["deck"] {
+  return {
+    name: deck.name,
+    mainDeck: deck.mainDeck.map(mapDeckCardToSharePayload),
+    extraDeck: deck.extraDeck.map(mapDeckCardToSharePayload),
+    sideDeck: deck.sideDeck.map(mapDeckCardToSharePayload),
+    mode: deck.mode,
+  };
+}
+
+export function getDeckShareFullUrl(shareUrl: string): string {
+  if (/^https?:\/\//i.test(shareUrl)) {
+    return shareUrl;
+  }
+
+  const path = shareUrl.startsWith("/") ? shareUrl : `/${shareUrl}`;
+  const base =
+    (typeof window !== "undefined"
+      ? process.env.NEXT_PUBLIC_APP_URL ||
+        process.env.PUBLIC_URL ||
+        window.location.origin
+      : process.env.NEXT_PUBLIC_APP_URL || process.env.PUBLIC_URL) || "";
+
+  return `${base}${path}`;
 }
 
 export interface GetDeckShareResponse {

@@ -68,12 +68,12 @@ export function DeckArchiveCard({
         reduceMotion
           ? undefined
           : {
-              y: -8,
+              y: -6,
               boxShadow:
-                "0 0 0 1px rgba(126,232,255,0.35), 0 18px 36px rgba(0,0,0,0.4)",
+                "0 0 0 1px rgba(126,232,255,0.35), 0 16px 28px rgba(0,0,0,0.35)",
             }
       }
-      transition={{ duration: 0.22, ease: "easeInOut" }}
+      transition={{ duration: 0.2, ease: "easeOut" }}
     >
       <div className="flex items-center justify-between px-2.5 pt-1.5">
         <div className="flex items-center gap-2 text-xs font-mda uppercase tracking-wide text-white/80">
@@ -93,7 +93,13 @@ export function DeckArchiveCard({
             isPinned ? "text-[color:var(--mda-cyan)]" : "text-white/50",
           )}
         >
-          <Pin className="h-5 w-5" aria-hidden />
+          <Pin
+            className={cn(
+              "h-5 w-5",
+              isPinned && "fill-[color:var(--mda-cyan)] text-[color:var(--mda-cyan)]",
+            )}
+            aria-hidden
+          />
         </button>
       </div>
 
@@ -111,7 +117,7 @@ export function DeckArchiveCard({
             preferSmall={false}
             fill
             alt=""
-            className="object-cover object-center transition-transform duration-300 group-hover:scale-[1.03]"
+            className="object-cover object-center"
             sizes="287px"
           />
         ) : (
@@ -137,7 +143,7 @@ export function DeckArchiveCard({
         <button
           type="button"
           onClick={onOpen}
-          className="w-full truncate bg-[rgba(207,207,207,0.28)] px-2 py-1 text-left font-mda text-sm font-bold uppercase tracking-wide text-white transition-colors duration-200 ease-in-out hover:bg-white hover:text-[color:var(--mda-bg-deep)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--mda-cyan)]"
+          className="w-full truncate bg-[rgba(207,207,207,0.28)] px-2 py-1 text-left font-mda text-sm font-bold uppercase tracking-wide text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--mda-cyan)]"
         >
           {name}
         </button>

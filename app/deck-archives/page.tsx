@@ -1,66 +1,38 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Bell, Pin, Plus } from "lucide-react";
 import { MdaAppHeader } from "@/components/mda/app-header";
 import { ClipButton } from "@/components/mda/clip-button";
 import { MdaSearchField } from "@/components/mda/search-field";
 import { SectionCollapse } from "@/components/mda/section-collapse";
+import { MdaCollapse } from "@/components/mda/collapse";
 import { DeckArchiveCard } from "@/components/mda/deck-archive-card";
 import {
   DeckDetailsModal,
-  FormatPickerDialog,
+  FormatPickerPopover,
 } from "@/components/mda/archives-dialogs";
 import { DeckArchiveActionPopovers } from "@/components/mda/archives-popovers";
 import { MdaLoadingScreen } from "@/components/mda/mda-loading-screen";
 import { useUserStore } from "@/store/useUserStore";
 import { useDeck } from "@/context/deck-context";
+import { useUserDecks } from "@/hooks/useUserDecks";
+import { deleteDeck, saveDeck, toggleDeckPin } from "@/lib/supabaseDecks";
 import {
-  deleteDeck,
-  getUserDecks,
-  saveDeck,
-  toggleDeckPin,
-} from "@/lib/supabaseDecks";
-import { createDeckShare } from "@/lib/api/deckShare";
+  createDeckShare,
+  getDeckShareFullUrl,
+  toDeckShareRequest,
+} from "@/lib/api/deckShare";
 import type { DeckMode, DeckType } from "@/types/types";
 import { v4 as uuidv4 } from "uuid";
-
-function mapRows(rows: unknown[]): DeckType[] {
-  return rows.map((row) => {
-    const deck = row as {
-      id: string;
-      name: string;
-      cards?: {
-        main?: DeckType["mainDeck"];
-        extra?: DeckType["extraDeck"];
-        side?: DeckType["sideDeck"];
-      };
-      updated_at?: string;
-      mode?: DeckMode;
-      is_pinned?: boolean;
-    };
-    return {
-      id: deck.id,
-      name: deck.name,
-      mainDeck: deck.cards?.main ?? [],
-      extraDeck: deck.cards?.extra ?? [],
-      sideDeck: deck.cards?.side ?? [],
-      updated_at: deck.updated_at,
-      mode: deck.mode ?? "Master Duel",
-      isPinned: deck.is_pinned ?? false,
-    };
-  });
-}
 
 export default function DeckArchivesPage(): ReactNode {
   const router = useRouter();
   const user = useUserStore((state) => state.user);
   const { loadDeck, clearDeck } = useDeck();
+  const { decks, isLoading, error, invalidate } = useUserDecks();
 
-  const [decks, setDecks] = useState<DeckType[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [pinnedOpen, setPinnedOpen] = useState(true);
   const [tcgOpen, setTcgOpen] = useState(true);
@@ -70,27 +42,6 @@ export default function DeckArchivesPage(): ReactNode {
   const [newDeckOpen, setNewDeckOpen] = useState(false);
   const [newDeckMode, setNewDeckMode] = useState<DeckMode>("Master Duel");
   const [alertsOpen, setAlertsOpen] = useState(false);
-
-  const refresh = useCallback(async (): Promise<void> => {
-    if (!user) {
-      setDecks([]);
-      return;
-    }
-    setLoading(true);
-    setError(null);
-    try {
-      const rows = await getUserDecks(user.id);
-      setDecks(mapRows(rows as unknown[]));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load decks");
-    } finally {
-      setLoading(false);
-    }
-  }, [user]);
-
-  useEffect(() => {
-    void refresh();
-  }, [refresh]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -118,7 +69,7 @@ export default function DeckArchivesPage(): ReactNode {
 
   const handleNewDeckConfirm = (): void => {
     if (!requireAuth()) return;
-    clearDeck();
+    clearDeck(newDeckMode);
     setNewDeckOpen(false);
     router.push(`/workshop?mode=${encodeURIComponent(newDeckMode)}`);
   };
@@ -136,27 +87,21 @@ export default function DeckArchivesPage(): ReactNode {
       isPinned: false,
     };
     await saveDeck(duplicate, user.id);
-    await refresh();
+    await invalidate();
   };
 
   const handleDeleteConfirm = async (deck: DeckType): Promise<void> => {
     if (!user) return;
     await deleteDeck(deck.id, user.id);
-    await refresh();
+    await invalidate();
   };
 
   const createShareUrl = async (deck: DeckType): Promise<string> => {
     if (!user) throw new Error("Auth required");
     const result = await createDeckShare({
-      deck: {
-        name: deck.name,
-        mainDeck: deck.mainDeck,
-        extraDeck: deck.extraDeck,
-        sideDeck: deck.sideDeck,
-        mode: deck.mode,
-      },
+      deck: toDeckShareRequest(deck),
     });
-    return result.shareUrl;
+    return getDeckShareFullUrl(result.shareUrl);
   };
 
   const renderGrid = (list: DeckType[]): ReactNode => (
@@ -181,7 +126,9 @@ export default function DeckArchivesPage(): ReactNode {
           onDelete={() => undefined}
           onTogglePin={() => {
             if (!user) return;
-            void toggleDeckPin(deck.id, user.id, !deck.isPinned).then(refresh);
+            void toggleDeckPin(deck.id, user.id, !deck.isPinned).then(
+              invalidate,
+            );
           }}
           actionControls={
             <DeckArchiveActionPopovers
@@ -209,7 +156,7 @@ export default function DeckArchivesPage(): ReactNode {
   return (
     <div className="relative flex min-h-full flex-col bg-[radial-gradient(circle_at_center,#A4A8B1_0%,#45474B_100%)] text-white">
       <MdaLoadingScreen
-        open={loading}
+        open={Boolean(user) && isLoading}
         status="Syncing deck archives from your library…"
       />
 
@@ -217,7 +164,7 @@ export default function DeckArchivesPage(): ReactNode {
 
       <div className="flex flex-col gap-2 pb-10">
         <div className="flex flex-nowrap items-center justify-between gap-4 px-6 py-4">
-          <h1 className="inline-flex shrink-0 bg-[color:var(--mda-cyan-muted)] px-16 py-1 font-mda text-3xl font-bold uppercase tracking-wide text-white">
+          <h1 className="w-fit shrink-0 bg-[color:var(--mda-cyan-muted)] px-4 py-1 text-left font-mda text-3xl font-bold uppercase tracking-wide text-white w-[25rem]">
             Deck Archives
           </h1>
           <div className="flex min-w-0 flex-nowrap items-center gap-3">
@@ -225,6 +172,7 @@ export default function DeckArchivesPage(): ReactNode {
               type="button"
               onClick={() => setAlertsOpen((value) => !value)}
               aria-label="Deck archives alerts"
+              aria-expanded={alertsOpen}
               data-magnetic
               className="shrink-0 rounded p-2 text-white/80 transition-colors duration-200 ease-in-out hover:bg-white hover:text-[color:var(--mda-bg-deep)]"
             >
@@ -237,18 +185,30 @@ export default function DeckArchivesPage(): ReactNode {
               aria-label="Search decks"
               containerClassName="min-w-0 w-[min(100%,400px)] flex-1"
             />
-            <ClipButton
-              size="sm"
-              variant="surface"
-              onClick={() => {
-                if (!requireAuth()) return;
-                setNewDeckOpen(true);
+            <FormatPickerPopover
+              title="New deck format"
+              open={newDeckOpen}
+              onOpenChange={(next) => {
+                if (next && !requireAuth()) return;
+                setNewDeckOpen(next);
               }}
-              className="shrink-0 gap-2 pl-4 pr-7"
-            >
-              <Plus className="h-4 w-4" aria-hidden />
-              New Deck
-            </ClipButton>
+              mode={newDeckMode}
+              onModeChange={setNewDeckMode}
+              onCancel={() => setNewDeckOpen(false)}
+              onConfirm={handleNewDeckConfirm}
+              side="bottom"
+              align="end"
+              trigger={
+                <ClipButton
+                  size="sm"
+                  variant="surface"
+                  className="shrink-0 gap-2 pl-4 pr-7"
+                >
+                  <Plus className="h-4 w-4" aria-hidden />
+                  New Deck
+                </ClipButton>
+              }
+            />
           </div>
         </div>
 
@@ -274,7 +234,7 @@ export default function DeckArchivesPage(): ReactNode {
           </p>
         ) : null}
 
-        {alertsOpen ? (
+        <MdaCollapse open={alertsOpen}>
           <div className="mx-6 mb-2 max-w-xl border border-white/10 bg-[color:var(--mda-surface)] p-4">
             <div className="mb-3 bg-[color:var(--mda-header-bar)] px-3 py-2 font-mda text-lg font-bold uppercase">
               Deck Archives Alerts
@@ -289,11 +249,12 @@ export default function DeckArchivesPage(): ReactNode {
               </p>
             </div>
           </div>
-        ) : null}
+        </MdaCollapse>
 
         <SectionCollapse
           title="Pinned"
           icon={Pin}
+          iconClassName="fill-[color:var(--mda-cyan)] text-[color:var(--mda-cyan)]"
           open={pinnedOpen}
           onToggle={() => setPinnedOpen((value) => !value)}
         >
@@ -342,14 +303,6 @@ export default function DeckArchivesPage(): ReactNode {
         onOpenWorkshop={() => {
           if (detailsDeck) void openWorkshop(detailsDeck);
         }}
-      />
-      <FormatPickerDialog
-        title="New deck format"
-        open={newDeckOpen}
-        mode={newDeckMode}
-        onModeChange={setNewDeckMode}
-        onCancel={() => setNewDeckOpen(false)}
-        onConfirm={handleNewDeckConfirm}
       />
     </div>
   );

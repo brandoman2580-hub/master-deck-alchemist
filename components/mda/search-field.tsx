@@ -21,6 +21,7 @@ export function MdaSearchField({
 }: MdaSearchFieldProps): ReactNode {
   return (
     <label
+      data-magnetic
       className={cn(
         "flex h-11 w-full items-center gap-2.5 px-[18px] text-white transition-[background-color,box-shadow,ring] duration-200 ease-in-out",
         "bg-[color:var(--mda-cyan-muted)] ring-1 ring-transparent",
