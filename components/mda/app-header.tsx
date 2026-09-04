@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 
 export type MdaAppHeaderProps = {
   className?: string;
-  /** Visual theme — light for Alt2 landing, dark for app shells. */
+  /** Visual theme — defaults to light (v2). Kept for call-site compat. */
   theme?: "dark" | "light";
   /** When set, shows a clipped Login CTA. */
   onLoginClick?: () => void;
@@ -23,27 +23,12 @@ export type MdaAppHeaderProps = {
   logoHref?: string | null;
 };
 
-function BrandMark({ isLight }: { isLight: boolean }): ReactNode {
+function BrandMark(): ReactNode {
   return (
     <>
-      <MDAIcon className="h-8 w-8 shrink-0" aria-hidden />
-      <span className="font-mda text-2xl uppercase tracking-wide">
-        <span
-          className={cn(
-            "font-bold",
-            isLight ? "text-[#89a7b8]" : "text-white",
-          )}
-        >
-          Master Deck
-        </span>{" "}
-        <span
-          className={cn(
-            "font-light",
-            isLight ? "text-[#8565e4]" : "text-[color:var(--mda-purple)]",
-          )}
-        >
-          Alchemist
-        </span>
+      <MDAIcon className="h-8 w-8 shrink-0 text-mda-purple" aria-hidden />
+      <span className="font-display text-[22px] font-black uppercase tracking-wide text-mda-ink sm:text-2xl">
+        Master Deck Alchemist
       </span>
     </>
   );
@@ -51,22 +36,21 @@ function BrandMark({ isLight }: { isLight: boolean }): ReactNode {
 
 export function MdaAppHeader({
   className,
-  theme = "dark",
+  theme = "light",
   onLoginClick,
   hideLoginButton = false,
   logoHref = "/",
 }: MdaAppHeaderProps): ReactNode {
   const user = useUserStore((state) => state.user);
-  const isLight = theme === "light";
   const brandClassName = "flex items-center gap-4";
 
   return (
     <header
       className={cn(
-        "flex w-full items-center justify-between px-6 py-2.5",
-        isLight ? "h-auto min-h-[68px]" : "h-[68px]",
+        "flex h-auto min-h-[68px] w-full items-center justify-between px-6 py-2.5",
         className,
       )}
+      data-theme={theme}
     >
       {logoHref ? (
         <Link
@@ -74,11 +58,11 @@ export function MdaAppHeader({
           className={brandClassName}
           aria-label="Master Deck Alchemist home"
         >
-          <BrandMark isLight={isLight} />
+          <BrandMark />
         </Link>
       ) : (
         <div className={brandClassName} aria-label="Master Deck Alchemist">
-          <BrandMark isLight={isLight} />
+          <BrandMark />
         </div>
       )}
 
@@ -87,9 +71,9 @@ export function MdaAppHeader({
       ) : onLoginClick && !hideLoginButton ? (
         <ClipButton
           size="sm"
-          variant={isLight ? "headerLogin" : "filled"}
+          variant="headerLogin"
           onClick={onLoginClick}
-          className={cn("min-w-[115px]", isLight ? "text-2xl" : "text-sm")}
+          className="min-w-[115px] text-2xl"
         >
           Login
         </ClipButton>

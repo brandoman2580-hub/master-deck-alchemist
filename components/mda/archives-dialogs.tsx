@@ -9,11 +9,16 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { Crown } from "lucide-react";
+import { RemoveScroll } from "react-remove-scroll";
 import type { DeckCard, DeckMode, DeckType } from "@/types/types";
 import { CardImage } from "@/components/ui/card-image";
 import { MdaCardPreview } from "@/components/mda/mda-card-preview";
 import { cn } from "@/lib/utils";
 
+/**
+ * Full-viewport interaction lock without a visual backdrop.
+ * Captures pointer events + scroll lock; Escape / click-outside still close.
+ */
 function Overlay({
   children,
   onClose,
@@ -23,32 +28,34 @@ function Overlay({
 }): ReactNode {
   const reduceMotion = useReducedMotion();
   return (
-    <motion.div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
-      role="presentation"
-      onClick={onClose}
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.2, ease: "easeInOut" }}
-    >
+    <RemoveScroll>
       <motion.div
-        role="dialog"
-        aria-modal="true"
-        className="max-h-[90vh] overflow-auto"
-        onClick={(event) => event.stopPropagation()}
-        initial={
-          reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.92 }
-        }
-        animate={{ opacity: 1, scale: 1 }}
-        exit={
-          reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.94 }
-        }
-        transition={{ type: "spring", stiffness: 420, damping: 32 }}
+        className="fixed inset-0 z-50 flex items-center justify-center bg-transparent p-4"
+        role="presentation"
+        onClick={onClose}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.2, ease: "easeInOut" }}
       >
-        {children}
+        <motion.div
+          role="dialog"
+          aria-modal="true"
+          className="max-h-[90vh] overflow-auto"
+          onClick={(event) => event.stopPropagation()}
+          initial={
+            reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.92 }
+          }
+          animate={{ opacity: 1, scale: 1 }}
+          exit={
+            reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.94 }
+          }
+          transition={{ type: "spring", stiffness: 420, damping: 32 }}
+        >
+          {children}
+        </motion.div>
       </motion.div>
-    </motion.div>
+    </RemoveScroll>
   );
 }
 
@@ -71,9 +78,9 @@ export function FormatPickerDialog({
     <AnimatePresence>
       {open ? (
         <Overlay onClose={onCancel} key="format-picker">
-          <div className="flex items-center gap-3 bg-[color:var(--mda-surface)] p-3 shadow-xl">
+          <div className="flex items-center gap-3 border border-mda-ink/15 bg-mda-surface p-3 shadow-mda-lift">
             <p className="sr-only">{title}</p>
-            <div className="flex overflow-hidden rounded">
+            <div className="flex overflow-hidden rounded border border-mda-ink/20">
               {(
                 [
                   { key: "TCG" as const, icon: Crown },
@@ -88,8 +95,8 @@ export function FormatPickerDialog({
                   className={cn(
                     "inline-flex items-center gap-1.5 px-3 py-2 font-mda text-sm font-bold uppercase transition-colors duration-200 ease-in-out",
                     mode === key
-                      ? "bg-white text-[color:var(--mda-bg-deep)]"
-                      : "bg-white/15 text-white/70 hover:bg-white hover:text-[color:var(--mda-bg-deep)]",
+                      ? "bg-mda-chrome text-mda-inverse-text"
+                      : "bg-mda-panel text-mda-ink hover:bg-mda-chrome hover:text-mda-inverse-text",
                   )}
                 >
                   <Icon className="h-4 w-4" aria-hidden />
@@ -99,17 +106,19 @@ export function FormatPickerDialog({
             </div>
             <button
               type="button"
+              data-magnetic
               onClick={onConfirm}
               aria-label="Confirm"
-              className="rounded p-2 text-[color:var(--mda-success)] transition-colors duration-200 hover:bg-white/10"
+              className="rounded p-2 text-mda-success transition-[background-color,color,transform] duration-200 ease-in-out hover:bg-mda-success/20 hover:scale-105 active:scale-95"
             >
               <Check className="h-6 w-6" aria-hidden />
             </button>
             <button
               type="button"
+              data-magnetic
               onClick={onCancel}
               aria-label="Cancel"
-              className="rounded p-2 text-[color:var(--mda-danger)] transition-colors duration-200 hover:bg-white/10"
+              className="rounded p-2 text-mda-danger transition-[background-color,color,transform] duration-200 ease-in-out hover:bg-mda-danger/20 hover:scale-105 active:scale-95"
             >
               <X className="h-6 w-6" aria-hidden />
             </button>
@@ -149,7 +158,7 @@ function CardRow({
   return (
     <div className="flex items-center gap-3 px-2.5 py-2">
       <MdaCardPreview card={card}>
-        <div className="relative h-[99px] w-[72px] shrink-0 cursor-help overflow-hidden bg-[color:var(--mda-bg-deep)]">
+        <div className="relative h-[99px] w-[72px] shrink-0 cursor-help overflow-hidden bg-mda-panel">
           <CardImage
             card={card}
             preferSmall
@@ -161,26 +170,26 @@ function CardRow({
         </div>
       </MdaCardPreview>
       <div className="min-w-0 flex-1">
-        <p className="truncate font-mda text-lg font-bold uppercase text-white">
+        <p className="truncate font-mda text-lg font-bold uppercase text-mda-ink">
           {card.name}
         </p>
         <div className="mt-1 flex flex-wrap gap-2">
-          <span className="rounded bg-white/15 px-2 py-1 font-mda text-xs text-white/90">
+          <span className="rounded bg-mda-chrome/15 px-2 py-1 font-mda text-xs text-mda-ink">
             {card.type?.split(" ")[0] ?? "Card"}
           </span>
           {race ? (
-            <span className="rounded bg-white/15 px-2 py-1 font-mda text-xs text-white/90">
+            <span className="rounded bg-mda-chrome/15 px-2 py-1 font-mda text-xs text-mda-ink">
               {race}
             </span>
           ) : null}
           {attribute ? (
-            <span className="rounded bg-white/15 px-2 py-1 font-mda text-xs text-white/90">
+            <span className="rounded bg-mda-chrome/15 px-2 py-1 font-mda text-xs text-mda-ink">
               {attribute}
             </span>
           ) : null}
         </div>
       </div>
-      <span className="rounded bg-white/10 px-2 py-1 font-mda text-lg font-bold text-white">
+      <span className="rounded bg-mda-chrome px-2 py-1 font-mda text-lg font-bold text-mda-inverse-text">
         ×{quantity}
       </span>
     </div>
@@ -210,21 +219,21 @@ export function DeckDetailsModal({
     <AnimatePresence>
       {open && deck ? (
         <Overlay onClose={onClose} key="deck-details">
-          <div className="flex w-full max-w-[523px] flex-col bg-[color:var(--mda-bg-deep)] shadow-2xl">
-            <div className="bg-[color:var(--mda-header-bar)] px-4 py-2 text-center font-mda text-2xl font-bold uppercase tracking-wide text-white">
+          <div className="flex w-full max-w-[523px] flex-col border border-mda-ink/15 bg-mda-surface shadow-mda-lift">
+            <div className="bg-mda-chrome px-4 py-2 text-center font-mda text-2xl font-bold uppercase tracking-wide text-mda-inverse-text">
               Deck List
             </div>
-            <p className="px-4 py-2 text-center font-mda text-xl font-bold uppercase text-white">
+            <p className="px-4 py-2 text-center font-mda text-xl font-bold uppercase text-mda-ink">
               {deck.name}
             </p>
             <div className="max-h-[70vh] space-y-3 overflow-y-auto px-2 pb-4">
               {sections.map((section) =>
                 section.cards.length === 0 ? null : (
                   <div key={section.title}>
-                    <p className="px-2.5 font-mda text-sm uppercase text-white/60">
+                    <p className="px-2.5 font-mda text-sm uppercase text-mda-ink-muted">
                       {section.title}
                     </p>
-                    <div className="divide-y divide-white/5">
+                    <div className="divide-y divide-mda-ink/10">
                       {groupCardsById(section.cards).map(({ card, quantity }) => (
                         <CardRow
                           key={`${section.title}-${card.id ?? card.name}`}
@@ -237,19 +246,19 @@ export function DeckDetailsModal({
                 ),
               )}
             </div>
-            <div className="flex gap-2 border-t border-white/10 p-3">
+            <div className="flex gap-2 border-t border-mda-ink/15 p-3">
               <button
                 type="button"
                 onClick={onOpenWorkshop}
                 data-magnetic
-                className="flex-1 bg-[color:var(--mda-cyan)] py-3 font-mda text-sm font-black uppercase text-[color:var(--mda-bg-deep)] transition-colors duration-200 ease-in-out hover:bg-[color:var(--mda-bg-deep)] hover:text-[color:var(--mda-cyan)]"
+                className="flex-1 bg-mda-sky py-3 font-mda text-sm font-black uppercase text-white transition-colors duration-200 ease-in-out hover:bg-mda-sky-strong"
               >
                 Open in Workshop
               </button>
               <button
                 type="button"
                 onClick={onClose}
-                className="bg-white/10 px-4 py-3 font-mda text-sm font-bold uppercase text-white transition-colors duration-200 ease-in-out hover:bg-white hover:text-[color:var(--mda-bg-deep)]"
+                className="bg-mda-chrome px-4 py-3 font-mda text-sm font-bold uppercase text-mda-inverse-text transition-colors duration-200 ease-in-out hover:bg-mda-chrome-muted"
               >
                 Close
               </button>

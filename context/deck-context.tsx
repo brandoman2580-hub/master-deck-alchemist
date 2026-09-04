@@ -208,6 +208,11 @@ export function DeckProvider({ children }: { children: ReactNode }) {
         await saveDeckToSupabase(validatedDeck, user.id);
 
         await getUserDecks();
+        const { getQueryClient } = await import("@/lib/query-client");
+        const { deckKeys } = await import("@/hooks/use-user-decks");
+        await getQueryClient().invalidateQueries({
+          queryKey: deckKeys.user(user.id),
+        });
       } catch (err: any) {
         const errorMessage =
           err?.message ||
@@ -275,6 +280,11 @@ export function DeckProvider({ children }: { children: ReactNode }) {
         // Use supabaseDecks function
         await deleteDeckFromSupabase(id, user.id);
         await getUserDecks();
+        const { getQueryClient } = await import("@/lib/query-client");
+        const { deckKeys } = await import("@/hooks/use-user-decks");
+        await getQueryClient().invalidateQueries({
+          queryKey: deckKeys.user(user.id),
+        });
       } catch (err: any) {
         setError(err.message || "Failed to delete deck");
       } finally {

@@ -7,7 +7,16 @@ import {
   type DragEvent,
   type ReactNode,
 } from "react";
-import { ChevronDown, Minus, Plus, Search, SlidersHorizontal } from "lucide-react";
+import {
+  Bot,
+  ChevronDown,
+  Layers,
+  Minus,
+  Plus,
+  Search,
+  Send,
+  SlidersHorizontal,
+} from "lucide-react";
 import { CardImage } from "@/components/ui/card-image";
 import { MdaSearchField } from "@/components/mda/search-field";
 import { MdaCardPreview } from "@/components/mda/mda-card-preview";
@@ -38,35 +47,6 @@ const SECTION_LIMITS: Record<DeckSection, number> = {
 
 const DRAG_MIME = "application/x-mda-card-id";
 
-function gradeFromCounts(
-  main: number,
-  extra: number,
-): {
-  letter: string;
-  scores: { label: string; value: number }[];
-} {
-  const density = Math.min(100, Math.round((main / 40) * 100));
-  const extraScore = Math.min(100, Math.round((extra / 15) * 100));
-  const consistency = Math.round((density + extraScore) / 2);
-  const letter =
-    consistency >= 90
-      ? "S"
-      : consistency >= 75
-        ? "A"
-        : consistency >= 60
-          ? "B"
-          : "C";
-  return {
-    letter,
-    scores: [
-      { label: "Consistency", value: consistency },
-      { label: "Resilience", value: Math.max(40, consistency - 5) },
-      { label: "Power", value: Math.max(45, extraScore) },
-      { label: "Disruption", value: Math.max(35, Math.round(consistency * 0.9)) },
-    ],
-  };
-}
-
 function groupCardsById(
   cards: DeckCard[],
 ): { card: DeckCard; quantity: number; instances: DeckCard[] }[] {
@@ -86,7 +66,7 @@ function groupCardsById(
   return Array.from(groups.values());
 }
 
-function BuilderCardRow({
+function BuilderCardGridItem({
   card,
   quantity,
   canAdd,
@@ -99,68 +79,44 @@ function BuilderCardRow({
   onAdd: () => void;
   onRemove: () => void;
 }): ReactNode {
-  const race = card.race ?? "";
-  const attribute = card.attribute ?? "";
-
   return (
-    <div className="flex items-center gap-3 px-2.5 py-2">
+    <div className="group relative">
       <MdaCardPreview card={card}>
-        <div className="relative h-[99px] w-[72px] shrink-0 cursor-help overflow-hidden bg-[color:var(--mda-bg-deep)] transition-[box-shadow] duration-200 ease-in-out hover:shadow-[0_0_16px_2px_rgba(255,255,255,0.65)]">
+        <div className="relative aspect-[72/99] overflow-hidden bg-mda-deep shadow-sm ring-1 ring-mda-ink/10 transition-shadow hover:shadow-mda-soft">
           <CardImage
             card={card}
             preferSmall
             fill
             alt={card.name}
             className="object-cover"
-            sizes="72px"
+            sizes="80px"
           />
+          {quantity > 1 ? (
+            <span className="absolute bottom-0 left-0 bg-mda-chrome px-1.5 py-0.5 font-mda text-xs font-bold text-mda-inverse-text">
+              ×<MdaAnimatedNumber value={quantity} />
+            </span>
+          ) : null}
+          <div className="absolute inset-0 flex items-center justify-center gap-1 bg-mda-chrome/85 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+            <button
+              type="button"
+              onClick={onAdd}
+              disabled={!canAdd}
+              aria-label={`Add another ${card.name}`}
+              className="flex h-7 w-7 items-center justify-center bg-mda-inverse-text/15 text-mda-inverse-text hover:bg-mda-inverse-text/25 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <Plus className="h-4 w-4" aria-hidden />
+            </button>
+            <button
+              type="button"
+              onClick={onRemove}
+              aria-label={`Remove one ${card.name}`}
+              className="flex h-7 w-7 items-center justify-center bg-mda-inverse-text/15 text-mda-inverse-text hover:bg-mda-inverse-text/25"
+            >
+              <Minus className="h-4 w-4" aria-hidden />
+            </button>
+          </div>
         </div>
       </MdaCardPreview>
-      <div className="min-w-0 flex-1">
-        <p className="truncate font-mda text-lg font-bold uppercase text-white">
-          {card.name}
-        </p>
-        <div className="mt-1 flex flex-wrap gap-2">
-          <span className="rounded bg-white/15 px-2 py-1 font-mda text-xs text-white/90">
-            {card.type?.split(" ")[0] ?? "Card"}
-          </span>
-          {race ? (
-            <span className="rounded bg-white/15 px-2 py-1 font-mda text-xs text-white/90">
-              {race}
-            </span>
-          ) : null}
-          {attribute ? (
-            <span className="rounded bg-white/15 px-2 py-1 font-mda text-xs text-white/90">
-              {attribute}
-            </span>
-          ) : null}
-        </div>
-      </div>
-      <div className="flex shrink-0 items-center gap-2">
-        <span className="inline-flex items-center rounded bg-white/10 px-2 py-1 font-mda text-lg font-bold text-white">
-          ×
-          <MdaAnimatedNumber value={quantity} />
-        </span>
-        <div className="flex flex-col overflow-hidden rounded border border-white/15">
-          <button
-            type="button"
-            onClick={onAdd}
-            disabled={!canAdd}
-            aria-label={`Add another ${card.name}`}
-            className="flex h-5 w-7 items-center justify-center text-white/80 hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-30"
-          >
-            <Plus className="h-3.5 w-3.5" aria-hidden />
-          </button>
-          <button
-            type="button"
-            onClick={onRemove}
-            aria-label={`Remove one ${card.name}`}
-            className="flex h-5 w-7 items-center justify-center border-t border-white/15 text-white/80 hover:bg-white/15"
-          >
-            <Minus className="h-3.5 w-3.5" aria-hidden />
-          </button>
-        </div>
-      </div>
     </div>
   );
 }
@@ -215,17 +171,20 @@ function DeckSectionBlock({
   };
 
   return (
-    <section className="mb-3">
+    <section className="border-b border-mda-ink/15 last:border-b-0">
       <button
         type="button"
         onClick={onToggle}
-        className="flex w-full items-center justify-between bg-[#0B5393] px-3 py-1.5 font-mda text-sm font-bold uppercase tracking-wide text-white"
+        className="flex w-full items-center justify-between border-y border-mda-chrome/30 bg-mda-bg px-3 py-2 font-mda text-sm font-bold uppercase tracking-wide text-mda-ink-strong"
       >
-        {title} ({cards.length})
-        <ChevronDown
-          className={cn("h-4 w-4 transition-transform", open && "rotate-180")}
-          aria-hidden
-        />
+        {title}
+        <span className="flex items-center gap-2 font-mda text-xs text-mda-ink-muted">
+          ({cards.length})
+          <ChevronDown
+            className={cn("h-4 w-4 transition-transform", open && "rotate-180")}
+            aria-hidden
+          />
+        </span>
       </button>
       {open ? (
         <div
@@ -233,28 +192,30 @@ function DeckSectionBlock({
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
           className={cn(
-            "min-h-[120px] divide-y divide-white/5 bg-[rgba(3,19,26,0.6)] transition-shadow",
-            isDragOver && "ring-2 ring-inset ring-[color:var(--mda-cyan-soft)]",
+            "min-h-[120px] bg-mda-surface/60 p-3 transition-shadow",
+            isDragOver && "ring-2 ring-inset ring-mda-cyan",
           )}
         >
           {grouped.length === 0 ? (
-            <p className="px-3 py-8 text-center font-mda text-sm text-white/40">
+            <p className="py-8 text-center font-mda text-sm text-mda-ink-muted">
               Drop cards here or add from the library
             </p>
           ) : (
-            grouped.map(({ card, quantity, instances }) => (
-              <BuilderCardRow
-                key={card.id}
-                card={card}
-                quantity={quantity}
-                canAdd={!atSectionCap && canAddCard(card)}
-                onAdd={() => onAdd(card)}
-                onRemove={() => {
-                  const last = instances[instances.length - 1];
-                  if (last) onRemoveOne(last.deckInstanceId);
-                }}
-              />
-            ))
+            <div className="grid grid-cols-4 gap-2 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-5 xl:grid-cols-6">
+              {grouped.map(({ card, quantity, instances }) => (
+                <BuilderCardGridItem
+                  key={card.id}
+                  card={card}
+                  quantity={quantity}
+                  canAdd={!atSectionCap && canAddCard(card)}
+                  onAdd={() => onAdd(card)}
+                  onRemove={() => {
+                    const last = instances[instances.length - 1];
+                    if (last) onRemoveOne(last.deckInstanceId);
+                  }}
+                />
+              ))}
+            </div>
           )}
         </div>
       ) : null}
@@ -283,12 +244,6 @@ export function WorkshopBuildPane(): ReactNode {
       text: "Ask about ratios, tech choices, or cuts. Full assistant streaming still runs from the classic builder tools.",
     },
   ]);
-
-  const grade = useMemo(
-    () =>
-      gradeFromCounts(currentDeck.mainDeck.length, currentDeck.extraDeck.length),
-    [currentDeck.mainDeck.length, currentDeck.extraDeck.length],
-  );
 
   const activeFilterCount = useMemo(() => {
     let count = 0;
@@ -367,35 +322,8 @@ export function WorkshopBuildPane(): ReactNode {
   };
 
   return (
-    <div className="grid h-full min-h-0 grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_533px]">
-      <div className="min-h-0 overflow-y-auto bg-[rgba(3,19,26,0.6)] p-2.5">
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <span className="font-mda text-sm font-bold uppercase tracking-wide text-white/80">
-            Deck Grade
-          </span>
-          <span className="font-mda text-sm font-bold uppercase tracking-wide text-white">
-            {grade.letter} Tier
-          </span>
-        </div>
-        <div className="mb-6 space-y-2">
-          {grade.scores.map((score) => (
-            <div key={score.label} className="flex items-center gap-3">
-              <span className="w-28 font-mda text-xs uppercase text-white/70">
-                {score.label}
-              </span>
-              <div className="h-2 flex-1 overflow-hidden rounded-sm bg-white/10">
-                <div
-                  className="h-full bg-[#EAF7FF]"
-                  style={{ width: `${score.value}%` }}
-                />
-              </div>
-              <span className="w-8 text-right font-mda text-xs text-white/70">
-                {score.value}
-              </span>
-            </div>
-          ))}
-        </div>
-
+    <div className="grid h-full min-h-0 grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(280px,420px)]">
+      <div className="min-h-0 overflow-y-auto border-r border-mda-ink/10">
         <DeckSectionBlock
           title="Main"
           section="mainDeck"
@@ -428,25 +356,26 @@ export function WorkshopBuildPane(): ReactNode {
         />
       </div>
 
-      <div className="flex min-h-0 flex-col bg-[rgba(3,19,26,0.35)] p-2.5">
-        <div className="mb-3 flex gap-2">
+      <div className="flex min-h-0 flex-col bg-mda-bg/40 p-3">
+        <div className="mb-3 grid grid-cols-2 gap-0 border border-mda-chrome">
           {(
             [
-              ["cards", "Cards"],
-              ["assistant", "Assistant"],
+              ["cards", "Cards", Layers],
+              ["assistant", "Assistant", Bot],
             ] as const
-          ).map(([key, label]) => (
+          ).map(([key, label, Icon]) => (
             <button
               key={key}
               type="button"
               onClick={() => setRightPanel(key)}
               className={cn(
-                "flex-1 py-2 font-mda text-sm font-bold uppercase transition-colors",
+                "flex items-center justify-center gap-2 py-2.5 font-mda text-xs font-bold uppercase tracking-wide transition-colors",
                 rightPanel === key
-                  ? "bg-[#0B5393] text-white"
-                  : "bg-transparent text-white/70 hover:text-white",
+                  ? "bg-mda-chrome text-mda-inverse-text"
+                  : "bg-mda-bg text-mda-ink hover:bg-mda-surface",
               )}
             >
+              <Icon className="h-4 w-4" aria-hidden />
               {label}
             </button>
           ))}
@@ -460,7 +389,7 @@ export function WorkshopBuildPane(): ReactNode {
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="Search the card library"
                 aria-label="Search card library"
-                containerClassName="flex-1 bg-[#45474B]"
+                containerClassName="flex-1 bg-mda-chrome ring-mda-chrome-deep focus-within:bg-mda-chrome-deep focus-within:ring-mda-cyan"
               />
               <button
                 type="button"
@@ -468,13 +397,13 @@ export function WorkshopBuildPane(): ReactNode {
                 aria-label={filtersOpen ? "Hide filters" : "Show filters"}
                 aria-expanded={filtersOpen}
                 className={cn(
-                  "relative rounded p-2 text-white/70 hover:bg-white/10 hover:text-white",
-                  filtersOpen && "bg-white/10 text-white",
+                  "relative rounded p-2 text-mda-ink-muted transition-colors hover:bg-mda-panel hover:text-mda-ink",
+                  filtersOpen && "bg-mda-panel text-mda-ink",
                 )}
               >
                 <SlidersHorizontal className="h-5 w-5" aria-hidden />
                 {activeFilterCount > 0 ? (
-                  <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#0B5393] px-1 font-mda text-[10px] font-bold text-white">
+                  <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-mda-chrome px-1 font-mda text-[10px] font-bold text-mda-inverse-text">
                     {activeFilterCount}
                   </span>
                 ) : null}
@@ -490,7 +419,7 @@ export function WorkshopBuildPane(): ReactNode {
               activeCount={activeFilterCount}
             />
             <div className="min-h-0 flex-1 overflow-y-auto">
-              <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">
+              <div className="grid grid-cols-4 gap-2 sm:grid-cols-5">
                 {library.map((card) => {
                   const remaining = getRemainingCopies(
                     card,
@@ -509,8 +438,9 @@ export function WorkshopBuildPane(): ReactNode {
                         onClick={() => handleLibraryAdd(card)}
                         disabled={disabled}
                         className={cn(
-                          "relative aspect-[72/99] overflow-hidden bg-[color:var(--mda-bg-deep)] transition-[box-shadow] duration-200 ease-in-out hover:shadow-[0_0_16px_2px_rgba(255,255,255,0.65)]",
-                          disabled && "cursor-not-allowed opacity-40 hover:shadow-none",
+                          "relative aspect-[72/99] overflow-hidden bg-mda-deep ring-1 ring-mda-ink/10 transition-shadow hover:shadow-mda-soft",
+                          disabled &&
+                            "cursor-not-allowed opacity-40 hover:shadow-none",
                         )}
                         title={
                           disabled
@@ -536,7 +466,7 @@ export function WorkshopBuildPane(): ReactNode {
                   );
                 })}
                 {library.length === 0 ? (
-                  <div className="col-span-full flex flex-col items-center gap-2 py-10 text-white/40">
+                  <div className="col-span-full flex flex-col items-center gap-2 py-10 text-mda-ink-muted">
                     <Search className="h-8 w-8" aria-hidden />
                     <p className="font-mda text-sm">
                       {cardList.length === 0
@@ -550,23 +480,29 @@ export function WorkshopBuildPane(): ReactNode {
           </>
         ) : (
           <div className="flex min-h-0 flex-1 flex-col">
-            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-2">
+            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-1">
               {assistantMessages.map((message, index) => (
                 <div
                   key={`${message.role}-${index}`}
                   className={cn(
-                    "rounded px-3 py-2 font-mda text-sm",
-                    message.role === "ai"
-                      ? "bg-[color:var(--mda-bg-deep)] text-white/80"
-                      : "bg-[color:var(--mda-cyan-muted)] text-white",
+                    "font-mda text-sm leading-relaxed",
+                    message.role === "user"
+                      ? "ml-4 rounded bg-mda-chrome px-3 py-2.5 text-mda-inverse-text"
+                      : "flex gap-2 text-mda-ink",
                   )}
                 >
-                  {message.text}
+                  {message.role === "ai" ? (
+                    <Bot
+                      className="mt-0.5 h-4 w-4 shrink-0 text-mda-ink-muted"
+                      aria-hidden
+                    />
+                  ) : null}
+                  <span>{message.text}</span>
                 </div>
               ))}
             </div>
             <form
-              className="mt-2 flex gap-2"
+              className="mt-3"
               onSubmit={(event) => {
                 event.preventDefault();
                 if (!assistantInput.trim()) return;
@@ -581,18 +517,22 @@ export function WorkshopBuildPane(): ReactNode {
                 setAssistantInput("");
               }}
             >
-              <input
-                value={assistantInput}
-                onChange={(event) => setAssistantInput(event.target.value)}
-                placeholder="Ask the assistant…"
-                className="flex-1 bg-[#45474B] px-3 py-2 font-mda text-sm text-white placeholder:text-white/40 focus:outline-none"
-              />
-              <button
-                type="submit"
-                className="bg-[color:var(--mda-cyan)] px-4 font-mda text-sm font-bold uppercase text-[color:var(--mda-bg-deep)]"
-              >
-                Send
-              </button>
+              <label className="flex items-center gap-2 bg-mda-chrome px-3 py-2.5">
+                <Search className="h-4 w-4 shrink-0 text-mda-inverse-text/70" aria-hidden />
+                <input
+                  value={assistantInput}
+                  onChange={(event) => setAssistantInput(event.target.value)}
+                  placeholder="Ask questions about your deck"
+                  className="w-full bg-transparent font-mda text-sm text-mda-inverse-text placeholder:text-mda-inverse-text/45 focus:outline-none"
+                />
+                <button
+                  type="submit"
+                  aria-label="Send message"
+                  className="shrink-0 text-mda-cyan transition-colors hover:text-mda-cyan-soft"
+                >
+                  <Send className="h-4 w-4" aria-hidden />
+                </button>
+              </label>
             </form>
           </div>
         )}

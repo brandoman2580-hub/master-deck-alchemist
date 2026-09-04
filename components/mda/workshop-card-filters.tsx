@@ -82,13 +82,13 @@ export function WorkshopCardFilters({
     >
       <SheetContent
         side="right"
-        className="w-full border-l border-white/10 bg-[color:var(--mda-bg-deep)] p-0 sm:max-w-md"
+        className="w-full border-l border-mda-ink/15 bg-mda-bg p-0 sm:max-w-md"
       >
-        <SheetHeader className="border-b border-white/10 bg-[#0B5393] px-4 py-3 text-left">
-          <SheetTitle className="font-mda text-base font-bold uppercase tracking-wide text-white">
+        <SheetHeader className="border-b border-mda-ink/10 bg-mda-chrome px-4 py-3 text-left">
+          <SheetTitle className="font-mda text-base font-bold uppercase tracking-wide text-mda-inverse-text">
             Filters
             {activeCount > 0 ? (
-              <span className="ml-2 rounded bg-white/20 px-1.5 py-0.5 text-xs font-bold normal-case tracking-normal">
+              <span className="ml-2 rounded bg-mda-inverse-text/15 px-1.5 py-0.5 text-xs font-bold normal-case tracking-normal">
                 {activeCount}
               </span>
             ) : null}
@@ -104,7 +104,7 @@ export function WorkshopCardFilters({
             return (
               <div
                 key={config.key}
-                className={cn(index > 0 && "border-t border-white/10 pt-4")}
+                className={cn(index > 0 && "border-t border-mda-ink/10 pt-4")}
               >
                 <ToggleFilter
                   label={config.label}
@@ -117,10 +117,10 @@ export function WorkshopCardFilters({
               </div>
             );
           })}
-          <div className="space-y-2 border-t border-white/10 pt-4">
+          <div className="space-y-2 border-t border-mda-ink/10 pt-4">
             <label
               htmlFor="mda-effect-filter"
-              className="font-mda text-sm font-medium text-white/80"
+              className="font-mda text-sm font-medium text-mda-ink"
             >
               Effect Text
             </label>
@@ -130,14 +130,14 @@ export function WorkshopCardFilters({
               value={searchParams.effect || ""}
               onChange={onEffectChange}
               placeholder="Search card effects…"
-              className="w-full bg-[#45474B] px-3 py-2 font-mda text-sm text-white placeholder:text-white/45 ring-1 ring-transparent transition-[box-shadow,background-color] duration-200 focus:bg-[#55585c] focus:outline-none focus:ring-[color:var(--mda-cyan)]"
+              className="w-full bg-mda-panel px-3 py-2 font-mda text-sm text-mda-ink placeholder:text-mda-ink-muted ring-1 ring-mda-ink/10 transition-[box-shadow,background-color] duration-200 focus:bg-mda-surface focus:outline-none focus:ring-mda-cyan"
             />
           </div>
           <button
             type="button"
             onClick={onClear}
             disabled={activeCount === 0}
-            className="inline-flex w-full items-center justify-center gap-2 border border-white/20 bg-white/5 px-3 py-2 font-mda text-sm font-bold uppercase text-white/80 transition-colors duration-200 ease-in-out hover:bg-white hover:text-[color:var(--mda-bg-deep)] disabled:cursor-not-allowed disabled:opacity-40"
+            className="inline-flex w-full items-center justify-center gap-2 border border-mda-chrome/30 bg-mda-surface px-3 py-2 font-mda text-sm font-bold uppercase text-mda-ink transition-colors duration-200 ease-in-out hover:bg-mda-chrome hover:text-mda-inverse-text disabled:cursor-not-allowed disabled:opacity-40"
           >
             <Trash2 className="h-4 w-4" aria-hidden />
             Reset Filters

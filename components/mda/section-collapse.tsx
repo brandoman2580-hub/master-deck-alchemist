@@ -31,16 +31,16 @@ export function SectionCollapse({
         onClick={onToggle}
         aria-expanded={open}
         data-magnetic
-        className="flex w-full items-center gap-3 px-6 py-2.5 text-left transition-colors duration-200 hover:bg-white/5"
+        className="flex w-full items-center gap-3 px-6 py-2.5 text-left transition-colors duration-200 hover:bg-mda-ink/5"
       >
-        {Icon ? <Icon className="h-5 w-5 text-white/80" aria-hidden /> : null}
-        <span className="font-mda text-sm font-bold uppercase tracking-[0.08em] text-white">
+        {Icon ? <Icon className="h-5 w-5 text-mda-ink" aria-hidden /> : null}
+        <span className="font-mda text-sm font-bold uppercase tracking-[0.08em] text-mda-ink">
           {title}
         </span>
-        <span className="h-px flex-1 bg-white/20" aria-hidden />
+        <span className="h-px flex-1 bg-mda-ink/35" aria-hidden />
         <ChevronDown
           className={cn(
-            "h-5 w-5 text-white/70 transition-transform duration-300 ease-in-out",
+            "h-5 w-5 text-mda-ink transition-transform duration-300 ease-in-out",
             open && "rotate-180",
           )}
           aria-hidden

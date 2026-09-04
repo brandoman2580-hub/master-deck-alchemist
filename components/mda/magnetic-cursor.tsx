@@ -6,6 +6,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { createPortal } from "react-dom";
 import {
   motion,
   useMotionValue,
@@ -16,6 +17,8 @@ const MAGNET_RADIUS = 10;
 const IDLE_RING = 16;
 /** Alchemy Sun cursor size (outer ring diameter). */
 const SUN_SIZE = 22;
+/** Above Radix portals (dialogs/popovers ~z-50–100) so the cursor stays visible. */
+const CURSOR_Z = 10000;
 
 type MagTarget = {
   x: number;
@@ -39,6 +42,25 @@ function isFinePointerDesktop(): boolean {
   );
 }
 
+/**
+ * Roots of open modal/popover layers. When any exist, magnetic snap is
+ * limited to targets inside them so the ring does not latch onto UI behind.
+ */
+function openOverlayRoots(): Element[] {
+  const roots: Element[] = [];
+  document.querySelectorAll('[aria-modal="true"]').forEach((el) => {
+    roots.push(el);
+  });
+  document
+    .querySelectorAll("[data-radix-popper-content-wrapper]")
+    .forEach((wrapper) => {
+      if (wrapper.querySelector('[data-state="open"]')) {
+        roots.push(wrapper);
+      }
+    });
+  return roots;
+}
+
 /** Distance from point to rectangle (0 when inside). */
 function distanceToRect(
   clientX: number,
@@ -55,10 +77,17 @@ function nearestMagneticTarget(
   clientY: number,
 ): MagTarget | null {
   const nodes = document.querySelectorAll<HTMLElement>("[data-magnetic]");
+  const overlays = openOverlayRoots();
   let bestDist = Number.POSITIVE_INFINITY;
   let best: MagTarget | null = null;
 
   nodes.forEach((node) => {
+    if (
+      overlays.length > 0 &&
+      !overlays.some((root) => root.contains(node))
+    ) {
+      return;
+    }
     const rect = node.getBoundingClientRect();
     if (rect.width < 4 || rect.height < 4) return;
     const dist = distanceToRect(clientX, clientY, rect);
@@ -202,15 +231,18 @@ export function MagneticCursor(): ReactNode {
     rawR,
   ]);
 
-  if (!enabled) return null;
+  if (!enabled || typeof document === "undefined") return null;
 
-  return (
+  // Portal to body so z-index is not trapped under the app shell (z-20),
+  // which otherwise paints Radix popovers above the custom cursor.
+  return createPortal(
     <>
       {/* Lagging magnetic morph ring */}
       <motion.div
         aria-hidden
-        className="pointer-events-none fixed left-0 top-0 z-[9999]"
+        className="pointer-events-none fixed left-0 top-0"
         style={{
+          zIndex: CURSOR_Z - 1,
           left: ringX,
           top: ringY,
           width,
@@ -235,8 +267,9 @@ export function MagneticCursor(): ReactNode {
       {/* Alchemy Sun cursor */}
       <motion.div
         aria-hidden
-        className="pointer-events-none fixed left-0 top-0 z-[10000]"
+        className="pointer-events-none fixed left-0 top-0"
         style={{
+          zIndex: CURSOR_Z,
           left: sunX,
           top: sunY,
           width: SUN_SIZE,
@@ -264,6 +297,7 @@ export function MagneticCursor(): ReactNode {
           <circle cx="11" cy="11" r="2.75" fill="#A0FBFF" />
         </svg>
       </motion.div>
-    </>
+    </>,
+    document.body,
   );
 }

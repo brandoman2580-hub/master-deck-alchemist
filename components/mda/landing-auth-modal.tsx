@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 export type AuthMode = "login" | "signup";
 
 const authFieldClass =
-  "group flex h-12 items-center gap-2.5 rounded bg-[#89a7b8]/85 px-[18px] ring-1 ring-transparent transition-[background-color,box-shadow,ring-color] duration-200 ease-in-out hover:bg-[#9bb6c6] hover:shadow-[0_0_14px_2px_rgba(126,232,255,0.45)] hover:ring-[#7ee8ff]/70 focus-within:bg-[#9bb6c6] focus-within:shadow-[0_0_16px_3px_rgba(126,232,255,0.55)] focus-within:ring-[#7ee8ff]";
+  "mda-auth-field group flex h-12 items-center gap-2.5 rounded bg-mda-chrome px-[18px] ring-1 ring-transparent transition-[background-color,box-shadow,ring-color] duration-200 ease-in-out hover:bg-mda-chrome-muted hover:ring-mda-cyan-soft/50 focus-within:bg-mda-chrome-muted focus-within:ring-mda-cyan";
 
 /**
  * Doors open reveal — recreates Motion Curtains: Doors "open" phase
@@ -56,7 +56,7 @@ function DoorReveal({
       {children}
       <motion.div
         aria-hidden
-        className="pointer-events-none absolute inset-y-0 left-0 z-20 w-1/2 bg-[#2a2d32]"
+        className="pointer-events-none absolute inset-y-0 left-0 z-20 w-1/2 bg-mda-chrome"
         variants={{
           closed: { x: "0%" },
           open: { x: "-100%" },
@@ -65,7 +65,7 @@ function DoorReveal({
       />
       <motion.div
         aria-hidden
-        className="pointer-events-none absolute inset-y-0 right-0 z-20 w-1/2 bg-[#2a2d32]"
+        className="pointer-events-none absolute inset-y-0 right-0 z-20 w-1/2 bg-mda-chrome"
         variants={{
           closed: { x: "0%" },
           open: { x: "100%" },
@@ -208,7 +208,7 @@ export function LandingAuthModal({
       {open ? (
         <motion.div
           key="auth-backdrop"
-          className="fixed inset-0 z-40 flex items-center justify-center bg-black/75 p-4"
+          className="fixed inset-0 z-40 flex items-center justify-center bg-mda-ink/35 p-4"
           role="presentation"
           onClick={onClose}
           initial={{ opacity: 0 }}
@@ -220,7 +220,7 @@ export function LandingAuthModal({
             role="dialog"
             aria-modal="true"
             aria-labelledby="auth-dialog-title"
-            className="relative w-full max-w-[420px] overflow-hidden bg-[#45474b] shadow-2xl"
+            className="relative w-full max-w-[420px] overflow-hidden rounded-sm bg-mda-panel shadow-mda-lift"
             onClick={(event) => event.stopPropagation()}
             initial={reduceMotion ? { opacity: 0 } : "closed"}
             animate={reduceMotion ? { opacity: 1 } : "open"}
@@ -236,7 +236,7 @@ export function LandingAuthModal({
           >
             <DoorReveal reduceMotion={reduceMotion}>
               <div className="flex flex-col items-center gap-2.5 p-6">
-                <Lock className="h-12 w-12 text-[#eaf7ff]" aria-hidden />
+                <Lock className="h-12 w-12 text-mda-ink" aria-hidden />
 
                 <div className="relative w-full overflow-hidden">
                   <AnimatePresence
@@ -261,7 +261,7 @@ export function LandingAuthModal({
                     >
                       <h2
                         id="auth-dialog-title"
-                        className="px-2 py-2 text-center font-mda text-2xl font-black uppercase tracking-wide text-[#eaf7ff] sm:text-[32px]"
+                        className="px-2 py-2 text-center font-display text-2xl font-black uppercase tracking-wide text-mda-ink sm:text-[32px]"
                       >
                         {isSignup
                           ? "Create Account"
@@ -275,7 +275,7 @@ export function LandingAuthModal({
                       >
                         <label className={authFieldClass}>
                           <Mail
-                            className="h-6 w-6 shrink-0 text-white"
+                            className="h-6 w-6 shrink-0 text-mda-inverse-text"
                             aria-hidden
                           />
                           <input
@@ -293,7 +293,7 @@ export function LandingAuthModal({
                               onEmailChange(event.target.value)
                             }
                             placeholder="Email"
-                            className="w-full bg-transparent font-mda text-base text-white placeholder:text-white/80 focus:outline-none"
+                            className="w-full bg-transparent font-display text-base text-mda-inverse-text placeholder:text-mda-inverse-text/70 focus:outline-none"
                           />
                         </label>
 
@@ -302,7 +302,7 @@ export function LandingAuthModal({
                         >
                           <span className="flex min-w-0 flex-1 items-center gap-2.5">
                             <KeyRound
-                              className="h-6 w-6 shrink-0 text-white"
+                              className="h-6 w-6 shrink-0 text-mda-inverse-text"
                               aria-hidden
                             />
                             <input
@@ -322,7 +322,7 @@ export function LandingAuthModal({
                                 onPasswordChange(event.target.value)
                               }
                               placeholder="Password"
-                              className="w-full bg-transparent font-mda text-base text-white placeholder:text-white/80 focus:outline-none"
+                              className="w-full bg-transparent font-display text-base text-mda-inverse-text placeholder:text-mda-inverse-text/70 focus:outline-none"
                             />
                           </span>
                           {!isSignup ? (
@@ -334,7 +334,7 @@ export function LandingAuthModal({
                                   ? "Hide password"
                                   : "Show password"
                               }
-                              className="shrink-0 text-white/90 transition-colors duration-200 hover:text-white"
+                              className="shrink-0 text-mda-inverse-text transition-colors duration-200 hover:text-mda-inverse-text"
                             >
                               {showPassword ? (
                                 <EyeOff className="h-6 w-6" aria-hidden />
@@ -348,7 +348,7 @@ export function LandingAuthModal({
                         {isSignup ? (
                           <label className={authFieldClass}>
                             <KeyRound
-                              className="h-6 w-6 shrink-0 text-white"
+                              className="h-6 w-6 shrink-0 text-mda-inverse-text"
                               aria-hidden
                             />
                             <input
@@ -363,26 +363,26 @@ export function LandingAuthModal({
                                 onConfirmChange(event.target.value)
                               }
                               placeholder="Retype Password"
-                              className="w-full bg-transparent font-mda text-base text-white placeholder:text-white/80 focus:outline-none"
+                              className="w-full bg-transparent font-display text-base text-mda-inverse-text placeholder:text-mda-inverse-text/70 focus:outline-none"
                             />
                           </label>
                         ) : (
                           <div className="flex items-center justify-between gap-4 font-mda text-sm">
-                            <label className="flex items-center gap-2.5 text-[#89a7b8]">
+                            <label className="flex items-center gap-2.5 text-mda-ink">
                               <input
                                 type="checkbox"
                                 checked={remember}
                                 onChange={(event) =>
                                   onRememberChange(event.target.checked)
                                 }
-                                className="size-3.5 border border-[#a8a8a8] accent-[#7ee8ff]"
+                                className="size-3.5 border border-mda-ink/40 accent-mda-cyan"
                               />
                               Remember Me
                             </label>
                             <button
                               type="button"
                               onClick={onForgotPassword}
-                              className="text-[#7ee8ff] hover:underline"
+                              className="text-mda-sky-strong hover:underline"
                             >
                               Forgot Password?
                             </button>
@@ -391,14 +391,14 @@ export function LandingAuthModal({
 
                         {error ? (
                           <p
-                            className="font-mda text-sm text-[color:var(--mda-danger)]"
+                            className="font-mda text-sm text-mda-danger"
                             role="alert"
                           >
                             {error}
                           </p>
                         ) : null}
                         {message ? (
-                          <p className="font-mda text-sm text-[color:var(--mda-success)]">
+                          <p className="font-mda text-sm text-mda-success">
                             {message}
                           </p>
                         ) : null}
@@ -408,7 +408,10 @@ export function LandingAuthModal({
                           size="lg"
                           variant="authSubmit"
                           disabled={submitting}
-                          className="w-full min-w-0 text-[32px]"
+                          className={cn(
+                            "w-full min-w-0 whitespace-nowrap",
+                            isSignup ? "text-xl sm:text-2xl" : "text-[32px]",
+                          )}
                         >
                           {isSignup ? "Create Account" : "Login"}
                         </ClipButton>
@@ -416,15 +419,15 @@ export function LandingAuthModal({
                         {!isSignup ? (
                           <>
                             <div
-                              className="h-px w-full bg-white/40"
+                              className="h-px w-full bg-mda-ink/25"
                               aria-hidden
                             />
-                            <p className="text-center font-mda text-sm text-[#89a7b8]">
+                            <p className="text-center font-mda text-sm text-mda-ink-muted">
                               Don&apos;t have an account?{" "}
                               <button
                                 type="button"
                                 onClick={goSignup}
-                                className="text-[#7ee8ff] hover:underline"
+                                className="text-mda-sky-strong hover:underline"
                               >
                                 Create one
                               </button>
@@ -434,7 +437,7 @@ export function LandingAuthModal({
                           <button
                             type="button"
                             onClick={goLogin}
-                            className="text-center font-mda text-sm text-[#7ee8ff] hover:underline"
+                            className="text-center font-mda text-sm text-mda-sky-strong hover:underline"
                           >
                             Back to login
                           </button>

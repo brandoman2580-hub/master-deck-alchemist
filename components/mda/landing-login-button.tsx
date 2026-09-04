@@ -11,8 +11,35 @@ export type LandingLoginButtonProps = {
   hidden?: boolean;
 };
 
+function LoginBracket({
+  side,
+}: {
+  side: "left" | "right";
+}): ReactNode {
+  const isLeft = side === "left";
+  // Arms wrap onto the fill: left opens right `[`, right opens left `]`
+  const d = isLeft ? "M8 1H1V59H8" : "M0 1H7V59H0";
+
+  return (
+    <svg
+      aria-hidden
+      width={9}
+      height={60}
+      viewBox="0 0 9 60"
+      fill="none"
+      className={cn(
+        "pointer-events-none absolute top-px z-20 overflow-visible",
+        isLeft ? "left-0" : "right-0",
+      )}
+    >
+      <path d={d} stroke="#4D6676" strokeWidth={2} strokeLinecap="square" />
+    </svg>
+  );
+}
+
 /**
- * Alt2 v2 Login CTA — header is outline; hero remains solid cyan.
+ * Alt4 v2 Login CTA.
+ * Hero: fill edge-to-edge; C-brackets overlay the left/right edges (Figma).
  */
 export function LandingLoginButton({
   onClick,
@@ -24,6 +51,27 @@ export function LandingLoginButton({
 
   const isHero = size === "hero";
 
+  if (isHero) {
+    return (
+      <div className={cn("relative h-[61px] w-[232px]", className)}>
+        <button
+          type="button"
+          onClick={onClick}
+          data-magnetic
+          aria-label="Open login"
+          className="absolute inset-0 z-0 flex items-center gap-2.5 bg-black/15 pl-[30px] pr-4 text-mda-ink transition-[background-color,transform] duration-200 ease-in-out hover:bg-black/25 active:scale-[0.98]"
+        >
+          <span className="font-display text-[36px] font-semibold uppercase leading-none tracking-wide">
+            Login
+          </span>
+          <ArrowUpRight className="size-[50px]" strokeWidth={2} aria-hidden />
+        </button>
+        <LoginBracket side="left" />
+        <LoginBracket side="right" />
+      </div>
+    );
+  }
+
   return (
     <button
       type="button"
@@ -31,26 +79,14 @@ export function LandingLoginButton({
       data-magnetic
       aria-label="Open login"
       className={cn(
-        "inline-flex items-center transition-[background-color,color,border-color,filter,transform] duration-200 ease-in-out active:scale-[0.98]",
-        isHero
-          ? "gap-2.5 bg-[#7ee8ff] px-[30px] py-1.5 text-black hover:brightness-110"
-          : "gap-2.5 border-2 border-[#7ee8ff] bg-transparent px-[17px] py-1.5 text-[#7ee8ff] hover:bg-[#7ee8ff] hover:text-black",
+        "inline-flex items-center gap-2.5 px-[17px] py-1.5 text-mda-ink transition-[background-color,color,transform] duration-200 ease-in-out hover:bg-mda-cyan-soft/40 active:scale-[0.98]",
         className,
       )}
     >
-      <span
-        className={cn(
-          "font-anton uppercase leading-none tracking-wide",
-          isHero ? "text-[36px]" : "text-2xl",
-        )}
-      >
+      <span className="font-display text-2xl font-semibold uppercase leading-none tracking-wide">
         Login
       </span>
-      <ArrowUpRight
-        className={cn(isHero ? "size-[50px]" : "size-6")}
-        strokeWidth={2}
-        aria-hidden
-      />
+      <ArrowUpRight className="size-6" strokeWidth={2} aria-hidden />
     </button>
   );
 }
