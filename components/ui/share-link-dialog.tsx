@@ -16,6 +16,7 @@ import { createDeckShare, getDeckShare, revokeDeckShare, type CreateDeckShareRes
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { QRCodeSVG } from "qrcode.react";
 import { useUserStore } from "@/store/useUserStore";
+import { toAbsoluteShareUrl } from "@/lib/utils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -206,18 +207,10 @@ export function ShareLinkDialog({
     }
   }
 
-  // Get the public site URL, fallback to window.location.origin for development
-  const getBaseUrl = () => {
-    if (typeof window !== "undefined") {
-      return process.env.PUBLIC_URL || window.location.origin;
-    }
-    return process.env.PUBLIC_URL || "";
-  };
-
   function copyToClipboard() {
     if (!shareData) return;
 
-    const fullUrl = `${getBaseUrl()}${shareData.shareUrl}`;
+    const fullUrl = toAbsoluteShareUrl(shareData.shareUrl);
     navigator.clipboard.writeText(fullUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -234,7 +227,7 @@ export function ShareLinkDialog({
   }
 
   const fullShareUrl = shareData
-    ? `${getBaseUrl()}${shareData.shareUrl}`
+    ? toAbsoluteShareUrl(shareData.shareUrl)
     : "";
 
   return (

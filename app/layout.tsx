@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { Inter, Roboto_Condensed } from "next/font/google";
 import localFont from "next/font/local";
 import "./globals.css";
 import { Providers } from "./providers";
@@ -13,27 +12,11 @@ import {
   generateWebApplicationSchema,
 } from "../lib/seo/structured-data";
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
-const robotoCondensed = Roboto_Condensed({
-  subsets: ["latin"],
-  weight: ["300", "400", "700", "900"],
-  variable: "--font-mda",
-});
-const anton = localFont({
-  src: "./fonts/Anton-Regular.ttf",
-  variable: "--font-anton",
-  weight: "400",
-  display: "swap",
-});
-const openSans = localFont({
-  src: "./fonts/OpenSans-VariableFont_wdth,wght.ttf",
-  variable: "--font-open-sans",
-  display: "swap",
-});
-const shareTechMono = localFont({
-  src: "./fonts/ShareTechMono-Regular.ttf",
-  variable: "--font-share-tech",
-  weight: "400",
+/** App-wide typeface — Orbitron only (variable weight). */
+const orbitron = localFont({
+  src: "./fonts/Orbitron-VariableFont_wght.ttf",
+  variable: "--font-orbitron",
+  weight: "100 900",
   display: "swap",
 });
 
@@ -122,11 +105,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="en" suppressHydrationWarning>
       <body
         className={`
-          ${inter.className}
-          ${robotoCondensed.variable}
-          ${anton.variable}
-          ${openSans.variable}
-          ${shareTechMono.variable}
+          ${orbitron.variable}
+          ${orbitron.className}
           min-h-screen
           flex flex-col
           overflow-x-hidden

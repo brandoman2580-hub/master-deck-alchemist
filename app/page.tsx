@@ -27,10 +27,6 @@ import {
 import { LandingFeatureRow } from "@/components/mda/landing-feature-row";
 import { LandingLoginButton } from "@/components/mda/landing-login-button";
 import { MdaBrandTitle } from "@/components/mda/brand-lockup";
-import {
-  LandingTransmutationStage,
-  useLandingScrollContainer,
-} from "@/components/mda/landing-transmutation-stage";
 import { LandingSideNav } from "@/components/mda/landing-side-nav";
 import { MdaLoadingScreen } from "@/components/mda/mda-loading-screen";
 import { signup } from "@/app/login/actions";
@@ -52,14 +48,15 @@ const FOOTER_LEGAL =
   "The literal and graphical information presented on this site about Yu-Gi-Oh!, including card images, the attribute, level/rank and type symbols, and card text, is copyright 4K Media Inc, a subsidiary of Konami Digital Entertainment, Inc. This website is not produced by, endorsed by, supported by, or affiliated with 4k Media or Konami Digital Entertainment.";
 
 const MOCKUPS = {
-  build: encodeURI("/images/MDA - Workshop, Build View, Assistant Tab.png"),
-  matchups: encodeURI("/images/MDA - Workshop, Matchups View.png"),
-  combos: encodeURI("/images/MDA - Workshop, Combos View.png"),
+  build: encodeURI("/images/MDA - Workshop v2 (Alternative), Build View, Cards Tab (1).png"),
+  matchups: encodeURI("/images/MDA - Workshop v2 (Alternative), Matchups View.png"),
+  combos: encodeURI("/images/MDA - Workshop v2 (Alternative), Combos View.png"),
 } as const;
 
+const HERO_ART = "/images/hero_deck_exploded_view.svg";
+
 /**
- * Landing — Figma MDA Login Page (Alternative 2) v2:
- * dark multi-section scroll with side indicators + modal auth.
+ * Landing — Figma MDA Login Page (Alternative 4) v2 (light token system).
  */
 export default function HomePage(): ReactNode {
   const router = useRouter();
@@ -78,7 +75,6 @@ export default function HomePage(): ReactNode {
   const [authLoading, setAuthLoading] = useState(false);
   const [activeSection, setActiveSection] = useState(0);
   const sectionRefs = useRef<Array<HTMLElement | null>>([]);
-  const scrollContainer = useLandingScrollContainer();
   const scrollContainerRef = useRef<HTMLElement | null>(null);
 
   const openLogin = (): void => {
@@ -184,7 +180,6 @@ export default function HomePage(): ReactNode {
   const scrollToSection = (index: number): void => {
     const node = sectionRefs.current[index];
     if (!node) return;
-    // Lock indicator immediately so smooth-scroll doesn't twitch mid-flight
     setActiveSection(index);
     const scrollRoot =
       scrollContainerRef.current ??
@@ -207,12 +202,12 @@ export default function HomePage(): ReactNode {
   };
 
   useEffect(() => {
-    scrollContainerRef.current = scrollContainer;
+    const scrollRoot = document.getElementById("main-content");
+    scrollContainerRef.current = scrollRoot;
 
     const nodes = sectionRefs.current.filter(Boolean) as HTMLElement[];
-    if (!scrollContainer || nodes.length === 0) return;
+    if (!scrollRoot || nodes.length === 0) return;
 
-    // Thin center band — only one section intersects at a time (no threshold flicker)
     const observer = new IntersectionObserver(
       (entries) => {
         const hit = entries.find((entry) => entry.isIntersecting);
@@ -223,7 +218,7 @@ export default function HomePage(): ReactNode {
         }
       },
       {
-        root: scrollContainer,
+        root: scrollRoot,
         rootMargin: "-42% 0px -42% 0px",
         threshold: 0,
       },
@@ -231,16 +226,15 @@ export default function HomePage(): ReactNode {
 
     nodes.forEach((node) => observer.observe(node));
     return () => observer.disconnect();
-  }, [scrollContainer]);
+  }, []);
 
   return (
-    <div className="relative min-h-screen bg-black text-white">
+    <div className="relative min-h-screen bg-mda-bg text-mda-ink">
       <MdaLoadingScreen
         open={authLoading}
         status="Signing in and opening Deck Archives…"
       />
 
-      {/* Sticky chrome: brand + login + side nav */}
       <header className="pointer-events-none fixed inset-x-0 top-0 z-30 flex items-center justify-between px-6 py-2.5">
         <div
           className="pointer-events-auto flex items-center gap-4"
@@ -249,7 +243,14 @@ export default function HomePage(): ReactNode {
           <MDAIcon className="h-[30px] w-[29px] shrink-0" aria-hidden />
           <MdaBrandTitle />
         </div>
-        <div className="pointer-events-auto">
+        <div
+          className={cn(
+            "pointer-events-auto transition-opacity duration-300",
+            activeSection === 0
+              ? "pointer-events-none opacity-0"
+              : "opacity-100",
+          )}
+        >
           <LandingLoginButton
             onClick={openLogin}
             size="header"
@@ -267,77 +268,86 @@ export default function HomePage(): ReactNode {
       </div>
 
       <div className="relative">
-        {/* Sticky transmutation stage — card/platform fixed in viewport; sprites/burst track page scroll */}
-        {scrollContainer ? (
-          <div
-            className="pointer-events-none absolute inset-0 z-[1] hidden lg:block"
-            aria-hidden
-          >
-            <div className="sticky top-[74px] ml-auto mr-10 h-[calc(100dvh-74px)] w-[min(821px,52vw)] xl:mr-16">
-              <LandingTransmutationStage
-                container={scrollContainer}
-                className="h-full w-full"
-              />
-            </div>
-          </div>
-        ) : null}
-
         {/* Section 1 — Hero */}
         <section
           id={SECTIONS[0].id}
           ref={(node) => {
             sectionRefs.current[0] = node;
           }}
-          className="relative z-10 flex min-h-[100dvh] flex-col overflow-visible bg-transparent pt-[74px]"
+          className="relative z-10 flex min-h-[100dvh] flex-col overflow-hidden pt-[68px]"
         >
           <div className="relative flex flex-1 flex-col lg:flex-row lg:items-start lg:px-16 lg:pt-6">
             <motion.div
-              className="relative z-10 flex max-w-[420px] flex-col px-6 pt-6 lg:px-0 lg:pt-0"
+              className="relative z-10 flex max-w-[598px] flex-col gap-12 px-6 pt-6 lg:px-0 lg:pt-0"
               initial={reduceMotion ? false : { opacity: 0, y: 24 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.45, ease: "easeOut" }}
             >
-              <h1 className="font-anton text-[64px] uppercase leading-none sm:text-[80px] lg:text-[96px]">
-                <span className="block text-white">Build.</span>
-                <span className="block text-white">Optimize.</span>
-                <span className="block text-[#7ee8ff]">Dominate.</span>
+              <h1 className="font-display text-[64px] font-semibold uppercase leading-none sm:text-[80px] lg:text-[96px]">
+                <span className="block text-mda-ink">Build.</span>
+                <span className="block text-mda-ink">Optimize.</span>
+                <span className="block text-mda-cyan">Dominate.</span>
               </h1>
-              <p className="mt-6 max-w-[373px] font-open-sans text-base leading-6 text-white">
-                {HERO_COPY}
-              </p>
-              <div className="mt-10">
-                <LandingLoginButton
-                  onClick={openLogin}
-                  size="hero"
-                  hidden={authOpen}
+
+              <div className="relative max-w-[450px] bg-[rgba(185,190,190,0.26)] p-3">
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute -left-0.5 -top-0.5 size-[17px] border-l-2 border-t-2 border-mda-cyan"
                 />
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute -right-0.5 -top-0.5 size-[17px] border-r-2 border-t-2 border-mda-cyan"
+                />
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute -bottom-0.5 -left-0.5 size-[17px] border-b-2 border-l-2 border-mda-cyan"
+                />
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute -bottom-0.5 -right-0.5 size-[17px] border-b-2 border-r-2 border-mda-cyan"
+                />
+                <p
+                  className="font-display text-base uppercase leading-6 text-mda-ink"
+                  style={{ fontWeight: 600, fontVariationSettings: '"wght" 600' }}
+                >
+                  Master Deck Alchemist{" "}
+                  {HERO_COPY.replace(/^Master Deck Alchemist\s*/i, "")}
+                </p>
               </div>
+
+              <LandingLoginButton
+                onClick={openLogin}
+                size="hero"
+                hidden={authOpen}
+              />
             </motion.div>
 
-            {/* Mobile — stage in-flow under copy */}
-            <div className="relative z-0 mx-auto mt-4 aspect-[821/864] w-full max-w-[820px] flex-1 lg:hidden">
-              {scrollContainer ? (
-                <LandingTransmutationStage container={scrollContainer} />
-              ) : null}
+            <div className="pointer-events-none relative z-0 mx-auto mt-2 aspect-square w-full max-w-[640px] flex-1 lg:absolute lg:-right-4 lg:top-[-24px] lg:mt-0 lg:h-[min(955px,78vh)] lg:w-[min(955px,58vw)] lg:max-w-none xl:right-8">
+              <Image
+                src={HERO_ART}
+                alt="Exploded deck technical view"
+                fill
+                priority
+                className="object-contain object-right-top"
+                sizes="(max-width: 1024px) 90vw, 58vw"
+              />
             </div>
           </div>
 
-          <div className="relative z-10 flex flex-col items-center gap-2 pb-8 pt-4">
-            <p className="font-share-tech text-sm uppercase tracking-[0.2em] text-white/80">
+          <div className="relative z-10 flex flex-col items-center gap-2.5 pb-8 pt-4">
+            <p className="font-display text-base font-normal uppercase leading-6 tracking-wide text-mda-ink">
               Scroll down
             </p>
             <motion.div
               aria-hidden
-              animate={
-                reduceMotion ? undefined : { y: [0, 6, 0] }
-              }
+              animate={reduceMotion ? undefined : { y: [0, 6, 0] }}
               transition={
                 reduceMotion
                   ? undefined
                   : { duration: 1.4, repeat: Infinity, ease: "easeInOut" }
               }
             >
-              <ChevronDown className="size-6 text-white" />
+              <ChevronDown className="size-6 text-mda-ink" />
             </motion.div>
           </div>
         </section>
@@ -348,30 +358,30 @@ export default function HomePage(): ReactNode {
           ref={(node) => {
             sectionRefs.current[1] = node;
           }}
-          className="relative z-10 flex min-h-[100dvh] items-start bg-black/80 px-6 py-12 backdrop-blur-[2px] lg:bg-transparent lg:px-16 lg:py-16 lg:backdrop-blur-none"
+          className="relative z-10 flex min-h-[642px] w-full items-start px-6 py-12 lg:px-16 lg:py-8 lg:pr-32"
         >
-          <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-10 lg:flex-row lg:items-start lg:gap-6 lg:pr-28">
-            <div className="relative aspect-[789/526] w-full overflow-hidden rounded-sm bg-[#1a1d22] lg:max-w-[789px] lg:flex-1">
+          <div className="flex w-full flex-col gap-10 lg:flex-row lg:items-start lg:justify-between lg:gap-10">
+            <div className="relative aspect-[789/526] w-full overflow-hidden rounded-sm bg-mda-panel shadow-mda-soft lg:min-w-0 lg:flex-1 lg:basis-[55%]">
               <Image
                 src={MOCKUPS.build}
                 alt="Workshop build view with AI assistant"
                 fill
                 className="object-cover object-top"
-                sizes="(max-width: 1024px) 100vw, 789px"
+                sizes="(max-width: 1024px) 100vw, 55vw"
               />
             </div>
-            <div className="flex w-full max-w-[381px] flex-col lg:pt-2">
-              <h2 className="font-anton text-5xl uppercase leading-none text-white sm:text-6xl lg:text-[72px]">
+            <div className="flex w-full flex-col lg:w-[min(420px,38%)] lg:shrink-0 lg:pt-2">
+              <h2 className="font-display text-5xl font-semibold uppercase leading-none text-mda-ink sm:text-6xl lg:text-[72px]">
                 AI-Powered Deck Building
               </h2>
               <div className="mt-2 flex flex-col gap-2.5 py-2.5">
                 <LandingFeatureRow
                   icon={Brain}
-                  label="Intelligent Suggestions"
+                  label="Intelligent Card Suggestions"
                 />
                 <LandingFeatureRow
                   icon={Gauge}
-                  label="Practical Optimizations"
+                  label="Practical Deck Optimizations"
                 />
               </div>
             </div>
@@ -384,11 +394,11 @@ export default function HomePage(): ReactNode {
           ref={(node) => {
             sectionRefs.current[2] = node;
           }}
-          className="relative z-10 flex min-h-[100dvh] items-start bg-black/80 px-6 py-12 backdrop-blur-[2px] lg:bg-transparent lg:px-16 lg:py-16 lg:backdrop-blur-none"
+          className="relative z-10 flex min-h-[642px] w-full items-start px-6 py-12 lg:px-16 lg:py-8 lg:pr-32"
         >
-          <div className="mx-auto flex w-full max-w-[1440px] flex-col-reverse gap-10 lg:flex-row lg:items-start lg:gap-6 lg:pr-28">
-            <div className="flex w-full max-w-[381px] flex-col lg:pt-2">
-              <h2 className="font-anton text-5xl uppercase leading-none text-white sm:text-6xl lg:text-[72px]">
+          <div className="flex w-full flex-col-reverse gap-10 lg:flex-row lg:items-start lg:justify-between lg:gap-10">
+            <div className="flex w-full flex-col lg:w-[min(420px,38%)] lg:shrink-0 lg:pt-2">
+              <h2 className="font-display text-5xl font-semibold uppercase leading-none text-mda-ink sm:text-6xl lg:text-[72px]">
                 Meta Matchup Analysis
               </h2>
               <div className="mt-2 flex flex-col gap-2.5 py-2.5">
@@ -402,13 +412,13 @@ export default function HomePage(): ReactNode {
                 />
               </div>
             </div>
-            <div className="relative aspect-[789/526] w-full overflow-hidden rounded-sm bg-[#1a1d22] lg:max-w-[789px] lg:flex-1">
+            <div className="relative aspect-[789/526] w-full overflow-hidden rounded-sm bg-mda-panel shadow-mda-soft lg:min-w-0 lg:flex-1 lg:basis-[55%]">
               <Image
                 src={MOCKUPS.matchups}
                 alt="Workshop matchups analytics view"
                 fill
                 className="object-cover object-top"
-                sizes="(max-width: 1024px) 100vw, 789px"
+                sizes="(max-width: 1024px) 100vw, 55vw"
               />
             </div>
           </div>
@@ -420,20 +430,20 @@ export default function HomePage(): ReactNode {
           ref={(node) => {
             sectionRefs.current[3] = node;
           }}
-          className="relative z-10 flex min-h-[100dvh] items-start bg-black/80 px-6 py-12 backdrop-blur-[2px] lg:bg-transparent lg:px-16 lg:py-16 lg:backdrop-blur-none"
+          className="relative z-10 flex min-h-[642px] w-full items-start px-6 py-12 lg:px-16 lg:py-8 lg:pr-32"
         >
-          <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-10 lg:flex-row lg:items-start lg:gap-6 lg:pr-28">
-            <div className="relative aspect-[789/526] w-full overflow-hidden rounded-sm bg-[#1a1d22] lg:max-w-[789px] lg:flex-1">
+          <div className="flex w-full flex-col gap-10 lg:flex-row lg:items-start lg:justify-between lg:gap-10">
+            <div className="relative aspect-[789/526] w-full overflow-hidden rounded-sm bg-mda-panel shadow-mda-soft lg:min-w-0 lg:flex-1 lg:basis-[55%]">
               <Image
                 src={MOCKUPS.combos}
                 alt="Workshop combos lines view"
                 fill
                 className="object-cover object-top"
-                sizes="(max-width: 1024px) 100vw, 789px"
+                sizes="(max-width: 1024px) 100vw, 55vw"
               />
             </div>
-            <div className="flex w-full max-w-[381px] flex-col lg:pt-2">
-              <h2 className="font-anton text-5xl uppercase leading-none text-white sm:text-6xl lg:text-[72px]">
+            <div className="flex w-full flex-col lg:w-[min(420px,38%)] lg:shrink-0 lg:pt-2">
+              <h2 className="font-display text-5xl font-semibold uppercase leading-none text-mda-ink sm:text-6xl lg:text-[72px]">
                 Real Time Combo Lines
               </h2>
               <div className="mt-2 flex flex-col gap-2.5 py-2.5">
@@ -452,14 +462,14 @@ export default function HomePage(): ReactNode {
 
         <footer
           className={cn(
-            "relative z-10 flex flex-col gap-4 bg-black px-6 py-8 font-open-sans text-white/70",
+            "relative z-10 flex flex-col gap-4 px-6 py-8 font-display text-mda-ink",
             "sm:flex-row sm:items-center sm:justify-between sm:px-6",
           )}
         >
-          <p className="text-base uppercase text-white">
+          <p className="text-base uppercase text-mda-ink">
             ©2026 Master Deck Alchemist
           </p>
-          <p className="max-w-[747px] text-sm leading-normal text-white/45">
+          <p className="max-w-[747px] text-sm leading-normal text-mda-ink-muted">
             {FOOTER_LEGAL}
           </p>
         </footer>

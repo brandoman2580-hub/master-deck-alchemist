@@ -24,6 +24,7 @@ import {
   getDeckShareFullUrl,
   toDeckShareRequest,
 } from "@/lib/api/deckShare";
+import { isDeckLegalForShare } from "@/lib/validation/deck-validator";
 import type { DeckMode, DeckType } from "@/types/types";
 import { v4 as uuidv4 } from "uuid";
 
@@ -134,6 +135,7 @@ export default function DeckArchivesPage(): ReactNode {
             <DeckArchiveActionPopovers
               deckName={deck.name}
               mode={deck.mode}
+              canShare={isDeckLegalForShare(deck)}
               onCopyConfirm={(mode) => {
                 if (!requireAuth()) return;
                 void handleCopyConfirm(deck, mode);
@@ -154,17 +156,27 @@ export default function DeckArchivesPage(): ReactNode {
   );
 
   return (
-    <div className="relative flex min-h-full flex-col bg-[radial-gradient(circle_at_center,#A4A8B1_0%,#45474B_100%)] text-white">
+    <div className="relative flex min-h-full flex-col bg-mda-bg text-mda-ink">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-[120px] z-0 select-none overflow-hidden"
+      >
+        <p className="whitespace-nowrap text-center font-display text-[clamp(4rem,18vw,14rem)] font-black uppercase leading-none tracking-tight text-mda-watermark">
+          Archives
+        </p>
+      </div>
+
+      {/* Only block UI on cold load — cached data skips the loading screen */}
       <MdaLoadingScreen
         open={Boolean(user) && isLoading}
         status="Syncing deck archives from your library…"
       />
 
-      <MdaAppHeader onLoginClick={() => router.push("/")} />
+      <MdaAppHeader theme="light" onLoginClick={() => router.push("/")} />
 
-      <div className="flex flex-col gap-2 pb-10">
+      <div className="relative z-10 flex flex-col gap-2 pb-10">
         <div className="flex flex-nowrap items-center justify-between gap-4 px-6 py-4">
-          <h1 className="w-fit shrink-0 bg-[color:var(--mda-cyan-muted)] px-4 py-1 text-left font-mda text-3xl font-bold uppercase tracking-wide text-white w-[25rem]">
+          <h1 className="shrink-0 font-display text-3xl font-black uppercase tracking-wide text-mda-ink sm:text-4xl">
             Deck Archives
           </h1>
           <div className="flex min-w-0 flex-nowrap items-center gap-3">
@@ -174,7 +186,7 @@ export default function DeckArchivesPage(): ReactNode {
               aria-label="Deck archives alerts"
               aria-expanded={alertsOpen}
               data-magnetic
-              className="shrink-0 rounded p-2 text-white/80 transition-colors duration-200 ease-in-out hover:bg-white hover:text-[color:var(--mda-bg-deep)]"
+              className="shrink-0 rounded p-2 text-mda-ink transition-colors duration-200 ease-in-out hover:bg-mda-ink/10"
             >
               <Bell className="h-6 w-6" aria-hidden />
             </button>
@@ -183,7 +195,7 @@ export default function DeckArchivesPage(): ReactNode {
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search"
               aria-label="Search decks"
-              containerClassName="min-w-0 w-[min(100%,400px)] flex-1"
+              containerClassName="min-w-[200px] w-[min(100%,400px)] flex-1"
             />
             <FormatPickerPopover
               title="New deck format"
@@ -213,12 +225,12 @@ export default function DeckArchivesPage(): ReactNode {
         </div>
 
         {!user ? (
-          <div className="mx-6 rounded-md border border-white/10 bg-white/5 px-4 py-6 font-mda text-white/80">
+          <div className="mx-6 rounded-md border border-mda-ink/15 bg-mda-panel px-4 py-6 font-mda text-mda-ink">
             Preview mode — sign in to sync and manage your decks.{" "}
             <button
               type="button"
               onClick={() => router.push("/")}
-              className="text-[color:var(--mda-cyan-soft)] underline"
+              className="text-mda-sky-strong underline"
             >
               Log in
             </button>
@@ -226,25 +238,22 @@ export default function DeckArchivesPage(): ReactNode {
         ) : null}
 
         {error ? (
-          <p
-            className="px-6 font-mda text-sm text-[color:var(--mda-danger)]"
-            role="alert"
-          >
+          <p className="px-6 font-mda text-sm text-mda-danger" role="alert">
             {error}
           </p>
         ) : null}
 
         <MdaCollapse open={alertsOpen}>
-          <div className="mx-6 mb-2 max-w-xl border border-white/10 bg-[color:var(--mda-surface)] p-4">
-            <div className="mb-3 bg-[color:var(--mda-header-bar)] px-3 py-2 font-mda text-lg font-bold uppercase">
+          <div className="mx-6 mb-2 max-w-xl border border-mda-ink/15 bg-mda-panel p-4 shadow-mda-soft">
+            <div className="mb-3 bg-mda-chrome px-3 py-2 font-mda text-lg font-bold uppercase text-mda-inverse-text">
               Deck Archives Alerts
             </div>
-            <div className="space-y-2 font-mda text-sm text-white/80">
+            <div className="space-y-2 font-mda text-sm text-mda-ink">
               <p>
                 Database and banlist sync status will appear here when
                 available.
               </p>
-              <p className="text-white/50">
+              <p className="text-mda-ink-muted">
                 No outstanding legality issues detected.
               </p>
             </div>
@@ -254,12 +263,12 @@ export default function DeckArchivesPage(): ReactNode {
         <SectionCollapse
           title="Pinned"
           icon={Pin}
-          iconClassName="fill-[color:var(--mda-cyan)] text-[color:var(--mda-cyan)]"
+          iconClassName="fill-mda-cyan text-mda-cyan"
           open={pinnedOpen}
           onToggle={() => setPinnedOpen((value) => !value)}
         >
           {pinned.length === 0 ? (
-            <p className="px-6 pb-4 font-mda text-sm text-white/40">
+            <p className="px-6 pb-4 font-mda text-sm text-mda-ink-muted">
               No pinned decks
             </p>
           ) : (
@@ -273,7 +282,7 @@ export default function DeckArchivesPage(): ReactNode {
           onToggle={() => setMdOpen((value) => !value)}
         >
           {masterDuel.length === 0 ? (
-            <p className="px-6 pb-4 font-mda text-sm text-white/40">
+            <p className="px-6 pb-4 font-mda text-sm text-mda-ink-muted">
               No Master Duel decks
             </p>
           ) : (
@@ -287,7 +296,7 @@ export default function DeckArchivesPage(): ReactNode {
           onToggle={() => setTcgOpen((value) => !value)}
         >
           {tcg.length === 0 ? (
-            <p className="px-6 pb-4 font-mda text-sm text-white/40">
+            <p className="px-6 pb-4 font-mda text-sm text-mda-ink-muted">
               No TCG decks
             </p>
           ) : (

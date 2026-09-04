@@ -17,9 +17,8 @@ import { nearestMagneticTarget } from "@/lib/magnetic-targets";
 const IDLE_RING = 16;
 /** Alchemy Sun cursor size (outer ring diameter). */
 const SUN_SIZE = 22;
-/** Ring sits below Radix popovers (z-100); sun stays above menus. */
-const RING_Z = 90;
-const SUN_Z = 101;
+/** Above Radix portals (dialogs/popovers ~z-50–100) so the cursor stays visible. */
+const CURSOR_Z = 10000;
 
 function prefersReducedMotion(): boolean {
   if (typeof window === "undefined") return true;
@@ -157,13 +156,15 @@ export function MagneticCursor(): ReactNode {
 
   if (!enabled || !mounted) return null;
 
+  // Portal to body so z-index is not trapped under the app shell (z-20),
+  // which otherwise paints Radix popovers above the custom cursor.
   return createPortal(
     <>
       <motion.div
         aria-hidden
         className="pointer-events-none fixed left-0 top-0"
         style={{
-          zIndex: RING_Z,
+          zIndex: CURSOR_Z - 1,
           left: ringX,
           top: ringY,
           width,
@@ -189,7 +190,7 @@ export function MagneticCursor(): ReactNode {
         aria-hidden
         className="pointer-events-none fixed left-0 top-0"
         style={{
-          zIndex: SUN_Z,
+          zIndex: CURSOR_Z,
           left: sunX,
           top: sunY,
           width: SUN_SIZE,

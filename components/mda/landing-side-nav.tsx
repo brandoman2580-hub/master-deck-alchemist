@@ -13,8 +13,7 @@ export type LandingSideNavProps = {
 const LABELS = ["01", "02", "03", "04"] as const;
 
 /**
- * Vertical section indicator (Share Tech Mono) with active circle-dot.
- * Each item is magnetic so the cursor ring morphs onto it.
+ * Vertical section indicator with active circle-dot (Alt4 light).
  */
 export function LandingSideNav({
   activeIndex,
@@ -41,13 +40,13 @@ export function LandingSideNav({
               aria-current={isActive ? "true" : undefined}
               aria-label={`Go to section ${label}`}
               className={cn(
-                "flex items-center gap-2.5 rounded-full px-2.5 py-1 font-share-tech text-2xl text-white transition-opacity duration-200",
-                isActive ? "opacity-100" : "opacity-55 hover:opacity-90",
+                "flex items-center gap-2.5 rounded-full px-2.5 py-1 font-display text-2xl text-mda-ink transition-opacity duration-200",
+                isActive ? "opacity-100" : "opacity-45 hover:opacity-80",
               )}
             >
               {isActive ? (
                 <CircleDot
-                  className="size-6 text-[#7ee8ff]"
+                  className="size-6 text-mda-cyan"
                   strokeWidth={2}
                   aria-hidden
                 />
@@ -57,7 +56,7 @@ export function LandingSideNav({
           );
         })}
       </div>
-      <div className="ml-0 w-px self-stretch bg-white/70" aria-hidden />
+      <div className="ml-0 w-px self-stretch bg-mda-ink/50" aria-hidden />
     </nav>
   );
 }

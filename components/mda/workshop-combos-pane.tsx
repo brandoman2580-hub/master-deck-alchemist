@@ -14,7 +14,6 @@ type ComboDoc = {
   subtitle: string;
   weaknesses: string[];
   comments: string;
-  /** Offsets into deck lists so each tab yields a different card order. */
   handOffset: number;
   seqOffset: number;
 };
@@ -62,19 +61,17 @@ function CardSlot({ card }: { card?: DeckCard }): ReactNode {
       sizes="72px"
     />
   ) : (
-    <ImageIcon className="h-10 w-10 text-white/25" aria-hidden />
+    <ImageIcon className="h-8 w-8 text-mda-ink-muted/40" aria-hidden />
   );
 
   return (
     <motion.div
       layout={!reduceMotion}
       layoutId={
-        card
-          ? `combo-card-${card.deckInstanceId ?? card.id}`
-          : undefined
+        card ? `combo-card-${card.deckInstanceId ?? card.id}` : undefined
       }
       transition={{ type: "spring", stiffness: 380, damping: 32 }}
-      className="relative flex h-[99px] w-[72px] items-center justify-center overflow-hidden bg-[color:var(--mda-bg-deep)] transition-[box-shadow] duration-200 ease-in-out hover:shadow-[0_0_16px_2px_rgba(255,255,255,0.55)]"
+      className="relative flex h-[99px] w-[72px] items-center justify-center overflow-hidden bg-mda-deep ring-1 ring-mda-ink/10 transition-shadow hover:shadow-mda-soft"
     >
       {body}
     </motion.div>
@@ -98,23 +95,19 @@ export function WorkshopCombosPane(): ReactNode {
     DEFAULT_COMBOS.find((combo) => combo.id === activeId) ?? DEFAULT_COMBOS[0];
 
   const hand = useMemo(
-    () =>
-      rotateSlice(currentDeck.mainDeck, active.handOffset, 5),
+    () => rotateSlice(currentDeck.mainDeck, active.handOffset, 5),
     [currentDeck.mainDeck, active.handOffset],
   );
   const sequenceA = useMemo(
-    () =>
-      rotateSlice(currentDeck.mainDeck, active.seqOffset + 5, 3),
+    () => rotateSlice(currentDeck.mainDeck, active.seqOffset + 5, 3),
     [currentDeck.mainDeck, active.seqOffset],
   );
   const sequenceB = useMemo(
-    () =>
-      rotateSlice(currentDeck.extraDeck, active.seqOffset, 3),
+    () => rotateSlice(currentDeck.extraDeck, active.seqOffset, 3),
     [currentDeck.extraDeck, active.seqOffset],
   );
   const sequenceC = useMemo(
-    () =>
-      rotateSlice(currentDeck.extraDeck, active.seqOffset + 3, 2),
+    () => rotateSlice(currentDeck.extraDeck, active.seqOffset + 3, 2),
     [currentDeck.extraDeck, active.seqOffset],
   );
   const endBoard = useMemo(() => {
@@ -132,7 +125,7 @@ export function WorkshopCombosPane(): ReactNode {
 
   return (
     <LayoutGroup>
-      <div className="grid h-full min-h-0 grid-cols-1 gap-3 p-2.5 lg:grid-cols-[253px_minmax(0,400px)_minmax(0,1fr)]">
+      <div className="grid h-full min-h-0 grid-cols-1 gap-4 p-4 lg:grid-cols-[220px_minmax(0,1fr)_minmax(0,280px)]">
         <div className="space-y-2 overflow-y-auto">
           {DEFAULT_COMBOS.map((combo) => {
             const selected = combo.id === activeId;
@@ -143,14 +136,14 @@ export function WorkshopCombosPane(): ReactNode {
                 onClick={() => setActiveId(combo.id)}
                 data-magnetic
                 className={cn(
-                  "flex w-full flex-col items-center rounded px-3 py-4 font-mda uppercase transition-colors duration-200 ease-in-out",
+                  "flex w-full flex-col items-center px-3 py-4 font-mda uppercase transition-colors duration-200 ease-in-out",
                   selected
-                    ? "bg-white/20 text-white"
-                    : "bg-[color:var(--mda-bg-deep)] text-white/55 hover:bg-white hover:text-[color:var(--mda-bg-deep)]",
+                    ? "border-l-4 border-mda-cyan bg-mda-surface text-mda-ink-strong shadow-mda-soft"
+                    : "bg-mda-chrome text-mda-inverse-text hover:bg-mda-chrome-deep",
                 )}
               >
-                <span className="text-2xl font-bold">{combo.title}</span>
-                <span className="text-lg">{combo.subtitle}</span>
+                <span className="text-xl font-bold">{combo.title}</span>
+                <span className="text-sm opacity-80">{combo.subtitle}</span>
               </button>
             );
           })}
@@ -158,7 +151,7 @@ export function WorkshopCombosPane(): ReactNode {
 
         <div className="space-y-6 overflow-y-auto px-1">
           <div>
-            <p className="mb-2 font-mda text-lg font-bold uppercase text-white">
+            <p className="mb-2 font-mda text-sm font-bold uppercase tracking-wide text-mda-ink-strong">
               Starting Hand
             </p>
             <div className="flex flex-wrap gap-2">
@@ -207,7 +200,7 @@ export function WorkshopCombosPane(): ReactNode {
             ))}
           </div>
           <div>
-            <p className="mb-2 font-mda text-lg font-bold uppercase text-white">
+            <p className="mb-2 font-mda text-sm font-bold uppercase tracking-wide text-mda-ink-strong">
               End Board
             </p>
             <div className="flex flex-wrap gap-2">
@@ -224,25 +217,25 @@ export function WorkshopCombosPane(): ReactNode {
           </div>
         </div>
 
-        <div className="flex min-h-0 flex-col gap-4 overflow-y-auto">
-          <section className="flex-1 bg-[color:var(--mda-surface)]/30 p-3">
-            <h3 className="mb-3 font-mda text-xl font-bold uppercase text-white">
+        <div className="flex min-h-0 flex-col gap-4 overflow-y-auto border-t border-mda-ink/10 pt-4 lg:border-l lg:border-t-0 lg:pl-4 lg:pt-0">
+          <section className="flex-1">
+            <h3 className="mb-2 font-mda text-sm font-bold uppercase tracking-wide text-mda-ink-strong">
               Weaknesses
             </h3>
-            <p className="mb-2 font-mda text-sm text-white/70">
+            <p className="mb-2 font-mda text-xs text-mda-ink-muted">
               This combo dies to:
             </p>
-            <ul className="list-disc space-y-1 pl-5 font-mda text-base text-white">
+            <ul className="list-disc space-y-1 pl-5 font-mda text-sm text-mda-ink">
               {active.weaknesses.map((item) => (
                 <li key={item}>{item}</li>
               ))}
             </ul>
           </section>
-          <section className="flex-1 bg-[color:var(--mda-surface)]/30 p-3">
-            <h3 className="mb-3 font-mda text-xl font-bold uppercase text-white">
+          <section className="flex-1">
+            <h3 className="mb-2 font-mda text-sm font-bold uppercase tracking-wide text-mda-ink-strong">
               Comments
             </h3>
-            <p className="whitespace-pre-wrap font-mda text-base leading-relaxed text-white/85">
+            <p className="whitespace-pre-wrap font-mda text-sm leading-relaxed text-mda-ink">
               {active.comments}
             </p>
           </section>

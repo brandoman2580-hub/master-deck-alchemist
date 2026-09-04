@@ -8,12 +8,23 @@ if (!SUPABASE_URL) {
   throw new Error("NEXT_PUBLIC_SUPABASE_URL or SUPABASE_URL must be defined");
 }
 
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export interface ShareDeckCard {
+  cardId: number;
+  deckInstanceId?: string;
+  name: string;
+  type?: string;
+  desc?: string;
+}
+
 export interface CreateDeckShareRequest {
   deck: {
     name: string;
-    mainDeck: Array<{ cardId: number; deckInstanceId?: string; name: string; type?: string; desc?: string }> | DeckType["mainDeck"];
-    extraDeck: Array<{ cardId: number; deckInstanceId?: string; name: string; type?: string; desc?: string }> | DeckType["extraDeck"];
-    sideDeck: Array<{ cardId: number; deckInstanceId?: string; name: string; type?: string; desc?: string }> | DeckType["sideDeck"];
+    mainDeck: Array<ShareDeckCard | DeckType["mainDeck"][number]>;
+    extraDeck: Array<ShareDeckCard | DeckType["extraDeck"][number]>;
+    sideDeck: Array<ShareDeckCard | DeckType["sideDeck"][number]>;
     mode: DeckType["mode"];
   };
   options?: {
@@ -114,6 +125,59 @@ export interface GetDeckShareResponse {
   } | null;
 }
 
+type LooseShareCard = {
+  cardId?: number;
+  id?: number;
+  deckInstanceId?: string;
+  name?: string;
+  type?: string;
+  desc?: string;
+};
+
+/**
+ * Edge function expects `cardId`; archived/workshop decks store `id`.
+ * Normalize either shape into the API payload.
+ */
+export function normalizeShareDeckCards(
+  cards: Array<ShareDeckCard | DeckType["mainDeck"][number] | LooseShareCard>,
+): ShareDeckCard[] {
+  return cards.map((raw, index) => {
+    const card = raw as LooseShareCard;
+    const cardId = card.cardId ?? card.id;
+    if (
+      typeof cardId !== "number" ||
+      !Number.isSafeInteger(cardId) ||
+      cardId <= 0
+    ) {
+      throw new Error(
+        `Cannot share deck: card at index ${index} is missing a valid id.`,
+      );
+    }
+
+    const name =
+      typeof card.name === "string" && card.name.trim().length > 0
+        ? card.name.trim()
+        : `Card ${cardId}`;
+
+    const normalized: ShareDeckCard = { cardId, name };
+
+    if (
+      typeof card.deckInstanceId === "string" &&
+      UUID_RE.test(card.deckInstanceId)
+    ) {
+      normalized.deckInstanceId = card.deckInstanceId;
+    }
+    if (typeof card.type === "string" && card.type.length > 0) {
+      normalized.type = card.type;
+    }
+    if (typeof card.desc === "string" && card.desc.length > 0) {
+      normalized.desc = card.desc;
+    }
+
+    return normalized;
+  });
+}
+
 /**
  * Create a shareable link for a deck
  */
@@ -135,19 +199,30 @@ export async function createDeckShare(
     headers["Authorization"] = `Bearer ${token}`;
   }
 
+  const payload = {
+    deck: {
+      name: request.deck.name,
+      mainDeck: normalizeShareDeckCards(request.deck.mainDeck),
+      extraDeck: normalizeShareDeckCards(request.deck.extraDeck),
+      sideDeck: normalizeShareDeckCards(request.deck.sideDeck),
+      mode: request.deck.mode,
+    },
+    options: request.options,
+  };
+
   const response = await fetch(
     `${SUPABASE_URL}/functions/v1/create-deck-share`,
     {
       method: "POST",
       headers,
-      body: JSON.stringify(request),
+      body: JSON.stringify(payload),
     },
   );
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({
+    const error = (await response.json().catch(() => ({
       error: "Failed to create share",
-    }));
+    }))) as { error?: string; details?: unknown };
     throw new Error(error.error || `HTTP ${response.status}`);
   }
 

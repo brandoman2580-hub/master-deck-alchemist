@@ -1,8 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import type { ReactNode } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useEffect, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { ThemeProvider } from "next-themes";
 import { DeckProvider } from "../context/deck-context";
@@ -11,16 +9,7 @@ import { useCardStore } from "../store/cardStore";
 import { getCardData } from "../lib/api";
 import { useSupabaseUserSync } from "../hooks/useSupabaseUserSync";
 import { MagneticCursor } from "@/components/mda/magnetic-cursor";
-
-function createQueryClient(): QueryClient {
-  return new QueryClient({
-    defaultOptions: {
-      queries: {
-        retry: 1,
-      },
-    },
-  });
-}
+import { AppQueryProvider } from "@/lib/query-client";
 
 function usesMdaShell(pathname: string): boolean {
   return (
@@ -38,7 +27,6 @@ export function Providers({ children }: { children: ReactNode }) {
   const setCardList = useCardStore((state) => state.setCardList);
   const setLoading = useCardStore((state) => state.setLoading);
   const cardList = useCardStore((state) => state.cardList);
-  const [queryClient] = useState(createQueryClient);
   useSupabaseUserSync();
 
   useEffect(() => {
@@ -66,13 +54,13 @@ export function Providers({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider
-        attribute="class"
-        defaultTheme="dark"
-        enableSystem
-        disableTransitionOnChange
-      >
+    <ThemeProvider
+      attribute="class"
+      defaultTheme="dark"
+      enableSystem
+      disableTransitionOnChange
+    >
+      <AppQueryProvider>
         <DeckProvider>
           <div className="relative z-20 flex h-dvh max-h-dvh flex-col overflow-hidden">
             {hideLegacyNavbar ? null : <Navbar />}
@@ -88,7 +76,7 @@ export function Providers({ children }: { children: ReactNode }) {
             </main>
           </div>
         </DeckProvider>
-      </ThemeProvider>
-    </QueryClientProvider>
+      </AppQueryProvider>
+    </ThemeProvider>
   );
 }

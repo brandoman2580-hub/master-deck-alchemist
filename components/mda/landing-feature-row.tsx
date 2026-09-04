@@ -23,11 +23,11 @@ export function LandingFeatureRow({
       )}
     >
       <Icon
-        className="size-[50px] shrink-0 text-[#7ee8ff] drop-shadow-[0_0_10px_rgba(126,232,255,0.65)]"
+        className="size-[50px] shrink-0 text-mda-cyan"
         strokeWidth={1.5}
         aria-hidden
       />
-      <p className="font-open-sans text-xl font-normal uppercase leading-6 text-white">
+      <p className="font-display text-xl font-normal uppercase leading-6 text-mda-ink">
         {label}
       </p>
     </div>

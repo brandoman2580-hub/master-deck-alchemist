@@ -186,6 +186,42 @@ export function validateCardCounts(deck: {
 }
 
 /**
+ * Size / copy rules required by create-deck-share (legal shareable deck).
+ * Accepts archived cards (`id`) or API cards (`cardId`).
+ */
+export function isDeckLegalForShare(deck: {
+  mainDeck: Array<{ id?: number; cardId?: number }>;
+  extraDeck: Array<{ id?: number; cardId?: number }>;
+  sideDeck: Array<{ id?: number; cardId?: number }>;
+}): boolean {
+  const main = deck.mainDeck.length;
+  const extra = deck.extraDeck.length;
+  const side = deck.sideDeck.length;
+  const total = main + extra + side;
+
+  if (main < 40 || main > 60) return false;
+  if (extra > 15 || side > 15) return false;
+  if (total === 0 || total > 200) return false;
+
+  const counts = new Map<number, number>();
+  for (const card of [...deck.mainDeck, ...deck.extraDeck, ...deck.sideDeck]) {
+    const cardId = card.cardId ?? card.id;
+    if (
+      typeof cardId !== "number" ||
+      !Number.isSafeInteger(cardId) ||
+      cardId <= 0
+    ) {
+      return false;
+    }
+    const next = (counts.get(cardId) ?? 0) + 1;
+    if (next > 3) return false;
+    counts.set(cardId, next);
+  }
+
+  return true;
+}
+
+/**
  * Comprehensive deck validation
  */
 export function validateDeck(

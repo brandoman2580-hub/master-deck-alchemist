@@ -18,7 +18,7 @@ export type ClipButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 
 /**
  * Square CTA (matches landing Login corners).
- * Hover: darken / invert with ease in-out (app-wide button behavior).
+ * Primary filled = sky (New Deck / DETAILS style).
  */
 export function ClipButton({
   children,
@@ -33,24 +33,24 @@ export function ClipButton({
       type={type}
       data-magnetic
       className={cn(
-        "relative inline-flex items-center justify-center gap-2 border-0 font-mda font-black uppercase tracking-wide transition-[background-color,color,filter,transform] duration-200 ease-in-out focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--mda-cyan)] disabled:pointer-events-none disabled:opacity-40 active:scale-[0.98]",
+        "relative inline-flex items-center justify-center gap-2 border-0 font-mda font-black uppercase tracking-wide transition-[background-color,color,filter,transform] duration-200 ease-in-out focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mda-cyan disabled:pointer-events-none disabled:opacity-40 active:scale-[0.98]",
         size === "sm" && "h-10 px-4 text-sm",
         size === "md" && "h-12 px-6 text-lg",
         size === "lg" && "h-[71px] min-w-[200px] px-8 text-2xl",
         variant === "filled" &&
-          "bg-[color:var(--mda-cyan)] text-[color:var(--mda-bg-deep)] hover:bg-[color:var(--mda-bg-deep)] hover:text-[color:var(--mda-cyan)]",
+          "bg-mda-sky text-white hover:bg-mda-sky-strong",
         variant === "ghost" &&
-          "bg-white/10 text-white hover:bg-white hover:text-[color:var(--mda-bg-deep)]",
+          "bg-mda-ink/10 text-mda-ink hover:bg-mda-ink hover:text-mda-inverse-text",
         variant === "surface" &&
-          "bg-[color:var(--mda-surface-raised)] text-white hover:bg-white hover:text-[color:var(--mda-bg-deep)]",
+          "bg-mda-sky text-white hover:bg-mda-sky-strong",
         variant === "heroLogin" &&
-          "bg-[rgba(126,232,255,0.25)] text-white hover:bg-[color:var(--mda-cyan)] hover:text-[color:var(--mda-bg-deep)]",
+          "bg-mda-cyan-muted text-mda-ink hover:bg-mda-sky hover:text-white",
         variant === "heroPreview" &&
-          "bg-[rgba(183,183,183,0.6)] text-white hover:bg-white hover:text-[#45474b]",
+          "bg-mda-panel text-mda-ink hover:bg-mda-chrome hover:text-mda-inverse-text",
         variant === "headerLogin" &&
-          "bg-[#7ee8ff] text-[#eaf7ff] shadow-[0_0_16px_2px_rgba(126,232,255,0.55),0_0_32px_4px_rgba(56,214,255,0.35)] hover:bg-[#1a1d22] hover:text-[#7ee8ff] hover:shadow-[0_0_20px_4px_rgba(126,232,255,0.7),0_0_40px_8px_rgba(56,214,255,0.45)]",
+          "bg-mda-sky text-white hover:bg-mda-sky-strong",
         variant === "authSubmit" &&
-          "bg-[#c8f0ff] text-[#4d6676] hover:bg-[#4d6676] hover:text-[#c8f0ff]",
+          "bg-mda-sky text-white hover:bg-mda-sky-strong",
         className,
       )}
       {...props}

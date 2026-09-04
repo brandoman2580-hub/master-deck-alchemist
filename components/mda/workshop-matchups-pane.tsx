@@ -26,15 +26,10 @@ type MatchupPoint = {
   metaShare: number;
 };
 
-/**
- * Tier colors for the matchup scatter:
- * gold (threat/top), brand cyan (mid), steel (peripheral) —
- * readable on the gray radial page fill without competing with KPI cyan text.
- */
 const TIER_COLORS: Record<Tier, string> = {
-  1: "#F2C14E",
-  2: "#7EE8FF",
-  3: "#8FA3B0",
+  1: "var(--mda-tier-1)",
+  2: "var(--mda-tier-2)",
+  3: "var(--mda-tier-3)",
 };
 
 function hashName(name: string): number {
@@ -142,182 +137,198 @@ export function WorkshopMatchupsPane(): ReactNode {
   };
 
   return (
-    <div className="relative flex h-full min-h-0 flex-col gap-4 overflow-y-auto p-4">
+    <div className="relative flex h-full min-h-0 flex-col overflow-hidden">
       <MdaLoadingScreen
         open={loading}
         scoped
         status="Loading matchup meta analysis…"
       />
 
-      <div className="flex flex-wrap items-center gap-4 font-mda text-sm uppercase text-white/80">
-        <span>Show:</span>
-        {([1, 2, 3] as Tier[]).map((tier) => (
-          <label key={tier} className="inline-flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={tiers[tier]}
-              onChange={() =>
-                setTiers((prev) => ({ ...prev, [tier]: !prev[tier] }))
-              }
-              className="accent-[color:var(--mda-cyan)]"
-            />
-            <span
-              className="inline-block size-2.5 rounded-full"
-              style={{ backgroundColor: TIER_COLORS[tier] }}
-              aria-hidden
-            />
-            Tier {tier}
-          </label>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {[
-          { label: "Avg Win Rate", value: `${avgWin}%` },
-          { label: "Favorable", value: String(favorable) },
-          { label: "Unfavorable", value: String(unfavorable) },
-          { label: "Tier 1 Avg", value: `${tier1Avg}%` },
-        ].map((stat) => (
-          <div
-            key={stat.label}
-            className="bg-[color:var(--mda-surface)] px-3 py-3"
-          >
-            <p className="font-mda text-xs uppercase text-white/55">{stat.label}</p>
-            <p className="font-mda text-2xl font-bold text-[color:var(--mda-cyan-soft)]">
-              {stat.value}
-            </p>
-          </div>
-        ))}
-      </div>
-
-      <div className="h-[340px] w-full bg-transparent">
-        <ResponsiveContainer width="100%" height="100%">
-          <ScatterChart margin={{ top: 16, right: 24, bottom: 40, left: 28 }}>
-            <CartesianGrid stroke="rgba(255,255,255,0.1)" strokeDasharray="3 3" />
-            <XAxis
-              type="number"
-              dataKey="metaShare"
-              name="Meta Representation"
-              unit="%"
-              stroke="rgba(234,247,255,0.45)"
-              tick={{ fill: "rgba(234,247,255,0.65)", fontSize: 11 }}
-              tickLine={false}
-              axisLine={{ stroke: "rgba(255,255,255,0.2)" }}
-            >
-              <Label
-                value="Meta Representation (%)"
-                position="bottom"
-                offset={16}
-                style={{
-                  fill: "rgba(234,247,255,0.8)",
-                  fontSize: 12,
-                  fontFamily: "var(--font-mda), sans-serif",
-                  textTransform: "uppercase",
-                }}
-              />
-            </XAxis>
-            <YAxis
-              type="number"
-              dataKey="winRate"
-              name="Win Rate"
-              unit="%"
-              domain={[0, 100]}
-              stroke="rgba(234,247,255,0.45)"
-              tick={{ fill: "rgba(234,247,255,0.65)", fontSize: 11 }}
-              tickLine={false}
-              axisLine={{ stroke: "rgba(255,255,255,0.2)" }}
-            >
-              <Label
-                value="Win Rate (%)"
-                angle={-90}
-                position="insideLeft"
-                offset={8}
-                style={{
-                  fill: "rgba(234,247,255,0.8)",
-                  fontSize: 12,
-                  fontFamily: "var(--font-mda), sans-serif",
-                  textTransform: "uppercase",
-                  textAnchor: "middle",
-                }}
-              />
-            </YAxis>
-            <ZAxis range={[70, 180]} />
-            <Tooltip
-              cursor={{ strokeDasharray: "3 3", stroke: "rgba(126,232,255,0.35)" }}
-              contentStyle={{
-                background: "rgba(3,19,26,0.92)",
-                border: "1px solid rgba(255,255,255,0.12)",
-                borderRadius: 0,
-                color: "#EAF7FF",
-                fontFamily: "var(--font-mda), sans-serif",
-              }}
-              formatter={(value: number, name: string) => {
-                if (name === "winRate") return [`${value}%`, "Win Rate"];
-                if (name === "metaShare")
-                  return [`${value}%`, "Meta Representation"];
-                return [value, name];
-              }}
-            />
-            <Legend
-              verticalAlign="top"
-              align="right"
-              iconType="circle"
-              wrapperStyle={{
-                fontFamily: "var(--font-mda), sans-serif",
-                fontSize: 12,
-                textTransform: "uppercase",
-                paddingBottom: 8,
-              }}
-            />
-            {([1, 2, 3] as Tier[]).map((tier) =>
-              tiers[tier] ? (
-                <Scatter
-                  key={tier}
-                  name={`Tier ${tier}`}
-                  data={byTier[tier]}
-                  fill={TIER_COLORS[tier]}
-                  fillOpacity={0.9}
+      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4 lg:flex-row lg:overflow-hidden">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-y-auto lg:overflow-y-auto">
+          <div className="flex flex-wrap items-center gap-4 font-mda text-xs font-bold uppercase tracking-wide text-mda-ink">
+            <span>Show:</span>
+            {([1, 2, 3] as Tier[]).map((tier) => (
+              <label key={tier} className="inline-flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={tiers[tier]}
+                  onChange={() =>
+                    setTiers((prev) => ({ ...prev, [tier]: !prev[tier] }))
+                  }
+                  className="accent-mda-cyan"
                 />
-              ) : null,
-            )}
-          </ScatterChart>
-        </ResponsiveContainer>
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        {([1, 2, 3] as Tier[]).map((tier) => (
-          <div key={tier} className="bg-[color:var(--mda-surface)]/40 p-3">
-            <h3 className="mb-3 font-mda text-sm font-bold uppercase text-white">
-              Tier {tier} Decks
-            </h3>
-            <ul className="space-y-2">
-              {byTier[tier].slice(0, 6).map((point) => (
-                <li key={point.name}>
-                  <div className="mb-1 flex justify-between font-mda text-xs text-white/80">
-                    <span className="truncate">{point.name}</span>
-                    <span>{point.winRate}%</span>
-                  </div>
-                  <div className="h-1.5 overflow-hidden rounded bg-white/10">
-                    <div
-                      className={cn(
-                        "h-full",
-                        point.winRate >= 55
-                          ? "bg-[color:var(--mda-success)]"
-                          : point.winRate <= 45
-                            ? "bg-[color:var(--mda-danger)]"
-                            : "bg-[color:var(--mda-cyan)]",
-                      )}
-                      style={{ width: `${point.winRate}%` }}
-                    />
-                  </div>
-                </li>
-              ))}
-              {byTier[tier].length === 0 ? (
-                <li className="font-mda text-xs text-white/40">No decks</li>
-              ) : null}
-            </ul>
+                <span
+                  className="inline-block size-2.5 rounded-full"
+                  style={{ backgroundColor: TIER_COLORS[tier] }}
+                  aria-hidden
+                />
+                Tier {tier}
+              </label>
+            ))}
           </div>
-        ))}
+
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            {[
+              { label: "Avg Win Rate", value: `${avgWin}%`, hint: "vs filtered meta" },
+              { label: "Favorable", value: String(favorable), hint: "≥55% win rate" },
+              { label: "Unfavorable", value: String(unfavorable), hint: "≤45% win rate" },
+              { label: "Tier 1 Avg", value: `${tier1Avg}%`, hint: "top meta only" },
+            ].map((stat) => (
+              <div
+                key={stat.label}
+                className="bg-mda-chrome px-3 py-3 text-center"
+              >
+                <p className="font-mda text-[10px] font-bold uppercase tracking-wide text-mda-inverse-text/70">
+                  {stat.label}
+                </p>
+                <p className="font-display text-3xl font-bold text-mda-cyan">
+                  {stat.value}
+                </p>
+                <p className="font-mda text-[9px] uppercase text-mda-inverse-text/45">
+                  {stat.hint}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          <div className="min-h-[280px] flex-1 bg-mda-bg/50 p-2 lg:min-h-[320px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <ScatterChart margin={{ top: 16, right: 24, bottom: 40, left: 28 }}>
+                <CartesianGrid
+                  stroke="rgba(77, 102, 118, 0.15)"
+                  strokeDasharray="3 3"
+                />
+                <XAxis
+                  type="number"
+                  dataKey="metaShare"
+                  name="Meta Representation"
+                  unit="%"
+                  stroke="rgba(77, 102, 118, 0.5)"
+                  tick={{ fill: "rgba(77, 102, 118, 0.75)", fontSize: 11 }}
+                  tickLine={false}
+                  axisLine={{ stroke: "rgba(77, 102, 118, 0.25)" }}
+                >
+                  <Label
+                    value="Meta Representation (%)"
+                    position="bottom"
+                    offset={16}
+                    style={{
+                      fill: "var(--mda-ink)",
+                      fontSize: 11,
+                      fontFamily: "var(--font-mda), sans-serif",
+                      textTransform: "uppercase",
+                    }}
+                  />
+                </XAxis>
+                <YAxis
+                  type="number"
+                  dataKey="winRate"
+                  name="Win Rate"
+                  unit="%"
+                  domain={[0, 100]}
+                  stroke="rgba(77, 102, 118, 0.5)"
+                  tick={{ fill: "rgba(77, 102, 118, 0.75)", fontSize: 11 }}
+                  tickLine={false}
+                  axisLine={{ stroke: "rgba(77, 102, 118, 0.25)" }}
+                >
+                  <Label
+                    value="Win Rate (%)"
+                    angle={-90}
+                    position="insideLeft"
+                    offset={8}
+                    style={{
+                      fill: "var(--mda-ink)",
+                      fontSize: 11,
+                      fontFamily: "var(--font-mda), sans-serif",
+                      textTransform: "uppercase",
+                      textAnchor: "middle",
+                    }}
+                  />
+                </YAxis>
+                <ZAxis range={[70, 180]} />
+                <Tooltip
+                  cursor={{
+                    strokeDasharray: "3 3",
+                    stroke: "rgba(56, 214, 255, 0.45)",
+                  }}
+                  contentStyle={{
+                    background: "var(--mda-chrome)",
+                    border: "1px solid rgba(255,255,255,0.12)",
+                    borderRadius: 0,
+                    color: "var(--mda-inverse-text)",
+                    fontFamily: "var(--font-mda), sans-serif",
+                  }}
+                  formatter={(value: number, name: string) => {
+                    if (name === "winRate") return [`${value}%`, "Win Rate"];
+                    if (name === "metaShare")
+                      return [`${value}%`, "Meta Representation"];
+                    return [value, name];
+                  }}
+                />
+                <Legend
+                  verticalAlign="top"
+                  align="right"
+                  iconType="circle"
+                  wrapperStyle={{
+                    fontFamily: "var(--font-mda), sans-serif",
+                    fontSize: 11,
+                    textTransform: "uppercase",
+                    color: "var(--mda-ink)",
+                    paddingBottom: 8,
+                  }}
+                />
+                {([1, 2, 3] as Tier[]).map((tier) =>
+                  tiers[tier] ? (
+                    <Scatter
+                      key={tier}
+                      name={`Tier ${tier}`}
+                      data={byTier[tier]}
+                      fill={TIER_COLORS[tier]}
+                      fillOpacity={0.9}
+                    />
+                  ) : null,
+                )}
+              </ScatterChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <aside className="flex w-full shrink-0 flex-col gap-4 overflow-y-auto border-t border-mda-ink/10 pt-4 lg:w-[280px] lg:border-l lg:border-t-0 lg:pl-4 lg:pt-0">
+          {([1, 2, 3] as Tier[]).map((tier) => (
+            <div key={tier}>
+              <h3 className="mb-2 font-mda text-xs font-bold uppercase tracking-wide text-mda-ink-strong">
+                Tier {tier} Decks
+              </h3>
+              <ul className="space-y-2">
+                {byTier[tier].slice(0, 8).map((point) => (
+                  <li key={point.name}>
+                    <div className="mb-1 flex justify-between gap-2 font-mda text-xs text-mda-ink">
+                      <span className="truncate">{point.name}</span>
+                      <span className="shrink-0 font-bold">{point.winRate}%</span>
+                    </div>
+                    <div className="h-1.5 overflow-hidden bg-mda-panel">
+                      <div
+                        className={cn(
+                          "h-full",
+                          point.winRate >= 55
+                            ? "bg-mda-success"
+                            : point.winRate <= 45
+                              ? "bg-mda-danger"
+                              : "bg-mda-chrome",
+                        )}
+                        style={{ width: `${point.winRate}%` }}
+                      />
+                    </div>
+                  </li>
+                ))}
+                {byTier[tier].length === 0 ? (
+                  <li className="font-mda text-xs text-mda-ink-muted">No decks</li>
+                ) : null}
+              </ul>
+            </div>
+          ))}
+        </aside>
       </div>
     </div>
   );

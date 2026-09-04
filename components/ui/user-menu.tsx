@@ -100,7 +100,7 @@ export function UserMenu() {
     <div className="relative" ref={dropdownRef}>
       <button
         ref={buttonRef}
-        className="w-10 h-10 rounded-lg bg-white/10 text-white font-bold flex items-center justify-center hover:bg-white/15 border border-white/20 transition-colors"
+        className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-mda-ink/40 font-display text-sm font-bold text-mda-ink transition-colors hover:bg-mda-ink/10"
         aria-label="User menu"
         onClick={() => setDropdownOpen((v) => !v)}
       >
@@ -111,16 +111,16 @@ export function UserMenu() {
         createPortal(
           <div
             ref={dropdownRef}
-            className="fixed w-48 z-[100]"
+            className="fixed z-[100] w-48"
             style={{
               top: `${dropdownPosition.top}px`,
               right: `${dropdownPosition.right}px`,
             }}
           >
-            <div className="rounded-xl bg-white/10 border border-white/20 backdrop-blur-xl shadow-lg py-2">
+            <div className="rounded-md border border-mda-ink/15 bg-mda-surface-raised py-2 shadow-mda-lift">
               <Button
                 variant="ghost"
-                className="w-full justify-start text-white/80 hover:text-white hover:bg-white/10 cursor-not-allowed"
+                className="w-full cursor-not-allowed justify-start text-mda-ink/60 hover:bg-mda-ink/5 hover:text-mda-ink"
                 startIcon={<HelpCircle className="mr-2" />}
                 disabled
               >
@@ -128,7 +128,7 @@ export function UserMenu() {
               </Button>
               <Button
                 variant="ghost"
-                className="w-full justify-start text-white/80 hover:text-white hover:bg-white/10"
+                className="w-full justify-start text-mda-ink hover:bg-mda-ink/10 hover:text-mda-ink-strong"
                 startIcon={<LogOut className="mr-2" />}
                 onClick={handleLogout}
               >

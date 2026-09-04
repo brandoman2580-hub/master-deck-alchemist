@@ -50,11 +50,11 @@ export function DeckCapBadge({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded bg-white/10 px-1.5 py-0.5 font-mda text-sm text-[color:var(--mda-cyan-soft)]",
+        "inline-flex items-center gap-1 rounded bg-black/20 px-1.5 py-0.5 font-mda text-sm text-mda-sky",
         className,
       )}
     >
-      <span className="text-white/70">{label}</span>
+      <span className="text-white">{label}</span>
       <AnimatedCount value={value} />
     </span>
   );

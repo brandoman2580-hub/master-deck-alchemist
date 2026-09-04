@@ -44,7 +44,7 @@ export default function Navbar() {
             >
               <div className="flex items-center gap-3">
                 <MDAIcon className="w-14 h-14" aria-hidden="true" />
-                <MdaBrandTitle />
+                <MdaBrandTitle className="text-white" />
               </div>
             </Link>
             <nav

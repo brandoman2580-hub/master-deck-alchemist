@@ -3,9 +3,9 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
-/** Shared navbar wordmark — matches the Landing header lockup. */
+/** Shared navbar wordmark — matches the Landing / MDA shell lockup (light tokens). */
 export const MDA_BRAND_TITLE_CLASS =
-  "font-anton text-[22px] uppercase leading-none tracking-wide text-white sm:text-2xl";
+  "font-display text-[22px] font-black uppercase leading-none tracking-wide text-mda-ink sm:text-2xl";
 
 export type MdaBrandTitleProps = {
   className?: string;
