@@ -60,8 +60,8 @@ export function Providers({ children }: { children: ReactNode }) {
       enableSystem
       disableTransitionOnChange
     >
-      <DeckProvider>
-        <AppQueryProvider>
+      <AppQueryProvider>
+        <DeckProvider>
           <div className="relative z-20 flex h-dvh max-h-dvh flex-col overflow-hidden">
             {hideLegacyNavbar ? null : <Navbar />}
             {showMagneticCursor ? <MagneticCursor /> : null}
@@ -75,8 +75,8 @@ export function Providers({ children }: { children: ReactNode }) {
               {children}
             </main>
           </div>
-        </AppQueryProvider>
-      </DeckProvider>
+        </DeckProvider>
+      </AppQueryProvider>
     </ThemeProvider>
   );
 }
