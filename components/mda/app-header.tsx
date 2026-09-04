@@ -6,6 +6,7 @@ import MDAIcon from "@/public/images/MDA_Logo_One.svg";
 import { useUserStore } from "@/store/useUserStore";
 import { UserMenu } from "@/components/ui/user-menu";
 import { ClipButton } from "@/components/mda/clip-button";
+import { MdaBrandTitle } from "@/components/mda/brand-lockup";
 import { cn } from "@/lib/utils";
 
 export type MdaAppHeaderProps = {
@@ -27,9 +28,7 @@ function BrandMark(): ReactNode {
   return (
     <>
       <MDAIcon className="h-8 w-8 shrink-0 text-mda-purple" aria-hidden />
-      <span className="font-display text-[22px] font-black uppercase tracking-wide text-mda-ink sm:text-2xl">
-        Master Deck Alchemist
-      </span>
+      <MdaBrandTitle />
     </>
   );
 }

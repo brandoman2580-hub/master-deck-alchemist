@@ -9,6 +9,7 @@ import {
   useCallback,
   useRef,
 } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Card } from "../types/card";
 import { BanStatus, Deck, DeckMode, DeckType } from "../types/types";
 import { v4 as uuidv4 } from "uuid";
@@ -20,6 +21,7 @@ import {
   getUserDecks as getUserDecksFromSupabase,
   loadDeck as loadDeckFromSupabase,
 } from "../lib/supabaseDecks";
+import { invalidateAllUserDecks } from "@/hooks/useUserDecks";
 
 type DeckSection = "mainDeck" | "extraDeck" | "sideDeck";
 
@@ -30,7 +32,7 @@ interface DeckContextType {
   banlist: Record<string, BanStatus>;
   addCardToDeck: (card: Card, deckType: DeckSection) => void;
   removeCardFromDeck: (cardId: string, deckType: DeckSection) => void;
-  clearDeck: () => void;
+  clearDeck: (mode?: DeckMode) => void;
   saveDeck: (deckData?: DeckType) => Promise<void>;
   loadDeck: (id: string) => Promise<void>;
   copyDeck: (sourceDeck: DeckType, options?: { targetMode?: DeckMode; name?: string }) => void;
@@ -69,6 +71,11 @@ export function DeckProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const saveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const queryClient = useQueryClient();
+
+  const invalidateUserDecksCache = useCallback((): void => {
+    void invalidateAllUserDecks(queryClient);
+  }, [queryClient]);
 
   // Fetch banlist based on deck mode from Supabase
   useEffect(() => {
@@ -136,14 +143,14 @@ export function DeckProvider({ children }: { children: ReactNode }) {
     [],
   );
 
-  const clearDeck = useCallback(() => {
+  const clearDeck = useCallback((mode: DeckMode = "Master Duel") => {
     setCurrentDeck({
       id: uuidv4(),
       name: "New Deck",
       mainDeck: [],
       extraDeck: [],
       sideDeck: [],
-      mode: "Master Duel",
+      mode,
     });
   }, []);
 
@@ -208,11 +215,7 @@ export function DeckProvider({ children }: { children: ReactNode }) {
         await saveDeckToSupabase(validatedDeck, user.id);
 
         await getUserDecks();
-        const { getQueryClient } = await import("@/lib/query-client");
-        const { deckKeys } = await import("@/hooks/use-user-decks");
-        await getQueryClient().invalidateQueries({
-          queryKey: deckKeys.user(user.id),
-        });
+        invalidateUserDecksCache();
       } catch (err: any) {
         const errorMessage =
           err?.message ||
@@ -225,7 +228,7 @@ export function DeckProvider({ children }: { children: ReactNode }) {
         setLoading(false);
       }
     },
-    [currentDeck, getUserDecks],
+    [currentDeck, getUserDecks, invalidateUserDecksCache],
   );
 
   const copyDeck = useCallback(
@@ -280,18 +283,14 @@ export function DeckProvider({ children }: { children: ReactNode }) {
         // Use supabaseDecks function
         await deleteDeckFromSupabase(id, user.id);
         await getUserDecks();
-        const { getQueryClient } = await import("@/lib/query-client");
-        const { deckKeys } = await import("@/hooks/use-user-decks");
-        await getQueryClient().invalidateQueries({
-          queryKey: deckKeys.user(user.id),
-        });
+        invalidateUserDecksCache();
       } catch (err: any) {
         setError(err.message || "Failed to delete deck");
       } finally {
         setLoading(false);
       }
     },
-    [getUserDecks],
+    [getUserDecks, invalidateUserDecksCache],
   );
 
   // Debounced auto-save effect
@@ -340,19 +339,15 @@ export function DeckProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const renameDeck = (name: string) => {
-    setCurrentDeck((prev) => ({
-      ...prev,
-      name,
-    }));
-  };
+  const renameDeck = useCallback((name: string) => {
+    setCurrentDeck((prev) =>
+      prev.name === name ? prev : { ...prev, name },
+    );
+  }, []);
 
-  const updateDeckMode = (mode: DeckMode) => {
-    setCurrentDeck((prev) => ({
-      ...prev,
-      mode,
-    }));
-  };
+  const updateDeckMode = useCallback((mode: DeckMode) => {
+    setCurrentDeck((prev) => (prev.mode === mode ? prev : { ...prev, mode }));
+  }, []);
 
   const getDeckStats = () => {
     const { mainDeck, extraDeck, sideDeck } = currentDeck;

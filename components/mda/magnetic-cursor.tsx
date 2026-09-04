@@ -12,22 +12,13 @@ import {
   useMotionValue,
   useSpring,
 } from "framer-motion";
+import { nearestMagneticTarget } from "@/lib/magnetic-targets";
 
-const MAGNET_RADIUS = 10;
 const IDLE_RING = 16;
 /** Alchemy Sun cursor size (outer ring diameter). */
 const SUN_SIZE = 22;
 /** Above Radix portals (dialogs/popovers ~z-50–100) so the cursor stays visible. */
 const CURSOR_Z = 10000;
-
-type MagTarget = {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  /** Pixel border-radius for the morph ring (0 = square). */
-  radius: number;
-};
 
 function prefersReducedMotion(): boolean {
   if (typeof window === "undefined") return true;
@@ -40,79 +31,6 @@ function isFinePointerDesktop(): boolean {
     window.matchMedia("(pointer: fine)").matches &&
     window.matchMedia("(min-width: 768px)").matches
   );
-}
-
-/**
- * Roots of open modal/popover layers. When any exist, magnetic snap is
- * limited to targets inside them so the ring does not latch onto UI behind.
- */
-function openOverlayRoots(): Element[] {
-  const roots: Element[] = [];
-  document.querySelectorAll('[aria-modal="true"]').forEach((el) => {
-    roots.push(el);
-  });
-  document
-    .querySelectorAll("[data-radix-popper-content-wrapper]")
-    .forEach((wrapper) => {
-      if (wrapper.querySelector('[data-state="open"]')) {
-        roots.push(wrapper);
-      }
-    });
-  return roots;
-}
-
-/** Distance from point to rectangle (0 when inside). */
-function distanceToRect(
-  clientX: number,
-  clientY: number,
-  rect: DOMRect,
-): number {
-  const nearestX = Math.max(rect.left, Math.min(clientX, rect.right));
-  const nearestY = Math.max(rect.top, Math.min(clientY, rect.bottom));
-  return Math.hypot(clientX - nearestX, clientY - nearestY);
-}
-
-function nearestMagneticTarget(
-  clientX: number,
-  clientY: number,
-): MagTarget | null {
-  const nodes = document.querySelectorAll<HTMLElement>("[data-magnetic]");
-  const overlays = openOverlayRoots();
-  let bestDist = Number.POSITIVE_INFINITY;
-  let best: MagTarget | null = null;
-
-  nodes.forEach((node) => {
-    if (
-      overlays.length > 0 &&
-      !overlays.some((root) => root.contains(node))
-    ) {
-      return;
-    }
-    const rect = node.getBoundingClientRect();
-    if (rect.width < 4 || rect.height < 4) return;
-    const dist = distanceToRect(clientX, clientY, rect);
-    // Only snap when the pointer is on/nearly on the target — avoids
-    // nearby links (e.g. "Create one") lighting up adjacent CTAs.
-    if (dist > MAGNET_RADIUS) return;
-    if (dist < bestDist) {
-      bestDist = dist;
-      const computed = window.getComputedStyle(node).borderRadius;
-      const parsed = Number.parseFloat(computed);
-      const radius =
-        Number.isFinite(parsed) && parsed > 0
-          ? Math.min(parsed + 7, Math.max(rect.height, rect.width) / 2 + 7)
-          : 0;
-      best = {
-        x: rect.left + rect.width / 2,
-        y: rect.top + rect.height / 2,
-        width: rect.width,
-        height: rect.height,
-        radius,
-      };
-    }
-  });
-
-  return best;
 }
 
 /** True when hovering a clickable control that is not itself magnetic. */
@@ -128,9 +46,12 @@ function isNonMagneticInteractive(target: EventTarget | null): boolean {
 /**
  * Desktop magnetic cursor: alchemy Sun pointer + lagging outline ring
  * that morphs onto `[data-magnetic]` targets.
+ *
+ * Portaled to `document.body` so stacking order is predictable vs popovers.
  */
 export function MagneticCursor(): ReactNode {
   const [enabled, setEnabled] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const [active, setActive] = useState(false);
   const ringFaceRef = useRef<HTMLDivElement>(null);
 
@@ -151,6 +72,10 @@ export function MagneticCursor(): ReactNode {
   const width = useSpring(rawW, spring);
   const height = useSpring(rawH, spring);
   const borderRadius = useSpring(rawR, spring);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     const sync = (): void => {
@@ -191,8 +116,6 @@ export function MagneticCursor(): ReactNode {
       rawDotX.set(event.clientX);
       rawDotY.set(event.clientY);
 
-      // Prefer the control under the pointer when it isn't magnetic
-      // (auth mode links sit just below the submit CTA).
       const target = isNonMagneticInteractive(event.target)
         ? null
         : nearestMagneticTarget(event.clientX, event.clientY);
@@ -231,13 +154,12 @@ export function MagneticCursor(): ReactNode {
     rawR,
   ]);
 
-  if (!enabled || typeof document === "undefined") return null;
+  if (!enabled || !mounted) return null;
 
   // Portal to body so z-index is not trapped under the app shell (z-20),
   // which otherwise paints Radix popovers above the custom cursor.
   return createPortal(
     <>
-      {/* Lagging magnetic morph ring */}
       <motion.div
         aria-hidden
         className="pointer-events-none fixed left-0 top-0"
@@ -264,7 +186,6 @@ export function MagneticCursor(): ReactNode {
         />
       </motion.div>
 
-      {/* Alchemy Sun cursor */}
       <motion.div
         aria-hidden
         className="pointer-events-none fixed left-0 top-0"

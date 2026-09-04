@@ -4,12 +4,22 @@ import type { ReactNode } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   Check,
+  Crown,
   Gamepad2,
   X,
   type LucideIcon,
 } from "lucide-react";
-import { Crown } from "lucide-react";
 import { RemoveScroll } from "react-remove-scroll";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  ARCHIVE_POPOVER_CONTENT_CLASS,
+  ARCHIVE_POPOVER_EDGE_PAD,
+  ARCHIVE_POPOVER_PANEL_CLASS,
+} from "@/components/mda/archives-popover-styles";
 import type { DeckCard, DeckMode, DeckType } from "@/types/types";
 import { CardImage } from "@/components/ui/card-image";
 import { MdaCardPreview } from "@/components/mda/mda-card-preview";
@@ -59,6 +69,115 @@ function Overlay({
   );
 }
 
+const FORMAT_OPTIONS: { key: DeckMode; icon: LucideIcon; label: string }[] = [
+  { key: "TCG", icon: Crown, label: "TCG" },
+  { key: "Master Duel", icon: Gamepad2, label: "MD" },
+];
+
+function FormatPickerPanel({
+  title,
+  mode,
+  onModeChange,
+  onConfirm,
+  onCancel,
+}: {
+  title: string;
+  mode: DeckMode;
+  onModeChange: (mode: DeckMode) => void;
+  onConfirm: () => void;
+  onCancel: () => void;
+}): ReactNode {
+  return (
+    <div className={ARCHIVE_POPOVER_PANEL_CLASS}>
+      <p className="sr-only">{title}</p>
+      <div className="flex overflow-hidden rounded">
+        {FORMAT_OPTIONS.map(({ key, icon: Icon, label }) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => onModeChange(key)}
+            data-magnetic
+            className={cn(
+              "inline-flex items-center gap-1.5 px-3 py-2 font-mda text-sm font-bold uppercase transition-colors duration-200 ease-in-out",
+              mode === key
+                ? "bg-mda-chrome text-mda-inverse-text"
+                : "bg-mda-panel text-mda-ink hover:bg-mda-chrome hover:text-mda-inverse-text",
+            )}
+          >
+            <Icon className="h-4 w-4" aria-hidden />
+            {label}
+          </button>
+        ))}
+      </div>
+      <button
+        type="button"
+        onClick={onConfirm}
+        data-magnetic
+        aria-label="Confirm"
+        className="rounded p-2 text-mda-success transition-[background-color,color,transform] duration-200 ease-in-out hover:bg-mda-success/20 hover:scale-105 active:scale-95"
+      >
+        <Check className="h-6 w-6" aria-hidden />
+      </button>
+      <button
+        type="button"
+        onClick={onCancel}
+        data-magnetic
+        aria-label="Cancel"
+        className="rounded p-2 text-mda-danger transition-[background-color,color,transform] duration-200 ease-in-out hover:bg-mda-danger/20 hover:scale-105 active:scale-95"
+      >
+        <X className="h-6 w-6" aria-hidden />
+      </button>
+    </div>
+  );
+}
+
+/** Anchored format picker — matches copy deck popover styling. */
+export function FormatPickerPopover({
+  title,
+  open,
+  onOpenChange,
+  trigger,
+  mode,
+  onModeChange,
+  onConfirm,
+  onCancel,
+  side = "bottom",
+  align = "end",
+}: {
+  title: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  trigger: ReactNode;
+  mode: DeckMode;
+  onModeChange: (mode: DeckMode) => void;
+  onConfirm: () => void;
+  onCancel: () => void;
+  side?: "top" | "right" | "bottom" | "left";
+  align?: "start" | "center" | "end";
+}): ReactNode {
+  return (
+    <Popover open={open} onOpenChange={onOpenChange}>
+      <PopoverTrigger asChild>{trigger}</PopoverTrigger>
+      <PopoverContent
+        side={side}
+        align={align}
+        sideOffset={10}
+        collisionPadding={ARCHIVE_POPOVER_EDGE_PAD}
+        className={ARCHIVE_POPOVER_CONTENT_CLASS}
+        data-mda-action-popover
+      >
+        <FormatPickerPanel
+          title={title}
+          mode={mode}
+          onModeChange={onModeChange}
+          onConfirm={onConfirm}
+          onCancel={onCancel}
+        />
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 export function FormatPickerDialog({
   title,
   open,
@@ -78,50 +197,14 @@ export function FormatPickerDialog({
     <AnimatePresence>
       {open ? (
         <Overlay onClose={onCancel} key="format-picker">
-          <div className="flex items-center gap-3 border border-mda-ink/15 bg-mda-surface p-3 shadow-mda-lift">
-            <p className="sr-only">{title}</p>
-            <div className="flex overflow-hidden rounded border border-mda-ink/20">
-              {(
-                [
-                  { key: "TCG" as const, icon: Crown },
-                  { key: "Master Duel" as const, icon: Gamepad2 },
-                ] as { key: DeckMode; icon: LucideIcon }[]
-              ).map(({ key, icon: Icon }) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => onModeChange(key)}
-                  data-magnetic
-                  className={cn(
-                    "inline-flex items-center gap-1.5 px-3 py-2 font-mda text-sm font-bold uppercase transition-colors duration-200 ease-in-out",
-                    mode === key
-                      ? "bg-mda-chrome text-mda-inverse-text"
-                      : "bg-mda-panel text-mda-ink hover:bg-mda-chrome hover:text-mda-inverse-text",
-                  )}
-                >
-                  <Icon className="h-4 w-4" aria-hidden />
-                  {key === "Master Duel" ? "MD" : "TCG"}
-                </button>
-              ))}
-            </div>
-            <button
-              type="button"
-              data-magnetic
-              onClick={onConfirm}
-              aria-label="Confirm"
-              className="rounded p-2 text-mda-success transition-[background-color,color,transform] duration-200 ease-in-out hover:bg-mda-success/20 hover:scale-105 active:scale-95"
-            >
-              <Check className="h-6 w-6" aria-hidden />
-            </button>
-            <button
-              type="button"
-              data-magnetic
-              onClick={onCancel}
-              aria-label="Cancel"
-              className="rounded p-2 text-mda-danger transition-[background-color,color,transform] duration-200 ease-in-out hover:bg-mda-danger/20 hover:scale-105 active:scale-95"
-            >
-              <X className="h-6 w-6" aria-hidden />
-            </button>
+          <div className="border border-mda-ink/15 bg-mda-surface shadow-mda-lift">
+            <FormatPickerPanel
+              title={title}
+              mode={mode}
+              onModeChange={onModeChange}
+              onConfirm={onConfirm}
+              onCancel={onCancel}
+            />
           </div>
         </Overlay>
       ) : null}
@@ -258,6 +341,7 @@ export function DeckDetailsModal({
               <button
                 type="button"
                 onClick={onClose}
+                data-magnetic
                 className="bg-mda-chrome px-4 py-3 font-mda text-sm font-bold uppercase text-mda-inverse-text transition-colors duration-200 ease-in-out hover:bg-mda-chrome-muted"
               >
                 Close

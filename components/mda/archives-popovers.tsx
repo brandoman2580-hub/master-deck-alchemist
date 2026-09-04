@@ -13,6 +13,7 @@ import {
   Check,
   Copy,
   Gamepad2,
+  Loader2,
   QrCode,
   Share2,
   Trash2,
@@ -31,16 +32,20 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  ARCHIVE_POPOVER_CONTENT_CLASS,
+  ARCHIVE_POPOVER_EDGE_PAD,
+  ARCHIVE_POPOVER_PANEL_CLASS,
+} from "@/components/mda/archives-popover-styles";
 import type { DeckMode } from "@/types/types";
 import { cn, toAbsoluteShareUrl } from "@/lib/utils";
 
-const EDGE_PAD = 16;
 const COPIED_TOOLTIP_MS = 1600;
 
 function preferSide(trigger: HTMLButtonElement | null): "left" | "right" {
   if (typeof window === "undefined" || !trigger) return "right";
   const spaceRight = window.innerWidth - trigger.getBoundingClientRect().right;
-  return spaceRight < 280 + EDGE_PAD ? "left" : "right";
+  return spaceRight < 280 + ARCHIVE_POPOVER_EDGE_PAD ? "left" : "right";
 }
 
 function usePreferLeft(): {
@@ -59,10 +64,7 @@ function usePreferLeft(): {
 }
 
 const iconBtn =
-  "rounded p-1 text-white/70 transition-[background-color,color,transform] duration-200 ease-in-out hover:bg-white hover:text-mda-inverse-deep active:scale-95";
-
-const panelClass =
-  "flex items-center gap-3 border border-mda-ink/15 bg-mda-surface p-3 text-mda-ink shadow-mda-lift";
+  "rounded p-1 text-white/70 transition-[background-color,color,transform] duration-200 ease-in-out hover:bg-white hover:text-mda-inverse-deep active:scale-95 disabled:pointer-events-none disabled:opacity-40";
 
 const confirmIconBtn =
   "rounded p-2 text-mda-success transition-[background-color,color,transform] duration-200 ease-in-out hover:bg-mda-success/20 hover:scale-105 active:scale-95";
@@ -99,8 +101,9 @@ export function DeckArchiveActionPopovers({
   const [shareUrl, setShareUrl] = useState("");
   const [shareLoading, setShareLoading] = useState(false);
   const [shareError, setShareError] = useState<string | null>(null);
-  const [showQr, setShowQr] = useState(false);
+  const [showShareQr, setShowShareQr] = useState(false);
   const [copiedTipOpen, setCopiedTipOpen] = useState(false);
+  const shareRequestRef = useRef<Promise<string> | null>(null);
   const copiedTipTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const copy = usePreferLeft();
@@ -122,37 +125,53 @@ export function DeckArchiveActionPopovers({
     }, COPIED_TOOLTIP_MS);
   }, []);
 
+  const beginShareGeneration = useCallback(async (): Promise<void> => {
+    if (shareRequestRef.current) return;
+
+    setShareLoading(true);
+    setShareError(null);
+    setShareUrl("");
+
+    const request = onShareOpen();
+    shareRequestRef.current = request;
+
+    try {
+      const url = await request;
+      setShareUrl(toAbsoluteShareUrl(url));
+    } catch (err) {
+      setShareError(
+        err instanceof Error ? err.message : "Failed to generate share link",
+      );
+    } finally {
+      shareRequestRef.current = null;
+      setShareLoading(false);
+    }
+  }, [onShareOpen]);
+
   const handleShareOpenChange = useCallback(
-    async (next: boolean): Promise<void> => {
+    (next: boolean): void => {
       if (!canShare) {
         setShareOpen(false);
         return;
       }
-      if (next) share.captureSide();
-      setShareOpen(next);
-      if (!next) {
-        setShareUrl("");
-        setShareError(null);
-        setShowQr(false);
-        setCopiedTipOpen(false);
+
+      if (next) {
+        if (shareLoading || shareRequestRef.current) return;
+        share.captureSide();
+        setShareOpen(true);
+        void beginShareGeneration();
         return;
       }
-      setShareLoading(true);
-      setShareError(null);
+
+      if (shareLoading || shareRequestRef.current) return;
+
+      setShareOpen(false);
       setShareUrl("");
-      setShowQr(false);
-      try {
-        const url = await onShareOpen();
-        setShareUrl(toAbsoluteShareUrl(url));
-      } catch (err) {
-        setShareError(
-          err instanceof Error ? err.message : "Failed to create share link",
-        );
-      } finally {
-        setShareLoading(false);
-      }
+      setShareError(null);
+      setShowShareQr(false);
+      setCopiedTipOpen(false);
     },
-    [canShare, onShareOpen, share],
+    [beginShareGeneration, canShare, share, shareLoading],
   );
 
   return (
@@ -180,11 +199,12 @@ export function DeckArchiveActionPopovers({
           side={copy.side}
           align="center"
           sideOffset={10}
-          collisionPadding={EDGE_PAD}
-          className="w-auto border-0 bg-transparent p-0 shadow-none"
+          collisionPadding={ARCHIVE_POPOVER_EDGE_PAD}
+          className={ARCHIVE_POPOVER_CONTENT_CLASS}
+          data-mda-action-popover
         >
-          <div className={panelClass}>
-            <div className="flex overflow-hidden rounded border border-mda-ink/20">
+          <div className={ARCHIVE_POPOVER_PANEL_CLASS}>
+            <div className="flex overflow-hidden rounded">
               {(
                 [
                   { key: "TCG" as const, icon: Crown, label: "TCG" },
@@ -238,18 +258,14 @@ export function DeckArchiveActionPopovers({
       </Popover>
 
       {canShare ? (
-        <Popover
-          modal
-          open={shareOpen}
-          onOpenChange={(next) => {
-            void handleShareOpenChange(next);
-          }}
-        >
+        <Popover open={shareOpen} onOpenChange={handleShareOpenChange}>
           <PopoverTrigger asChild>
             <button
               ref={share.triggerRef}
               type="button"
               aria-label={`Share ${deckName}`}
+              aria-busy={shareLoading}
+              disabled={shareLoading}
               className={iconBtn}
             >
               <Share2 className="h-5 w-5" aria-hidden />
@@ -259,83 +275,94 @@ export function DeckArchiveActionPopovers({
             side={share.side}
             align="center"
             sideOffset={10}
-            collisionPadding={EDGE_PAD}
-            className="w-auto border-0 bg-transparent p-0 shadow-none"
+            collisionPadding={ARCHIVE_POPOVER_EDGE_PAD}
+            className={ARCHIVE_POPOVER_CONTENT_CLASS}
+            data-mda-action-popover
+            onOpenAutoFocus={(event) => event.preventDefault()}
+            onInteractOutside={(event) => {
+              if (shareLoading || shareRequestRef.current) {
+                event.preventDefault();
+              }
+            }}
+            onEscapeKeyDown={(event) => {
+              if (shareLoading || shareRequestRef.current) {
+                event.preventDefault();
+              }
+            }}
           >
-            <div className="flex flex-col gap-3 border border-mda-ink/15 bg-mda-surface p-3 text-mda-ink shadow-mda-lift">
-              <div className="flex items-center gap-3">
-                <div className="flex min-w-[260px] max-w-[320px] flex-col gap-2 bg-mda-chrome px-3 py-2 text-mda-inverse-text">
-                  <div className="flex items-center gap-2">
-                    <span className="flex-1 truncate font-mda text-sm text-mda-inverse-text/90">
-                      {shareLoading
-                        ? "Generating share link…"
-                        : shareError
-                          ? "Share failed"
-                          : shareUrl || "Share link unavailable"}
-                    </span>
-                    <TooltipProvider delayDuration={0}>
-                      <Tooltip open={copiedTipOpen}>
-                        <TooltipTrigger asChild>
-                          <button
-                            type="button"
-                            data-magnetic
-                            onClick={() => {
-                              if (!shareUrl) return;
-                              void navigator.clipboard.writeText(shareUrl);
-                              showCopiedTooltip();
-                            }}
-                            disabled={!shareUrl}
-                            aria-label="Copy share link"
-                            className="rounded p-1 text-mda-inverse-text transition-colors duration-200 hover:bg-white/15 disabled:opacity-40"
-                          >
-                            <Copy className="h-5 w-5" aria-hidden />
-                          </button>
-                        </TooltipTrigger>
-                        <TooltipContent
-                          side="top"
-                          className="z-[110] border-mda-ink/15 bg-mda-surface font-mda text-xs font-bold text-mda-ink"
-                        >
-                          Copied!
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                    <button
-                      type="button"
-                      data-magnetic
-                      onClick={() => setShowQr((prev) => !prev)}
-                      disabled={!shareUrl}
-                      aria-label={showQr ? "Hide QR code" : "Show QR code"}
-                      aria-pressed={showQr}
-                      className={cn(
-                        "rounded p-1 text-mda-inverse-text transition-colors duration-200 hover:bg-white/15 disabled:opacity-40",
-                        showQr && "bg-white/15",
-                      )}
-                    >
-                      <QrCode className="h-5 w-5" aria-hidden />
-                    </button>
-                  </div>
-                  {shareError ? (
-                    <p
-                      role="alert"
-                      className="font-mda text-xs leading-snug text-mda-danger"
-                    >
-                      {shareError}
-                    </p>
+            <div className="flex flex-col bg-[color:var(--mda-surface-raised)]">
+              <div className={ARCHIVE_POPOVER_PANEL_CLASS}>
+                <div
+                  className="flex min-w-[260px] max-w-[320px] items-center gap-2 rounded border border-white/10 bg-[color:var(--mda-bg-deep)] px-3 py-2"
+                  aria-live="polite"
+                >
+                  {shareLoading ? (
+                    <Loader2
+                      className="h-4 w-4 shrink-0 animate-spin text-mda-cyan"
+                      aria-hidden
+                    />
                   ) : null}
+                  <span className="flex-1 truncate font-mda text-sm text-white/80">
+                    {shareLoading
+                      ? "Generating share link…"
+                      : shareError
+                        ? shareError
+                        : shareUrl || "Share link unavailable"}
+                  </span>
+                  <TooltipProvider delayDuration={0}>
+                    <Tooltip open={copiedTipOpen}>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          data-magnetic
+                          onClick={() => {
+                            if (!shareUrl) return;
+                            void navigator.clipboard.writeText(shareUrl);
+                            showCopiedTooltip();
+                          }}
+                          disabled={!shareUrl || shareLoading}
+                          aria-label="Copy share link"
+                          className="rounded p-1 text-white/70 hover:bg-white/10 hover:text-white disabled:opacity-40"
+                        >
+                          <Copy className="h-5 w-5" aria-hidden />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent
+                        side="top"
+                        className="z-[110] border-mda-ink/15 bg-mda-surface font-mda text-xs font-bold text-mda-ink"
+                      >
+                        Copied!
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
                 <button
                   type="button"
                   data-magnetic
-                  onClick={() => setShareOpen(false)}
+                  onClick={() => handleShareOpenChange(false)}
+                  disabled={shareLoading}
                   aria-label="Close share"
-                  className={cancelIconBtn}
+                  className={cn(cancelIconBtn, "disabled:opacity-40")}
                 >
                   <X className="h-6 w-6" aria-hidden />
                 </button>
               </div>
-              {showQr && shareUrl ? (
-                <div className="flex justify-center rounded bg-white p-3">
-                  <QRCodeSVG value={shareUrl} size={160} />
+              {shareUrl && !shareLoading && !shareError ? (
+                <div className="border-t border-white/10 px-3 pb-3 pt-2">
+                  <button
+                    type="button"
+                    data-magnetic
+                    onClick={() => setShowShareQr((prev) => !prev)}
+                    className="inline-flex w-full items-center justify-center gap-2 rounded border border-white/15 bg-white/5 px-3 py-2 font-mda text-xs font-bold uppercase tracking-wide text-white/80 transition-colors hover:bg-white/10"
+                  >
+                    <QrCode className="h-4 w-4" aria-hidden />
+                    {showShareQr ? "Hide QR Code" : "Show QR Code"}
+                  </button>
+                  {showShareQr ? (
+                    <div className="mt-2 flex justify-center rounded bg-white p-3">
+                      <QRCodeSVG value={shareUrl} size={160} />
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
             </div>
@@ -375,11 +402,17 @@ export function DeckArchiveActionPopovers({
           side={del.side}
           align="center"
           sideOffset={10}
-          collisionPadding={EDGE_PAD}
-          className="w-auto border-0 bg-transparent p-0 shadow-none"
+          collisionPadding={ARCHIVE_POPOVER_EDGE_PAD}
+          className={ARCHIVE_POPOVER_CONTENT_CLASS}
+          data-mda-action-popover
         >
-          <div className={cn(panelClass, "max-w-[360px] px-4 py-3")}>
-            <p className="font-mda text-sm text-mda-ink">
+          <div
+            className={cn(
+              ARCHIVE_POPOVER_PANEL_CLASS,
+              "max-w-[360px] px-4 py-3",
+            )}
+          >
+            <p className="font-mda text-sm text-white">
               Delete <span className="font-bold">{deckName}</span>?
             </p>
             <button

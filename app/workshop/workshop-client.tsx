@@ -25,16 +25,22 @@ export default function WorkshopPage(): ReactNode {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { currentDeck, updateDeckMode } = useDeck();
+  const deckMode = useModeStore((state) => state.deckMode);
   const setDeckMode = useModeStore((state) => state.setDeckMode);
   const [tab, setTab] = useState<WorkshopTab>("build");
 
   useEffect(() => {
     const modeParam = searchParams.get("mode");
-    if (modeParam === "TCG" || modeParam === "Master Duel") {
-      updateDeckMode(modeParam as DeckMode);
-      setDeckMode(modeParam as DeckMode);
+    if (modeParam !== "TCG" && modeParam !== "Master Duel") return;
+
+    const mode = modeParam as DeckMode;
+    if (currentDeck.mode !== mode) {
+      updateDeckMode(mode);
     }
-  }, [searchParams, setDeckMode, updateDeckMode]);
+    if (deckMode !== mode) {
+      setDeckMode(mode);
+    }
+  }, [searchParams, currentDeck.mode, deckMode, setDeckMode, updateDeckMode]);
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden bg-mda-bg text-mda-ink">

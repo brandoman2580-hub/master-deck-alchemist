@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { ThemeProvider } from "next-themes";
 import { DeckProvider } from "../context/deck-context";
@@ -63,19 +62,19 @@ export function Providers({ children }: { children: ReactNode }) {
     >
       <DeckProvider>
         <AppQueryProvider>
-        <div className="relative z-20 flex h-dvh max-h-dvh flex-col overflow-hidden">
-          {hideLegacyNavbar ? null : <Navbar />}
-          {showMagneticCursor ? <MagneticCursor /> : null}
-          <main
-            id="main-content"
-            className="min-h-0 flex-1 overflow-y-auto scroll-smooth"
-            tabIndex={-1}
-            aria-label="Main content"
-            role="main"
-          >
-            {children}
-          </main>
-        </div>
+          <div className="relative z-20 flex h-dvh max-h-dvh flex-col overflow-hidden">
+            {hideLegacyNavbar ? null : <Navbar />}
+            {showMagneticCursor ? <MagneticCursor /> : null}
+            <main
+              id="main-content"
+              className="min-h-0 flex-1 overflow-y-auto scroll-smooth"
+              tabIndex={-1}
+              aria-label="Main content"
+              role="main"
+            >
+              {children}
+            </main>
+          </div>
         </AppQueryProvider>
       </DeckProvider>
     </ThemeProvider>

@@ -19,12 +19,12 @@ export type MdaSearchFieldProps = Omit<
 export function MdaSearchField({
   className,
   containerClassName,
-  "data-magnetic": dataMagnetic,
+  "data-magnetic": _dataMagnetic,
   ...props
 }: MdaSearchFieldProps): ReactNode {
   return (
     <label
-      data-magnetic={dataMagnetic === undefined ? undefined : ""}
+      data-magnetic
       className={cn(
         "flex h-11 w-full items-center gap-2.5 rounded-sm bg-mda-chrome px-[18px] text-mda-inverse-text ring-1 ring-transparent transition-[background-color,box-shadow,ring-color] duration-200 ease-in-out",
         "focus-within:bg-mda-chrome-muted focus-within:ring-mda-cyan/60",

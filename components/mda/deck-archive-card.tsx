@@ -68,11 +68,11 @@ export function DeckArchiveCard({
         reduceMotion
           ? undefined
           : {
-              y: -8,
+              y: -6,
               boxShadow: "0 14px 32px rgba(58, 79, 92, 0.28)",
             }
       }
-      transition={{ duration: 0.22, ease: "easeInOut" }}
+      transition={{ duration: 0.2, ease: "easeOut" }}
     >
       <div className="flex items-center justify-between px-2.5 pt-1.5">
         <div className="flex items-center gap-2 text-xs font-mda uppercase tracking-wide text-white">
@@ -94,7 +94,10 @@ export function DeckArchiveCard({
           )}
         >
           <Pin
-            className="h-5 w-5"
+            className={cn(
+              "h-5 w-5",
+              isPinned && "fill-mda-cyan text-mda-cyan",
+            )}
             aria-hidden
             fill={isPinned ? "currentColor" : "none"}
             strokeWidth={isPinned ? 0 : 2}
@@ -142,7 +145,7 @@ export function DeckArchiveCard({
         <button
           type="button"
           onClick={onOpen}
-          className="w-full truncate bg-white/15 px-2 py-1 text-left font-mda text-sm font-bold uppercase tracking-wide text-white transition-colors duration-200 ease-in-out hover:bg-white/25 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mda-cyan"
+          className="w-full truncate bg-[rgba(207,207,207,0.28)] px-2 py-1 text-left font-mda text-sm font-bold uppercase tracking-wide text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mda-cyan"
         >
           {name}
         </button>
