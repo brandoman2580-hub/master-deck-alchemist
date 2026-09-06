@@ -15,7 +15,13 @@ export type DeckCapBadgeProps = {
   className?: string;
 };
 
-function AnimatedCount({ value }: { value: number }): ReactNode {
+function AnimatedCount({
+  value,
+  className,
+}: {
+  value: number;
+  className?: string;
+}): ReactNode {
   const reduceMotion = useReducedMotion();
   const motionValue = useMotionValue(value);
   const spring = useSpring(motionValue, { stiffness: 200, damping: 28 });
@@ -35,7 +41,10 @@ function AnimatedCount({ value }: { value: number }): ReactNode {
   }, [spring, reduceMotion]);
 
   return (
-    <motion.span className="inline-block tabular-nums font-bold" layout>
+    <motion.span
+      className={cn("inline-block tabular-nums font-bold", className)}
+      layout
+    >
       {reduceMotion ? value : display}
     </motion.span>
   );
@@ -70,7 +79,7 @@ export function MdaAnimatedNumber({
 }): ReactNode {
   return (
     <span className={cn("tabular-nums", className)}>
-      <AnimatedCount value={value} />
+      <AnimatedCount value={value} className={className} />
     </span>
   );
 }
