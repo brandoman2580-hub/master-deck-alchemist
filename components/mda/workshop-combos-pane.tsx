@@ -49,6 +49,19 @@ const DEFAULT_COMBOS: ComboDoc[] = [
   },
 ];
 
+/**
+ * Match workshop-build-pane card tile sizing:
+ * sizes="(min-width: 576px) 104px, (max-width: 575px) 20vw"
+ * Aspect ≈ 59×86mm so borders are not cropped.
+ */
+const CARD_SIZES = "(min-width: 576px) 104px, 20vw";
+const CARD_TILE =
+  "relative aspect-[59/86] w-[20vw] max-w-[104px] min-w-[72px] overflow-hidden bg-mda-deep sm:w-[104px]";
+
+const SECTION_HEADING =
+  "mb-2 font-mda text-2xl font-semibold uppercase tracking-wide text-mda-ink";
+const SECTION_BODY = "font-mda text-2xl font-normal leading-snug text-mda-ink";
+
 function CardSlot({ card }: { card?: DeckCard }): ReactNode {
   const reduceMotion = useReducedMotion();
   const body = card ? (
@@ -57,8 +70,8 @@ function CardSlot({ card }: { card?: DeckCard }): ReactNode {
       preferSmall
       fill
       alt={card.name}
-      className="object-cover"
-      sizes="72px"
+      className="object-contain"
+      sizes={CARD_SIZES}
     />
   ) : (
     <ImageIcon className="h-8 w-8 text-mda-ink-muted/40" aria-hidden />
@@ -71,7 +84,10 @@ function CardSlot({ card }: { card?: DeckCard }): ReactNode {
         card ? `combo-card-${card.deckInstanceId ?? card.id}` : undefined
       }
       transition={{ type: "spring", stiffness: 380, damping: 32 }}
-      className="relative flex h-[99px] w-[72px] items-center justify-center overflow-hidden bg-mda-deep ring-1 ring-mda-ink/10 transition-shadow hover:shadow-mda-soft"
+      className={cn(
+        CARD_TILE,
+        "flex items-center justify-center shadow-[0_6px_16px_rgba(58,79,92,0.28)] transition-shadow hover:shadow-mda-soft",
+      )}
     >
       {body}
     </motion.div>
@@ -125,7 +141,7 @@ export function WorkshopCombosPane(): ReactNode {
 
   return (
     <LayoutGroup>
-      <div className="grid h-full min-h-0 grid-cols-1 gap-4 p-4 lg:grid-cols-[220px_minmax(0,1fr)_minmax(0,280px)]">
+      <div className="grid h-full min-h-0 grid-cols-1 gap-4 bg-[#B9BEBE]/50 p-4 lg:grid-cols-[220px_minmax(0,1fr)_minmax(0,280px)]">
         <div className="space-y-2 overflow-y-auto">
           {DEFAULT_COMBOS.map((combo) => {
             const selected = combo.id === activeId;
@@ -138,12 +154,14 @@ export function WorkshopCombosPane(): ReactNode {
                 className={cn(
                   "flex w-full flex-col items-center px-3 py-4 font-mda uppercase transition-colors duration-200 ease-in-out",
                   selected
-                    ? "border-l-4 border-mda-cyan bg-mda-surface text-mda-ink-strong shadow-mda-soft"
+                    ? "bg-[#EAF7FF]/60 text-mda-ink"
                     : "bg-mda-chrome text-mda-inverse-text hover:bg-mda-chrome-deep",
                 )}
               >
-                <span className="text-xl font-bold">{combo.title}</span>
-                <span className="text-sm opacity-80">{combo.subtitle}</span>
+                <span className="text-2xl font-semibold">{combo.title}</span>
+                <span className="text-lg font-normal opacity-80">
+                  {combo.subtitle}
+                </span>
               </button>
             );
           })}
@@ -151,9 +169,7 @@ export function WorkshopCombosPane(): ReactNode {
 
         <div className="space-y-6 overflow-y-auto px-1">
           <div>
-            <p className="mb-2 font-mda text-sm font-bold uppercase tracking-wide text-mda-ink-strong">
-              Starting Hand
-            </p>
+            <p className={SECTION_HEADING}>Starting Hand</p>
             <div className="flex flex-wrap gap-2">
               {Array.from({ length: 5 }).map((_, index) => (
                 <CardSlot
@@ -200,9 +216,7 @@ export function WorkshopCombosPane(): ReactNode {
             ))}
           </div>
           <div>
-            <p className="mb-2 font-mda text-sm font-bold uppercase tracking-wide text-mda-ink-strong">
-              End Board
-            </p>
+            <p className={SECTION_HEADING}>End Board</p>
             <div className="flex flex-wrap gap-2">
               {Array.from({ length: 5 }).map((_, index) => (
                 <CardSlot
@@ -219,23 +233,17 @@ export function WorkshopCombosPane(): ReactNode {
 
         <div className="flex min-h-0 flex-col gap-4 overflow-y-auto border-t border-mda-ink/10 pt-4 lg:border-l lg:border-t-0 lg:pl-4 lg:pt-0">
           <section className="flex-1">
-            <h3 className="mb-2 font-mda text-sm font-bold uppercase tracking-wide text-mda-ink-strong">
-              Weaknesses
-            </h3>
-            <p className="mb-2 font-mda text-xs text-mda-ink-muted">
-              This combo dies to:
-            </p>
-            <ul className="list-disc space-y-1 pl-5 font-mda text-sm text-mda-ink">
+            <h3 className={SECTION_HEADING}>Weaknesses</h3>
+            <p className={cn(SECTION_BODY, "mb-2")}>This combo dies to:</p>
+            <ul className={cn(SECTION_BODY, "list-disc space-y-1 pl-5")}>
               {active.weaknesses.map((item) => (
                 <li key={item}>{item}</li>
               ))}
             </ul>
           </section>
           <section className="flex-1">
-            <h3 className="mb-2 font-mda text-sm font-bold uppercase tracking-wide text-mda-ink-strong">
-              Comments
-            </h3>
-            <p className="whitespace-pre-wrap font-mda text-sm leading-relaxed text-mda-ink">
+            <h3 className={SECTION_HEADING}>Comments</h3>
+            <p className={cn(SECTION_BODY, "whitespace-pre-wrap")}>
               {active.comments}
             </p>
           </section>
