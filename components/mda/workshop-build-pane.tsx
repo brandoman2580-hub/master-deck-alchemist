@@ -5,6 +5,7 @@ import {
   useState,
   type ChangeEvent,
   type DragEvent,
+  type PointerEvent,
   type ReactNode,
 } from "react";
 import {
@@ -20,13 +21,13 @@ import {
 import { CardImage } from "@/components/ui/card-image";
 import { MdaSearchField } from "@/components/mda/search-field";
 import { MdaCardPreview } from "@/components/mda/mda-card-preview";
-import { MdaAnimatedNumber } from "@/components/mda/deck-cap-badge";
+import { MdaFrameCorners } from "@/components/mda/frame-corners";
 import {
   EMPTY_WORKSHOP_FILTERS,
   WorkshopCardFilters,
   type WorkshopFilterState,
 } from "@/components/mda/workshop-card-filters";
-import type { DeckCard, DeckSection } from "@/types/types";
+import type { BanStatus, DeckCard, DeckSection } from "@/types/types";
 import type { Card } from "@/types/card";
 import { useDeck } from "@/context/deck-context";
 import { useCardStore } from "@/store/cardStore";
@@ -46,6 +47,41 @@ const SECTION_LIMITS: Record<DeckSection, number> = {
 };
 
 const DRAG_MIME = "application/x-mda-card-id";
+
+/**
+ * Match masterduelmeta.com card tile sizing:
+ * sizes="(min-width: 576px) 104px, (max-width: 575px) 20vw"
+ * Aspect ≈ 59×86mm so borders are not cropped.
+ */
+const CARD_SIZES = "(min-width: 576px) 104px, 20vw";
+const CARD_TILE =
+  "relative aspect-[59/86] w-[20vw] max-w-[104px] min-w-[72px] overflow-hidden bg-mda-deep sm:w-[104px]";
+const CARD_SHELL = "relative inline-block shadow-[0_6px_16px_rgba(58,79,92,0.28)]";
+const COUNT_BADGE_CLASS =
+  "inline-flex min-w-[28px] items-center justify-center whitespace-nowrap bg-mda-chrome px-1.5 py-0.5 font-mda text-xs font-bold leading-none text-mda-inverse-text";
+const COUNT_BTN_CLASS =
+  "flex h-6 w-6 shrink-0 items-center justify-center bg-mda-chrome-deep text-mda-inverse-text transition-opacity";
+
+function banlistLimitLabel(status: BanStatus): string | null {
+  if (status === "Limited") return "1";
+  if (status === "Semi-Limited") return "2";
+  if (status === "Forbidden") return "0";
+  return null;
+}
+
+function BanlistCornerBadge({ status }: { status: BanStatus }): ReactNode {
+  const label = banlistLimitLabel(status);
+  if (!label) return null;
+  return (
+    <div
+      className="absolute left-1 top-1 z-[3] flex h-6 w-6 items-center justify-center rounded-full border-2 border-red-500 bg-black text-sm font-bold leading-none text-yellow-400 drop-shadow-md"
+      aria-label={`Ban status: ${status}`}
+      title={status}
+    >
+      {label}
+    </div>
+  );
+}
 
 function groupCardsById(
   cards: DeckCard[],
@@ -70,54 +106,116 @@ function BuilderCardGridItem({
   card,
   quantity,
   canAdd,
+  banStatus,
   onAdd,
   onRemove,
 }: {
   card: DeckCard;
   quantity: number;
   canAdd: boolean;
+  banStatus: BanStatus;
   onAdd: () => void;
   onRemove: () => void;
 }): ReactNode {
+  /**
+   * CSS `group-hover` + `group-focus-within` left +/- stuck visible after click
+   * (button retained focus) and on some pointer leave paths. Drive visibility
+   * from pointer enter/leave and blur after each click.
+   */
+  const [controlsVisible, setControlsVisible] = useState(false);
+
+  const showControls = (event: PointerEvent<HTMLDivElement>): void => {
+    if (event.pointerType === "touch") return;
+    setControlsVisible(true);
+  };
+
+  const hideControls = (): void => {
+    setControlsVisible(false);
+  };
+
   return (
-    <div className="group relative">
-      <MdaCardPreview card={card}>
-        <div className="relative aspect-[72/99] overflow-hidden bg-mda-deep shadow-sm ring-1 ring-mda-ink/10 transition-shadow hover:shadow-mda-soft">
+    <MdaCardPreview card={card}>
+      <div
+        data-magnetic
+        className={CARD_SHELL}
+        onPointerEnter={showControls}
+        onPointerLeave={hideControls}
+      >
+        <div className={CARD_TILE}>
           <CardImage
             card={card}
             preferSmall
             fill
             alt={card.name}
-            className="object-cover"
-            sizes="80px"
+            className="object-contain"
+            sizes={CARD_SIZES}
           />
-          {quantity > 1 ? (
-            <span className="absolute bottom-0 left-0 bg-mda-chrome px-1.5 py-0.5 font-mda text-xs font-bold text-mda-inverse-text">
-              ×<MdaAnimatedNumber value={quantity} />
-            </span>
-          ) : null}
-          <div className="absolute inset-0 flex items-center justify-center gap-1 bg-mda-chrome/85 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
-            <button
-              type="button"
-              onClick={onAdd}
-              disabled={!canAdd}
-              aria-label={`Add another ${card.name}`}
-              className="flex h-7 w-7 items-center justify-center bg-mda-inverse-text/15 text-mda-inverse-text hover:bg-mda-inverse-text/25 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              <Plus className="h-4 w-4" aria-hidden />
-            </button>
-            <button
-              type="button"
-              onClick={onRemove}
-              aria-label={`Remove one ${card.name}`}
-              className="flex h-7 w-7 items-center justify-center bg-mda-inverse-text/15 text-mda-inverse-text hover:bg-mda-inverse-text/25"
-            >
-              <Minus className="h-4 w-4" aria-hidden />
-            </button>
-          </div>
+          <BanlistCornerBadge status={banStatus} />
         </div>
-      </MdaCardPreview>
-    </div>
+        <div className="absolute bottom-1 left-1/2 z-[2] flex -translate-x-1/2 flex-row items-center gap-0.5">
+          <button
+            type="button"
+            tabIndex={controlsVisible ? 0 : -1}
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              onRemove();
+              event.currentTarget.blur();
+            }}
+            aria-label={`Remove one ${card.name}`}
+            className={cn(
+              COUNT_BTN_CLASS,
+              controlsVisible
+                ? "opacity-100"
+                : "pointer-events-none opacity-0",
+            )}
+          >
+            <Minus className="h-3.5 w-3.5" aria-hidden />
+          </button>
+          <span
+            className={cn(
+              COUNT_BADGE_CLASS,
+              quantity <= 1 && "bg-transparent text-transparent",
+            )}
+          >
+            {quantity > 1 ? `x${quantity}` : "x1"}
+          </span>
+          <button
+            type="button"
+            tabIndex={controlsVisible ? 0 : -1}
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              onAdd();
+              event.currentTarget.blur();
+            }}
+            disabled={!canAdd}
+            aria-label={
+              canAdd
+                ? `Add another ${card.name}`
+                : banStatus && banStatus !== "Unlimited"
+                  ? `${card.name} is ${banStatus}`
+                  : `Cannot add more ${card.name}`
+            }
+            title={
+              !canAdd && banStatus && banStatus !== "Unlimited"
+                ? `${banStatus} — max ${banlistLimitLabel(banStatus)}`
+                : undefined
+            }
+            className={cn(
+              COUNT_BTN_CLASS,
+              controlsVisible
+                ? canAdd
+                  ? "opacity-100"
+                  : "cursor-not-allowed opacity-40"
+                : "pointer-events-none opacity-0",
+            )}
+          >
+            <Plus className="h-3.5 w-3.5" aria-hidden />
+          </button>
+        </div>
+      </div>
+    </MdaCardPreview>
   );
 }
 
@@ -126,6 +224,7 @@ function DeckSectionBlock({
   section,
   cards,
   open,
+  banlist,
   onToggle,
   onAdd,
   onRemoveOne,
@@ -135,6 +234,7 @@ function DeckSectionBlock({
   section: DeckSection;
   cards: DeckCard[];
   open: boolean;
+  banlist: Record<string, BanStatus>;
   onToggle: () => void;
   onAdd: (card: Card) => void;
   onRemoveOne: (deckInstanceId: string) => void;
@@ -171,20 +271,28 @@ function DeckSectionBlock({
   };
 
   return (
-    <section className="border-b border-mda-ink/15 last:border-b-0">
+    <section className="w-full">
       <button
         type="button"
         onClick={onToggle}
-        className="flex w-full items-center justify-between border-y border-mda-chrome/30 bg-mda-bg px-3 py-2 font-mda text-sm font-bold uppercase tracking-wide text-mda-ink-strong"
+        aria-expanded={open}
+        data-magnetic
+        className="flex w-full items-center gap-3 border-4 border-mda-chrome bg-[#B9BEBE] px-3 py-2.5 text-left transition-colors duration-200 hover:bg-[#B9BEBE]/80"
       >
-        {title}
-        <span className="flex items-center gap-2 font-mda text-xs text-mda-ink-muted">
-          ({cards.length})
-          <ChevronDown
-            className={cn("h-4 w-4 transition-transform", open && "rotate-180")}
-            aria-hidden
-          />
+        <span className="font-mda text-2xl font-semibold uppercase tracking-[0.06em] text-mda-ink-strong">
+          {title}
         </span>
+        <span className="font-mda text-sm text-mda-ink-muted">
+          ({cards.length})
+        </span>
+        <span className="h-px flex-1 bg-mda-chrome/50" aria-hidden />
+        <ChevronDown
+          className={cn(
+            "h-6 w-6 text-mda-ink transition-transform duration-300 ease-in-out",
+            open && "rotate-180",
+          )}
+          aria-hidden
+        />
       </button>
       {open ? (
         <div
@@ -192,7 +300,7 @@ function DeckSectionBlock({
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
           className={cn(
-            "min-h-[120px] bg-mda-surface/60 p-3 transition-shadow",
+            "min-h-[120px] px-3 py-3 transition-shadow",
             isDragOver && "ring-2 ring-inset ring-mda-cyan",
           )}
         >
@@ -201,13 +309,14 @@ function DeckSectionBlock({
               Drop cards here or add from the library
             </p>
           ) : (
-            <div className="grid grid-cols-4 gap-2 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-5 xl:grid-cols-6">
+            <div className="flex flex-wrap gap-2">
               {grouped.map(({ card, quantity, instances }) => (
                 <BuilderCardGridItem
                   key={card.id}
                   card={card}
                   quantity={quantity}
                   canAdd={!atSectionCap && canAddCard(card)}
+                  banStatus={banlist[card.name] || "Unlimited"}
                   onAdd={() => onAdd(card)}
                   onRemove={() => {
                     const last = instances[instances.length - 1];
@@ -321,43 +430,60 @@ export function WorkshopBuildPane(): ReactNode {
     event.dataTransfer.effectAllowed = "copy";
   };
 
+  const isTcg = currentDeck.mode === "TCG";
+
   return (
-    <div className="grid h-full min-h-0 grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(280px,420px)]">
-      <div className="min-h-0 overflow-y-auto border-r border-mda-ink/10">
-        <DeckSectionBlock
-          title="Main"
-          section="mainDeck"
-          cards={currentDeck.mainDeck}
-          open={mainOpen}
-          onToggle={() => setMainOpen((value) => !value)}
-          onAdd={(card) => handleAddToSection(card, "mainDeck")}
-          onRemoveOne={(id) => removeCardFromDeck(id, "mainDeck")}
-          canAddCard={canAddCard}
+    <div className="grid h-full min-h-0 grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(280px,420px)]">
+      <div className="relative h-full min-h-0 bg-transparent">
+        {/*
+          Brackets sit on the outer frame. The filled panel is inset so the
+          L-arms read as a separate frame, not painted on the same edge.
+        */}
+        <MdaFrameCorners
+          sizeClassName="h-8 w-8"
+          thicknessClassName="border-[4px]"
         />
-        <DeckSectionBlock
-          title="Extra"
-          section="extraDeck"
-          cards={currentDeck.extraDeck}
-          open={extraOpen}
-          onToggle={() => setExtraOpen((value) => !value)}
-          onAdd={(card) => handleAddToSection(card, "extraDeck")}
-          onRemoveOne={(id) => removeCardFromDeck(id, "extraDeck")}
-          canAddCard={canAddCard}
-        />
-        <DeckSectionBlock
-          title="Side"
-          section="sideDeck"
-          cards={currentDeck.sideDeck}
-          open={sideOpen}
-          onToggle={() => setSideOpen((value) => !value)}
-          onAdd={(card) => handleAddToSection(card, "sideDeck")}
-          onRemoveOne={(id) => removeCardFromDeck(id, "sideDeck")}
-          canAddCard={canAddCard}
-        />
+        <div className="absolute inset-3 z-[1] space-y-2 overflow-y-auto bg-[#B9BEBE]/50 p-3 sm:inset-4">
+          <DeckSectionBlock
+            title="Main"
+            section="mainDeck"
+            cards={currentDeck.mainDeck}
+            open={mainOpen}
+            banlist={banlist}
+            onToggle={() => setMainOpen((value) => !value)}
+            onAdd={(card) => handleAddToSection(card, "mainDeck")}
+            onRemoveOne={(id) => removeCardFromDeck(id, "mainDeck")}
+            canAddCard={canAddCard}
+          />
+          <DeckSectionBlock
+            title="Extra"
+            section="extraDeck"
+            cards={currentDeck.extraDeck}
+            open={extraOpen}
+            banlist={banlist}
+            onToggle={() => setExtraOpen((value) => !value)}
+            onAdd={(card) => handleAddToSection(card, "extraDeck")}
+            onRemoveOne={(id) => removeCardFromDeck(id, "extraDeck")}
+            canAddCard={canAddCard}
+          />
+          {isTcg ? (
+            <DeckSectionBlock
+              title="Side"
+              section="sideDeck"
+              cards={currentDeck.sideDeck}
+              open={sideOpen}
+              banlist={banlist}
+              onToggle={() => setSideOpen((value) => !value)}
+              onAdd={(card) => handleAddToSection(card, "sideDeck")}
+              onRemoveOne={(id) => removeCardFromDeck(id, "sideDeck")}
+              canAddCard={canAddCard}
+            />
+          ) : null}
+        </div>
       </div>
 
-      <div className="flex min-h-0 flex-col bg-mda-bg/40 p-3">
-        <div className="mb-3 grid grid-cols-2 gap-0 border border-mda-chrome">
+      <div className="flex min-h-0 flex-col bg-transparent p-0">
+        <div className="mb-3 flex gap-1 border-b-4 border-mda-chrome">
           {(
             [
               ["cards", "Cards", Layers],
@@ -368,14 +494,15 @@ export function WorkshopBuildPane(): ReactNode {
               key={key}
               type="button"
               onClick={() => setRightPanel(key)}
+              data-magnetic
               className={cn(
-                "flex items-center justify-center gap-2 py-2.5 font-mda text-xs font-bold uppercase tracking-wide transition-colors",
+                "relative flex min-h-[48px] min-w-[140px] items-center justify-center gap-2.5 px-6 font-mda text-2xl font-semibold uppercase tracking-wide transition-colors",
                 rightPanel === key
                   ? "bg-mda-chrome text-mda-inverse-text"
-                  : "bg-mda-bg text-mda-ink hover:bg-mda-surface",
+                  : "bg-transparent text-mda-ink hover:text-mda-ink-strong",
               )}
             >
-              <Icon className="h-4 w-4" aria-hidden />
+              <Icon className="h-6 w-6 shrink-0" aria-hidden />
               {label}
             </button>
           ))}
@@ -383,12 +510,13 @@ export function WorkshopBuildPane(): ReactNode {
 
         {rightPanel === "cards" ? (
           <>
-            <div className="mb-3 flex items-center gap-2">
+            <div className="mb-2 flex items-center gap-2">
               <MdaSearchField
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="Search the card library"
                 aria-label="Search card library"
+                className="normal-case tracking-normal"
                 containerClassName="flex-1 bg-mda-chrome ring-mda-chrome-deep focus-within:bg-mda-chrome-deep focus-within:ring-mda-cyan"
               />
               <button
@@ -396,9 +524,10 @@ export function WorkshopBuildPane(): ReactNode {
                 onClick={() => setFiltersOpen((value) => !value)}
                 aria-label={filtersOpen ? "Hide filters" : "Show filters"}
                 aria-expanded={filtersOpen}
+                data-magnetic
                 className={cn(
-                  "relative rounded p-2 text-mda-ink-muted transition-colors hover:bg-mda-panel hover:text-mda-ink",
-                  filtersOpen && "bg-mda-panel text-mda-ink",
+                  "relative bg-transparent p-2 text-mda-ink-muted transition-colors hover:text-mda-ink",
+                  filtersOpen && "text-mda-ink",
                 )}
               >
                 <SlidersHorizontal className="h-5 w-5" aria-hidden />
@@ -411,7 +540,6 @@ export function WorkshopBuildPane(): ReactNode {
             </div>
             <WorkshopCardFilters
               open={filtersOpen}
-              onToggle={() => setFiltersOpen((value) => !value)}
               searchParams={searchParams}
               onSelectChange={handleFilterSelectChange}
               onEffectChange={handleEffectChange}
@@ -419,7 +547,7 @@ export function WorkshopBuildPane(): ReactNode {
               activeCount={activeFilterCount}
             />
             <div className="min-h-0 flex-1 overflow-y-auto">
-              <div className="grid grid-cols-4 gap-2 sm:grid-cols-5">
+              <div className="flex flex-wrap gap-2">
                 {library.map((card) => {
                   const remaining = getRemainingCopies(
                     card,
@@ -427,46 +555,57 @@ export function WorkshopBuildPane(): ReactNode {
                     banlist,
                   );
                   const disabled = remaining <= 0;
+                  const banStatus = banlist[card.name] || "Unlimited";
                   return (
                     <MdaCardPreview key={card.id} card={card}>
-                      <button
-                        type="button"
-                        draggable={!disabled}
-                        onDragStart={(event) =>
-                          handleLibraryDragStart(event, card)
-                        }
-                        onClick={() => handleLibraryAdd(card)}
-                        disabled={disabled}
+                      <div
+                        data-magnetic={disabled ? undefined : true}
                         className={cn(
-                          "relative aspect-[72/99] overflow-hidden bg-mda-deep ring-1 ring-mda-ink/10 transition-shadow hover:shadow-mda-soft",
-                          disabled &&
-                            "cursor-not-allowed opacity-40 hover:shadow-none",
+                          CARD_SHELL,
+                          disabled && "opacity-40 shadow-none",
                         )}
-                        title={
-                          disabled
-                            ? `${card.name} — copy limit reached`
-                            : `Add ${card.name}`
-                        }
-                        aria-label={
-                          disabled
-                            ? `${card.name} unavailable`
-                            : `Add ${card.name}`
-                        }
                       >
-                        <CardImage
-                          card={card}
-                          preferSmall
-                          fill
-                          alt={card.name}
-                          className="object-cover"
-                          sizes="80px"
-                        />
-                      </button>
+                        <button
+                          type="button"
+                          draggable={!disabled}
+                          onDragStart={(event) =>
+                            handleLibraryDragStart(event, card)
+                          }
+                          onClick={() => handleLibraryAdd(card)}
+                          disabled={disabled}
+                          className={cn(
+                            CARD_TILE,
+                            disabled && "cursor-not-allowed",
+                          )}
+                          title={
+                            disabled
+                              ? banStatus !== "Unlimited"
+                                ? `${card.name} — ${banStatus}`
+                                : `${card.name} — copy limit reached`
+                              : `Add ${card.name}`
+                          }
+                          aria-label={
+                            disabled
+                              ? `${card.name} unavailable`
+                              : `Add ${card.name}`
+                          }
+                        >
+                          <CardImage
+                            card={card}
+                            preferSmall
+                            fill
+                            alt={card.name}
+                            className="object-contain"
+                            sizes={CARD_SIZES}
+                          />
+                          <BanlistCornerBadge status={banStatus} />
+                        </button>
+                      </div>
                     </MdaCardPreview>
                   );
                 })}
                 {library.length === 0 ? (
-                  <div className="col-span-full flex flex-col items-center gap-2 py-10 text-mda-ink-muted">
+                  <div className="col-span-full flex w-full flex-col items-center gap-2 py-10 text-mda-ink-muted">
                     <Search className="h-8 w-8" aria-hidden />
                     <p className="font-mda text-sm">
                       {cardList.length === 0
@@ -487,7 +626,7 @@ export function WorkshopBuildPane(): ReactNode {
                   className={cn(
                     "font-mda text-sm leading-relaxed",
                     message.role === "user"
-                      ? "ml-4 rounded bg-mda-chrome px-3 py-2.5 text-mda-inverse-text"
+                      ? "ml-4 bg-mda-chrome px-3 py-2.5 text-mda-inverse-text"
                       : "flex gap-2 text-mda-ink",
                   )}
                 >

@@ -20,6 +20,14 @@ const orbitron = localFont({
   display: "swap",
 });
 
+/** Readable body face for card effect text and dense copy. */
+const openSans = localFont({
+  src: "./fonts/OpenSans-VariableFont_wdth,wght.ttf",
+  variable: "--font-open-sans",
+  weight: "300 800",
+  display: "swap",
+});
+
 const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL || "https://masterdeckalchemist.com";
 
@@ -106,6 +114,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body
         className={`
           ${orbitron.variable}
+          ${openSans.variable}
           ${orbitron.className}
           min-h-screen
           flex flex-col

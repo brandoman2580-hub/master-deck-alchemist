@@ -204,15 +204,3 @@ input:-webkit-autofill:focus {
   animation: none !important;
 }
 
-/* Workshop v2 — connected diagonal-cut tabs */
-.mda-workshop-tab-first {
-  clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 100%, 0 100%);
-}
-
-.mda-workshop-tab-middle {
-  clip-path: polygon(14px 0, calc(100% - 14px) 0, 100% 100%, 0 100%);
-}
-
-.mda-workshop-tab-last {
-  clip-path: polygon(14px 0, 100% 0, 100% 100%, 0 100%);
-}

@@ -1,5 +1,6 @@
 import { ToggleGroup, ToggleGroupItem } from "@radix-ui/react-toggle-group";
 import { Label } from "./label";
+import { cn } from "@/lib/utils";
 
 export type ToggleFilterOption = {
   value: string;
@@ -11,6 +12,8 @@ interface ToggleFilterProps {
   value: string[];
   options: ToggleFilterOption[];
   onChange: (value: string[]) => void;
+  /** `glass` = dark builder overlay; `chrome` = MDA light workshop filters. */
+  variant?: "glass" | "chrome";
 }
 
 export function ToggleFilter({
@@ -18,11 +21,28 @@ export function ToggleFilter({
   value,
   options,
   onChange,
+  variant = "glass",
 }: ToggleFilterProps) {
+  const isChrome = variant === "chrome";
+
   return (
     <div className="space-y-2">
-      <Label className="text-white/80 font-medium">{label}</Label>
-      <div className="relative flex w-fit bg-white/5 border border-white/10 backdrop-blur-xl rounded-lg">
+      <Label
+        className={cn(
+          "font-medium",
+          isChrome ? "font-mda text-sm text-mda-ink" : "text-white/80",
+        )}
+      >
+        {label}
+      </Label>
+      <div
+        className={cn(
+          "relative flex w-fit",
+          isChrome
+            ? "border border-mda-chrome-deep bg-mda-chrome"
+            : "rounded-lg border border-white/10 bg-white/5 backdrop-blur-xl",
+        )}
+      >
         <ToggleGroup
           type="multiple"
           value={value}
@@ -34,9 +54,23 @@ export function ToggleFilter({
               key={option.value}
               value={option.value}
               type="button"
-              className={`relative z-10 px-3 py-2 font-semibold transition-colors duration-200 focus:outline-none flex items-center justify-center gap-1 text-xs font-display rounded-lg
-                ${value.includes(option.value) ? "text-white bg-white/10" : "text-white/60 hover:bg-white/5"}
-              `}
+              data-magnetic={isChrome ? true : undefined}
+              className={cn(
+                "relative z-10 flex items-center justify-center gap-1 px-3 py-2 text-xs font-semibold transition-colors duration-200 focus:outline-none",
+                isChrome
+                  ? cn(
+                      "font-mda uppercase tracking-wide text-mda-inverse-text",
+                      value.includes(option.value)
+                        ? "bg-mda-chrome-deep"
+                        : "hover:bg-mda-chrome-deep/80",
+                    )
+                  : cn(
+                      "rounded-lg font-display",
+                      value.includes(option.value)
+                        ? "bg-white/10 text-white"
+                        : "text-white/60 hover:bg-white/5",
+                    ),
+              )}
               aria-pressed={value.includes(option.value)}
             >
               {option.label}
