@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
 import {
   CartesianGrid,
   Label,
@@ -15,7 +21,6 @@ import {
 } from "recharts";
 import { getMetaDecks } from "@/lib/supabaseDecks";
 import { MdaLoadingScreen } from "@/components/mda/mda-loading-screen";
-import { cn } from "@/lib/utils";
 
 type Tier = 1 | 2 | 3;
 
@@ -24,12 +29,22 @@ type MatchupPoint = {
   tier: Tier;
   winRate: number;
   metaShare: number;
+  /** Bubble size — tournament participation / meta trend (demo: hash-derived). */
+  weight: number;
 };
 
 const TIER_COLORS: Record<Tier, string> = {
   1: "var(--mda-tier-1)",
   2: "var(--mda-tier-2)",
   3: "var(--mda-tier-3)",
+};
+
+const AXIS_LABEL_STYLE: CSSProperties = {
+  fill: "var(--mda-ink)",
+  fontSize: 20,
+  fontFamily: "var(--font-mda), sans-serif",
+  fontWeight: 400,
+  textTransform: "uppercase",
 };
 
 function hashName(name: string): number {
@@ -49,6 +64,8 @@ function buildPoints(names: string[]): MatchupPoint[] {
       tier,
       winRate: 38 + (hash % 35),
       metaShare: 2 + ((hash >> 3) % 10) + index * 0.1,
+      // Independent of metaShare so size is a true third dimension.
+      weight: 20 + ((hash >> 5) % 80) + (index === 0 ? 120 : 0),
     };
   });
 }
@@ -144,57 +161,75 @@ export function WorkshopMatchupsPane(): ReactNode {
         status="Loading matchup meta analysis…"
       />
 
-      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4 lg:flex-row lg:overflow-hidden">
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-y-auto lg:overflow-y-auto">
-          <div className="flex flex-wrap items-center gap-4 font-mda text-xs font-bold uppercase tracking-wide text-mda-ink">
-            <span>Show:</span>
+      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3 lg:flex-row lg:overflow-hidden">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-y-auto lg:overflow-y-auto">
+          <div className="flex flex-wrap items-center gap-2 font-mda uppercase text-mda-ink">
+            <span className="text-2xl font-semibold tracking-wide">Show:</span>
             {([1, 2, 3] as Tier[]).map((tier) => (
-              <label key={tier} className="inline-flex items-center gap-2">
+              <label
+                key={tier}
+                data-magnetic
+                className="inline-flex cursor-pointer items-center gap-2.5 px-6 py-2.5"
+              >
                 <input
                   type="checkbox"
                   checked={tiers[tier]}
                   onChange={() =>
                     setTiers((prev) => ({ ...prev, [tier]: !prev[tier] }))
                   }
-                  className="accent-mda-cyan"
+                  className="size-5 shrink-0 accent-mda-ink"
+                  aria-label={`Show Tier ${tier}`}
                 />
-                <span
-                  className="inline-block size-2.5 rounded-full"
-                  style={{ backgroundColor: TIER_COLORS[tier] }}
-                  aria-hidden
-                />
-                Tier {tier}
+                <span className="text-2xl font-normal tracking-wide">
+                  Tier {tier}
+                </span>
               </label>
             ))}
           </div>
 
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
             {[
-              { label: "Avg Win Rate", value: `${avgWin}%`, hint: "vs filtered meta" },
-              { label: "Favorable", value: String(favorable), hint: "≥55% win rate" },
-              { label: "Unfavorable", value: String(unfavorable), hint: "≤45% win rate" },
-              { label: "Tier 1 Avg", value: `${tier1Avg}%`, hint: "top meta only" },
+              {
+                label: "Avg Win Rate",
+                value: `${avgWin}%`,
+                hint: "vs filtered meta",
+              },
+              {
+                label: "Favorable",
+                value: String(favorable),
+                hint: "decks (>55%)",
+              },
+              {
+                label: "Unfavorable",
+                value: String(unfavorable),
+                hint: "decks (<45%)",
+              },
+              {
+                label: "Tier 1 Avg",
+                value: `${tier1Avg}%`,
+                hint: `${tier1.length} major decks`,
+              },
             ].map((stat) => (
               <div
                 key={stat.label}
-                className="bg-mda-chrome px-3 py-3 text-center"
+                className="bg-[#4D6676] px-2.5 py-2.5 text-center text-mda-inverse-text"
               >
-                <p className="font-mda text-[10px] font-bold uppercase tracking-wide text-mda-inverse-text/70">
+                <p className="font-mda text-base font-bold uppercase tracking-wide">
                   {stat.label}
                 </p>
-                <p className="font-display text-3xl font-bold text-mda-cyan">
+                <p className="font-mda text-5xl font-semibold leading-none">
                   {stat.value}
                 </p>
-                <p className="font-mda text-[9px] uppercase text-mda-inverse-text/45">
+                <p className="mt-1 font-mda text-sm font-normal uppercase">
                   {stat.hint}
                 </p>
               </div>
             ))}
           </div>
 
-          <div className="min-h-[280px] flex-1 bg-mda-bg/50 p-2 lg:min-h-[320px]">
+          <div className="min-h-[280px] flex-1 p-2 lg:min-h-[320px]">
             <ResponsiveContainer width="100%" height="100%">
-              <ScatterChart margin={{ top: 16, right: 24, bottom: 40, left: 28 }}>
+              <ScatterChart margin={{ top: 16, right: 24, bottom: 44, left: 36 }}>
                 <CartesianGrid
                   stroke="rgba(77, 102, 118, 0.15)"
                   strokeDasharray="3 3"
@@ -205,20 +240,15 @@ export function WorkshopMatchupsPane(): ReactNode {
                   name="Meta Representation"
                   unit="%"
                   stroke="rgba(77, 102, 118, 0.5)"
-                  tick={{ fill: "rgba(77, 102, 118, 0.75)", fontSize: 11 }}
+                  tick={{ fill: "rgba(77, 102, 118, 0.75)", fontSize: 12 }}
                   tickLine={false}
                   axisLine={{ stroke: "rgba(77, 102, 118, 0.25)" }}
                 >
                   <Label
                     value="Meta Representation (%)"
                     position="bottom"
-                    offset={16}
-                    style={{
-                      fill: "var(--mda-ink)",
-                      fontSize: 11,
-                      fontFamily: "var(--font-mda), sans-serif",
-                      textTransform: "uppercase",
-                    }}
+                    offset={20}
+                    style={AXIS_LABEL_STYLE}
                   />
                 </XAxis>
                 <YAxis
@@ -228,7 +258,7 @@ export function WorkshopMatchupsPane(): ReactNode {
                   unit="%"
                   domain={[0, 100]}
                   stroke="rgba(77, 102, 118, 0.5)"
-                  tick={{ fill: "rgba(77, 102, 118, 0.75)", fontSize: 11 }}
+                  tick={{ fill: "rgba(77, 102, 118, 0.75)", fontSize: 12 }}
                   tickLine={false}
                   axisLine={{ stroke: "rgba(77, 102, 118, 0.25)" }}
                 >
@@ -236,17 +266,19 @@ export function WorkshopMatchupsPane(): ReactNode {
                     value="Win Rate (%)"
                     angle={-90}
                     position="insideLeft"
-                    offset={8}
+                    offset={4}
                     style={{
-                      fill: "var(--mda-ink)",
-                      fontSize: 11,
-                      fontFamily: "var(--font-mda), sans-serif",
-                      textTransform: "uppercase",
+                      ...AXIS_LABEL_STYLE,
                       textAnchor: "middle",
                     }}
                   />
                 </YAxis>
-                <ZAxis range={[70, 180]} />
+                <ZAxis
+                  type="number"
+                  dataKey="weight"
+                  range={[60, 420]}
+                  name="weight"
+                />
                 <Tooltip
                   cursor={{
                     strokeDasharray: "3 3",
@@ -263,16 +295,18 @@ export function WorkshopMatchupsPane(): ReactNode {
                     if (name === "winRate") return [`${value}%`, "Win Rate"];
                     if (name === "metaShare")
                       return [`${value}%`, "Meta Representation"];
+                    if (name === "weight") return [value, "Weight"];
                     return [value, name];
                   }}
                 />
                 <Legend
                   verticalAlign="top"
                   align="right"
-                  iconType="circle"
+                  iconType="square"
                   wrapperStyle={{
                     fontFamily: "var(--font-mda), sans-serif",
-                    fontSize: 11,
+                    fontSize: 14,
+                    fontWeight: 400,
                     textTransform: "uppercase",
                     color: "var(--mda-ink)",
                     paddingBottom: 8,
@@ -294,36 +328,38 @@ export function WorkshopMatchupsPane(): ReactNode {
           </div>
         </div>
 
-        <aside className="flex w-full shrink-0 flex-col gap-4 overflow-y-auto border-t border-mda-ink/10 pt-4 lg:w-[280px] lg:border-l lg:border-t-0 lg:pl-4 lg:pt-0">
+        <aside className="flex w-full shrink-0 flex-col gap-6 overflow-y-auto border-t border-mda-ink/10 pt-4 lg:w-[340px] lg:border-l lg:border-t-0 lg:pl-3 lg:pt-0">
           {([1, 2, 3] as Tier[]).map((tier) => (
             <div key={tier}>
-              <h3 className="mb-2 font-mda text-xs font-bold uppercase tracking-wide text-mda-ink-strong">
+              <h3 className="mb-3 font-mda text-xl font-semibold uppercase tracking-wide text-mda-ink">
                 Tier {tier} Decks
               </h3>
-              <ul className="space-y-2">
+              <ul className="space-y-3">
                 {byTier[tier].slice(0, 8).map((point) => (
-                  <li key={point.name}>
-                    <div className="mb-1 flex justify-between gap-2 font-mda text-xs text-mda-ink">
-                      <span className="truncate">{point.name}</span>
-                      <span className="shrink-0 font-bold">{point.winRate}%</span>
-                    </div>
-                    <div className="h-1.5 overflow-hidden bg-mda-panel">
-                      <div
-                        className={cn(
-                          "h-full",
-                          point.winRate >= 55
-                            ? "bg-mda-success"
-                            : point.winRate <= 45
-                              ? "bg-mda-danger"
-                              : "bg-mda-chrome",
-                        )}
-                        style={{ width: `${point.winRate}%` }}
-                      />
+                  <li
+                    key={point.name}
+                    className="flex items-center gap-3 font-mda text-mda-ink"
+                  >
+                    <span className="w-[7.5rem] shrink-0 truncate text-base font-normal">
+                      {point.name}
+                    </span>
+                    <div className="flex min-w-0 flex-1 items-center gap-2">
+                      <div className="h-[22px] min-w-0 flex-1 overflow-hidden bg-[#B9BEBE]">
+                        <div
+                          className="h-full bg-[#4D6676]"
+                          style={{ width: `${point.winRate}%` }}
+                        />
+                      </div>
+                      <span className="w-8 shrink-0 text-[11px] font-normal">
+                        {point.winRate}%
+                      </span>
                     </div>
                   </li>
                 ))}
                 {byTier[tier].length === 0 ? (
-                  <li className="font-mda text-xs text-mda-ink-muted">No decks</li>
+                  <li className="font-mda text-base text-mda-ink-muted">
+                    No decks
+                  </li>
                 ) : null}
               </ul>
             </div>

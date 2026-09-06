@@ -68,17 +68,22 @@ export default function WorkshopPage(): ReactNode {
             <div className="min-h-0 flex-1 overflow-hidden">
               <WorkshopBuildPane />
             </div>
-          ) : (
+          ) : null}
+          {tab === "matchups" ? (
+            <div className="relative min-h-0 flex-1 overflow-hidden bg-[#B9BEBE]/50">
+              <WorkshopMatchupsPane />
+            </div>
+          ) : null}
+          {tab === "combos" ? (
             <div
               className={cn(
                 "relative min-h-0 flex-1 overflow-hidden",
                 "border border-mda-ink/10 bg-mda-surface/80 shadow-mda-soft",
               )}
             >
-              {tab === "matchups" ? <WorkshopMatchupsPane /> : null}
-              {tab === "combos" ? <WorkshopCombosPane /> : null}
+              <WorkshopCombosPane />
             </div>
-          )}
+          ) : null}
         </div>
       </div>
     </div>
