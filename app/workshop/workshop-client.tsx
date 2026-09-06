@@ -13,7 +13,6 @@ import { WorkshopCombosPane } from "@/components/mda/workshop-combos-pane";
 import { useDeck } from "@/context/deck-context";
 import { useModeStore } from "@/store/modeStore";
 import type { DeckMode } from "@/types/types";
-import { cn } from "@/lib/utils";
 
 const TAB_WATERMARK: Record<WorkshopTab, string> = {
   build: "Build",
@@ -75,12 +74,7 @@ export default function WorkshopPage(): ReactNode {
             </div>
           ) : null}
           {tab === "combos" ? (
-            <div
-              className={cn(
-                "relative min-h-0 flex-1 overflow-hidden",
-                "border border-mda-ink/10 bg-mda-surface/80 shadow-mda-soft",
-              )}
-            >
+            <div className="relative min-h-0 flex-1 overflow-hidden">
               <WorkshopCombosPane />
             </div>
           ) : null}
