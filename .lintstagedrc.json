@@ -1,0 +1,9 @@
+{
+    "src/**/*.{js,jsx,ts,tsx}": [
+      "next lint --file"
+    ],
+    "src/**/*.ts?(x)": [
+      "bash -c 'tsc --noEmit'"
+    ]
+  }
+  
