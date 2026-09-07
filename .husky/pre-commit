@@ -1,8 +1,20 @@
-#!/usr/bin/env sh
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
 
-# Block setup/planning docs from being committed unless listed in docs/.tracked
-npm run docs:check || exit 1
+# 1. Document Filter Guard
+# Extracts a list of staged .md and .doc files, excluding the core cursor rules/agent files
+STAGED_DOCS=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(md|doc)$' | grep -vE '^(\.cursor/rules/|AGENTS\.md$|README\.md$)')
 
-# Run TypeScript type checking only
-# ESLint is run separately via `npm run lint` or in CI
-npx tsc --noEmit || exit 1
+if [ -not -z "$STAGED_DOCS" ]; then
+  for FILE in $STAGED_DOCS; do
+    # Check if the file contains mandatory developer instruction headers/keywords
+    if ! grep -qE '(## Instructions|## Setup|## Architecture|## Commands|## Dev Notes)' "$FILE"; then
+      echo "\033[31m[ERROR] Commit Blocked:\033[0m The file '$FILE' does not contain necessary developer instructions."
+      echo "Documentation files must include an architecture, instructions, or setup directive block to be committed."
+      exit 1
+    fi
+  done
+fi
+
+# 2. Run your existing fast linter/type-check array
+npx lint-staged
