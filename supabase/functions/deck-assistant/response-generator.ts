@@ -133,7 +133,8 @@ export async function generateRecommendations(
   modelName: string = "llama-3.3-70b-versatile",
   deckCardIds: number[] = [],
   deckCards?: Array<{ cardId: number; cardName: string; count: number }>,
-  deckFormat: DeckFormat = "Master Duel"
+  deckFormat: DeckFormat = "Master Duel",
+  factsPrompt: string = "",
 ): Promise<ResponseOutput> {
   // Check if this is a ratio question
   const isRatio = isRatioQuestion(userQuery);
@@ -147,6 +148,7 @@ export async function generateRecommendations(
       apiKey,
       modelName,
       deckFormat,
+      factsPrompt,
     );
   }
 
@@ -161,6 +163,7 @@ export async function generateRecommendations(
   const deckContext = toDeckContextForPrompt(deckAnalysis, deckFormat, allCardNames);
   const deckContextText = buildDeckContextText(deckContext);
   const conversationContext = buildConversationContext(history, 5);
+  const factsSection = factsPrompt ? `\n${factsPrompt}\n` : "";
 
   const candidateList = candidates.slice(0, 15).map((c, i) => {
     const archetypeInfo = c.archetype ? `, Archetype: ${c.archetype}` : "";
@@ -180,7 +183,7 @@ export async function generateRecommendations(
         ? 15
         : 5;
 
-  const userPrompt = `${deckContextText}${conversationContext}
+  const userPrompt = `${deckContextText}${factsSection}${conversationContext}
 
 # USER REQUEST
 "${userQuery}"
@@ -376,7 +379,8 @@ async function generateRatioSuggestions(
   history: Message[],
   apiKey: string,
   modelName: string,
-  deckFormat: DeckFormat = "Master Duel"
+  deckFormat: DeckFormat = "Master Duel",
+  factsPrompt: string = "",
 ): Promise<ResponseOutput> {
   const deckCardList = deckCards
     .map((dc, i) => `${i + 1}. ${dc.cardName}: ${dc.count} copies`)
@@ -386,8 +390,9 @@ async function generateRatioSuggestions(
   const deckContext = toDeckContextForPrompt(deckAnalysis, deckFormat, allCardNames);
   const deckContextText = buildDeckContextText(deckContext);
   const conversationContext = buildConversationContext(history, 5);
+  const factsSection = factsPrompt ? `\n${factsPrompt}\n` : "";
 
-  const userPrompt = `${deckContextText}${conversationContext}
+  const userPrompt = `${deckContextText}${factsSection}${conversationContext}
 
 # USER REQUEST
 "${userQuery}"

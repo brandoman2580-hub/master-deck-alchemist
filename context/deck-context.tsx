@@ -214,6 +214,12 @@ export function DeckProvider({ children }: { children: ReactNode }) {
         // Use supabaseDecks function
         await saveDeckToSupabase(validatedDeck, user.id);
 
+        setCurrentDeck((prev) => ({
+          ...prev,
+          ...validatedDeck,
+          updated_at: new Date().toISOString(),
+        }));
+
         await getUserDecks();
         invalidateUserDecksCache();
       } catch (err: any) {

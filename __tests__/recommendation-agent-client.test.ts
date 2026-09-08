@@ -10,6 +10,16 @@ jest.mock("@/lib/supabaseClient", () => ({
   getAccessToken: jest.fn(() => Promise.resolve("mock-access-token")),
 }));
 
+jest.mock("@/lib/api/coachFromFacts", () => ({
+  coachFromFacts: jest.fn(() =>
+    Promise.resolve({
+      facts: null,
+      systemPrompt: "mock",
+      factsPromptBlock: null,
+    }),
+  ),
+}));
+
 // Mock environment variables
 process.env.NEXT_PUBLIC_SUPABASE_URL = "https://test.supabase.co";
 

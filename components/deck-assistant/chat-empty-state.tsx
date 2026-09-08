@@ -7,12 +7,16 @@ import { openLoginModal } from "@/lib/helpers";
 interface ChatEmptyStateProps {
   isAuthenticated: boolean;
   isDeckEmpty: boolean;
+  assistantBlocked?: boolean;
+  assistantBlockReasons?: string[];
   error?: string | null;
 }
 
 export function ChatEmptyState({
   isAuthenticated,
   isDeckEmpty,
+  assistantBlocked = false,
+  assistantBlockReasons = [],
   error,
 }: ChatEmptyStateProps) {
   return (
@@ -33,7 +37,20 @@ export function ChatEmptyState({
         <>
           <p className="text-white/70 text-sm mb-2 font-semibold">Start Building Your Deck</p>
           <p className="text-white/50 text-xs mb-1">Add cards to your deck from the Card Browser to get started.</p>
-          <p className="text-white/50 text-xs">Once you have cards, I can help you optimize ratios, find synergies, and improve your deck!</p>
+          <p className="text-white/50 text-xs">Once you have a saved legal list, I can help optimize ratios, find synergies, and improve your deck.</p>
+        </>
+      ) : assistantBlocked ? (
+        <>
+          <Lock className="h-12 w-12 text-white/40 mb-4" aria-hidden="true" />
+          <p className="text-white/70 text-sm mb-2 font-semibold">Deck Not Ready for Assistant</p>
+          <p className="text-white/50 text-xs mb-3">
+            Save a renamed, legal deck (40–60 main, banlist-compliant) before chatting.
+          </p>
+          <ul className="text-left text-white/60 text-xs space-y-1 max-w-sm">
+            {assistantBlockReasons.slice(0, 5).map((reason) => (
+              <li key={reason}>• {reason}</li>
+            ))}
+          </ul>
         </>
       ) : (
         <>

@@ -128,4 +128,24 @@ describe("ChatInterface", () => {
     const chatInput = screen.queryByRole("textbox") || container.querySelector('input[type="text"]');
     expect(chatInput).toBeInTheDocument();
   });
+
+  it("displays blocked empty state when assistant gate fails", () => {
+    render(
+      <ChatInterface
+        currentDeck={mockDeck}
+        deckMode="Master Duel"
+        isAuthenticated={true}
+        isDeckEmpty={false}
+        assistantBlocked={true}
+        assistantBlockReasons={["Main deck must have at least 40 cards"]}
+      />,
+    );
+
+    expect(
+      screen.getByText("Deck Not Ready for Assistant"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Main deck must have at least 40 cards/),
+    ).toBeInTheDocument();
+  });
 });

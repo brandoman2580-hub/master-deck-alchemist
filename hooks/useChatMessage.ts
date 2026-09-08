@@ -6,19 +6,20 @@ interface UseChatMessageOptions {
   currentDeckId: string;
   conversationId: string | undefined;
   onConversationChange?: (conversationId: string | undefined) => void;
-  saveDeck: () => Promise<void>;
 }
 
+/**
+ * Sends chat messages to deck-assistant.
+ * Caller must gate on saved + legal decks before invoking.
+ */
 export function useChatMessage({
   currentDeckId,
   conversationId,
   onConversationChange,
-  saveDeck,
 }: UseChatMessageOptions) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Retry logic with exponential backoff
   const sendMessageWithRetry = async (
     deckId: string,
     userQuery: string,
@@ -26,7 +27,7 @@ export function useChatMessage({
     retries = 3
   ): Promise<DeckAssistantChatResponse> => {
     let lastError: Error | null = null;
-    
+
     for (let attempt = 0; attempt < retries; attempt++) {
       try {
         const response = await sendChatMessage({
@@ -37,23 +38,23 @@ export function useChatMessage({
         return response;
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error));
-        
-        // Don't retry on authentication errors or client errors (4xx)
-        if (lastError.message.includes("Authentication") || 
-            lastError.message.includes("401") ||
-            lastError.message.includes("403") ||
-            lastError.message.includes("400")) {
+
+        if (
+          lastError.message.includes("Authentication") ||
+          lastError.message.includes("401") ||
+          lastError.message.includes("403") ||
+          lastError.message.includes("400")
+        ) {
           throw lastError;
         }
-        
-        // Exponential backoff: wait 1s, 2s, 4s
+
         if (attempt < retries - 1) {
           const delay = Math.pow(2, attempt) * 1000;
-          await new Promise(resolve => setTimeout(resolve, delay));
+          await new Promise((resolve) => setTimeout(resolve, delay));
         }
       }
     }
-    
+
     throw lastError || new Error("Failed to send message after retries");
   };
 
@@ -65,18 +66,13 @@ export function useChatMessage({
     setError(null);
 
     try {
-      // Ensure deck is saved and has an ID
-      let deckId = currentDeckId;
+      const deckId = currentDeckId;
       if (!deckId || deckId === "temp" || deckId === "") {
-        await saveDeck();
-        deckId = currentDeckId;
-        
-        if (!deckId || deckId === "temp" || deckId === "") {
-          throw new Error("Please save your deck first before using the assistant.");
-        }
+        throw new Error(
+          "Please save a legal deck before using the assistant.",
+        );
       }
 
-      // Call deck-assistant API with retry logic
       const response = await sendMessageWithRetry(
         deckId,
         userQuery,
@@ -84,12 +80,10 @@ export function useChatMessage({
         3
       );
 
-      // Update conversation ID if provided
       if (response.conversation_id) {
         onConversationChange?.(response.conversation_id);
       }
 
-      // Handle response based on type
       if (response.type === "clarification") {
         const clarificationMessage: Message = {
           id: (Date.now() + 1).toString(),
@@ -98,11 +92,18 @@ export function useChatMessage({
           timestamp: new Date(),
         };
         setMessages((prev) => [...prev, clarificationMessage]);
-      } else if (response.type === "recommendations" || response.type === "ratio_suggestions") {
-        const ratioText = response.ratioSuggestions 
-          ? "\n\n" + response.ratioSuggestions.map(rs => 
-              `${rs.cardName}: ${rs.currentCount} → ${rs.suggestedCount}\n${rs.reason}`
-            ).join("\n\n")
+      } else if (
+        response.type === "recommendations" ||
+        response.type === "ratio_suggestions"
+      ) {
+        const ratioText = response.ratioSuggestions
+          ? "\n\n" +
+            response.ratioSuggestions
+              .map(
+                (rs) =>
+                  `${rs.cardName}: ${rs.currentCount} → ${rs.suggestedCount}\n${rs.reason}`,
+              )
+              .join("\n\n")
           : "";
         const assistantMessage: Message = {
           id: (Date.now() + 1).toString(),
@@ -124,14 +125,13 @@ export function useChatMessage({
         throw new Error(response.error || "Unknown response type");
       }
     } catch (error) {
-      // Error sending message
       const errorMessageText =
         error instanceof Error
           ? error.message
           : "Sorry, I encountered an error. Please try again.";
-      
+
       setError(errorMessageText);
-      
+
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",

@@ -1,7 +1,9 @@
 import { getAccessToken } from "../supabaseClient";
 import { DeckType } from "../../types/types";
+import type { BanStatus } from "../../types/types";
 import type { RecommenderResponse } from "../../types/recommender";
 import { extractNumberConstraint } from "../utils/prompt-utils";
+import { coachFromFacts } from "./coachFromFacts";
 
 export interface EnhancedDeckAnalysis {
   playstyle: 'Combo' | 'Midrange' | 'Control' | 'Stun' | 'Beatdown' | 'Balanced';
@@ -87,6 +89,11 @@ export interface RecommendationRequest {
   };
   // Enhanced deck analysis
   deckAnalysis?: EnhancedDeckAnalysis;
+  /** Optional Facts Brain prompt block; auto-built via getFacts when omitted */
+  validatedFacts?: string;
+  banlist?: Record<string, BanStatus | string>;
+  /** Skip client getFacts attach (tests / callers that already pass validatedFacts) */
+  skipFactsAttach?: boolean;
 }
 
 export type RecommendationResponse = RecommenderResponse;
@@ -219,6 +226,27 @@ export async function getRecommendations(
     request.numberConstraint ||
     (request.question ? extractNumberConstraint(request.question) : null);
 
+  // getFacts → coach consolidation: attach VALIDATED FACTS when deck is complete
+  let validatedFacts = request.validatedFacts;
+  if (
+    !validatedFacts &&
+    !request.skipFactsAttach &&
+    request.current_deck &&
+    request.current_deck.mainDeck.length >= 40
+  ) {
+    try {
+      const coached = await coachFromFacts({
+        deck: request.current_deck,
+        baseSystemPrompt: "Recommendation agent coaching context.",
+        banlist: request.banlist,
+        factsOptions: { writeCache: true, readCache: true },
+      });
+      validatedFacts = coached.factsPromptBlock ?? undefined;
+    } catch {
+      // Facts attach is best-effort; recommendation still proceeds on heuristics
+    }
+  }
+
   const body = JSON.stringify({
     question: request.question,
     current_deck,
@@ -231,6 +259,7 @@ export async function getRecommendations(
     maxOutputTokens: request.maxOutputTokens,
     numberConstraint: numberConstraint || undefined,
     deckAnalysis: request.deckAnalysis || undefined,
+    validatedFacts: validatedFacts || undefined,
   });
 
 

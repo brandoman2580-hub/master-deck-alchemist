@@ -112,7 +112,7 @@ export default function DeckBuilderTips() {
 
     if (tips.length === 0 && stats.mainCount >= 40) {
       tips.push(
-        "Your deck looks well-balanced! Consider testing it in the Deck Tester to see how it performs.",
+        "Your deck looks well-balanced! Open Workshop Matchups and Combos to review readiness and lines.",
       );
     }
 

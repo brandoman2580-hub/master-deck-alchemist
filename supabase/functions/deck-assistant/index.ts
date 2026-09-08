@@ -16,6 +16,11 @@ import { analyzeDeck } from "./deck-analyzer.ts";
 import { generateStructuredQuery } from "./self-query.ts";
 import { retrieveCards } from "./rag-retrieval.ts";
 import { generateRecommendations } from "./response-generator.ts"; // Uses prompts.ts
+import {
+  evaluateStructuralLegality,
+  formatFactsPromptBlock,
+  getOrComputeFactsPromptBlock,
+} from "./facts-brain.ts";
 import type { Deck, Card } from "./types.ts";
 import type { Message } from "./self-query.ts";
 
@@ -440,7 +445,23 @@ async function handleChatRequest(
       content: m.content,
     }));
 
-    // 3. Get or compute deck embedding + analysis (embedding cached for consistency)
+    // 3. Structural legality gate (Assistant requires a complete legal list)
+    const legality = evaluateStructuralLegality(deck);
+    if (!legality.ok) {
+      return new Response(
+        JSON.stringify({
+          error: "Deck is not legal for assistant analysis.",
+          details: legality.errors.join("; "),
+          legality_errors: legality.errors,
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    // 4. Get or compute deck embedding + analysis (embedding cached for consistency)
     const { analysis: deckAnalysis } = await getOrComputeDeckEmbedding(
         deck,
         deckId,
@@ -449,7 +470,17 @@ async function handleChatRequest(
         supabase,
       );
 
-    // 4. Extract deck card IDs and archetypes for exclusion
+    const engineFormat = deckFormat === "TCG" ? "TCG" : "MASTER_DUEL";
+    const factsBlock = await getOrComputeFactsPromptBlock(supabase, {
+      deckId,
+      deck,
+      allCards,
+      deckAnalysis,
+      format: engineFormat,
+    });
+    const factsPrompt = formatFactsPromptBlock(factsBlock);
+
+    // 5. Extract deck card IDs and archetypes for exclusion
     const deckCardIds = [
       ...deck.mainDeck.map(c => c.cardId),
       ...deck.extraDeck.map(c => c.cardId),
@@ -465,7 +496,7 @@ async function handleChatRequest(
       }
     });
 
-    // 5. Generate structured query (self-querying)
+    // 6. Generate structured query (self-querying)
     const structuredQuery = await generateStructuredQuery(
       userQuery,
       deckAnalysis,
@@ -476,7 +507,7 @@ async function handleChatRequest(
       deckArchetypes,
     );
 
-    // 6. Check if clarification needed
+    // 7. Check if clarification needed
     if (structuredQuery.needsClarification) {
       // Save clarification question
       const { data: seqData } = await supabase.rpc("get_next_message_sequence", {
@@ -503,7 +534,7 @@ async function handleChatRequest(
       );
     }
 
-    // 7. Save user message
+    // 8. Save user message
     const { data: userSeqData } = await supabase.rpc("get_next_message_sequence", {
       p_conversation_id: actualConversationId,
     });
@@ -543,7 +574,7 @@ async function handleChatRequest(
       }
     }
 
-    // 8. Build deck cards with names for ratio suggestions
+    // 9. Build deck cards with names for ratio suggestions
     const deckCardsWithNames = deck.mainDeck.map(dc => {
       const card = allCards.find(c => c.id === dc.cardId);
       return {
@@ -553,7 +584,7 @@ async function handleChatRequest(
       };
     });
 
-    // 9. Retrieve cards (RAG) - skip if ratio question
+    // 10. Retrieve cards (RAG) - skip if ratio question
     const isRatioQuestion = userQuery.toLowerCase().includes('ratio') || 
                             userQuery.toLowerCase().includes('adjust') ||
                             userQuery.toLowerCase().includes('optimize');
@@ -576,7 +607,7 @@ async function handleChatRequest(
       console.log(`📊 [deck-assistant/index.ts] First 5 candidate IDs: ${candidates.slice(0, 5).map(c => c.id).join(", ")}`);
     }
 
-    // 10. Generate LLM response with recommendations or ratio suggestions
+    // 11. Generate LLM response with recommendations or ratio suggestions
     console.log(`🔍 [deck-assistant/index.ts] Generating recommendations for query: "${userQuery}"`);
     console.log(`📊 [deck-assistant/index.ts] Candidates count: ${candidates.length}`);
     console.log(`📊 [deck-assistant/index.ts] Deck card IDs count: ${deckCardIds.length}`);
@@ -591,6 +622,7 @@ async function handleChatRequest(
       deckCardIds,
       deckCardsWithNames, // Pass deck cards for ratio suggestions
       deckFormat,
+      factsPrompt,
     );
     
     console.log(`✅ [deck-assistant/index.ts] Response received:`);
