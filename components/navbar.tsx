@@ -4,12 +4,24 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "./ui/button";
 import { cn } from "../lib/utils";
-import { Layers, Save, FlaskConical } from "lucide-react";
+import { Layers, Save } from "lucide-react";
 import { openLoginModal } from "../lib/helpers";
 import { useUserStore } from "../store/useUserStore";
 import { UserMenu } from "./ui/user-menu";
 import MDAIcon from "@/public/images/MDA_Logo_One.svg";
 import { MdaBrandTitle } from "@/components/mda/brand-lockup";
+
+/** Primary app destinations — Matchups/Combos live inside Workshop. */
+export const PRIMARY_NAV_ITEMS = [
+  {
+    name: "Workshop",
+    href: "/workshop",
+  },
+  {
+    name: "Deck Archives",
+    href: "/deck-archives",
+  },
+] as const;
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -25,11 +37,6 @@ export default function Navbar() {
       name: "Deck Archives",
       href: "/deck-archives",
       icon: <Save className="h-4 w-4 mr-2" />,
-    },
-    {
-      name: "Deck Tester",
-      href: "/deck-tester",
-      icon: <FlaskConical className="h-4 w-4 mr-2" />,
     },
   ];
 

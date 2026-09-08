@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { MdaAppHeader } from "@/components/mda/app-header";
 import {
@@ -12,6 +12,8 @@ import { WorkshopMatchupsPane } from "@/components/mda/workshop-matchups-pane";
 import { WorkshopCombosPane } from "@/components/mda/workshop-combos-pane";
 import { useDeck } from "@/context/deck-context";
 import { useModeStore } from "@/store/modeStore";
+import { useWorkshopFacts } from "@/hooks/useWorkshopFacts";
+import { workshopGradeFromAxes } from "@/lib/workshop-grade";
 import type { DeckMode } from "@/types/types";
 
 const TAB_WATERMARK: Record<WorkshopTab, string> = {
@@ -27,6 +29,12 @@ export default function WorkshopPage(): ReactNode {
   const deckMode = useModeStore((state) => state.deckMode);
   const setDeckMode = useModeStore((state) => state.setDeckMode);
   const [tab, setTab] = useState<WorkshopTab>("build");
+  const { facts, loading: factsLoading, error: factsError } = useWorkshopFacts();
+
+  const grade = useMemo(
+    () => (facts ? workshopGradeFromAxes(facts.grade) : null),
+    [facts],
+  );
 
   useEffect(() => {
     const modeParam = searchParams.get("mode");
@@ -61,6 +69,8 @@ export default function WorkshopPage(): ReactNode {
           activeTab={tab}
           onTabChange={setTab}
           onBackToArchives={() => router.push("/deck-archives")}
+          grade={grade}
+          gradeLoading={factsLoading}
         />
         <div className="relative z-[1] flex min-h-0 flex-1 flex-col px-4 pb-4 pt-3 sm:px-6">
           {tab === "build" ? (
@@ -70,12 +80,20 @@ export default function WorkshopPage(): ReactNode {
           ) : null}
           {tab === "matchups" ? (
             <div className="relative min-h-0 flex-1 overflow-hidden bg-[#B9BEBE]/50">
-              <WorkshopMatchupsPane />
+              <WorkshopMatchupsPane
+                facts={facts}
+                loading={factsLoading}
+                error={factsError}
+              />
             </div>
           ) : null}
           {tab === "combos" ? (
             <div className="relative min-h-0 flex-1 overflow-hidden">
-              <WorkshopCombosPane />
+              <WorkshopCombosPane
+                facts={facts}
+                loading={factsLoading}
+                error={factsError}
+              />
             </div>
           ) : null}
         </div>

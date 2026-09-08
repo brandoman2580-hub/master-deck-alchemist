@@ -545,6 +545,8 @@ Deno.serve(async (req) => {
     // Build prompt
     const prompt = `You are an expert Yu-Gi-Oh! deck building assistant. Analyze the current deck and provide helpful suggestions.
 
+VALIDATED FACTS HARD RULE: Do not invent brick rates, win rates, combo steps, or matchup percentages. Only cite quantitative metrics when a VALIDATED FACTS block is attached; otherwise keep advice qualitative.
+
 Current Deck:
 Main Deck: ${deckStats.mainCount} cards (${deckStats.monsterCount} monsters, ${deckStats.spellCount} spells, ${deckStats.trapCount} traps)
 Extra Deck: ${deckStats.extraCount} cards

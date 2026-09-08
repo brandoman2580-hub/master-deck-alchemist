@@ -1,11 +1,10 @@
-#!/bin/sh
-. "$(dirname "$0")/_/husky.sh"
+#!/usr/bin/env sh
 
 # 1. Document Filter Guard
 # Extracts a list of staged .md and .doc files, excluding the core cursor rules/agent files
-STAGED_DOCS=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(md|doc)$' | grep -vE '^(\.cursor/rules/|AGENTS\.md$|README\.md$)')
+STAGED_DOCS=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(md|doc)$' | grep -vE '^(\.cursor/rules/|AGENTS\.md$|README\.md$)' || true)
 
-if [ -not -z "$STAGED_DOCS" ]; then
+if [ -n "$STAGED_DOCS" ]; then
   for FILE in $STAGED_DOCS; do
     # Check if the file contains mandatory developer instruction headers/keywords
     if ! grep -qE '(## Instructions|## Setup|## Architecture|## Commands|## Dev Notes)' "$FILE"; then

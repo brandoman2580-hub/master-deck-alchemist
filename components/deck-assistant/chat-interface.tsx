@@ -24,6 +24,9 @@ interface ChatInterfaceProps {
   onConversationChange?: (conversationId: string | undefined) => void;
   isAuthenticated?: boolean;
   isDeckEmpty?: boolean;
+  /** True when Facts Brain legality/persistence gate fails. */
+  assistantBlocked?: boolean;
+  assistantBlockReasons?: string[];
 }
 
 /**
@@ -37,11 +40,13 @@ export function ChatInterface({
   onConversationChange,
   isAuthenticated = false,
   isDeckEmpty = false,
+  assistantBlocked = false,
+  assistantBlockReasons = [],
 }: ChatInterfaceProps) {
   const [inputValue, setInputValue] = useState("");
   const [deckFingerprint, setDeckFingerprint] = useState<string | undefined>();
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const { saveDeck, addCardToDeck } = useDeck();
+  const { addCardToDeck } = useDeck();
 
   const {
     messages,
@@ -66,7 +71,6 @@ export function ChatInterface({
       setConversationId(id);
       onConversationChange?.(id);
     },
-    saveDeck,
   });
 
   // Generate deck fingerprint when deck changes
@@ -94,7 +98,15 @@ export function ChatInterface({
   }, [messages]);
 
   const handleSend = async () => {
-    if (!inputValue.trim() || isLoading || !isAuthenticated || isDeckEmpty) return;
+    if (
+      !inputValue.trim() ||
+      isLoading ||
+      !isAuthenticated ||
+      isDeckEmpty ||
+      assistantBlocked
+    ) {
+      return;
+    }
 
     const userQuery = inputValue.trim();
     const userMessage: Message = {
@@ -150,6 +162,8 @@ export function ChatInterface({
           <ChatEmptyState
             isAuthenticated={isAuthenticated}
             isDeckEmpty={isDeckEmpty}
+            assistantBlocked={assistantBlocked}
+            assistantBlockReasons={assistantBlockReasons}
             error={error}
           />
         ) : (
@@ -177,6 +191,8 @@ export function ChatInterface({
         isLoading={isLoading}
         isAuthenticated={isAuthenticated}
         isDeckEmpty={isDeckEmpty}
+        assistantBlocked={assistantBlocked}
+        assistantBlockReasons={assistantBlockReasons}
         onInputChange={(e) => setInputValue(e.target.value)}
         onInputClear={() => setInputValue("")}
         onKeyPress={handleKeyPress}

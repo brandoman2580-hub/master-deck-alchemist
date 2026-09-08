@@ -16,6 +16,8 @@ interface ChatInputBarProps {
   isLoading: boolean;
   isAuthenticated: boolean;
   isDeckEmpty: boolean;
+  assistantBlocked?: boolean;
+  assistantBlockReasons?: string[];
   onInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onInputClear: () => void;
   onKeyPress: (e: React.KeyboardEvent<HTMLInputElement>) => void;
@@ -27,12 +29,17 @@ export function ChatInputBar({
   isLoading,
   isAuthenticated,
   isDeckEmpty,
+  assistantBlocked = false,
+  assistantBlockReasons = [],
   onInputChange,
   onInputClear,
   onKeyPress,
   onSend,
 }: ChatInputBarProps) {
-  const isDisabled = !isAuthenticated || isDeckEmpty;
+  const isDisabled = !isAuthenticated || isDeckEmpty || assistantBlocked;
+  const blockHint =
+    assistantBlockReasons[0] ??
+    "Save a legal deck before using the AI Assistant.";
 
   return (
     <div className="border-t border-white/10 p-4 sm:p-6 flex-shrink-0">
@@ -47,13 +54,16 @@ export function ChatInputBar({
                       ? "Please log in to use AI Assistant..."
                       : isDeckEmpty
                         ? "Add cards to your deck first..."
-                        : "Ask about your deck..."
+                        : assistantBlocked
+                          ? "Save a legal deck to unlock AI Assistant..."
+                          : "Ask about your deck..."
                   }
                   value={inputValue}
                   onChange={onInputChange}
                   onClear={onInputClear}
                   onKeyPress={onKeyPress}
                   disabled={isLoading || isDisabled}
+                  aria-disabled={isDisabled}
                   className={`flex-1 h-9 text-sm bg-white/5 border border-white/10 text-white placeholder:text-white/50 focus-visible:outline-none rounded-lg transition-all duration-200 focus:border-white/30 focus:bg-white/10 ${
                     isDisabled ? "opacity-50 cursor-not-allowed" : ""
                   }`}
@@ -73,6 +83,11 @@ export function ChatInputBar({
                 <p>Add cards to your deck first</p>
               </TooltipContent>
             )}
+            {isAuthenticated && !isDeckEmpty && assistantBlocked && (
+              <TooltipContent>
+                <p>{blockHint}</p>
+              </TooltipContent>
+            )}
           </Tooltip>
         </TooltipProvider>
         <TooltipProvider>
@@ -82,14 +97,15 @@ export function ChatInputBar({
                 onClick={() => {
                   if (!isAuthenticated) {
                     openLoginModal();
-                  } else if (isDeckEmpty) {
-                    // Do nothing - tooltip will show message
+                  } else if (isDeckEmpty || assistantBlocked) {
+                    // Gate is explained via tooltip / empty state
                   } else {
                     onSend();
                   }
                 }}
                 disabled={!inputValue.trim() || isLoading || isDisabled}
                 size="icon"
+                aria-label="Send message"
                 className={`h-9 w-9 flex-shrink-0 bg-white/10 border border-white/20 text-white disabled:opacity-50 disabled:cursor-not-allowed rounded-lg relative group ${
                   !isDisabled ? "hover:bg-white/15" : ""
                 }`}
@@ -108,6 +124,11 @@ export function ChatInputBar({
             {isAuthenticated && isDeckEmpty && (
               <TooltipContent>
                 <p>Add cards to your deck first</p>
+              </TooltipContent>
+            )}
+            {isAuthenticated && !isDeckEmpty && assistantBlocked && (
+              <TooltipContent>
+                <p>{blockHint}</p>
               </TooltipContent>
             )}
           </Tooltip>

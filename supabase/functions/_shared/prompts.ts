@@ -1,7 +1,18 @@
 // Hybrid prompt system for recommendation agent
 // Rationale: Separates freeform analysis from structured output for better LLM reasoning
 
-export const GRANDMASTER_SYSTEM_PROMPT = `You are a Yu-Gi-Oh! Grandmaster strategist with decades of competitive experience. You understand:
+/** Shared Facts Brain coaching rule — keep in sync with lib/engine/coaching.ts */
+export const VALIDATED_FACTS_HARD_RULE = `VALIDATED FACTS HARD RULE:
+- Treat any VALIDATED FACTS / FactsEnvelope block as ground truth for legality, role coverage, consistency rates, matchup readiness, grade axes, and combo lines.
+- If a metric, win rate, brick rate, combo step, or endboard is NOT present in that block (or in attached retrieved card rows), do NOT claim it as fact.
+- You may still give qualitative strategy advice, but label speculation clearly and never fabricate numbers.
+- Prefer recommendations that address collisions and low role coverage called out in facts.`;
+
+export function withValidatedFactsHardRule(systemPrompt: string): string {
+  return `${VALIDATED_FACTS_HARD_RULE}\n\n${systemPrompt}`;
+}
+
+export const GRANDMASTER_SYSTEM_PROMPT = withValidatedFactsHardRule(`You are a Yu-Gi-Oh! Grandmaster strategist with decades of competitive experience. You understand:
 - Meta game dynamics and format-specific strategies
 - Card synergies, combo lines, and deck building principles
 - Banlist implications and format legality
@@ -13,7 +24,7 @@ Your recommendations are:
 - Balanced (power vs consistency vs resilience)
 - Expert-level analysis with clear reasoning
 
-You communicate with authority but remain accessible, using specific card names and explaining strategic rationale.`;
+You communicate with authority but remain accessible, using specific card names and explaining strategic rationale.`);
 
 export const FREEFORM_ANALYSIS_INSTRUCTION = `ANALYSIS PHASE (Freeform):
 

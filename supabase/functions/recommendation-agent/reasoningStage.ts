@@ -35,6 +35,8 @@ function buildReasoningPrompt(
 ): string {
   let prompt = `You are an expert Yu-Gi-Oh! deck analyst. Your task is to ANALYZE a deck and user request WITHOUT making specific card recommendations yet.
 
+VALIDATED FACTS HARD RULE: Do not invent brick rates, win rates, or combo lines. Prefer any VALIDATED FACTS block over heuristic deckAnalysis fields. Heuristic brick hints below are not ground truth.
+
 DECK ANALYSIS:
 `;
 
@@ -44,7 +46,7 @@ DECK ANALYSIS:
 - Deck Size: ${deckAnalysis.deckSize} cards (Main: ${deckAnalysis.mainDeckSize}, Extra: ${deckAnalysis.extraDeckSize})
 - Ratios: ${deckAnalysis.ratios.monsters}M / ${deckAnalysis.ratios.spells}S / ${deckAnalysis.ratios.traps}T (${deckAnalysis.ratios.monstersPercent.toFixed(1)}% / ${deckAnalysis.ratios.spellsPercent.toFixed(1)}% / ${deckAnalysis.ratios.trapsPercent.toFixed(1)}%)
 - Win Condition: ${deckAnalysis.winCondition}
-- Estimated Brick Rate: ${(deckAnalysis.estimatedBrickRate * 100).toFixed(1)}%
+- Heuristic Brick Hint: ${(deckAnalysis.estimatedBrickRate * 100).toFixed(1)}% (override with VALIDATED FACTS consistency.brickRate when present)
 - Card Roles: ${deckAnalysis.cardRoles.starters} starters, ${deckAnalysis.cardRoles.extenders} extenders, ${deckAnalysis.cardRoles.interruptions} interruptions, ${deckAnalysis.cardRoles.boardBreakers} board breakers
 - Missing Staples: ${deckAnalysis.missingStaples.map(s => s.cardName).join(", ") || "None detected"}
 `;

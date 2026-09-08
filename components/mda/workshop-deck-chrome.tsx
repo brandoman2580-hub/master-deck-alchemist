@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { CardImage } from "@/components/ui/card-image";
 import { MdaAnimatedNumber } from "@/components/mda/deck-cap-badge";
-import { gradeFromCounts } from "@/lib/workshop-grade";
+import { gradeFromCounts, type WorkshopGrade } from "@/lib/workshop-grade";
 import type { DeckCard, DeckMode } from "@/types/types";
 import { cn } from "@/lib/utils";
 
@@ -27,6 +27,9 @@ export type WorkshopDeckChromeProps = {
   activeTab: WorkshopTab;
   onTabChange: (tab: WorkshopTab) => void;
   onBackToArchives: () => void;
+  /** Facts Brain grade when available; falls back to size placeholder. */
+  grade?: WorkshopGrade | null;
+  gradeLoading?: boolean;
 };
 
 const TABS: {
@@ -93,12 +96,15 @@ export function WorkshopDeckChrome({
   activeTab,
   onTabChange,
   onBackToArchives,
+  grade: gradeProp,
+  gradeLoading = false,
 }: WorkshopDeckChromeProps): ReactNode {
   const isTcg = mode === "TCG";
-  const grade = useMemo(
+  const fallbackGrade = useMemo(
     () => gradeFromCounts(mainCount, extraCount),
     [mainCount, extraCount],
   );
+  const grade = gradeProp ?? fallbackGrade;
 
   return (
     <div className="relative z-[1] shrink-0 bg-transparent px-6 pb-0 pt-1">
@@ -148,7 +154,7 @@ export function WorkshopDeckChrome({
               Grade
             </span>
             <span className="font-display text-3xl font-bold leading-none">
-              {grade.letter}
+              {gradeLoading && !gradeProp ? "—" : grade.letter}
             </span>
           </div>
           <div className="grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-4">

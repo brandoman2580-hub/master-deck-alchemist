@@ -81,15 +81,15 @@ export function validateDeckStructure(deck: unknown): ValidationResult {
 
   for (const card of allCards) {
     const cardObj = card as Record<string, unknown>;
-    
-    // Check for dangerous properties
-    if ("__proto__" in cardObj) {
+
+    // Own-property only — `in` matches prototype chain and false-positives every object
+    if (Object.prototype.hasOwnProperty.call(cardObj, "__proto__")) {
       errors.push("Deck contains dangerous __proto__ property");
     }
-    if ("constructor" in cardObj && typeof cardObj.constructor === "function") {
+    if (Object.prototype.hasOwnProperty.call(cardObj, "constructor")) {
       errors.push("Deck contains dangerous constructor property");
     }
-    if ("prototype" in cardObj) {
+    if (Object.prototype.hasOwnProperty.call(cardObj, "prototype")) {
       errors.push("Deck contains dangerous prototype property");
     }
 

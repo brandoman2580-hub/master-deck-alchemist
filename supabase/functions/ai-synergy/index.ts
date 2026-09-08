@@ -479,6 +479,8 @@ Deno.serve(async (req) => {
 
     const prompt = `You are an expert Yu-Gi-Oh! Master Duel synergy analyst. Analyze the selected cards and identify synergies, combos, and strategic interactions.
 
+VALIDATED FACTS HARD RULE: Do not invent brick rates, win rates, or unvalidated combo lines as fact. Prefer qualitative synergy notes unless a VALIDATED FACTS / compiled combo graph is attached.
+
 Deck Name Rule:
 - Do NOT rename, restyle, or invent a new name for any deck.
 - Refer to decks only as "this deck" or "the current deck".

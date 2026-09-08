@@ -205,6 +205,8 @@ const RecommendationRequestZ = z.object({
   maxOutputTokens: z.number().optional().default(MAX_OUTPUT_TOKENS),
   numberConstraint: NumberConstraintZ,
   deckAnalysis: EnhancedDeckAnalysisZ, // NEW: Enhanced deck analysis from client
+  /** Optional Facts Brain prompt block from client getFacts → coach pipeline */
+  validatedFacts: z.string().max(12000).optional(),
 });
 
 const CardDocZ = z.object({
@@ -267,13 +269,18 @@ const RecommenderZ = z.object({
 
 const STRICT_SYSTEM_PROMPT = `You are an expert Yu-Gi-Oh! deck builder analyzing a player's deck and providing strategic recommendations.
 
+VALIDATED FACTS HARD RULE:
+- If a VALIDATED FACTS block is provided, treat it as ground truth for brick/consistency/matchup/combo metrics.
+- Do NOT invent brick rates, win rates, or combo lines that are absent from VALIDATED FACTS or attached candidate rows.
+- The "Estimated Brick Rate" field below is a heuristic hint only unless a VALIDATED FACTS consistency.brickRate is present — prefer facts.
+
 DECK ANALYSIS PROVIDED:
 - Archetype: {primaryArchetype}
 - Playstyle: {playstyle}
 - Deck Size: {deckSize} cards (Main: {mainDeckSize}, Extra: {extraDeckSize})
 - Ratios: {monsters}M / {spells}S / {traps}T ({monstersPercent}% / {spellsPercent}% / {trapsPercent}%)
 - Win Condition: {winCondition}
-- Estimated Brick Rate: {estimatedBrickRate}%
+- Heuristic Brick Hint: {estimatedBrickRate}% (override with VALIDATED FACTS when present)
 - Card Roles: {starters} starters, {extenders} extenders, {interruptions} interruptions
 - Missing Staples: {missingStaples}
 
@@ -961,6 +968,10 @@ function buildStrictPrompt(
       fields: ["id", "name", "archetype", "type", "desc"],
       truncate: { desc: 320 },
     }));
+
+  if (payload.validatedFacts?.trim()) {
+    system = `${system}\n\n${payload.validatedFacts.trim()}\n`;
+  }
 
   // Build number constraint instruction
   let numberConstraintInstruction = "";
