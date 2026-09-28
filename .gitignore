@@ -73,5 +73,8 @@ next-env.d.ts
 **/run-phase*-tests.sh
 
 # SQL migration files
-# Ignore migration SQL files (these are typically generated/applied remotely)
+# Most migration SQL is applied remotely; Facts Brain seeds are still
+# asserted by Jest and must stay in git for CI.
 supabase/migrations/*.sql
+!supabase/migrations/*facts_brain*.sql
+!supabase/migrations/*master_rank*.sql
