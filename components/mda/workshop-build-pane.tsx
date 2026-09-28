@@ -14,10 +14,15 @@ import {
   Layers,
   Minus,
   Plus,
-  Search,
-  Send,
   SlidersHorizontal,
 } from "lucide-react";
+import { WorkshopStrategistPanel } from "@/components/mda/workshop-strategist";
+import { WorkshopCardLibrary } from "@/components/mda/workshop-card-library";
+import {
+  WORKSHOP_CARD_SHELL,
+  WORKSHOP_CARD_SIZES,
+  WORKSHOP_CARD_TILE,
+} from "@/components/mda/workshop-card-dims";
 import { CardImage } from "@/components/ui/card-image";
 import { MdaSearchField } from "@/components/mda/search-field";
 import { MdaCardPreview } from "@/components/mda/mda-card-preview";
@@ -29,6 +34,7 @@ import {
 } from "@/components/mda/workshop-card-filters";
 import type { BanStatus, DeckCard, DeckSection } from "@/types/types";
 import type { Card } from "@/types/card";
+import type { WorkshopTab } from "@/components/mda/workshop-deck-chrome";
 import { useDeck } from "@/context/deck-context";
 import { useCardStore } from "@/store/cardStore";
 import { selectFilteredCards } from "@/store/cardPoolSelectors";
@@ -38,7 +44,7 @@ import {
 } from "@/app/deck-builder/utils";
 import { cn } from "@/lib/utils";
 
-type RightPanel = "cards" | "assistant";
+type RightPanel = "cards" | "strategist";
 
 const SECTION_LIMITS: Record<DeckSection, number> = {
   mainDeck: 60,
@@ -48,15 +54,6 @@ const SECTION_LIMITS: Record<DeckSection, number> = {
 
 const DRAG_MIME = "application/x-mda-card-id";
 
-/**
- * Match masterduelmeta.com card tile sizing:
- * sizes="(min-width: 576px) 104px, (max-width: 575px) 20vw"
- * Aspect ≈ 59×86mm so borders are not cropped.
- */
-const CARD_SIZES = "(min-width: 576px) 104px, 20vw";
-const CARD_TILE =
-  "relative aspect-[59/86] w-[20vw] max-w-[104px] min-w-[72px] overflow-hidden bg-mda-deep sm:w-[104px]";
-const CARD_SHELL = "relative inline-block shadow-[0_6px_16px_rgba(58,79,92,0.28)]";
 const COUNT_BADGE_CLASS =
   "inline-flex min-w-[28px] items-center justify-center whitespace-nowrap bg-mda-chrome px-1.5 py-0.5 font-mda text-xs font-bold leading-none text-mda-inverse-text";
 const COUNT_BTN_CLASS =
@@ -137,18 +134,18 @@ function BuilderCardGridItem({
     <MdaCardPreview card={card}>
       <div
         data-magnetic
-        className={CARD_SHELL}
+        className={WORKSHOP_CARD_SHELL}
         onPointerEnter={showControls}
         onPointerLeave={hideControls}
       >
-        <div className={CARD_TILE}>
+        <div className={WORKSHOP_CARD_TILE}>
           <CardImage
             card={card}
             preferSmall
             fill
             alt={card.name}
             className="object-contain"
-            sizes={CARD_SIZES}
+            sizes={WORKSHOP_CARD_SIZES}
           />
           <BanlistCornerBadge status={banStatus} />
         </div>
@@ -332,7 +329,11 @@ function DeckSectionBlock({
   );
 }
 
-export function WorkshopBuildPane(): ReactNode {
+export function WorkshopBuildPane({
+  onOpenWorkshopTab,
+}: {
+  onOpenWorkshopTab?: (tab: Extract<WorkshopTab, "matchups" | "combos">) => void;
+} = {}): ReactNode {
   const { currentDeck, banlist, addCardToDeck, removeCardFromDeck } = useDeck();
   const cardList = useCardStore((state) => state.cardList);
   const [rightPanel, setRightPanel] = useState<RightPanel>("cards");
@@ -344,16 +345,6 @@ export function WorkshopBuildPane(): ReactNode {
   const [mainOpen, setMainOpen] = useState(true);
   const [extraOpen, setExtraOpen] = useState(true);
   const [sideOpen, setSideOpen] = useState(true);
-  const [assistantInput, setAssistantInput] = useState("");
-  const [assistantMessages, setAssistantMessages] = useState<
-    { role: "user" | "ai"; text: string }[]
-  >([
-    {
-      role: "ai",
-      text: "Ask about ratios, tech choices, or cuts. Full assistant streaming still runs from the classic builder tools.",
-    },
-  ]);
-
   const activeFilterCount = useMemo(() => {
     let count = 0;
     (
@@ -397,7 +388,7 @@ export function WorkshopBuildPane(): ReactNode {
         });
       }
     }
-    return filtered.slice(0, 120);
+    return filtered;
   }, [banlist, cardList, query, searchParams]);
 
   const handleFilterSelectChange = (key: string, value: string): void => {
@@ -443,7 +434,7 @@ export function WorkshopBuildPane(): ReactNode {
           sizeClassName="h-8 w-8"
           thicknessClassName="border-[4px]"
         />
-        <div className="absolute inset-3 z-[1] space-y-2 overflow-y-auto bg-[#B9BEBE]/50 p-3 sm:inset-4">
+        <div className="absolute inset-3 z-[1] space-y-2 overflow-y-auto bg-[#BEBEBE]/75 p-3 sm:inset-4">
           <DeckSectionBlock
             title="Main"
             section="mainDeck"
@@ -487,7 +478,7 @@ export function WorkshopBuildPane(): ReactNode {
           {(
             [
               ["cards", "Cards", Layers],
-              ["assistant", "Assistant", Bot],
+              ["strategist", "Strategist", Bot],
             ] as const
           ).map(([key, label, Icon]) => (
             <button
@@ -546,134 +537,21 @@ export function WorkshopBuildPane(): ReactNode {
               onClear={() => setSearchParams(EMPTY_WORKSHOP_FILTERS)}
               activeCount={activeFilterCount}
             />
-            <div className="min-h-0 flex-1 overflow-y-auto">
-              <div className="flex flex-wrap gap-2">
-                {library.map((card) => {
-                  const remaining = getRemainingCopies(
-                    card,
-                    currentDeck,
-                    banlist,
-                  );
-                  const disabled = remaining <= 0;
-                  const banStatus = banlist[card.name] || "Unlimited";
-                  return (
-                    <MdaCardPreview key={card.id} card={card}>
-                      <div
-                        data-magnetic={disabled ? undefined : true}
-                        className={cn(
-                          CARD_SHELL,
-                          disabled && "opacity-40 shadow-none",
-                        )}
-                      >
-                        <button
-                          type="button"
-                          draggable={!disabled}
-                          onDragStart={(event) =>
-                            handleLibraryDragStart(event, card)
-                          }
-                          onClick={() => handleLibraryAdd(card)}
-                          disabled={disabled}
-                          className={cn(
-                            CARD_TILE,
-                            disabled && "cursor-not-allowed",
-                          )}
-                          title={
-                            disabled
-                              ? banStatus !== "Unlimited"
-                                ? `${card.name} — ${banStatus}`
-                                : `${card.name} — copy limit reached`
-                              : `Add ${card.name}`
-                          }
-                          aria-label={
-                            disabled
-                              ? `${card.name} unavailable`
-                              : `Add ${card.name}`
-                          }
-                        >
-                          <CardImage
-                            card={card}
-                            preferSmall
-                            fill
-                            alt={card.name}
-                            className="object-contain"
-                            sizes={CARD_SIZES}
-                          />
-                          <BanlistCornerBadge status={banStatus} />
-                        </button>
-                      </div>
-                    </MdaCardPreview>
-                  );
-                })}
-                {library.length === 0 ? (
-                  <div className="col-span-full flex w-full flex-col items-center gap-2 py-10 text-mda-ink-muted">
-                    <Search className="h-8 w-8" aria-hidden />
-                    <p className="font-mda text-sm">
-                      {cardList.length === 0
-                        ? "Loading card library…"
-                        : "No cards match"}
-                    </p>
-                  </div>
-                ) : null}
-              </div>
+            <div className="min-h-0 flex-1 overflow-hidden">
+              <WorkshopCardLibrary
+                cards={library}
+                cardPoolSize={cardList.length}
+                banlist={banlist}
+                getRemainingCopies={(card) =>
+                  getRemainingCopies(card, currentDeck, banlist)
+                }
+                onAdd={handleLibraryAdd}
+                onDragStart={handleLibraryDragStart}
+              />
             </div>
           </>
         ) : (
-          <div className="flex min-h-0 flex-1 flex-col">
-            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-1">
-              {assistantMessages.map((message, index) => (
-                <div
-                  key={`${message.role}-${index}`}
-                  className={cn(
-                    "font-mda text-sm leading-relaxed",
-                    message.role === "user"
-                      ? "ml-4 bg-mda-chrome px-3 py-2.5 text-mda-inverse-text"
-                      : "flex gap-2 text-mda-ink",
-                  )}
-                >
-                  {message.role === "ai" ? (
-                    <Bot
-                      className="mt-0.5 h-4 w-4 shrink-0 text-mda-ink-muted"
-                      aria-hidden
-                    />
-                  ) : null}
-                  <span>{message.text}</span>
-                </div>
-              ))}
-            </div>
-            <form
-              className="mt-3"
-              onSubmit={(event) => {
-                event.preventDefault();
-                if (!assistantInput.trim()) return;
-                setAssistantMessages((prev) => [
-                  ...prev,
-                  { role: "user", text: assistantInput.trim() },
-                  {
-                    role: "ai",
-                    text: "Noted. Wire the full deck-assistant stream into this panel in a follow-up pass.",
-                  },
-                ]);
-                setAssistantInput("");
-              }}
-            >
-              <label className="flex items-center gap-2 bg-mda-chrome px-3 py-2.5">
-                <Search className="h-4 w-4 shrink-0 text-mda-inverse-text/70" aria-hidden />
-                <input
-                  value={assistantInput}
-                  onChange={(event) => setAssistantInput(event.target.value)}
-                  placeholder="Ask questions about your deck"
-                  className="w-full bg-transparent font-mda text-sm text-mda-inverse-text placeholder:text-mda-inverse-text/45 focus:outline-none"
-                />
-                <button
-                  type="submit"
-                  aria-label="Send message"
-                  className="shrink-0 text-mda-cyan transition-colors hover:text-mda-cyan-soft"
-                >
-                  <Send className="h-4 w-4" aria-hidden />
-                </button>
-              </label>
-            </form>
-          </div>
+          <WorkshopStrategistPanel onOpenWorkshopTab={onOpenWorkshopTab} />
         )}
       </div>
     </div>

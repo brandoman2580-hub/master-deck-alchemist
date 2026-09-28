@@ -138,6 +138,45 @@ function normalizeCardPrices(
 }
 
 /**
+ * YGOPRODeck temporary spoiler IDs live in 10xxxxxxx (100M–200M) before
+ * official passcodes. Skill/token cards use other high ranges and keep S3 art.
+ */
+function isTemporarySpoilerId(cardId: number): boolean {
+  return (
+    Number.isFinite(cardId) && cardId >= 100_000_000 && cardId < 200_000_000
+  );
+}
+
+/**
+ * Prefer self-hosted S3 thumbs over YGOPRODeck CDN URLs so monthly sync
+ * does not reintroduce hotlinks or Supabase Storage paths.
+ * Set CARD_IMAGE_BASE_URL (or NEXT_PUBLIC_CARD_IMAGE_BASE_URL) on the function.
+ *
+ * Temporary spoiler IDs are skipped entirely by sync (see syncCardPool) — they
+ * become renamed official passcodes with art already on S3.
+ */
+function mapCardImagesForStorage(
+  cardId: number,
+  cardImages: YGOCard["card_images"],
+): YGOCard["card_images"] | null {
+  const baseRaw =
+    Deno.env.get("CARD_IMAGE_BASE_URL") ??
+    Deno.env.get("NEXT_PUBLIC_CARD_IMAGE_BASE_URL");
+  const base = baseRaw?.trim().replace(/\/$/, "");
+
+  if (base) {
+    // Only attach S3 URLs when YGO reported art for this card.
+    if (!cardImages || cardImages.length === 0) {
+      return null;
+    }
+    const url = `${base}/${cardId}.jpg`;
+    return [{ id: cardId, image_url: url, image_url_small: url }];
+  }
+
+  return cardImages ?? null;
+}
+
+/**
  * Transforms a YGO API card object into a database record
  */
 function transformCardToRecord(card: YGOCard): Record<string, unknown> {
@@ -155,7 +194,7 @@ function transformCardToRecord(card: YGOCard): Record<string, unknown> {
     desc: card.desc,
     archetype: card.archetype,
     ban_tcg: banlist.ban_tcg,
-    card_images: card.card_images ?? null,
+    card_images: mapCardImagesForStorage(card.id, card.card_images),
     card_sets: card.card_sets ?? null,
     card_prices: normalizeCardPrices(card.card_prices),
     misc_info: card.misc_info ?? null,
@@ -229,12 +268,31 @@ async function syncCardPool(): Promise<SyncStats> {
     `Processing ${totalCards} cards in ${batchesProcessed} batches...`,
   );
 
+  let skippedTemporarySpoilers = 0;
+
   for (let i = 0; i < totalCards; i += BATCH_SIZE) {
     const batch = cards.slice(i, i + BATCH_SIZE);
     const batchIndex = Math.floor(i / BATCH_SIZE);
 
+    // Temporary spoiler IDs (10xxxxxxx) are renamed into official passcodes.
+    // Upserting them reintroduces artless duplicate stubs in the library.
+    const syncable = batch.filter((card) => {
+      if (isTemporarySpoilerId(card.id)) {
+        skippedTemporarySpoilers += 1;
+        return false;
+      }
+      return true;
+    });
+
+    if (syncable.length === 0) {
+      console.log(
+        `Batch ${batchIndex + 1}: skipped ${batch.length} temporary spoiler IDs`,
+      );
+      continue;
+    }
+
     // Transform cards to records
-    const records = batch.map(transformCardToRecord);
+    const records = syncable.map(transformCardToRecord);
 
     try {
       const result = await upsertCardBatch(supabase, records, batchIndex);
@@ -252,6 +310,58 @@ async function syncCardPool(): Promise<SyncStats> {
       }`;
       errors.push(errorMsg);
       console.error(errorMsg);
+    }
+  }
+
+  // Drop artless temporary spoiler stubs left over from earlier syncs.
+  const { data: stubs, error: stubQueryError } = await supabase
+    .from("cards")
+    .select("id")
+    .gte("id", 100_000_000)
+    .lt("id", 200_000_000)
+    .is("card_images", null);
+
+  if (stubQueryError) {
+    const msg = `Failed to list artless temporary spoiler stubs: ${stubQueryError.message}`;
+    errors.push(msg);
+    console.error(msg);
+  } else {
+    const stubIds = (stubs ?? []).map((row) => row.id as number);
+    if (stubIds.length > 0) {
+      const { error: factsErr } = await supabase
+        .from("card_facts")
+        .delete()
+        .in("card_id", stubIds);
+      const { error: embErr } = await supabase
+        .from("card_embeddings")
+        .delete()
+        .in("card_id", stubIds);
+      if (factsErr || embErr) {
+        const msg = `Failed to clear FK rows for spoiler stubs: ${
+          factsErr?.message ?? embErr?.message
+        }`;
+        errors.push(msg);
+        console.error(msg);
+      } else {
+        const { data: purged, error: purgeError } = await supabase
+          .from("cards")
+          .delete()
+          .in("id", stubIds)
+          .select("id");
+        if (purgeError) {
+          const msg = `Failed to purge artless temporary spoiler stubs: ${purgeError.message}`;
+          errors.push(msg);
+          console.error(msg);
+        } else {
+          console.log(
+            `Purged ${purged?.length ?? 0} artless temporary spoiler stubs; skipped ${skippedTemporarySpoilers} during upsert`,
+          );
+        }
+      }
+    } else {
+      console.log(
+        `No artless temporary spoiler stubs to purge; skipped ${skippedTemporarySpoilers} during upsert`,
+      );
     }
   }
 

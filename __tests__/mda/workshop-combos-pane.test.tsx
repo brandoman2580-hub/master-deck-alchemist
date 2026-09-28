@@ -2,7 +2,7 @@ import { readFileSync } from "fs";
 import { join } from "path";
 import { render, screen } from "@testing-library/react";
 import { WorkshopCombosPane } from "@/components/mda/workshop-combos-pane";
-import { FACTS_SCHEMA_VERSION, type FactsEnvelope } from "@/lib/engine";
+import { FACTS_SCHEMA_VERSION, emptyWorkshopGradeAxes, type FactsEnvelope } from "@/lib/engine";
 
 jest.mock("@/context/deck-context", () => ({
   useDeck: () => ({
@@ -73,6 +73,7 @@ function sampleFacts(): FactsEnvelope {
         notes: [],
       },
       bosses: [],
+      restrictions: [],
     },
     consistency: {
       n: 0,
@@ -102,11 +103,13 @@ function sampleFacts(): FactsEnvelope {
       ],
     },
     grade: {
+      ...emptyWorkshopGradeAxes(),
       consistency: 50,
       power: 50,
       resilience: 50,
       disruption: 50,
       letter: "C",
+      formatRulePack: "masterDuelMaxxC",
     },
   };
 }

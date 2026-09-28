@@ -1,33 +1,54 @@
 /**
+ * NOT LIVE — legacy twin of the Strategist edge function.
+ * Client traffic uses `/functions/v1/strategist` via `lib/api/strategist.ts`.
+ * See `NOT_LIVE.md` in this folder. Prefer editing `../strategist/` for coaching changes.
+ *
  * Deck Assistant Edge Function
- * Deck Analysis, Embedding System, and Self-Querying Retrieval
- * 
- * Provides endpoints for:
- * - Getting/computing deck embeddings
- * - Getting deck analysis
- * - Self-querying retrieval with RAG
- * - Conversation management
+ * Facts-Brain coaching: qa / tune_copies / discover_synergy over validated FactsEnvelope.
  */
 
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { corsHeaders } from "../_shared/cors.ts";
+import { resolveGroqModel } from "../_shared/groq-model.ts";
 import { getOrComputeDeckEmbedding } from "./deck-embedder.ts";
 import { analyzeDeck } from "./deck-analyzer.ts";
-import { generateStructuredQuery } from "./self-query.ts";
-import { retrieveCards } from "./rag-retrieval.ts";
-import { generateRecommendations } from "./response-generator.ts"; // Uses prompts.ts
 import {
   evaluateStructuralLegality,
-  formatFactsPromptBlock,
-  getOrComputeFactsPromptBlock,
-} from "./facts-brain.ts";
+  getOrComputeFactsEnvelope,
+} from "./get-facts-edge.ts";
+import {
+  classifyIntentHeuristic,
+  resolveAssistantMode,
+  resolveCardEntitiesFromNames,
+} from "./mode-router.ts";
+import { classifyIntent } from "./intent-classifier.ts";
+import {
+  computeCopyVariants,
+  formatVariantsForPrompt,
+} from "./tune-variants.ts";
+import {
+  extractEngineConditions,
+  formatConditionsForPrompt,
+  parseDiscoveryFilters,
+  buildDiscoveryCondition,
+  rankConditionsForQuestion,
+} from "./engine-conditions.ts";
+import { retrieveSynergyCandidates } from "./synergy-retrieval.ts";
+import { loadFormatBanlist } from "./synergy-eligibility.ts";
+import { generateCoachResponse } from "./coach-response.ts";
 import type { Deck, Card } from "./types.ts";
-import type { Message } from "./self-query.ts";
+import {
+  buildOutOfBoundsCoachResponse,
+  type AssistantMode,
+  type IntentClassification,
+} from "./assistant-contract.ts";
+import type { EngineFormat } from "../_shared/engine/types.ts";
 
 Deno.serve(async (req) => {
-  console.log(`🌐 [deck-assistant/index.ts] Request received: ${req.method} ${new URL(req.url).pathname}`);
-  
-  // Handle CORS preflight
+  console.log(
+    `🌐 [deck-assistant/index.ts] Request received: ${req.method} ${new URL(req.url).pathname}`,
+  );
+
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -36,7 +57,7 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     const groqApiKey = Deno.env.get("GROQ_API_KEY")?.trim();
-    const modelName = Deno.env.get("MODEL_NAME")?.trim() || "llama-3.3-70b-versatile";
+    const modelName = resolveGroqModel();
 
     if (!supabaseUrl || !supabaseServiceKey) {
       return new Response(
@@ -64,30 +85,12 @@ Deno.serve(async (req) => {
       },
     });
 
-    // Verify Supabase connection by testing cards table access
-    const { data: testCards, error: testError } = await supabase
-      .from("cards")
-      .select("id")
-      .limit(1);
-    
-    if (testError) {
-      console.error("❌ Cannot access cards table:", {
-        error: testError.message,
-        code: testError.code,
-        details: testError.details,
-        hint: testError.hint,
-      });
-    } else {
-      console.log(`✅ Cards table accessible. Test query returned ${testCards?.length || 0} cards`);
-    }
-
-    // Check authentication (simplified pattern matching recommend-cards)
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return new Response(
         JSON.stringify({
           error: "Authentication required.",
-          details: "No Authorization header found in request. Please ensure you are logged in.",
+          details: "No Authorization header found in request.",
         }),
         {
           status: 401,
@@ -110,67 +113,16 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Check if token is a service role key (for better error messages)
-    try {
-      const tokenParts = token.split(".");
-      if (tokenParts.length === 3) {
-        const payload = JSON.parse(atob(tokenParts[1]));
-        console.log("🔍 Token payload check:", {
-          role: payload.role,
-          hasSub: !!payload.sub,
-          sub: payload.sub,
-        });
-        
-        if (payload.role === "service_role" && !payload.sub) {
-          console.warn("⚠️ Service role key detected in Authorization header - returning helpful error");
-          return new Response(
-            JSON.stringify({
-              error: "Service role key detected.",
-              details:
-                "You're using a service role key as the Authorization token. " +
-                "Edge functions require a user access token (JWT with 'sub' claim), not a service role key. " +
-                "To test this function:\n" +
-                "1. Log in via your application\n" +
-                "2. Get the access_token from the session\n" +
-                "3. Use that token in the Authorization header: Bearer <access_token>\n\n" +
-                "In Supabase test interface, you may need to manually provide a user access token.",
-              hint: "Service role keys are for server-side operations only, not for Authorization headers.",
-            }),
-            {
-              status: 401,
-              headers: { ...corsHeaders, "Content-Type": "application/json" },
-            },
-          );
-        }
-      }
-    } catch (e) {
-      // If we can't decode, continue to let Supabase handle validation
-      console.warn("⚠️ Could not decode token payload (continuing):", e);
-    }
-
-    // Validate user token
     const {
       data: { user },
       error: authError,
     } = await supabase.auth.getUser(token);
 
     if (authError || !user) {
-      console.error("❌ Auth error:", authError?.message || "No user returned");
-      console.error("   Auth error details:", JSON.stringify(authError));
-      
-      // Provide more helpful error message for missing sub claim
-      let errorDetails = authError?.message || "Invalid or expired token.";
-      if (authError?.message?.includes("missing sub claim") || authError?.code === "bad_jwt") {
-        errorDetails +=
-          " This usually means you're using a service role key or API key instead of a user access token. " +
-          "Please use a user access token from a logged-in session.";
-      }
-      
       return new Response(
         JSON.stringify({
           error: "Authentication failed.",
-          details: errorDetails,
-          error_code: authError?.status,
+          details: authError?.message || "Invalid or expired token.",
         }),
         {
           status: 401,
@@ -179,9 +131,19 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log("✅ User authenticated:", user.id);
+    const body = await req.json();
+    const {
+      action,
+      deck_id,
+      deck,
+      user_query,
+      question,
+      conversation_id,
+      mode: rawMode,
+      format: rawFormat,
+    } = body;
 
-    const { action, deck_id, deck, user_query, conversation_id } = await req.json();
+    const userQuery = (question ?? user_query ?? "").toString();
 
     if (!deck_id && !deck) {
       return new Response(
@@ -193,7 +155,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Load deck from database if deck_id provided
     let deckData: Deck | null = null;
     let actualDeckId: string | null = null;
     let deckMode: string | undefined;
@@ -218,27 +179,29 @@ Deno.serve(async (req) => {
 
       actualDeckId = deckRecord.id;
       deckMode = deckRecord.mode as string | undefined;
-      const cards = deckRecord.cards as any;
+      const cards = deckRecord.cards as {
+        main?: Array<number | { id?: number; cardId?: number; count?: number }>;
+        extra?: Array<number | { id?: number; cardId?: number; count?: number }>;
+        side?: Array<number | { id?: number; cardId?: number; count?: number }>;
+      };
+      const mapZone = (
+        zone: typeof cards.main,
+      ): Deck["mainDeck"] =>
+        (zone || []).map((c) => ({
+          cardId: typeof c === "number" ? c : c.id || c.cardId || 0,
+          count: typeof c === "number" ? 1 : c.count || 1,
+        }));
       deckData = {
-        mainDeck: (cards?.main || []).map((c: any) => ({
-          cardId: typeof c === "number" ? c : c.id || c.cardId,
-          count: c.count || 1,
-        })),
-        extraDeck: (cards?.extra || []).map((c: any) => ({
-          cardId: typeof c === "number" ? c : c.id || c.cardId,
-          count: c.count || 1,
-        })),
-        sideDeck: (cards?.side || []).map((c: any) => ({
-          cardId: typeof c === "number" ? c : c.id || c.cardId,
-          count: c.count || 1,
-        })),
+        mainDeck: mapZone(cards?.main),
+        extraDeck: mapZone(cards?.extra),
+        sideDeck: mapZone(cards?.side),
       };
     } else if (deck) {
-      // Use provided deck data (mode may be in deck object from client)
+      // Non-chat actions may still accept client deck; chat requires deck_id
       const deckFromClient = deck as Deck & { mode?: string };
       deckData = deckFromClient;
       deckMode = deckFromClient.mode;
-      actualDeckId = null; // Will need to be provided or created
+      actualDeckId = null;
     }
 
     if (!deckData) {
@@ -251,11 +214,10 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Load all cards for analysis
     const cardIds = new Set<number>();
-    deckData.mainDeck.forEach(c => cardIds.add(c.cardId));
-    deckData.extraDeck.forEach(c => cardIds.add(c.cardId));
-    deckData.sideDeck.forEach(c => cardIds.add(c.cardId));
+    deckData.mainDeck.forEach((c) => cardIds.add(c.cardId));
+    deckData.extraDeck.forEach((c) => cardIds.add(c.cardId));
+    deckData.sideDeck.forEach((c) => cardIds.add(c.cardId));
 
     const { data: cards, error: cardsError } = await supabase
       .from("cards")
@@ -272,20 +234,20 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Handle different actions
     switch (action) {
       case "get_embedding":
-      case undefined: // Default action
+      case undefined: {
         if (!actualDeckId) {
           return new Response(
-            JSON.stringify({ error: "deck_id required for embedding computation" }),
+            JSON.stringify({
+              error: "deck_id required for embedding computation",
+            }),
             {
               status: 400,
               headers: { ...corsHeaders, "Content-Type": "application/json" },
             },
           );
         }
-
         const result = await getOrComputeDeckEmbedding(
           deckData,
           actualDeckId,
@@ -293,7 +255,6 @@ Deno.serve(async (req) => {
           cards || [],
           supabase,
         );
-
         return new Response(
           JSON.stringify({
             embedding: result.embedding,
@@ -305,39 +266,31 @@ Deno.serve(async (req) => {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           },
         );
+      }
 
-      case "analyze":
+      case "analyze": {
         const analysis = await analyzeDeck(deckData, cards || []);
+        return new Response(JSON.stringify({ analysis }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
 
-        return new Response(
-          JSON.stringify({
-            analysis,
-          }),
-          {
-            status: 200,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          },
-        );
-
-      case "chat":
-        console.log("💬 [deck-assistant/index.ts] Chat action received");
-        console.log(`📝 Raw user_query: "${user_query}"`);
-        console.log(`🆔 Raw deck_id: ${deck_id}`);
-        
-        //: Self-querying retrieval with conversation
-        if (!user_query) {
+      case "chat": {
+        if (!userQuery || userQuery.trim().length < 2) {
           return new Response(
-            JSON.stringify({ error: "user_query required for chat action" }),
+            JSON.stringify({ error: "question / user_query required for chat" }),
             {
               status: 400,
               headers: { ...corsHeaders, "Content-Type": "application/json" },
             },
           );
         }
-
         if (!actualDeckId) {
           return new Response(
-            JSON.stringify({ error: "deck_id required for chat action" }),
+            JSON.stringify({
+              error: "deck_id required for chat action (saved decks only)",
+            }),
             {
               status: 400,
               headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -345,21 +298,23 @@ Deno.serve(async (req) => {
           );
         }
 
-        const deckFormat: "TCG" | "Master Duel" =
-          deckMode === "TCG" ? "TCG" : "Master Duel"; // Default to Master Duel if mode unknown
+        const engineFormat: EngineFormat =
+          rawFormat === "TCG" || deckMode === "TCG" ? "TCG" : "MASTER_DUEL";
 
-        return await handleChatRequest(
-          user_query,
-          actualDeckId,
-          user.id,
-          deckData,
-          cards || [],
-          conversation_id,
+        return await handleChatRequest({
+          userQuery: userQuery.trim(),
+          deckId: actualDeckId,
+          userId: user.id,
+          deck: deckData,
+          allCards: cards || [],
+          conversationId: conversation_id,
+          mode: (rawMode as AssistantMode | undefined) ?? "auto",
+          format: engineFormat,
           supabase,
           groqApiKey,
           modelName,
-          deckFormat,
-        );
+        });
+      }
 
       default:
         return new Response(
@@ -384,27 +339,34 @@ Deno.serve(async (req) => {
   }
 });
 
-/**
- * Handle chat request with self-querying retrieval
- */
-async function handleChatRequest(
-  userQuery: string,
-  deckId: string,
-  userId: string,
-  deck: Deck,
-  allCards: Card[],
-  conversationId: string | undefined,
-  supabase: SupabaseClient,
-  apiKey: string,
-  modelName: string,
-  deckFormat: "TCG" | "Master Duel" = "Master Duel"
-): Promise<Response> {
-  console.log("🚀 [deck-assistant/index.ts] handleChatRequest called");
-  console.log(`📝 User query: "${userQuery}"`);
-  console.log(`🆔 Deck ID: ${deckId}, User ID: ${userId}`);
-  
+async function handleChatRequest(args: {
+  userQuery: string;
+  deckId: string;
+  userId: string;
+  deck: Deck;
+  allCards: Card[];
+  conversationId: string | undefined;
+  mode: AssistantMode;
+  format: EngineFormat;
+  supabase: SupabaseClient;
+  groqApiKey: string;
+  modelName: string;
+}): Promise<Response> {
+  const {
+    userQuery,
+    deckId,
+    userId,
+    deck,
+    allCards,
+    conversationId,
+    mode,
+    format,
+    supabase,
+    groqApiKey,
+    modelName,
+  } = args;
+
   try {
-    // 1. Get or create conversation
     const deckSnapshot = {
       main: deck.mainDeck,
       extra: deck.extraDeck,
@@ -417,35 +379,29 @@ async function handleChatRequest(
         p_deck_id: deckId,
         p_user_id: userId,
         p_deck_snapshot: deckSnapshot,
-      }
+      },
     );
 
     if (convError || !convId) {
-      throw new Error(`Failed to get/create conversation: ${convError?.message || "Unknown error"}`);
+      throw new Error(
+        `Failed to get/create conversation: ${convError?.message || "Unknown"}`,
+      );
     }
 
     const actualConversationId = conversationId || convId;
-    
-    // Check if this is a new conversation (no conversationId was provided)
     const isNewConversation = !conversationId;
 
-    // 2. Load conversation history
-    const { data: messages, error: historyError } = await supabase
+    const { data: messages } = await supabase
       .from("chatbot_messages")
       .select("role, content")
       .eq("conversation_id", actualConversationId)
       .order("sequence_number", { ascending: true });
 
-    if (historyError) {
-      console.warn("Failed to load conversation history:", historyError);
-    }
-
-    const conversationHistory: Message[] = (messages || []).map((m: any) => ({
+    const conversationHistory = (messages || []).map((m) => ({
       role: m.role as "user" | "assistant",
-      content: m.content,
+      content: m.content as string,
     }));
 
-    // 3. Structural legality gate (Assistant requires a complete legal list)
     const legality = evaluateStructuralLegality(deck);
     if (!legality.ok) {
       return new Response(
@@ -461,71 +417,78 @@ async function handleChatRequest(
       );
     }
 
-    // 4. Get or compute deck embedding + analysis (embedding cached for consistency)
-    const { analysis: deckAnalysis } = await getOrComputeDeckEmbedding(
-        deck,
-        deckId,
-        userId,
-        allCards,
-        supabase,
-      );
-
-    const engineFormat = deckFormat === "TCG" ? "TCG" : "MASTER_DUEL";
-    const factsBlock = await getOrComputeFactsPromptBlock(supabase, {
-      deckId,
-      deck,
-      allCards,
-      deckAnalysis,
-      format: engineFormat,
-    });
-    const factsPrompt = formatFactsPromptBlock(factsBlock);
-
-    // 5. Extract deck card IDs and archetypes for exclusion
-    const deckCardIds = [
-      ...deck.mainDeck.map(c => c.cardId),
-      ...deck.extraDeck.map(c => c.cardId),
-      ...deck.sideDeck.map(c => c.cardId),
-    ];
-
-    const deckArchetypes: string[] = [];
-    allCards.forEach(card => {
-      if (deckCardIds.includes(card.id) && card.archetype) {
-        if (!deckArchetypes.includes(card.archetype)) {
-          deckArchetypes.push(card.archetype);
-        }
-      }
-    });
-
-    // 6. Generate structured query (self-querying)
-    const structuredQuery = await generateStructuredQuery(
-      userQuery,
-      deckAnalysis,
-      conversationHistory,
-      apiKey,
-      modelName,
-      deckCardIds,
-      deckArchetypes,
-    );
-
-    // 7. Check if clarification needed
-    if (structuredQuery.needsClarification) {
-      // Save clarification question
-      const { data: seqData } = await supabase.rpc("get_next_message_sequence", {
-        p_conversation_id: actualConversationId,
+    // Auto → Groq NLP classifier (heuristic fallback). Explicit modes skip OOB gate.
+    let intent: IntentClassification | null = null;
+    if (!mode || mode === "auto") {
+      intent = await classifyIntent({
+        question: userQuery,
+        apiKey: groqApiKey,
+        modelName,
       });
+    }
 
+    // Persist user message early (needed for OOB replies too)
+    const { data: userSeqData } = await supabase.rpc(
+      "get_next_message_sequence",
+      { p_conversation_id: actualConversationId },
+    );
+    await supabase.from("chatbot_messages").insert({
+      conversation_id: actualConversationId,
+      role: "user",
+      content: userQuery,
+      sequence_number: userSeqData || 0,
+    });
+
+    if (isNewConversation) {
+      const truncatedName =
+        userQuery.length > 50
+          ? userQuery.substring(0, 47) + "..."
+          : userQuery;
+      try {
+        await supabase
+          .from("chatbot_conversations")
+          .update({ name: truncatedName })
+          .eq("id", actualConversationId);
+      } catch {
+        // name column may be missing
+      }
+    }
+
+    if (intent?.is_out_of_bounds) {
+      const coach = buildOutOfBoundsCoachResponse(intent);
+      const { data: assistantSeqData } = await supabase.rpc(
+        "get_next_message_sequence",
+        { p_conversation_id: actualConversationId },
+      );
       await supabase.from("chatbot_messages").insert({
         conversation_id: actualConversationId,
         role: "assistant",
-        content: structuredQuery.clarificationQuestion || "Could you provide more details?",
-        sequence_number: seqData || 0,
+        content: coach.answer,
+        sequence_number: assistantSeqData || 0,
+        recommendations: null,
+        retrieval_metadata: {
+          mode: coach.mode,
+          out_of_bounds: true,
+          oob_reason: intent.oob_reason,
+          intent,
+          coach,
+        },
       });
-
       return new Response(
         JSON.stringify({
-          type: "clarification",
-          question: structuredQuery.clarificationQuestion,
+          type: "coach",
+          mode: coach.mode,
+          answer: coach.answer,
+          confidence: coach.confidence,
+          limitations: coach.limitations,
+          evidence: coach.evidence,
+          tuning: null,
+          synergies: null,
+          redirectHint: coach.redirectHint ?? null,
+          text: coach.answer,
+          recommendations: null,
           conversation_id: actualConversationId,
+          coach,
         }),
         {
           status: 200,
@@ -534,150 +497,213 @@ async function handleChatRequest(
       );
     }
 
-    // 8. Save user message
-    const { data: userSeqData } = await supabase.rpc("get_next_message_sequence", {
-      p_conversation_id: actualConversationId,
+    const facts = await getOrComputeFactsEnvelope(supabase, {
+      deckId,
+      deck,
+      allCards,
+      format,
     });
 
-    await supabase.from("chatbot_messages").insert({
-      conversation_id: actualConversationId,
-      role: "user",
-      content: userQuery,
-      sequence_number: userSeqData || 0,
-    });
+    const resolvedMode = resolveAssistantMode(mode, userQuery, intent);
+    const mainDeckSize = deck.mainDeck.reduce(
+      (s, c) => s + (c.count ?? 1),
+      0,
+    );
 
-    // If this is a new conversation, set the name from the first user message
-    if (isNewConversation) {
-      const conversationName = userQuery.trim().replace(/\s+/g, " ");
-      const truncatedName = conversationName.length > 50 
-        ? conversationName.substring(0, 47) + "..." 
-        : conversationName;
-      
-      // Try to update conversation name (gracefully fail if name column doesn't exist)
-      try {
-        const { error: nameError } = await supabase
-          .from("chatbot_conversations")
-          .update({ name: truncatedName })
-          .eq("id", actualConversationId);
-        
-        if (nameError) {
-          // Only warn if it's not a missing column error
-          if (!nameError.message.includes("column") && !nameError.message.includes("does not exist")) {
-            console.warn("Failed to set conversation name:", nameError.message);
-          } else {
-            console.log("Name column does not exist yet, skipping name update");
-          }
+    const resolvedTargetCardIds = resolveCardEntitiesFromNames(
+      intent?.target_card_entities ?? [],
+      allCards.map((c) => ({ id: c.id, name: c.name })),
+    );
+
+    let variantsBlock = "";
+    let variants: ReturnType<typeof computeCopyVariants> = [];
+    let conditionsBlock = "";
+    let conditions: ReturnType<typeof extractEngineConditions> = [];
+    let retrievedBlock = "";
+    let retrieved: Awaited<ReturnType<typeof retrieveSynergyCandidates>> = [];
+
+    if (resolvedMode === "tune_copies") {
+      const { data: weightRows } = await supabase
+        .from("card_strategy_weights")
+        .select("card_id, role, is_boss, synergy_weight")
+        .eq("format", format);
+      const weights = (weightRows ?? []).map((row) => ({
+        cardId: String(row.card_id),
+        role: String(row.role),
+        isBoss: Boolean(row.is_boss),
+        synergyWeight: Number(row.synergy_weight ?? 0),
+      }));
+      variants = computeCopyVariants({
+        deck,
+        allCards,
+        weights,
+        baseline: facts,
+        preferCardIds: resolvedTargetCardIds,
+      });
+      variantsBlock = formatVariantsForPrompt(variants);
+    }
+
+    if (resolvedMode === "discover_synergy") {
+      const detected = extractEngineConditions(deck, allCards);
+      conditions = rankConditionsForQuestion(detected, userQuery);
+      const discovery = buildDiscoveryCondition(
+        parseDiscoveryFilters(userQuery),
+        detected.flatMap((c) => c.satisfiedByDeck),
+      );
+      if (discovery) {
+        conditions = [
+          discovery,
+          ...conditions.filter((c) => c.slug !== "card_discovery"),
+        ].slice(0, 4);
+      }
+      conditionsBlock = formatConditionsForPrompt(conditions);
+      const deckCardIds = [
+        ...deck.mainDeck.map((c) => c.cardId),
+        ...deck.extraDeck.map((c) => c.cardId),
+        ...deck.sideDeck.map((c) => c.cardId),
+      ];
+      const banlist = await loadFormatBanlist(supabase, format);
+      retrieved = await retrieveSynergyCandidates({
+        conditions,
+        deckCardIds,
+        primaryArchetype: facts.diagnostics.strategyFit.primaryArchetype,
+        supabase,
+        banlistFormat: format,
+        deck,
+        banlist,
+        userQuery,
+      });
+      // Drop Extra Deck candidates when active ED locks make them soft-illegal.
+      const edLocks = (facts.diagnostics.restrictions ?? []).filter(
+        (r) => r.appliesTo === "extra_deck",
+      );
+      const lockScoped =
+        intent?.qa_focus === "anti_synergy" ||
+        /\b(lock|anti[- ]?synergy|extra\s+deck)\b/i.test(userQuery);
+      if (edLocks.length > 0 && lockScoped) {
+        const { isLikelyExtraDeckCard } = await import("./restrictions.ts");
+        retrieved = retrieved.filter((r) => !isLikelyExtraDeckCard(r.card));
+      }
+      // Lean RETRIEVED_CARDS block is built inside generateCoachResponse
+      retrievedBlock = "";
+    }
+
+    // If auto classification was skipped (explicit mode), still attach heuristic intent for prompt focus
+    const promptIntent =
+      intent ??
+      (mode && mode !== "auto"
+        ? {
+          ...classifyIntentHeuristic(userQuery),
+          inferred_mode: resolvedMode,
+          is_out_of_bounds: false,
+          oob_reason: null,
         }
-      } catch (err) {
-        // Silently fail if name column doesn't exist
-        console.log("Name column may not exist yet, skipping name update");
-      }
+        : classifyIntentHeuristic(userQuery));
+
+    let sideDeckBlock = "";
+    let matchupBlock = "";
+    if (
+      resolvedMode === "qa" &&
+      (promptIntent.qa_focus === "side_plan" ||
+        promptIntent.qa_focus === "meta_matchup" ||
+        /\b(side\s+deck|side\s+plan|matchup|going\s+first|going\s+second)\b/i
+          .test(userQuery))
+    ) {
+      const cardMap = new Map(allCards.map((c) => [c.id, c]));
+      const sideLines = deck.sideDeck
+        .map((e) => {
+          const c = cardMap.get(e.cardId);
+          return c ? `- ${c.name} x${e.count ?? 1}` : null;
+        })
+        .filter(Boolean)
+        .slice(0, 20);
+      sideDeckBlock =
+        sideLines.length > 0
+          ? `# SIDE_DECK\n${sideLines.join("\n")}`
+          : "# SIDE_DECK\nEmpty — say so if side_plan was asked.";
+      const mu = facts.matchups.slice(0, 8).map(
+        (m) =>
+          `- ${m.opponentArchetype}${m.tier ? ` T${m.tier}` : ""} tagAdvantage=${m.tagAdvantage.toFixed(2)}`,
+      );
+      matchupBlock =
+        mu.length > 0
+          ? `# MATCHUP_ATTACHMENT\n${mu.join("\n")}`
+          : "# MATCHUP_ATTACHMENT\nThin — do not invent live meta tiers.";
     }
 
-    // 9. Build deck cards with names for ratio suggestions
-    const deckCardsWithNames = deck.mainDeck.map(dc => {
-      const card = allCards.find(c => c.id === dc.cardId);
-      return {
-        cardId: dc.cardId,
-        cardName: card?.name || `Card ${dc.cardId}`,
-        count: dc.count || 1,
-      };
-    });
-
-    // 10. Retrieve cards (RAG) - skip if ratio question
-    const isRatioQuestion = userQuery.toLowerCase().includes('ratio') || 
-                            userQuery.toLowerCase().includes('adjust') ||
-                            userQuery.toLowerCase().includes('optimize');
-    
-    console.log(`🔍 [deck-assistant/index.ts] Retrieving cards (isRatioQuestion: ${isRatioQuestion})`);
-    console.log(`📊 [deck-assistant/index.ts] Structured query: ${JSON.stringify(structuredQuery)}`);
-    
-    const banlistFormat =
-      deckFormat === "TCG" ? "TCG" : "MASTER_DUEL";
-
-    const candidates = isRatioQuestion ? [] : await retrieveCards(
-      structuredQuery,
-      deckAnalysis,
-      supabase,
-      banlistFormat,
-    );
-    
-    console.log(`📊 [deck-assistant/index.ts] RAG retrieval returned ${candidates.length} candidates`);
-    if (candidates.length > 0) {
-      console.log(`📊 [deck-assistant/index.ts] First 5 candidate IDs: ${candidates.slice(0, 5).map(c => c.id).join(", ")}`);
-    }
-
-    // 11. Generate LLM response with recommendations or ratio suggestions
-    console.log(`🔍 [deck-assistant/index.ts] Generating recommendations for query: "${userQuery}"`);
-    console.log(`📊 [deck-assistant/index.ts] Candidates count: ${candidates.length}`);
-    console.log(`📊 [deck-assistant/index.ts] Deck card IDs count: ${deckCardIds.length}`);
-    
-    const response = await generateRecommendations(
-      userQuery,
-      deckAnalysis,
-      candidates,
+    const coach = await generateCoachResponse({
+      question: userQuery,
+      mode: resolvedMode,
+      facts,
       conversationHistory,
-      apiKey,
+      apiKey: groqApiKey,
       modelName,
-      deckCardIds,
-      deckCardsWithNames, // Pass deck cards for ratio suggestions
-      deckFormat,
-      factsPrompt,
-    );
-    
-    console.log(`✅ [deck-assistant/index.ts] Response received:`);
-    console.log(`   - Type: ${response.ratioSuggestions ? "ratio_suggestions" : "recommendations"}`);
-    console.log(`   - Recommendations count: ${response.recommendations?.length || 0}`);
-    console.log(`   - Ratio suggestions count: ${response.ratioSuggestions?.length || 0}`);
-    if (response.recommendations && response.recommendations.length > 0) {
-      const cardIds = response.recommendations.map(r => r.cardId);
-      const uniqueIds = [...new Set(cardIds)];
-      console.log(`   - Recommendation card IDs (${cardIds.length} total, ${uniqueIds.length} unique): ${cardIds.join(", ")}`);
-      if (cardIds.length !== uniqueIds.length) {
-        console.warn(`   ⚠️ DUPLICATES DETECTED: ${cardIds.length - uniqueIds.length} duplicate card IDs in recommendations!`);
-      }
-      console.log(`   - Recommendation card names: ${response.recommendations.map(r => r.cardName).join(", ")}`);
-    }
-
-    // 11. Save assistant response
-    const { data: assistantSeqData } = await supabase.rpc("get_next_message_sequence", {
-      p_conversation_id: actualConversationId,
+      variantsBlock,
+      variants,
+      conditionsBlock,
+      conditions,
+      retrievedBlock,
+      retrieved,
+      mainDeckSize,
+      intent: promptIntent,
+      resolvedTargetCardIds,
+      sideDeckBlock,
+      matchupBlock,
     });
+
+    // Legacy recommendation projection for older UI slideshow (from synergies)
+    const legacyRecommendations = (coach.synergies ?? []).map((s) => ({
+      cardId: Number(s.cardId) || 0,
+      cardName: s.title,
+      reason: s.fitSummary,
+      priority: "medium" as const,
+      canAdd: true,
+      synergyScore: 0.7,
+    }));
+
+    const { data: assistantSeqData } = await supabase.rpc(
+      "get_next_message_sequence",
+      { p_conversation_id: actualConversationId },
+    );
 
     await supabase.from("chatbot_messages").insert({
       conversation_id: actualConversationId,
       role: "assistant",
-      content: response.text,
+      content: coach.answer,
       sequence_number: assistantSeqData || 0,
-      recommendations: response.recommendations ? response.recommendations.map(rec => ({
-        cardId: rec.cardId,
-        cardName: rec.cardName,
-        reason: rec.reason,
-        priority: rec.priority,
-        impactEst: rec.impactEst,
-        synergyScore: rec.synergyScore,
-      })) : null,
+      recommendations: legacyRecommendations.length
+        ? legacyRecommendations
+        : null,
       retrieval_metadata: {
-        query: structuredQuery,
-        candidates_count: candidates.length,
-        ratio_suggestions: response.ratioSuggestions || null,
+        mode: resolvedMode,
+        intent: promptIntent,
+        resolved_target_card_ids: resolvedTargetCardIds,
+        coach,
+        variants_count: variants.length,
+        conditions: conditions.map((c) => c.slug),
+        candidates_count: retrieved.length,
       },
     });
 
-    // 12. Return response
-    const responsePayload = {
-      type: response.ratioSuggestions ? "ratio_suggestions" : "recommendations",
-      text: response.text,
-      recommendations: response.recommendations || null,
-      ratioSuggestions: response.ratioSuggestions || null,
-      conversation_id: actualConversationId,
-      structured_query: structuredQuery,
-    };
-    
-    console.log(`📤 [deck-assistant/index.ts] Sending response with ${responsePayload.recommendations?.length || 0} recommendations`);
-    
     return new Response(
-      JSON.stringify(responsePayload),
+      JSON.stringify({
+        type: "coach",
+        mode: coach.mode,
+        answer: coach.answer,
+        confidence: coach.confidence,
+        limitations: coach.limitations,
+        evidence: coach.evidence,
+        tuning: coach.tuning ?? null,
+        synergies: coach.synergies ?? null,
+        redirectHint: coach.redirectHint ?? null,
+        // Back-compat fields
+        text: coach.answer,
+        recommendations: legacyRecommendations.length
+          ? legacyRecommendations
+          : null,
+        conversation_id: actualConversationId,
+        coach,
+      }),
       {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

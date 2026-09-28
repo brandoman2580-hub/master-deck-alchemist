@@ -13,9 +13,24 @@ import { loadMetaMatchupTemplates } from "./meta-templates";
 import { scoreMatchupReadiness } from "./matchups";
 import { tagMainDeckForConsistency } from "./tag-main-deck";
 import { runConsistencySimulation } from "./worker/client";
-import type { FactsEnvelope } from "./types";
+import { FACTS_SCHEMA_VERSION, type FactsEnvelope } from "./types";
 
 const DEFAULT_ITERATIONS = 3000;
+
+/**
+ * Cached envelopes must match the current schema and include grade breakdown
+ * (0.2.0+). Stale 0.1.0 rows are ignored so Workshop recompute runs.
+ */
+export function isUsableCachedFacts(
+  facts: FactsEnvelope | null | undefined,
+): facts is FactsEnvelope {
+  if (!facts) return false;
+  if (facts.schemaVersion !== FACTS_SCHEMA_VERSION) return false;
+  if (!(facts.consistency?.n > 0)) return false;
+  if (!facts.combos || !facts.matchups) return false;
+  if (!facts.grade?.breakdown) return false;
+  return true;
+}
 
 export interface GetFactsOptions {
   banlist?: Record<string, BanStatus | string>;
@@ -59,12 +74,7 @@ export async function getFacts(
 
   if (options.readCache !== false) {
     const cached = await readDeckAnalysisCache(deck.id, deckHash);
-    if (
-      cached &&
-      cached.consistency.n > 0 &&
-      cached.combos &&
-      cached.matchups
-    ) {
+    if (isUsableCachedFacts(cached)) {
       return cached;
     }
   }

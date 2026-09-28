@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef, useMemo, useLayoutEffect } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { motion } from "framer-motion";
 import { Card as CardUI, CardContent, CardHeader } from "@/components/ui/card";
 import { InputWithClear } from "@/components/ui/input-with-clear";
@@ -17,12 +17,11 @@ import { selectFilteredCards } from "@/store/cardPoolSelectors";
 import { CardStack } from "@/components/ui/card-stack";
 import { FilterSidebar } from "./filter-sidebar";
 import { useMasterDuelRarity } from "@/hooks/useMasterDuelRarity";
-import { Search, Filter, Bot } from "lucide-react";
+import { Search, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { FILTER_CONFIGS } from "@/lib/constants";
-import { pulseVariants, SPRING_CONFIG } from "@/lib/animations";
-import { DeckAssistant } from "@/components/deck-assistant/deck-assistant";
+import { pulseVariants } from "@/lib/animations";
 
 interface CardBrowserProps {
   currentDeck: DeckType;
@@ -47,35 +46,8 @@ export function CardBrowser({
   const cardList = useCardStore((state) => state.cardList);
   const loading = useCardStore((state) => state.loading);
 
-  // Tab state - controlled to track active tab
-  const [activeTab, setActiveTab] = useState("browser");
-
-  // Refs for tab slider animation
-  const browserTabRef = useRef<HTMLButtonElement>(null);
-  const assistantTabRef = useRef<HTMLButtonElement>(null);
-  const tabsContainerRef = useRef<HTMLDivElement>(null);
-  const [tabSliderStyle, setTabSliderStyle] = useState<React.CSSProperties>({});
-
   // Virtual list container ref
   const virtualContainerRef = useRef<HTMLDivElement>(null);
-
-  // Calculate tab slider position
-  useLayoutEffect(() => {
-    if (tabsContainerRef.current) {
-      let activeTabRef: React.RefObject<HTMLButtonElement> | null = null;
-      if (activeTab === "browser") activeTabRef = browserTabRef;
-      else if (activeTab === "assistant") activeTabRef = assistantTabRef;
-
-      if (activeTabRef?.current) {
-        const containerRect = tabsContainerRef.current.getBoundingClientRect();
-        const btnRect = activeTabRef.current.getBoundingClientRect();
-        setTabSliderStyle({
-          left: btnRect.left - containerRect.left,
-          width: btnRect.width,
-        });
-      }
-    }
-  }, [activeTab]);
 
   // Search and filter state
   const [searchQuery, setSearchQuery] = useState("");
@@ -171,31 +143,16 @@ export function CardBrowser({
     setFilteredCards(filtered);
   }, [debouncedSearchQuery, cardList, searchParams, banlist]);
 
-  // TanStack Virtual setup - only create when browser tab is active
+  // TanStack Virtual setup
   // Note: gap option has a bug with dynamic measurement - bake spacing into estimateSize instead
   const ROW_GAP = 8;
   const CONTENT_HEIGHT = 170;
   const virtualizer = useVirtualizer({
     count: filteredCards.length,
-    getScrollElement: () => (activeTab === "browser" ? virtualContainerRef.current : null),
+    getScrollElement: () => virtualContainerRef.current,
     estimateSize: () => CONTENT_HEIGHT + ROW_GAP,
-    overscan: 5, // Render 5 extra items outside viewport for smooth scrolling
+    overscan: 5,
   });
-
-  // Reset scroll position when switching to browser tab
-  useEffect(() => {
-    if (activeTab === "browser" && virtualContainerRef.current) {
-      // Use double requestAnimationFrame to ensure DOM is fully rendered
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          if (virtualContainerRef.current) {
-            // Reset scroll to top when switching to browser tab
-            virtualContainerRef.current.scrollTop = 0;
-          }
-        });
-      });
-    }
-  }, [activeTab]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -257,73 +214,8 @@ export function CardBrowser({
 
   return (
     <div className="relative grid grid-rows-[auto_1fr] h-full min-h-0 overflow-hidden" style={{ height: "100%" }}>
-      {/* Tabbed Interface: Card Browser + AI Assistant */}
       <div className="grid grid-rows-[auto_1fr] h-full min-h-0 overflow-hidden" style={{ height: "100%" }}>
-        {/* Custom Tab List with Slide Animation */}
-        <div className="pb-2 flex-shrink-0">
-          <div
-            ref={tabsContainerRef}
-            className="relative flex w-full bg-white/5 border border-white/10 backdrop-blur-xl rounded-lg p-1"
-          >
-            <motion.span
-              className="absolute top-1 bottom-1 bg-white/10 rounded-md"
-              style={{
-                ...tabSliderStyle,
-                zIndex: 0,
-                left: typeof tabSliderStyle.left === "number" ? tabSliderStyle.left + 4 : 0,
-                width: typeof tabSliderStyle.width === "number" ? tabSliderStyle.width - 8 : 0,
-              }}
-              layout
-              transition={{
-                type: "spring",
-                stiffness: SPRING_CONFIG.gentle.tension,
-                damping: SPRING_CONFIG.gentle.friction,
-              }}
-            />
-            <motion.button
-              ref={browserTabRef}
-              type="button"
-              onClick={() => setActiveTab("browser")}
-              className={`relative z-10 flex-1 px-4 py-3 font-medium transition-colors duration-200 focus:outline-none text-sm flex items-center justify-center gap-2 ${
-                activeTab === "browser"
-                  ? "text-white"
-                  : "text-white/60 hover:text-white/80"
-              }`}
-              aria-pressed={activeTab === "browser"}
-              style={{
-                background: "transparent",
-                position: "relative",
-              }}
-            >
-              <Search className="h-4 w-4" />
-              Card Browser
-            </motion.button>
-            <motion.button
-              ref={assistantTabRef}
-              type="button"
-              onClick={() => setActiveTab("assistant")}
-              className={`relative z-10 flex-1 px-4 py-3 font-medium transition-colors duration-200 focus:outline-none text-sm flex items-center justify-center gap-2 ${
-                activeTab === "assistant"
-                  ? "text-white"
-                  : "text-white/60 hover:text-white/80"
-              }`}
-              aria-pressed={activeTab === "assistant"}
-              style={{
-                background: "transparent",
-                position: "relative",
-              }}
-            >
-              <Bot className="h-4 w-4" />
-              AI Assistant
-            </motion.button>
-          </div>
-        </div>
-
-        {/* Card Browser Tab */}
-        <div
-          className="mt-0 min-h-0 overflow-hidden h-full"
-          style={{ height: "100%", display: activeTab === "browser" ? "grid" : "none" }}
-        >
+        <div className="mt-0 min-h-0 overflow-hidden h-full" style={{ height: "100%" }}>
           <div className="grid grid-rows-[auto_1fr] h-full min-h-0 overflow-hidden" style={{ height: "100%" }}>
             <CardUI className="bg-transparent grid grid-rows-[auto_1fr] h-full min-h-0 overflow-hidden" style={{ height: "100%" }}>
               <CardHeader className="pb-2 flex-shrink-0 px-0 pt-4 sm:pt-6">
@@ -421,15 +313,14 @@ export function CardBrowser({
                           className="flex-1 min-h-0 h-full w-full overflow-auto"
                           style={{ height: "100%" }}
                         >
-                          {activeTab === "browser" && (
-                            <div
-                              style={{
-                                height: `${virtualizer.getTotalSize()}px`,
-                                width: "100%",
-                                position: "relative",
-                              }}
-                            >
-                              {virtualizer.getVirtualItems().map((virtualItem) => {
+                          <div
+                            style={{
+                              height: `${virtualizer.getTotalSize()}px`,
+                              width: "100%",
+                              position: "relative",
+                            }}
+                          >
+                            {virtualizer.getVirtualItems().map((virtualItem) => {
                               const card = filteredCards[virtualItem.index];
                               const banStatus =
                                 banlist[card.name] || "Unlimited";
@@ -441,16 +332,13 @@ export function CardBrowser({
                               const remaining = getRemainingCopies(
                                 card,
                                 currentDeck,
-                                banlist
+                                banlist,
                               );
                               const currentCount = getCardCountInDeck(card.id);
+                              const shouldHideAfterDrop = droppedCardIds.has(
+                                card.id,
+                              );
 
-                              // Hide card after drop: when card is in droppedCardIds set
-                              // CardStack component handles hiding during drag via isDragging
-                              const shouldHideAfterDrop = droppedCardIds.has(card.id);
-
-                              // Don't render the wrapper div if card should be hidden
-                              // This prevents layout issues with TanStack Virtual
                               if (shouldHideAfterDrop) {
                                 return (
                                   <div
@@ -484,34 +372,38 @@ export function CardBrowser({
                                     transform: `translateY(${virtualItem.start}px)`,
                                   }}
                                 >
-                                  <div className="flex-shrink-0" style={{ marginBottom: ROW_GAP }}>
+                                  <div
+                                    className="flex-shrink-0"
+                                    style={{ marginBottom: ROW_GAP }}
+                                  >
                                     <CardStack
-                                    card={card}
-                                    remainingCopies={remaining}
-                                    maxCopies={maxCopies}
-                                    banStatus={banStatus}
-                                    shouldHideAfterDrop={shouldHideAfterDrop}
-                                    currentCount={currentCount}
-                                    deckMode={deckMode}
-                                    mdRarityOverride={mdRarityMap?.get(card.id)}
-                                    onStackClick={() => {
-                                      if (remaining > 0) {
-                                        handleAddCard(card);
-                                      }
-                                    }}
-                                    onDoubleClick={() => {
-                                      if (remaining > 0) {
-                                        handleCardDoubleClick(card);
-                                      }
-                                    }}
-                                    onRemove={removeCardFromDeck}
-                                  />
+                                      card={card}
+                                      remainingCopies={remaining}
+                                      maxCopies={maxCopies}
+                                      banStatus={banStatus}
+                                      shouldHideAfterDrop={shouldHideAfterDrop}
+                                      currentCount={currentCount}
+                                      deckMode={deckMode}
+                                      mdRarityOverride={mdRarityMap?.get(
+                                        card.id,
+                                      )}
+                                      onStackClick={() => {
+                                        if (remaining > 0) {
+                                          handleAddCard(card);
+                                        }
+                                      }}
+                                      onDoubleClick={() => {
+                                        if (remaining > 0) {
+                                          handleCardDoubleClick(card);
+                                        }
+                                      }}
+                                      onRemove={removeCardFromDeck}
+                                    />
                                   </div>
                                 </div>
                               );
                             })}
-                            </div>
-                          )}
+                          </div>
                         </div>
                       )}
                     </div>
@@ -521,19 +413,8 @@ export function CardBrowser({
             </CardUI>
           </div>
         </div>
-
-        {/* AI Assistant Tab */}
-        <div
-          className="mt-0 min-h-0 overflow-hidden h-full"
-          style={{ height: "100%", display: activeTab === "assistant" ? "flex" : "none" }}
-        >
-          <div className="h-full min-h-0 overflow-hidden flex flex-col w-full">
-            <DeckAssistant currentDeck={currentDeck} deckMode={deckMode} />
-          </div>
-        </div>
       </div>
 
-      {/* Filter Sidebar - Overlay/Slide Over */}
       <FilterSidebar
         searchParams={searchParams}
         setSearchParams={setSearchParams}

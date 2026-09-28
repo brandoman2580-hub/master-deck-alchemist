@@ -14,8 +14,12 @@ import { getArchetypeName } from "@/lib/helpers";
 const filterCache = new Map<string, Card[]>();
 const CACHE_SIZE_LIMIT = 100; // Limit cache size to prevent memory issues
 
-function getCacheKey(searchQuery: string, searchParams: SearchParams): string {
-  return JSON.stringify({ searchQuery, searchParams });
+function getCacheKey(
+  searchQuery: string,
+  searchParams: SearchParams,
+  cardPoolSize: number,
+): string {
+  return JSON.stringify({ searchQuery, searchParams, cardPoolSize });
 }
 
 function clearOldCacheEntries() {
@@ -47,26 +51,44 @@ function filterBySearchQuery(cards: Card[], query: string): Card[] {
 }
 
 /**
- * Filter cards by search parameters
+ * Filter cards by search parameters.
+ * Toggle filters store multi-select as comma-separated values.
  */
 function filterBySearchParams(cards: Card[], params: SearchParams): Card[] {
   let filtered = cards;
 
-  // Only apply filters if they have non-empty values
-  if (params.type && params.type.trim()) {
-    filtered = filtered.filter((card) => card.type === params.type);
+  const selected = (raw: string | undefined): string[] =>
+    (raw ?? "")
+      .split(",")
+      .map((part) => part.trim())
+      .filter(Boolean);
+
+  const typeSelected = selected(params.type);
+  if (typeSelected.length > 0) {
+    filtered = filtered.filter((card) => typeSelected.includes(card.type));
   }
 
-  if (params.race && params.race.trim()) {
-    filtered = filtered.filter((card) => card.race === params.race);
+  const raceSelected = selected(params.race);
+  if (raceSelected.length > 0) {
+    filtered = filtered.filter(
+      (card) => card.race != null && raceSelected.includes(card.race),
+    );
   }
 
-  if (params.attribute && params.attribute.trim()) {
-    filtered = filtered.filter((card) => card.attribute === params.attribute);
+  const attributeSelected = selected(params.attribute);
+  if (attributeSelected.length > 0) {
+    filtered = filtered.filter(
+      (card) =>
+        card.attribute != null && attributeSelected.includes(card.attribute),
+    );
   }
 
-  if (params.level && params.level.trim()) {
-    filtered = filtered.filter((card) => card.level === Number(params.level));
+  const levelSelected = selected(params.level);
+  if (levelSelected.length > 0) {
+    filtered = filtered.filter(
+      (card) =>
+        card.level != null && levelSelected.includes(String(card.level)),
+    );
   }
 
   if (params.atk && params.atk.trim()) {
@@ -88,9 +110,14 @@ function filterBySearchParams(cards: Card[], params: SearchParams): Card[] {
   }
 
   if (params.archetype && params.archetype.trim()) {
+    const archetypeSelected = selected(params.archetype);
     filtered = filtered.filter((card) => {
       const archetypeName = getArchetypeName(card);
-      return archetypeName?.toLowerCase().includes(params.archetype!.toLowerCase());
+      if (!archetypeName) return false;
+      const lower = archetypeName.toLowerCase();
+      return archetypeSelected.some((value) =>
+        lower.includes(value.toLowerCase()),
+      );
     });
   }
 
@@ -122,9 +149,12 @@ function filterBySearchParams(cards: Card[], params: SearchParams): Card[] {
   }
 
   if (params.rarity && params.rarity.trim()) {
+    const raritySelected = selected(params.rarity);
     filtered = filtered.filter((card) => {
       const rarity = card.misc_info?.[0]?.md_rarity;
-      return rarity?.toLowerCase().includes(params.rarity!.toLowerCase());
+      if (!rarity) return false;
+      const lower = rarity.toLowerCase();
+      return raritySelected.some((value) => lower.includes(value.toLowerCase()));
     });
   }
 
@@ -274,7 +304,7 @@ export function selectFilteredCards(
   searchQuery: string,
   searchParams: SearchParams & { sort?: string; sortDirection?: "asc" | "desc" },
 ): Card[] {
-  const cacheKey = getCacheKey(searchQuery, searchParams);
+  const cacheKey = getCacheKey(searchQuery, searchParams, allCards.length);
 
   // Check cache first
   if (filterCache.has(cacheKey)) {

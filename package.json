@@ -25,6 +25,13 @@
     "test:watch": "jest --watch",
     "test:a11y": "jest --testPathPattern=a11y",
     "test:deck-share": "tsx scripts/test-deck-share-standalone.ts",
+    "strategist:eval": "node scripts/strategist-eval.mjs",
+    "strategist:eval:start": "node scripts/strategist-eval.mjs start",
+    "strategist:eval:run": "node scripts/strategist-eval.mjs run",
+    "strategist:eval:end": "node scripts/strategist-eval.mjs end",
+    "strategist:eval:report": "node scripts/strategist-eval.mjs report",
+    "strategist:eval:status": "node scripts/strategist-eval.mjs status",
+    "strategist:eval:promote": "node scripts/strategist-eval.mjs promote",
     "seed:metadata": "tsx scripts/seed-card-metadata.ts",
     "verify:embeddings": "tsx scripts/verify-embeddings.ts"
   },

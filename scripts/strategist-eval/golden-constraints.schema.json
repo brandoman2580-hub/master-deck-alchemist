@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://master-deck-alchemist.local/strategist-eval/golden-constraints.schema.json",
+  "title": "StrategistEvalGolden",
+  "description": "Versioned golden constraint case for Strategist chat-in eval. Store in scenarios.json or goldens/*.jsonl — not a live DB table.",
+  "type": "object",
+  "required": ["id", "prompt"],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Stable scenario id (A1) or regression id (A3-reg-…)."
+    },
+    "group": { "type": "string" },
+    "prompt": { "type": "string", "minLength": 1 },
+    "format": {
+      "type": "string",
+      "enum": ["MASTER_DUEL", "TCG"]
+    },
+    "formatPolicy": {
+      "type": "string",
+      "enum": ["match_session", "require_format", "any"],
+      "default": "match_session",
+      "description": "match_session skips when session format differs (avoids false HTTP 400 on MD decks for TCG cases)."
+    },
+    "injectUnknownCardId": { "type": "integer" },
+    "severity": {
+      "type": "string",
+      "enum": ["high", "medium", "low"]
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["seed", "promoted_fail"]
+        },
+        "at": { "type": "string" },
+        "fromFile": { "type": "string" },
+        "notes": { "type": "string" }
+      }
+    },
+    "constraints": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "modes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["qa", "tune_copies", "discover_synergy", "optimize"]
+          }
+        },
+        "forbidCasualTone": { "type": "boolean" },
+        "redirectHint": {
+          "type": ["string", "null"]
+        },
+        "forbidRedirectHints": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "httpError": { "type": "boolean" },
+        "oob": { "type": "boolean" },
+        "mustContainAnswer": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "mustNotContainAnswer": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "answerMustMatch": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "RegExp source strings, matched case-insensitively."
+        },
+        "answerMustNotMatch": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "forbidRecommendNames": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Must not be framed as add/run/play; refuse/ban mentions are allowed."
+        },
+        "requireRefuseNames": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Name must appear near refuse/ban/illegal language."
+        },
+        "requiredEntities": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "notes": { "type": "string" }
+      }
+    },
+    "expect": {
+      "description": "Deprecated alias for constraints (back-compat).",
+      "type": "object"
+    }
+  }
+}

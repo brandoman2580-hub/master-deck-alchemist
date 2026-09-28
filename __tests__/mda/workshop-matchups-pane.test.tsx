@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { WorkshopMatchupsPane } from "@/components/mda/workshop-matchups-pane";
 import type { FactsEnvelope } from "@/lib/engine";
-import { FACTS_SCHEMA_VERSION } from "@/lib/engine";
+import { FACTS_SCHEMA_VERSION, emptyWorkshopGradeAxes } from "@/lib/engine";
 
 function sampleFacts(): FactsEnvelope {
   return {
@@ -28,6 +28,7 @@ function sampleFacts(): FactsEnvelope {
         notes: [],
       },
       bosses: [],
+      restrictions: [],
     },
     consistency: {
       n: 3000,
@@ -55,11 +56,13 @@ function sampleFacts(): FactsEnvelope {
     ],
     combos: { lines: [], source: "empty" },
     grade: {
+      ...emptyWorkshopGradeAxes(),
       consistency: 78,
       power: 60,
       resilience: 65,
       disruption: 70,
       letter: "B",
+      formatRulePack: "masterDuelMaxxC",
     },
   };
 }

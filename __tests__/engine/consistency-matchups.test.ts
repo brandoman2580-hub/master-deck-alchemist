@@ -218,6 +218,7 @@ describe("scoreMatchupReadiness + grade", () => {
       consistency: facts.consistency,
       diagnostics: facts.diagnostics,
       matchups: facts.matchups,
+      format: "MASTER_DUEL",
     });
     expect(axes.letter).toBe(facts.grade.letter);
   });

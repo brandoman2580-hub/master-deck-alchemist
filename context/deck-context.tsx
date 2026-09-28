@@ -22,6 +22,7 @@ import {
   loadDeck as loadDeckFromSupabase,
 } from "../lib/supabaseDecks";
 import { invalidateAllUserDecks } from "@/hooks/useUserDecks";
+import { mergeDeckAfterSave } from "@/lib/deck/merge-deck-after-save";
 
 type DeckSection = "mainDeck" | "extraDeck" | "sideDeck";
 
@@ -214,11 +215,16 @@ export function DeckProvider({ children }: { children: ReactNode }) {
         // Use supabaseDecks function
         await saveDeckToSupabase(validatedDeck, user.id);
 
-        setCurrentDeck((prev) => ({
-          ...prev,
-          ...validatedDeck,
-          updated_at: new Date().toISOString(),
-        }));
+        // Never replace main/extra/side from the save payload — a newer local
+        // add can land while this request is in flight (Workshop Assistant Add).
+        setCurrentDeck((prev) =>
+          mergeDeckAfterSave(prev, {
+            id: validatedDeck.id,
+            name: validatedDeck.name,
+            mode: validatedDeck.mode,
+            updated_at: new Date().toISOString(),
+          }),
+        );
 
         await getUserDecks();
         invalidateUserDecksCache();

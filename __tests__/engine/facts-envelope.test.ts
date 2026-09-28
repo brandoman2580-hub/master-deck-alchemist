@@ -1,8 +1,8 @@
-import { FACTS_SCHEMA_VERSION } from "@/lib/engine/types";
+import { FACTS_SCHEMA_VERSION, emptyWorkshopGradeAxes } from "@/lib/engine";
 import type { FactsEnvelope } from "@/lib/engine/types";
 
 /**
- * Proves the Phase 0 FactsEnvelope shape is constructible with empty
+ * Proves the FactsEnvelope shape is constructible with empty
  * projections so later phases can fill diagnostics/consistency without
  * breaking consumers that expect the full contract.
  */
@@ -31,6 +31,7 @@ function emptyFacts(overrides: Partial<FactsEnvelope> = {}): FactsEnvelope {
         notes: [],
       },
       bosses: [],
+      restrictions: [],
     },
     consistency: {
       n: 0,
@@ -40,20 +41,14 @@ function emptyFacts(overrides: Partial<FactsEnvelope> = {}): FactsEnvelope {
     },
     matchups: [],
     combos: { lines: [], source: "empty" },
-    grade: {
-      consistency: 0,
-      power: 0,
-      resilience: 0,
-      disruption: 0,
-      letter: "F",
-    },
+    grade: emptyWorkshopGradeAxes(),
     ...overrides,
   };
 }
 
 describe("FactsEnvelope contract", () => {
   it("exports a pinned schema version for cache compatibility checks", () => {
-    expect(FACTS_SCHEMA_VERSION).toBe("0.1.0");
+    expect(FACTS_SCHEMA_VERSION).toBe("0.2.0");
   });
 
   it("marks illegal decks as not ok while still returning a full envelope", () => {
@@ -69,10 +64,15 @@ describe("FactsEnvelope contract", () => {
     );
     expect(facts.combos.source).toBe("empty");
     expect(facts.matchups).toEqual([]);
+    expect(facts.grade.formatRulePack).toBe("none");
+    expect(facts.grade.synergyFactor).toBe(1);
   });
 
   it("supports TCG format envelopes independently of Master Duel", () => {
-    const facts = emptyFacts({ format: "TCG", legality: { ok: true, errors: [] } });
+    const facts = emptyFacts({
+      format: "TCG",
+      legality: { ok: true, errors: [] },
+    });
     expect(facts.format).toBe("TCG");
     expect(facts.legality.ok).toBe(true);
   });

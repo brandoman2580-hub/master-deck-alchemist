@@ -1,4 +1,8 @@
 /**
+ * NOT LIVE — legacy free-form prompt pack (deck-assistant twin).
+ * Live coaching: `supabase/functions/strategist/coach-response.ts`.
+ * Do not extend this file for production Strategist behavior.
+ *
  * Deck Assistant System Prompts
  * Optimized for llama-3.3-70b-versatile to deliver high-quality Yu-Gi-Oh! deck building guidance.
  * Based on prompt engineering principles: few-shot examples, structured reasoning, anti-patterns.
