@@ -17,7 +17,8 @@ const hasRequiredEnv =
   Boolean(SUPABASE_URL) &&
   Boolean(SUPABASE_ANON_KEY) &&
   SUPABASE_URL !== "https://placeholder.supabase.co" &&
-  SUPABASE_ANON_KEY !== "placeholder";
+  SUPABASE_ANON_KEY !== "placeholder" &&
+  typeof fetch === "function";
 
 const describeIntegration = hasRequiredEnv ? describe : describe.skip;
 

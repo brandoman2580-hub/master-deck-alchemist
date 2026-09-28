@@ -1,21 +1,56 @@
 import { useState } from "react";
-import { sendChatMessage, type DeckAssistantChatResponse } from "@/lib/api/deckAssistant";
-import type { Message } from "@/components/deck-assistant/chat-interface-types";
+import {
+  sendChatMessage,
+  type DeckAssistantChatResponse,
+} from "@/lib/api/strategist";
+import type {
+  AssistantMode,
+  DeckCoachResponse,
+} from "@/lib/engine/assistant-contract";
+import type { DeckSnapshot } from "@/lib/engine/deck-snapshot";
+import type { StrategistMessage } from "@/components/mda/workshop-strategist/types";
+
+/**
+ * Prefer the nested coach payload; fall back to flat chat fields when the
+ * edge returns a coach answer without `coach` (transitional responses).
+ */
+function coachFromChatResponse(
+  response: DeckAssistantChatResponse,
+): DeckCoachResponse | null {
+  if (response.coach) return response.coach;
+  if (!response.answer) return null;
+  return {
+    mode: response.mode ?? "qa",
+    answer: response.answer,
+    confidence: response.confidence ?? "medium",
+    limitations: response.limitations ?? [],
+    evidence: response.evidence ?? [],
+    tuning: response.tuning ?? undefined,
+    synergies: response.synergies ?? undefined,
+  };
+}
 
 interface UseChatMessageOptions {
   currentDeckId: string;
   conversationId: string | undefined;
   onConversationChange?: (conversationId: string | undefined) => void;
+  mode?: AssistantMode;
+  format?: "TCG" | "MASTER_DUEL";
+  /** Live Workshop snapshot builder — called at send time. */
+  getDeckSnapshot?: () => DeckSnapshot;
 }
 
 /**
- * Sends chat messages to deck-assistant.
+ * Sends chat messages to Strategist with the live Workshop deck snapshot.
  * Caller must gate on saved + legal decks before invoking.
  */
 export function useChatMessage({
   currentDeckId,
   conversationId,
   onConversationChange,
+  mode = "auto",
+  format,
+  getDeckSnapshot,
 }: UseChatMessageOptions) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -24,7 +59,8 @@ export function useChatMessage({
     deckId: string,
     userQuery: string,
     convId: string | undefined,
-    retries = 3
+    deckSnapshot: DeckSnapshot | undefined,
+    retries = 3,
   ): Promise<DeckAssistantChatResponse> => {
     let lastError: Error | null = null;
 
@@ -34,16 +70,31 @@ export function useChatMessage({
           deckId,
           userQuery,
           conversationId: convId,
+          mode,
+          format,
+          deckSnapshot,
         });
         return response;
-      } catch (error) {
-        lastError = error instanceof Error ? error : new Error(String(error));
+      } catch (err) {
+        lastError = err instanceof Error ? err : new Error(String(err));
 
         if (
-          lastError.message.includes("Authentication") ||
-          lastError.message.includes("401") ||
-          lastError.message.includes("403") ||
-          lastError.message.includes("400")
+          lastError.message.includes("log in") ||
+          lastError.message.includes("not legal") ||
+          lastError.message.includes("card library") ||
+          lastError.message.includes("Save your deck") ||
+          lastError.message.includes("could not be found")
+        ) {
+          throw lastError;
+        }
+
+        // Do not retry client validation / auth failures
+        const msg = lastError.message.toLowerCase();
+        if (
+          msg.includes("authentication") ||
+          msg.includes("401") ||
+          msg.includes("403") ||
+          msg.includes("400")
         ) {
           throw lastError;
         }
@@ -55,12 +106,13 @@ export function useChatMessage({
       }
     }
 
-    throw lastError || new Error("Failed to send message after retries");
+    throw lastError ||
+      new Error("Strategist could not review your deck right now. Try again.");
   };
 
   const sendMessage = async (
     userQuery: string,
-    setMessages: React.Dispatch<React.SetStateAction<Message[]>>
+    setMessages: React.Dispatch<React.SetStateAction<StrategistMessage[]>>,
   ): Promise<void> => {
     setIsLoading(true);
     setError(null);
@@ -68,71 +120,70 @@ export function useChatMessage({
     try {
       const deckId = currentDeckId;
       if (!deckId || deckId === "temp" || deckId === "") {
-        throw new Error(
-          "Please save a legal deck before using the assistant.",
-        );
+        throw new Error("Save your deck before using Strategist.");
       }
+
+      const deckSnapshot = getDeckSnapshot?.();
 
       const response = await sendMessageWithRetry(
         deckId,
         userQuery,
         conversationId,
-        3
+        deckSnapshot,
+        3,
       );
 
-      if (response.conversation_id) {
-        onConversationChange?.(response.conversation_id);
-      }
-
       if (response.type === "clarification") {
-        const clarificationMessage: Message = {
+        const clarificationMessage: StrategistMessage = {
           id: (Date.now() + 1).toString(),
           role: "assistant",
-          content: response.question || response.text,
+          content: response.question || response.text || response.answer || "",
           timestamp: new Date(),
         };
         setMessages((prev) => [...prev, clarificationMessage]);
-      } else if (
-        response.type === "recommendations" ||
-        response.type === "ratio_suggestions"
-      ) {
-        const ratioText = response.ratioSuggestions
-          ? "\n\n" +
-            response.ratioSuggestions
-              .map(
-                (rs) =>
-                  `${rs.cardName}: ${rs.currentCount} → ${rs.suggestedCount}\n${rs.reason}`,
-              )
-              .join("\n\n")
-          : "";
-        const assistantMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          role: "assistant",
-          content: response.text + ratioText,
-          timestamp: new Date(),
-          recommendations: response.recommendations?.map((rec) => ({
-            cardId: rec.cardId,
-            cardName: rec.cardName,
-            reason: rec.reason,
-            priority: rec.priority,
-            canAdd: rec.canAdd,
-            impactEst: rec.impactEst,
-            synergyScore: rec.synergyScore,
-          })),
-        };
-        setMessages((prev) => [...prev, assistantMessage]);
-      } else {
-        throw new Error(response.error || "Unknown response type");
+        if (response.conversation_id) {
+          onConversationChange?.(response.conversation_id);
+        }
+        return;
       }
-    } catch (error) {
+
+      const coach = coachFromChatResponse(response);
+
+      const answer =
+        response.answer ||
+        response.text ||
+        coach?.answer ||
+        "";
+
+      const assistantMessage: StrategistMessage = {
+        id: (Date.now() + 1).toString(),
+        role: "assistant",
+        content: answer,
+        timestamp: new Date(),
+        coach,
+        mode: coach?.mode,
+        confidence: coach?.confidence,
+        evidence: coach?.evidence,
+        tuning: coach?.tuning ?? null,
+        synergies: coach?.synergies ?? null,
+        limitations: coach?.limitations,
+        recommendations: coach?.recommendations,
+        redirectHint: coach?.redirectHint ?? null,
+      };
+
+      setMessages((prev) => [...prev, assistantMessage]);
+      if (response.conversation_id) {
+        onConversationChange?.(response.conversation_id);
+      }
+    } catch (err) {
       const errorMessageText =
-        error instanceof Error
-          ? error.message
-          : "Sorry, I encountered an error. Please try again.";
+        err instanceof Error
+          ? err.message
+          : "Strategist could not review your deck right now. Try again.";
 
       setError(errorMessageText);
 
-      const errorMessage: Message = {
+      const errorMessage: StrategistMessage = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
         content: errorMessageText,

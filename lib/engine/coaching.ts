@@ -41,3 +41,20 @@ export function mentionsInventedQuantitativeClaims(text: string): boolean {
     /\bsimulated\s+\d+\s+duels?\b/.test(lower)
   );
 }
+
+/**
+ * Smoke detector for banned casual / peer-coach filler in Strategist answers.
+ * Competitive YGO terms (hand trap, brick, garnet) are allowed.
+ */
+export function containsCasualCoachTone(text: string): boolean {
+  return (
+    /\byo\b/i.test(text) ||
+    /\bbro\b/i.test(text) ||
+    /\blet'?s slide this out\b/i.test(text) ||
+    /\bsolid pick\b/i.test(text) ||
+    /\bdialed\b/i.test(text) ||
+    /\bspicy\b/i.test(text) ||
+    /\bdue?list\b/i.test(text) ||
+    /\bhype\b/i.test(text)
+  );
+}

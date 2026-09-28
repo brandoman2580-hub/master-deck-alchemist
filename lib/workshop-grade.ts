@@ -1,34 +1,51 @@
 import type { WorkshopGrade } from "./workshop-grade-types";
-import { gradeFromFacts } from "@/lib/engine/grade";
-import type {
-  ConsistencyStats,
-  DiagnosticsBlock,
-  MatchupReadiness,
-  WorkshopGradeAxes,
-} from "@/lib/engine/types";
+import {
+  emptyWorkshopGradeAxes,
+  gradeFromFacts,
+  type GradeFromFactsInput,
+} from "@/lib/engine/grade";
+import type { WorkshopGradeAxes } from "@/lib/engine/types";
 
 export type { WorkshopGrade, WorkshopGradeScore } from "./workshop-grade-types";
 
-export function workshopGradeFromAxes(axes: WorkshopGradeAxes): WorkshopGrade {
+/**
+ * Map Facts Brain axes → chrome labels.
+ * Tolerates pre-0.2.0 cached grades that lack breakdown / pack metadata.
+ */
+export function workshopGradeFromAxes(
+  axes: WorkshopGradeAxes | null | undefined,
+): WorkshopGrade {
+  const fallback = emptyWorkshopGradeAxes();
+  const safe = axes ?? fallback;
+  const breakdown = safe.breakdown ?? fallback.breakdown;
+
   return {
-    letter: axes.letter,
+    letter: safe.letter ?? fallback.letter,
     scores: [
-      { label: "Consistency", value: axes.consistency },
-      { label: "Resilience", value: axes.resilience },
-      { label: "Power", value: axes.power },
-      { label: "Disruption", value: axes.disruption },
+      { label: "Consistency", value: safe.consistency ?? 0 },
+      { label: "Resilience", value: safe.resilience ?? 0 },
+      { label: "Power", value: safe.power ?? 0 },
+      { label: "Disruption", value: safe.disruption ?? 0 },
     ],
+    synergyFactor: safe.synergyFactor ?? fallback.synergyFactor,
+    formatRulePack: safe.formatRulePack ?? fallback.formatRulePack,
+    formatPackNotes: breakdown.formatPackNotes ?? [],
+    synergyNotes: breakdown.synergyNotes ?? [],
+    breakdown: {
+      consistency: breakdown.consistency ?? [],
+      power: breakdown.power ?? [],
+      resilience: breakdown.resilience ?? [],
+      disruption: breakdown.disruption ?? [],
+    },
   };
 }
 
 /**
  * Preferred path: grade from Facts Brain axes.
  */
-export function gradeFromWorkshopFacts(input: {
-  consistency: ConsistencyStats;
-  diagnostics: DiagnosticsBlock;
-  matchups?: MatchupReadiness[];
-}): WorkshopGrade {
+export function gradeFromWorkshopFacts(
+  input: GradeFromFactsInput,
+): WorkshopGrade {
   return workshopGradeFromAxes(gradeFromFacts(input));
 }
 

@@ -1,5 +1,6 @@
 import type { DeckType } from "@/types/types";
 import type { FactsEnvelope } from "@/lib/engine/types";
+import { emptyWorkshopGradeAxes } from "@/lib/engine/grade";
 
 const mockBuildFactsEnvelope = jest.fn();
 const mockLoadStrategyKnowledge = jest.fn();
@@ -69,7 +70,7 @@ function makeDeck(mainCount: number): DeckType {
 
 function makeFacts(partial?: Partial<FactsEnvelope>): FactsEnvelope {
   return {
-    schemaVersion: "0.1.0",
+    schemaVersion: "0.2.0",
     deckId: "deck-1",
     deckHash: "hash",
     format: "MASTER_DUEL",
@@ -92,6 +93,7 @@ function makeFacts(partial?: Partial<FactsEnvelope>): FactsEnvelope {
         notes: [],
       },
       bosses: [],
+      restrictions: [],
     },
     consistency: {
       n: 3000,
@@ -110,11 +112,13 @@ function makeFacts(partial?: Partial<FactsEnvelope>): FactsEnvelope {
     ],
     combos: { lines: [], source: "template" },
     grade: {
+      ...emptyWorkshopGradeAxes(),
       consistency: 80,
       power: 70,
       resilience: 65,
       disruption: 70,
       letter: "B",
+      formatRulePack: "masterDuelMaxxC",
     },
     ...partial,
   };
@@ -155,6 +159,41 @@ describe("getFacts shared pipeline", () => {
     const result = await getFacts(makeDeck(40), { readCache: true });
     expect(result).toBe(cached);
     expect(mockRunConsistencySimulation).not.toHaveBeenCalled();
+  });
+
+  it("ignores stale 0.1.0 cache missing grade breakdown", async () => {
+    const stale = makeFacts({
+      schemaVersion: "0.1.0",
+      grade: {
+        consistency: 80,
+        power: 70,
+        resilience: 65,
+        disruption: 70,
+        letter: "B",
+      } as ReturnType<typeof makeFacts>["grade"],
+    });
+    mockReadDeckAnalysisCache.mockResolvedValue(stale);
+    const full = makeFacts();
+    mockBuildFactsEnvelope
+      .mockReturnValueOnce(
+        makeFacts({
+          consistency: {
+            n: 0,
+            starterAccess: 0,
+            brickRate: 0,
+            oneInterruptionSurvival: 0,
+          },
+        }),
+      )
+      .mockReturnValueOnce(full);
+
+    const { getFacts } = await import("@/lib/engine/get-facts");
+    const result = await getFacts(makeDeck(40), {
+      readCache: true,
+      writeCache: true,
+    });
+    expect(result).toBe(full);
+    expect(mockRunConsistencySimulation).toHaveBeenCalled();
   });
 
   it("runs consistency → matchups → combos and writes cache on miss", async () => {

@@ -4,7 +4,35 @@
  * Groq may only coach from validated fields present here.
  */
 
-export const FACTS_SCHEMA_VERSION = "0.1.0" as const;
+/** Bumped when gradeBreakdown / formatRulePack / synergyFactor land on the envelope. */
+export const FACTS_SCHEMA_VERSION = "0.2.0" as const;
+
+/** Active format scoring pack id (never merges TCG ↔ MD banlists). */
+export type FormatRulePackId =
+  | "tcgTournament"
+  | "masterDuelMaxxC"
+  | "none";
+
+export interface GradeAxisContribution {
+  key: string;
+  label: string;
+  /** Numeric contribution or raw metric used in the axis explanation. */
+  value: number;
+  note?: string;
+}
+
+/**
+ * Deterministic, prompt-safe explanation of how each KPI was derived.
+ * Synergy stays internal (factor + notes) — not a fifth chrome axis.
+ */
+export interface GradeBreakdown {
+  consistency: GradeAxisContribution[];
+  power: GradeAxisContribution[];
+  resilience: GradeAxisContribution[];
+  disruption: GradeAxisContribution[];
+  synergyNotes: string[];
+  formatPackNotes: string[];
+}
 
 export type EngineFormat = "TCG" | "MASTER_DUEL";
 
@@ -99,6 +127,8 @@ export interface ComboLine {
   edges: ComboEdge[];
   killers: string[];
   endboardSummary: string;
+  /** Optional choke fallback note from curated templates. */
+  fallbackSummary?: string;
 }
 
 export interface ComboGraphSummary {
@@ -112,6 +142,10 @@ export interface WorkshopGradeAxes {
   resilience: number;
   disruption: number;
   letter: "S" | "A" | "B" | "C" | "D" | "F";
+  /** Internal modifier applied to Consistency/Power only (typically 0.85–1.15). */
+  synergyFactor: number;
+  formatRulePack: FormatRulePackId;
+  breakdown: GradeBreakdown;
 }
 
 export interface LegalityBlock {
@@ -119,11 +153,21 @@ export interface LegalityBlock {
   errors: string[];
 }
 
+export interface RestrictionFact {
+  cardId: number;
+  name: string;
+  lockSummary: string;
+  appliesTo: "extra_deck" | "special_summon" | "summon" | "other";
+  evidenceId: string;
+}
+
 export interface DiagnosticsBlock {
   collisions: Collision[];
   roleCoverage: RoleCoverage;
   strategyFit: StrategyFit;
   bosses: BossCard[];
+  /** Extracted Extra Deck / summon locks from effect text. */
+  restrictions: RestrictionFact[];
 }
 
 /**

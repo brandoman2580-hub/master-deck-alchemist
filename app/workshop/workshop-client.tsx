@@ -75,7 +75,9 @@ export default function WorkshopPage(): ReactNode {
         <div className="relative z-[1] flex min-h-0 flex-1 flex-col px-4 pb-4 pt-3 sm:px-6">
           {tab === "build" ? (
             <div className="min-h-0 flex-1 overflow-hidden">
-              <WorkshopBuildPane />
+              <WorkshopBuildPane
+                onOpenWorkshopTab={(next) => setTab(next)}
+              />
             </div>
           ) : null}
           {tab === "matchups" ? (

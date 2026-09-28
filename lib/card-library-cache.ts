@@ -5,7 +5,7 @@ const DB_VERSION = 1;
 const STORE_NAME = "library";
 const CACHE_KEY = "all-cards";
 /** Bump when Card shape or fetch mapping changes. */
-export const CARD_LIBRARY_CACHE_SCHEMA = 1;
+export const CARD_LIBRARY_CACHE_SCHEMA = 3;
 /** Revalidate from network after this age. */
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 

@@ -21,6 +21,7 @@ export interface ComboTemplateGraph {
   nodes: ComboTemplateNode[];
   edges: ComboEdge[];
   endboardSummary: string;
+  fallbackSummary?: string;
 }
 
 export interface ComboTemplateRow {
@@ -112,6 +113,7 @@ export function validateComboTemplate(
     edges,
     killers: template.killers,
     endboardSummary: template.graph.endboardSummary,
+    fallbackSummary: template.graph.fallbackSummary,
   };
 }
 
@@ -233,9 +235,27 @@ export function compileCombos(input: CompileCombosInput): ComboGraphSummary {
   );
 
   const lines: ComboLine[] = [];
+  const seen = new Set<string>();
   for (const template of selected) {
     const line = validateComboTemplate(template, input.deckCards);
-    if (line) lines.push(line);
+    if (line) {
+      lines.push(line);
+      seen.add(template.id);
+    }
+  }
+
+  // Hybrid coverage: also accept other format templates that fully validate.
+  if (lines.length < 3) {
+    const scoped = input.templates.filter((t) => t.format === input.format);
+    for (const template of scoped) {
+      if (seen.has(template.id)) continue;
+      const line = validateComboTemplate(template, input.deckCards);
+      if (line) {
+        lines.push(line);
+        seen.add(template.id);
+        if (lines.length >= 3) break;
+      }
+    }
   }
 
   if (lines.length > 0) {

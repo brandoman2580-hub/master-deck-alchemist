@@ -13,6 +13,18 @@ import {
   type FactsEnvelope,
   type MatchupReadiness,
 } from "./types";
+import {
+  prioritySlice,
+  resolveFactsPromptCaps,
+  type FormatFactsOptions,
+} from "./prompt-packing";
+
+export type { FormatFactsOptions } from "./prompt-packing";
+export {
+  packDeckCardsForPrompt,
+  resolveFactsPromptCaps,
+  prioritySlice,
+} from "./prompt-packing";
 
 export interface BuildFactsOptions {
   banlist?: Record<string, BanStatus | string>;
@@ -60,7 +72,20 @@ export function buildFactsEnvelope(
   const consistency = options.consistency ?? EMPTY_CONSISTENCY;
   const matchups = options.matchups ?? [];
   const combos = options.combos ?? { lines: [], source: "empty" as const };
-  const grade = gradeFromFacts({ consistency, diagnostics, matchups });
+  const mainDeckCardNames = (deck.mainDeck ?? []).map((c) => c.name);
+  const engineCards = [...(deck.mainDeck ?? []), ...(deck.extraDeck ?? [])].map(
+    (c) => ({ archetype: c.archetype ?? null }),
+  );
+  const grade = gradeFromFacts({
+    consistency,
+    diagnostics,
+    matchups,
+    combos,
+    format,
+    banlist: options.banlist,
+    mainDeckCardNames,
+    engineCards,
+  });
 
   return {
     schemaVersion: FACTS_SCHEMA_VERSION,
@@ -77,20 +102,50 @@ export function buildFactsEnvelope(
 }
 
 /**
- * Compact prompt block for Groq coaching. Only includes validated facts.
+ * Compress FactsEnvelope into a metrics-focused prompt block.
+ * Caps are raised and intent-selected (not blind top-N).
  */
-export function formatFactsForPrompt(facts: FactsEnvelope): string {
+export function formatFactsForPrompt(
+  facts: FactsEnvelope,
+  options: FormatFactsOptions = {},
+): string {
   const { diagnostics, legality, format, consistency, matchups, grade } = facts;
+  const caps = resolveFactsPromptCaps(options);
+  const q = (options.question ?? "").toLowerCase();
+
+  const collisionItems = prioritySlice(
+    diagnostics.collisions,
+    caps.collisions,
+    (c) => {
+      let s = c.severity === "error" ? 30 : c.severity === "warning" ? 20 : 5;
+      if (c.code.includes("LOCK") || /lock|conflict/i.test(c.message)) s += 15;
+      if (
+        q &&
+        c.message
+          .toLowerCase()
+          .split(/\s+/)
+          .some((w) => w.length > 4 && q.includes(w))
+      ) {
+        s += 10;
+      }
+      return s;
+    },
+  );
   const collisions =
-    diagnostics.collisions.length > 0
-      ? diagnostics.collisions
+    collisionItems.length > 0
+      ? collisionItems
           .map((c) => `- [${c.severity}] ${c.code}: ${c.message}`)
           .join("\n")
       : "- None";
 
+  const bossItems = prioritySlice(
+    diagnostics.bosses,
+    caps.bosses,
+    (b) => (b.zone === "extra" ? 10 : 5),
+  );
   const bosses =
-    diagnostics.bosses.length > 0
-      ? diagnostics.bosses.map((b) => `${b.name} (${b.cardId})`).join(", ")
+    bossItems.length > 0
+      ? bossItems.map((b) => `${b.name} (id:${b.cardId})`).join(", ")
       : "None detected";
 
   const consistencyLine =
@@ -98,10 +153,19 @@ export function formatFactsForPrompt(facts: FactsEnvelope): string {
       ? `n=${consistency.n}, starterAccess=${consistency.starterAccess.toFixed(3)}, brickRate=${consistency.brickRate.toFixed(3)}, oneInterruptionSurvival=${consistency.oneInterruptionSurvival.toFixed(3)}`
       : "not computed";
 
+  const matchupItems = prioritySlice(
+    matchups,
+    caps.matchups,
+    (m) => {
+      let s = Math.abs(m.tagAdvantage) * 10;
+      if (m.tier === "1" || m.tier === "T1") s += 8;
+      if (q && q.includes(m.opponentArchetype.toLowerCase())) s += 25;
+      return s;
+    },
+  );
   const matchupLines =
-    matchups.length > 0
-      ? matchups
-          .slice(0, 12)
+    matchupItems.length > 0
+      ? matchupItems
           .map(
             (m) =>
               `- ${m.opponentArchetype} (T${m.tier ?? "?"}): tagAdvantage=${m.tagAdvantage.toFixed(2)}`,
@@ -109,29 +173,78 @@ export function formatFactsForPrompt(facts: FactsEnvelope): string {
           .join("\n")
       : "- none";
 
+  const comboItems = prioritySlice(
+    facts.combos.lines,
+    caps.combos,
+    (l) => {
+      let s = (l.endboardSummary?.length ?? 0) > 0 ? 8 : 2;
+      if (q && q.includes(l.name.toLowerCase())) s += 20;
+      return s;
+    },
+  );
+  const comboLines =
+    comboItems.length > 0
+      ? comboItems
+          .map((l) => {
+            const killers = l.killers.slice(0, 3).join(", ") || "n/a";
+            const summary = (l.endboardSummary || "").slice(0, 120);
+            const fallback = l.fallbackSummary
+              ? ` | if choke: ${l.fallbackSummary.slice(0, 80)}`
+              : "";
+            return `- ${l.name}: ${summary} (killers: ${killers})${fallback}`;
+          })
+          .join("\n")
+      : "- none";
+
+  const restrictionItems = prioritySlice(
+    diagnostics.restrictions ?? [],
+    caps.restrictions,
+    (r) => {
+      let s = 10;
+      if (q && q.includes(r.name.toLowerCase())) s += 20;
+      if (/only|cannot|lock/i.test(r.lockSummary)) s += 8;
+      return s;
+    },
+  );
+  const restrictionLines =
+    restrictionItems.length > 0
+      ? restrictionItems
+          .map((r) => `- ${r.name}: ${r.lockSummary}`)
+          .join("\n")
+      : "- none";
+
+  const noteItems = prioritySlice(
+    diagnostics.strategyFit.notes,
+    caps.strategyNotes,
+    (_n, i) => 10 - i,
+  );
+  const strategyNotes =
+    noteItems.length > 0
+      ? noteItems.map((n) => `- ${n}`).join("\n")
+      : "-";
+
   return `# VALIDATED FACTS (Facts Brain — do not invent alternate metrics)
 
 **Format:** ${format}
 **Deck hash:** ${facts.deckHash}
-**Legality:** ${legality.ok ? "OK" : "FAILED"}
-${legality.errors.length ? legality.errors.map((e) => `- ${e}`).join("\n") : "- No legality errors"}
-
+**Legality:** ${legality.ok ? "OK" : "FAILED"} (${legality.errors.length} errors)
 **Role coverage:** starters=${diagnostics.roleCoverage.starters}, extenders=${diagnostics.roleCoverage.extenders}, handTraps=${diagnostics.roleCoverage.handTraps}, boardBreakers=${diagnostics.roleCoverage.boardBreakers}, endboard=${diagnostics.roleCoverage.endboardPieces}, locks=${diagnostics.roleCoverage.locks}
-
 **Strategy fit:** archetype=${diagnostics.strategyFit.primaryArchetype ?? "unknown"}, primary=${diagnostics.strategyFit.primaryStrategy ?? "n/a"}, fitScore=${diagnostics.strategyFit.fitScore}
-${diagnostics.strategyFit.notes.map((n) => `- ${n}`).join("\n") || "-"}
-
+${strategyNotes}
 **Bosses:** ${bosses}
-
 **Structural collisions:**
 ${collisions}
-
+**Summon / Extra Deck locks:**
+${restrictionLines}
 **Consistency:** ${consistencyLine}
-
-**Matchups (tag readiness):**
+**Matchups (tag readiness, priority ≤${caps.matchups}):**
 ${matchupLines}
-
 **Grade:** ${grade.letter} (C=${grade.consistency} P=${grade.power} R=${grade.resilience} D=${grade.disruption})
+**Grade synergy factor (internal):** ${grade.synergyFactor.toFixed(2)} — ${grade.breakdown.synergyNotes.slice(0, 3).join(" | ") || "n/a"}
+**Format rule pack:** ${grade.formatRulePack} — ${grade.breakdown.formatPackNotes.slice(0, 3).join(" | ") || "n/a"}
+**Grade breakdown (resilience):** ${grade.breakdown.resilience.map((c) => `${c.key}=${c.value}`).join(", ") || "n/a"}
+**Combos:** ${facts.combos.source} (${facts.combos.lines.length} lines; showing ≤${caps.combos})
+${comboLines}
 
-**Combos:** ${facts.combos.source} (${facts.combos.lines.length} lines) — only discuss lines present in facts; do not invent steps.`;
+Only discuss combo steps present above; do not invent lines. Cite evidence IDs such as facts.consistency, facts.combos, facts.grade, facts.grade.breakdown, facts.formatRulePack, facts.diagnostics.*. Prefer professional competitive language in the answer — never dump raw Δstarter/brickRate decimals or FactsEnvelope jargon.`;
 }

@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { CardImage } from "@/components/ui/card-image";
 import { MdaAnimatedNumber } from "@/components/mda/deck-cap-badge";
+import { WorkshopGradeDisclaimer } from "@/components/mda/workshop-grade-disclaimer";
 import { gradeFromCounts, type WorkshopGrade } from "@/lib/workshop-grade";
 import type { DeckCard, DeckMode } from "@/types/types";
 import { cn } from "@/lib/utils";
@@ -149,13 +150,16 @@ export function WorkshopDeckChrome({
         </div>
 
         <div className="flex flex-wrap items-center gap-4 lg:justify-end lg:border-l-[6px] lg:border-mda-chrome lg:pl-4">
-          <div className="flex h-full max-h-[74px] min-w-[72px] flex-col items-center justify-center bg-mda-chrome px-3 py-1.5 text-mda-inverse-text">
-            <span className="font-mda text-[10px] font-bold uppercase tracking-widest">
-              Grade
-            </span>
-            <span className="font-display text-3xl font-bold leading-none">
-              {gradeLoading && !gradeProp ? "—" : grade.letter}
-            </span>
+          <div className="flex items-center gap-2">
+            <div className="flex h-full max-h-[74px] min-w-[72px] flex-col items-center justify-center bg-mda-chrome px-3 py-1.5 text-mda-inverse-text">
+              <span className="font-mda text-[10px] font-bold uppercase tracking-widest">
+                Grade
+              </span>
+              <span className="font-display text-3xl font-bold leading-none">
+                {gradeLoading && !gradeProp ? "—" : grade.letter}
+              </span>
+            </div>
+            <WorkshopGradeDisclaimer mode={mode} grade={grade} />
           </div>
           <div className="grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-4">
             {grade.scores.map((score) => (

@@ -1,10 +1,13 @@
 import type { Card } from "@/types/card";
 import type { DeckType } from "@/types/types";
-import { detectCardRole } from "@/lib/analysis/cardRoleDetector";
 import {
   ARCHETYPE_KNOWLEDGE,
   findArchetypeKnowledge,
 } from "@/lib/analysis/archetypeKnowledge";
+import {
+  detectHeuristicRoleSlugs,
+  heuristicSlugsToCardRoleTags,
+} from "@/lib/engine/card-role-heuristics";
 import type {
   BossCard,
   CardRoleTag,
@@ -15,6 +18,10 @@ import type {
   StrategyFit,
   YugiohPlayStrategy,
 } from "./types";
+import {
+  detectPackageLockConflicts,
+  extractRestrictions,
+} from "./restrictions";
 
 export interface StrategyWeightRow {
   cardId: string;
@@ -41,30 +48,7 @@ const PLAYSTYLE_TO_STRATEGY: Record<string, YugiohPlayStrategy> = {
 };
 
 function mapHeuristicRoles(card: Card): CardRoleTag[] {
-  const roles = detectCardRole(card);
-  const mapped: CardRoleTag[] = [];
-  for (const role of roles) {
-    switch (role) {
-      case "starter":
-        mapped.push("Starter");
-        break;
-      case "extender":
-        mapped.push("Extender");
-        break;
-      case "interruption":
-        mapped.push("Hand Trap");
-        break;
-      case "board_breaker":
-        mapped.push("Board Breaker");
-        break;
-      case "end_board_piece":
-        mapped.push("Endboard");
-        break;
-      default:
-        break;
-    }
-  }
-  return mapped;
+  return heuristicSlugsToCardRoleTags(detectHeuristicRoleSlugs(card));
 }
 
 function emptyCoverage(): RoleCoverage {
@@ -265,10 +249,25 @@ export function buildDiagnostics(
     );
   }
 
+  const restrictionCards = allCards.map((c) => ({
+    id: c.id,
+    name: c.name,
+    desc: c.desc,
+  }));
+  const restrictions = extractRestrictions(restrictionCards);
+  const deckNames = allCards.map((c) => c.name);
+  collisions.push(
+    ...detectPackageLockConflicts({
+      restrictions,
+      deckCardNames: deckNames,
+    }),
+  );
+
   return {
     collisions,
     roleCoverage: coverage,
     strategyFit,
     bosses: bosses.slice(0, 8),
+    restrictions,
   };
 }

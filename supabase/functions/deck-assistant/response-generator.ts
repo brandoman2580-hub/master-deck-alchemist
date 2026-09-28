@@ -1,4 +1,8 @@
 /**
+ * NOT LIVE — legacy LLM response generator (deck-assistant twin).
+ * Live path: `supabase/functions/strategist/coach-response.ts`.
+ * Kept for historical Deno tests only; do not wire into production gateways.
+ *
  * LLM Response Generation
  * Generates natural language response with card recommendations
  * Uses optimized system prompt for high-quality Yu-Gi-Oh! deck building guidance.

@@ -1,0 +1,278 @@
+{
+  "version": 2,
+  "description": "Strategist chat-in eval scenarios + golden constraints. Additive regressions live in goldens/*.jsonl. Schema: golden-constraints.schema.json. Docs: docs/strategist-eval-matrix.md.",
+  "scenarios": [
+    {
+      "id": "A1",
+      "group": "legality",
+      "format": "MASTER_DUEL",
+      "formatPolicy": "match_session",
+      "prompt": "Can I run 3 copies of Maxx \"C\" and use Hot Red Dragon Archfiend King Calamity as my primary Level 12 endboard boss?",
+      "constraints": {
+        "modes": ["qa", "tune_copies", "discover_synergy", "optimize"],
+        "forbidCasualTone": true,
+        "forbidRecommendNames": ["Hot Red Dragon Archfiend King Calamity"],
+        "notes": "Assert against live MD banlist; Calamity often Forbidden — refuse framing is OK."
+      }
+    },
+    {
+      "id": "A2",
+      "group": "legality",
+      "format": "TCG",
+      "formatPolicy": "match_session",
+      "prompt": "Can I run 3 copies of Maxx \"C\" and use Hot Red Dragon Archfiend King Calamity as my primary Level 12 endboard boss?",
+      "constraints": {
+        "forbidCasualTone": true,
+        "notes": "Skipped on MD sessions. Start a TCG deck session to execute."
+      }
+    },
+    {
+      "id": "A3_MD",
+      "group": "legality",
+      "format": "MASTER_DUEL",
+      "formatPolicy": "match_session",
+      "prompt": "Should I add Hot Red Dragon Archfiend King Calamity to my Extra Deck?",
+      "constraints": {
+        "forbidCasualTone": true,
+        "forbidRecommendNames": ["Hot Red Dragon Archfiend King Calamity"],
+        "requireRefuseNames": ["Hot Red Dragon Archfiend King Calamity"],
+        "notes": "MD session only. Calamity is Forbidden on MD — refuse framing required; ban mention is not a recommend fail."
+      }
+    },
+    {
+      "id": "A3_TCG",
+      "group": "legality",
+      "format": "TCG",
+      "formatPolicy": "match_session",
+      "prompt": "Should I add Hot Red Dragon Archfiend King Calamity to my Extra Deck?",
+      "constraints": {
+        "forbidCasualTone": true,
+        "forbidRecommendNames": ["Hot Red Dragon Archfiend King Calamity"],
+        "notes": "TCG session only (skips on MD). Soft: never recommend as add. Do not requireRefuseNames — TCG ban status may differ from MD; review banlist-relative refuse manually if legal."
+      }
+    },
+    {
+      "id": "A4",
+      "group": "legality",
+      "prompt": "Should I play Ultra Neo Tomahawk Resonator Deluxe in this list?",
+      "constraints": {
+        "forbidCasualTone": true,
+        "mustNotContainAnswer": [
+          "Ultra Neo Tomahawk Resonator Deluxe as a legal add",
+          "run 3 Ultra Neo Tomahawk"
+        ],
+        "forbidRecommendNames": ["Ultra Neo Tomahawk Resonator Deluxe"]
+      }
+    },
+    {
+      "id": "B1",
+      "group": "consistency",
+      "prompt": "Why is my deck bricking on openers?",
+      "constraints": {
+        "modes": ["qa"],
+        "forbidCasualTone": true,
+        "forbidRedirectHints": ["workshop_matchups", "workshop_combos"]
+      }
+    },
+    {
+      "id": "B2",
+      "group": "tune",
+      "prompt": "Should I cut Ash Blossom to 2?",
+      "constraints": {
+        "modes": ["tune_copies"],
+        "forbidCasualTone": true
+      }
+    },
+    {
+      "id": "B3",
+      "group": "tune",
+      "prompt": "Optimize my card copies for brick rate",
+      "constraints": {
+        "modes": ["tune_copies"],
+        "forbidCasualTone": true
+      }
+    },
+    {
+      "id": "B4",
+      "group": "tune",
+      "prompt": "Trim my Main Deck to 40 — what should I pitch?",
+      "constraints": {
+        "modes": ["tune_copies", "qa"],
+        "forbidCasualTone": true
+      }
+    },
+    {
+      "id": "B5",
+      "group": "tune",
+      "prompt": "I am currently running 3 copies of Soul Resonator. Is this ratio optimal for my starting consistency?",
+      "constraints": {
+        "modes": ["tune_copies"],
+        "forbidCasualTone": true,
+        "requiredEntities": ["Soul Resonator"],
+        "answerMustMatch": ["\\b3\\b"],
+        "notes": "Soft copy-count probe. Fixture should include Soul Resonator at count 3 (id+count snapshot). Asserts tune_copies + name + acknowledging 3 — not a Monte Carlo oracle. Skip/promote if the session deck lacks Soul Resonator."
+      }
+    },
+    {
+      "id": "C1",
+      "group": "synergy",
+      "prompt": "Show me DARK Fiend searchers for this list",
+      "constraints": {
+        "modes": ["discover_synergy"],
+        "forbidCasualTone": true
+      }
+    },
+    {
+      "id": "C2",
+      "group": "synergy",
+      "prompt": "I need more board breakers for going second",
+      "constraints": {
+        "modes": ["discover_synergy", "qa"],
+        "forbidCasualTone": true
+      }
+    },
+    {
+      "id": "C3",
+      "group": "synergy",
+      "prompt": "Should I splash Hieratic Seal of the Heavenly Spheres or Baronne de Fleur to protect my endboard?",
+      "constraints": {
+        "modes": ["qa", "discover_synergy", "optimize"],
+        "forbidCasualTone": true,
+        "notes": "Conditional: if Facts.diagnostics.restrictions is non-empty, prefer lock/anti-synergy language and no unsummonable splash. If restrictions empty, do not fail for missing DARK/Fiend/Tyrant prose. Never fail solely for omitting Tyrant."
+      }
+    },
+    {
+      "id": "C4",
+      "group": "synergy",
+      "prompt": "What Extra Deck lock or anti-synergy problems does this list have?",
+      "constraints": {
+        "modes": ["qa"],
+        "forbidCasualTone": true
+      }
+    },
+    {
+      "id": "D1",
+      "group": "optimize",
+      "prompt": "Convert Lair into RDA",
+      "constraints": {
+        "modes": ["optimize"],
+        "forbidCasualTone": true
+      }
+    },
+    {
+      "id": "D2",
+      "group": "optimize",
+      "prompt": "Rework this deck toward Fiendsmith",
+      "constraints": {
+        "modes": ["optimize"],
+        "forbidCasualTone": true
+      }
+    },
+    {
+      "id": "E1",
+      "group": "matchups",
+      "prompt": "How does my current strategy match up against Snake-Eye? Do I have the right tools to beat them?",
+      "constraints": {
+        "modes": ["qa"],
+        "forbidCasualTone": true,
+        "notes": "workshop_matchups CTA only when Facts matchups non-empty."
+      }
+    },
+    {
+      "id": "E2",
+      "group": "matchups",
+      "prompt": "What are my worst matchups going first?",
+      "constraints": {
+        "modes": ["qa"],
+        "forbidCasualTone": true
+      }
+    },
+    {
+      "id": "E3",
+      "group": "combos",
+      "prompt": "What is the optimal opening hand for this build, and how do I navigate interactions to reach my endboard boss?",
+      "constraints": {
+        "modes": ["qa"],
+        "forbidCasualTone": true,
+        "notes": "workshop_combos only when combo lines exist."
+      }
+    },
+    {
+      "id": "E4",
+      "group": "combos",
+      "prompt": "What is the optimal opening hand for this build, and how do I reach my endboard boss?",
+      "constraints": {
+        "modes": ["qa"],
+        "forbidCasualTone": true,
+        "forbidRedirectHints": ["workshop_combos"],
+        "notes": "Run against a fixture with empty combo lines (or skip if fixture always has lines)."
+      }
+    },
+    {
+      "id": "F1",
+      "group": "side",
+      "format": "TCG",
+      "formatPolicy": "match_session",
+      "prompt": "I'm taking this deck to a TCG regional and struggle heavily going second against backrow-heavy control decks. What should I add to my Side Deck?",
+      "constraints": {
+        "modes": ["qa", "discover_synergy"],
+        "forbidCasualTone": true,
+        "notes": "Skipped on MD sessions. Start a TCG deck session to execute."
+      }
+    },
+    {
+      "id": "F2",
+      "group": "oob",
+      "prompt": "What's the best deck in the format right now?",
+      "constraints": {
+        "oob": true,
+        "redirectHint": "meta_panel",
+        "forbidCasualTone": true
+      }
+    },
+    {
+      "id": "F3",
+      "group": "oob",
+      "prompt": "What's the weather today?",
+      "constraints": {
+        "oob": true,
+        "mustContainAnswer": ["limited to information your deck and the card database"],
+        "forbidCasualTone": true
+      }
+    },
+    {
+      "id": "F4",
+      "group": "oob",
+      "prompt": "Build me a competitive Snake-Eye deck from scratch",
+      "constraints": {
+        "oob": true,
+        "redirectHint": "save_deck",
+        "forbidCasualTone": true
+      }
+    },
+    {
+      "id": "H2",
+      "group": "snapshot",
+      "prompt": "Why is my deck bricking?",
+      "injectUnknownCardId": 999999001,
+      "constraints": {
+        "httpError": true,
+        "notes": "Runner poisons snapshot with unknown id; edge must 400 via sanitizeLiveDeckSnapshot. Fail here means deploy gap or sanitizer bypass."
+      }
+    }
+  ],
+  "manualOnly": [
+    {
+      "id": "G1",
+      "steps": "After E1 with View Matchups CTA, click CTA → Matchups tab; return to Build and confirm chat history."
+    },
+    {
+      "id": "G2",
+      "steps": "After E3 with View Combos CTA, click CTA → Combos tab; return to Build and confirm chat history."
+    },
+    {
+      "id": "H1",
+      "steps": "Open Strategist on unsaved/illegal deck → client eligibility gate; no coach."
+    }
+  ]
+}

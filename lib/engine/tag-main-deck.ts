@@ -1,12 +1,12 @@
 import type { Card } from "@/types/card";
-import { detectCardRole } from "@/lib/analysis/cardRoleDetector";
+import { detectHeuristicRoleSlugs } from "@/lib/engine/card-role-heuristics";
 import type { StrategyWeightRow } from "./diagnostics";
 import type { EngineFormat } from "./types";
 import type { TaggedMainCard } from "./consistency";
 
 /**
  * Tag main-deck copies for Monte Carlo using curated weights when available,
- * otherwise heuristic role detection from card text.
+ * otherwise shared heuristic role detection from card text.
  */
 export function tagMainDeckForConsistency(
   mainDeck: Card[],
@@ -34,10 +34,10 @@ export function tagMainDeckForConsistency(
       isExtender = curated.some((r) => r.role === "Extender");
       isHandTrap = curated.some((r) => r.role === "Hand Trap");
     } else {
-      const roles = detectCardRole(card);
+      const roles = detectHeuristicRoleSlugs(card);
       isStarter = roles.includes("starter");
       isExtender = roles.includes("extender");
-      isHandTrap = roles.includes("interruption");
+      isHandTrap = roles.includes("hand_trap");
     }
 
     const existing = counts.get(card.id);

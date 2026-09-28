@@ -11,6 +11,7 @@ import {
   readCardLibraryCache,
   writeCardLibraryCache,
 } from "../lib/card-library-cache";
+import { clearFilterCache } from "../store/cardPoolSelectors";
 import { useSupabaseUserSync } from "../hooks/useSupabaseUserSync";
 import { MagneticCursor } from "@/components/mda/magnetic-cursor";
 import { AppQueryProvider } from "@/lib/query-client";
@@ -70,13 +71,25 @@ export function Providers({ children }: { children: ReactNode }) {
         if (cancelled) return;
 
         if (cached && cached.length > 0) {
+          clearFilterCache();
           setCardList(cached);
           setLoading(false);
+          // Revalidate in the background so DB cleanups (provisional IDs, etc.) land.
+          void fetchAndCacheCardLibrary()
+            .then((results) => {
+              if (cancelled || results.length === 0) return;
+              clearFilterCache();
+              setCardList(results);
+            })
+            .catch(() => {
+              // Keep cached library on refresh failure.
+            });
           return;
         }
 
         const results = await fetchAndCacheCardLibrary();
         if (cancelled) return;
+        clearFilterCache();
         setCardList(results);
       } catch {
         // Cards remain empty on failure
@@ -105,6 +118,7 @@ export function Providers({ children }: { children: ReactNode }) {
           setLoading(true);
           try {
             const results = await fetchAndCacheCardLibrary();
+            clearFilterCache();
             setCardList(results);
           } catch {
             // Keep empty on failure
