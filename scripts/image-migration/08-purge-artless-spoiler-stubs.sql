@@ -1,0 +1,25 @@
+-- 08: Remove artless YGOPRODeck temporary spoiler stubs (missing card art)
+-- Applied 2026-09-19 (prod: izshwywgfaozmisedwxm)
+--
+-- Findings
+-- -------
+-- Missing library art was NOT missing S3 assets for official passcodes.
+-- 29 cards had card_images IS NULL — all temporary 101302xxx spoiler IDs with
+-- pre-release names (e.g. "Violence Witch", "Magnifistorming Megala").
+-- Each maps to a renamed official passcode that already exists in `cards`
+-- with working S3 art (HTTP 200), e.g.:
+--   101302004 Violence Witch → 66100116 Vengeful Witch
+--   101302012 Magnifistorming Megala → 27755794 Radiant Typhoon Meghala
+--
+-- S3 re-upload was NOT required. Asset counts: ~14,149 on S3 / card_image_assets.
+--
+-- Actions
+-- -------
+-- 1. Remap decks still holding provisional IDs → official passcodes + names
+-- 2. Delete the 29 artless stubs (+ card_facts / card_embeddings)
+-- 3. sync-card-pool now skips upserting temporary spoiler IDs (100M–200M)
+--    and purges artless stubs in that range after each sync
+-- 4. CARD_LIBRARY_CACHE_SCHEMA bumped to 3 so clients re-fetch
+--
+-- No AWS image sync needed for this gap. Re-run monthly sync-card-pool (or
+-- invoke it now) to pick up any newly released official passcodes.

@@ -1,21 +1,21 @@
-Subject: Orphaned storage objects after quota overage — request physical purge
+Subject: Please run orphan Storage scanner (deleteS3Keys) — Usage may still show ~2.8 GB
 
 Project ref: izshwywgfaozmisedwxm
 Project name: supabase-md-alchemist
 
 Hello,
 
-My project exceeded the 1 GB free storage quota (~3.26 GB). I attempted to
-reduce usage by deleting rows from storage.objects via SQL with
-storage.allow_delete_query = 'true'.
+We upgraded to Pro temporarily to clean Storage.
 
-Dashboard → Usage still shows ~3.26 GB, but storage.objects metadata now only
-lists ~14,149 objects (~370 MB) in the card-images bucket. This suggests
-~2.9 GB of orphaned files remain on the storage backend.
+Current API/DB state:
+- `storage.buckets` = 0
+- `storage.objects` = 0
+- Supabase S3-compatible API lists **no buckets** and **0 bytes**
+- Card images were migrated to AWS S3 (`mda-card-images-prod`); app no longer uses Supabase Storage
 
-I have [ / have not ] run the S3 sync delete for bucket card-images.
-
-Please purge orphaned storage objects for this project so billed usage reflects
-actual bucket contents, or advise the correct recovery procedure.
+Earlier, SQL deletes on `storage.objects` created orphans (classic failure mode).
+If Dashboard → Usage → Storage Size still shows ~2–3 GB despite empty metadata,
+please run the **orphan object scanner** with **deleteS3Keys** for this project
+so billed Storage Size matches reality (~0 GB).
 
 Thank you.
