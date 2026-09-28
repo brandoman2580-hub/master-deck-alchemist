@@ -1,0 +1,23 @@
+-- 07: Cleanup YGOPRODeck provisional card IDs that lack S3 art
+-- Applied 2026-09-19 (prod: izshwywgfaozmisedwxm)
+--
+-- Problem
+-- -------
+-- YGOPRODeck assigns temporary IDs (typically 10xxxxxxx) before official
+-- Konami passcodes. Monthly sync left duplicate rows with card_images = null.
+-- The app invented S3 URLs (.../cards_small/{provisionalId}.jpg) which 403
+-- and spam next/image ("upstream image response failed").
+--
+-- What was done
+-- -------------
+-- 1. Remapped 5 decks from provisional → official passcodes
+--    (e.g. 101302023 "Dracotail Phrixl" → 84477320 "Dracotail Phryxul").
+-- 2. Deleted 36 duplicate provisional rows (+ card_facts / card_embeddings).
+-- 3. Left ~29 unmatched pre-release rows (no official passcode yet) with
+--    card_images IS NULL — client now renders /placeholder.svg.
+--
+-- App guards (permanent)
+-- ----------------------
+-- lib/card-image-url.ts: isProvisionalCardId / no invent when card_images null
+-- components/ui/card-image.tsx: onError → placeholder
+-- sync-card-pool: mapCardImagesForStorage returns null for provisional IDs
