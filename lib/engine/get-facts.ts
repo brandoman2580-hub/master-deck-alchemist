@@ -1,4 +1,4 @@
-import type { BanStatus, DeckCard, DeckType } from "@/types/types";
+import type { BanStatus, DeckCard, DeckType } from "@/types/deck";
 import type { Card } from "@/types/card";
 import { buildFactsEnvelope } from "./build-facts";
 import { compileCombos, type DeckCardRef } from "./combos";

@@ -3,7 +3,7 @@
  * TCG and Master Duel banlists stay separate — packs only read the active format's list.
  */
 
-import type { BanStatus } from "@/types/types";
+import type { BanStatus } from "@/types/deck";
 import type { EngineFormat, FormatRulePackId, RoleCoverage } from "./types";
 
 /** Hard Maxx "C" answers (Main Deck copy counts). Soft outs are not scored. */

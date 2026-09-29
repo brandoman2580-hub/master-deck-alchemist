@@ -13,7 +13,7 @@ import { StrategistThread } from "@/components/mda/workshop-strategist/Strategis
 import { StrategistEmptyState } from "@/components/mda/workshop-strategist/StrategistEmptyState";
 import { applyMainCopyTarget } from "@/components/mda/workshop-strategist/apply-tuning";
 import type { Card } from "@/types/card";
-import type { DeckType } from "@/types/types";
+import type { DeckType } from "@/types/deck";
 import type { StrategistMessage } from "@/components/mda/workshop-strategist/types";
 
 expect.extend(toHaveNoViolations);

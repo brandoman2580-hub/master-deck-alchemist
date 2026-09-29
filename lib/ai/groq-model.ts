@@ -1,4 +1,6 @@
 /**
+ * Jest mirror of `supabase/functions/_shared/groq-model.ts` (edge Deno cannot import this module).
+ *
  * Groq's recommended replacement for deprecated `llama-3.3-70b-versatile`
  * (shutdown 2026-08-16). See https://console.groq.com/docs/deprecations
  *

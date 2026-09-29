@@ -37,8 +37,9 @@ import {
   ARCHIVE_POPOVER_EDGE_PAD,
   ARCHIVE_POPOVER_PANEL_CLASS,
 } from "@/components/mda/archives-popover-styles";
-import type { DeckMode } from "@/types/types";
-import { cn, toAbsoluteShareUrl } from "@/lib/utils";
+import type { DeckMode } from "@/types/deck";
+import { cn } from "@/lib/utils";
+import { toAbsoluteShareUrl } from "@/lib/share/urls";
 
 const COPIED_TOOLTIP_MS = 1600;
 
@@ -75,7 +76,7 @@ const cancelIconBtn =
 export type DeckArchiveActionPopoversProps = {
   deckName: string;
   mode: DeckMode;
-  /** False when deck fails legal share size/copy rules. */
+  /** False when PersistedDeck fails legal share size/copy rules. */
   canShare?: boolean;
   onCopyConfirm: (mode: DeckMode) => void;
   onDeleteConfirm: () => void;

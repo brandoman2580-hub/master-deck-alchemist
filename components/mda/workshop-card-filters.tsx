@@ -2,7 +2,7 @@
 
 import type { ChangeEvent, ReactNode } from "react";
 import { Trash2 } from "lucide-react";
-import { FILTER_CONFIGS } from "@/lib/constants";
+import { FILTER_CONFIGS } from "@/lib/deck/constants";
 import { ToggleFilter } from "@/components/ui/filter-toggle";
 import { MdaCollapse } from "@/components/mda/collapse";
 import { cn } from "@/lib/utils";

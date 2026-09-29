@@ -1,5 +1,5 @@
-import { getUserDecks } from "@/lib/supabaseDecks";
-import type { DeckMode, DeckType } from "@/types/types";
+import { getUserDecks } from "@/lib/data/decks";
+import type { DeckMode, DeckType } from "@/types/deck";
 
 export const USER_DECKS_QUERY_KEY = "user-decks" as const;
 

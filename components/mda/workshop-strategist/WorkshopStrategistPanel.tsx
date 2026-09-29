@@ -12,12 +12,12 @@ import {
   classifyOutOfBoundsHeuristic,
   buildOutOfBoundsCoachResponse,
 } from "@/lib/engine";
-import { openLoginModal } from "@/lib/helpers";
+import { openLoginModal } from "@/hooks/useOpenLoginModal";
 import { useChatMessage } from "@/hooks/useChatMessage";
 import { useConversationPersistence } from "@/hooks/useConversationPersistence";
 import type { AssistantMode } from "@/lib/engine/assistant-contract";
 import type { Card } from "@/types/card";
-import type { DeckSection } from "@/types/types";
+import type { DeckSection } from "@/types/deck";
 import type { WorkshopTab } from "@/components/mda/workshop-deck-chrome";
 import { StrategistEmptyState } from "./StrategistEmptyState";
 import { StrategistInputBar } from "./StrategistInputBar";

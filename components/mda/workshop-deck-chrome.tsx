@@ -12,8 +12,8 @@ import {
 import { CardImage } from "@/components/ui/card-image";
 import { MdaAnimatedNumber } from "@/components/mda/deck-cap-badge";
 import { WorkshopGradeDisclaimer } from "@/components/mda/workshop-grade-disclaimer";
-import { gradeFromCounts, type WorkshopGrade } from "@/lib/workshop-grade";
-import type { DeckCard, DeckMode } from "@/types/types";
+import { gradeFromCounts, type WorkshopGrade } from "@/lib/workshop/grade";
+import type { DeckCard, DeckMode } from "@/types/deck";
 import { cn } from "@/lib/utils";
 
 export type WorkshopTab = "build" | "matchups" | "combos";

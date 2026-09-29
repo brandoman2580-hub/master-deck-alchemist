@@ -1,4 +1,4 @@
-import type { DeckType } from "@/types/types";
+import type { DeckType } from "@/types/deck";
 import type { FactsEnvelope } from "@/lib/engine/types";
 import { emptyWorkshopGradeAxes } from "@/lib/engine/grade";
 

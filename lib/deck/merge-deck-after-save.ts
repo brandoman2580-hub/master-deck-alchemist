@@ -1,4 +1,4 @@
-import type { DeckType } from "@/types/types";
+import type { DeckType } from "@/types/deck";
 
 /**
  * After a successful persist, merge save metadata into live deck state

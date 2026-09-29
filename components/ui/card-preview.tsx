@@ -5,11 +5,11 @@ import { Badge } from "./badge";
 import { RarityBadge } from "./rarity-badge";
 import { CardImage } from "./card-image";
 import * as Tooltip from "@radix-ui/react-tooltip";
-import { getArchetypeName } from "../../lib/helpers";
-import { getRarityBadge, getCardRarityForDisplay } from "@/lib/utils/rarityBadges";
-import { getCardTCGPrices, MASTER_DUEL_CP_PER_CARD } from "@/lib/utils/cardPricing";
+import { getArchetypeName } from "../../lib/deck/import";
+import { getRarityBadge, getCardRarityForDisplay } from "@/lib/card/rarity";
+import { getCardTCGPrices, MASTER_DUEL_CP_PER_CARD } from "@/lib/card/pricing";
 import { Gem } from "lucide-react";
-import type { DeckMode } from "@/types/types";
+import type { DeckMode } from "@/types/deck";
 
 interface CardPreviewProps {
   card: Card;

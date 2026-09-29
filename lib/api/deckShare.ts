@@ -1,5 +1,5 @@
-import { DeckType } from "@/types/types";
-import type { DeckCard } from "@/types/types";
+import type { DeckType } from "@/types/deck";
+import type { DeckCard } from "@/types/deck";
 import { getAccessToken } from "@/lib/supabaseClient";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;

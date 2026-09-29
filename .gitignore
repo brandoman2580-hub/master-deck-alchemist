@@ -61,6 +61,7 @@ skills-lock.json
 !/docs/.tracked
 !/docs/strategist-eval-matrix.md
 !/docs/strategist-optimization-plan.md
+!/docs/v2-orphan-inventory.md
 # END docs-track
 
 # Phase-driven test files (not UI-driven tests)

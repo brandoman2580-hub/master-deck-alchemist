@@ -1,4 +1,4 @@
-import type { BanStatus, DeckType } from "@/types/types";
+import type { BanStatus, DeckType } from "@/types/deck";
 import {
   validateBanlistCompliance,
   validateDeckStructure,

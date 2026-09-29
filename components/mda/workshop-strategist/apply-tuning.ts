@@ -3,7 +3,7 @@
  */
 
 import type { Card } from "@/types/card";
-import type { DeckType } from "@/types/types";
+import type { DeckType } from "@/types/deck";
 
 export function countMainCopies(deck: DeckType, cardId: number): number {
   return deck.mainDeck.filter((c) => c.id === cardId).length;

@@ -1,5 +1,5 @@
 import { mergeDeckAfterSave } from "@/lib/deck/merge-deck-after-save";
-import type { DeckType } from "@/types/types";
+import type { DeckType } from "@/types/deck";
 
 describe("mergeDeckAfterSave", () => {
   const base: DeckType = {

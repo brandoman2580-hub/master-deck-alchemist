@@ -8,7 +8,7 @@ import {
   USER_DECKS_QUERY_KEY,
   userDecksQueryKey,
 } from "@/lib/query/user-decks";
-import type { DeckType } from "@/types/types";
+import type { DeckType } from "@/types/deck";
 
 export type UseUserDecksResult = {
   decks: DeckType[];

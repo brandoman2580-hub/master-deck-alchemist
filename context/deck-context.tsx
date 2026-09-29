@@ -11,16 +11,16 @@ import {
 } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card } from "../types/card";
-import { BanStatus, Deck, DeckMode, DeckType } from "../types/types";
+import type { BanStatus, Deck, DeckMode, DeckType } from "@/types/deck";
 import { v4 as uuidv4 } from "uuid";
 import { supabase } from "../lib/supabaseClient";
-import { getArchetypeName } from "../lib/helpers";
+import { getArchetypeName } from "@/lib/deck/import";
 import {
   saveDeck as saveDeckToSupabase,
   deleteDeck as deleteDeckFromSupabase,
   getUserDecks as getUserDecksFromSupabase,
   loadDeck as loadDeckFromSupabase,
-} from "../lib/supabaseDecks";
+} from "@/lib/data/decks";
 import { invalidateAllUserDecks } from "@/hooks/useUserDecks";
 import { mergeDeckAfterSave } from "@/lib/deck/merge-deck-after-save";
 
@@ -82,7 +82,7 @@ export function DeckProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const loadBanlist = async () => {
       try {
-        const { getMasterDuelBanlist, getTCGBanlist } = await import("../lib/api");
+        const { getMasterDuelBanlist, getTCGBanlist } = await import("../lib/data/cards");
         const banlistData = currentDeck.mode === "TCG" 
           ? await getTCGBanlist()
           : await getMasterDuelBanlist();

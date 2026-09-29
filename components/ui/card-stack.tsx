@@ -7,13 +7,13 @@ import { CSS } from "@dnd-kit/utilities";
 import { Badge } from "./badge";
 import { RarityBadge } from "./rarity-badge";
 import { Card } from "../../types/card";
-import { BanStatus } from "../../types/types";
+import type { BanStatus } from "@/types/deck";
 import { CardPreview } from "./card-preview";
 import { CardImage } from "./card-image";
 import { Minus, Plus } from "lucide-react";
 import { useHoverAnimation } from "@/lib/animations";
-import { getRarityBadge } from "@/lib/utils/rarityBadges";
-import type { DeckMode } from "@/types/types";
+import { getRarityBadge } from "@/lib/card/rarity";
+import type { DeckMode } from "@/types/deck";
 
 export interface CardStackProps {
   card: Card;

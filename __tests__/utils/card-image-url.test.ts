@@ -12,7 +12,7 @@ import {
   isYgoprodeckImageUrl,
   normalizeCardImages,
   resolveCardImageUrl,
-} from "@/lib/card-image-url";
+} from "@/lib/card/image-url";
 
 const AWS_BASE =
   "https://mda-card-images-prod.s3.us-east-1.amazonaws.com/cards_small";

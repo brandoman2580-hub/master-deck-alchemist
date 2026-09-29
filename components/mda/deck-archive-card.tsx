@@ -5,7 +5,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import { Copy, Crown, Gamepad2, Pin, Share2, Trash2 } from "lucide-react";
 import { CardImage } from "@/components/ui/card-image";
 import { DeckCapBadge } from "@/components/mda/deck-cap-badge";
-import type { DeckCard, DeckMode } from "@/types/types";
+import type { DeckCard, DeckMode } from "@/types/deck";
 import { cn } from "@/lib/utils";
 
 export type DeckArchiveCardProps = {

@@ -4,17 +4,14 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ThumbsDown, ThumbsUp } from "lucide-react";
 import { useCardStore } from "@/store/cardStore";
 import { useDeck } from "@/context/deck-context";
-import {
-  getRemainingCopies,
-  isExtraDeckCard,
-} from "@/app/deck-builder/utils";
+import { getRemainingCopies, isExtraDeckCard } from "@/lib/deck/copy-limits";
 import { RecommendationCard } from "./RecommendationCard";
 import { EvidenceDisclosure } from "./EvidenceDisclosure";
 import { TuningActionRow } from "./TuningActionRow";
 import { WorkshopTabCta } from "./WorkshopTabCta";
 import type { StrategistMessage } from "./types";
 import type { Card } from "@/types/card";
-import type { DeckSection } from "@/types/types";
+import type { DeckSection } from "@/types/deck";
 import type { WorkshopTab } from "@/components/mda/workshop-deck-chrome";
 import { cn } from "@/lib/utils";
 

@@ -7,8 +7,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import type { WorkshopGrade } from "@/lib/workshop-grade";
-import type { DeckMode } from "@/types/types";
+import type { WorkshopGrade } from "@/lib/workshop/grade";
+import type { DeckMode } from "@/types/deck";
 import { cn } from "@/lib/utils";
 
 const AXIS_BLURBS: Record<string, string> = {

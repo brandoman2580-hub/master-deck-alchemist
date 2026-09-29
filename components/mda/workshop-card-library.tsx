@@ -20,7 +20,7 @@ import {
   workshopCardTileHeightPx,
   workshopCardTileWidthPx,
 } from "@/components/mda/workshop-card-dims";
-import type { BanStatus } from "@/types/types";
+import type { BanStatus } from "@/types/deck";
 import type { Card } from "@/types/card";
 import { cn } from "@/lib/utils";
 
@@ -67,7 +67,7 @@ export type WorkshopCardLibraryProps = {
 
 /**
  * Virtualized workshop card grid using the same tile dimensions as the
- * deck-builder cards (`BuilderCardGridItem`).
+ * PersistedDeck-builder cards (`BuilderCardGridItem`).
  */
 export function WorkshopCardLibrary({
   cards,

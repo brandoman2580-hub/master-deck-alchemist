@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import type { RarityBadgeResult } from "@/lib/utils/rarityBadges";
+import type { RarityBadgeResult } from "@/lib/card/rarity";
 
 interface RarityBadgeProps {
   result: RarityBadgeResult;

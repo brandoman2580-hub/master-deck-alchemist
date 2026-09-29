@@ -16,7 +16,7 @@ import { createDeckShare, getDeckShare, revokeDeckShare, type CreateDeckShareRes
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { QRCodeSVG } from "qrcode.react";
 import { useUserStore } from "@/store/useUserStore";
-import { toAbsoluteShareUrl } from "@/lib/utils";
+import { toAbsoluteShareUrl } from "@/lib/share/urls";
 import {
   AlertDialog,
   AlertDialogAction,

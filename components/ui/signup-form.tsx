@@ -1,8 +1,8 @@
 "use client";
 import { useState } from "react";
 import { useActionState } from "react";
-import { signup } from "../../app/login/actions";
-import { SignupFormState } from "../../types/types";
+import { signup } from "@/app/auth/actions";
+import type { SignupFormState } from "@/types/auth";
 
 const initialState: SignupFormState = { success: false };
 

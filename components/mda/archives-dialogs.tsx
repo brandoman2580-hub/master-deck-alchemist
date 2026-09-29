@@ -20,7 +20,7 @@ import {
   ARCHIVE_POPOVER_EDGE_PAD,
   ARCHIVE_POPOVER_PANEL_CLASS,
 } from "@/components/mda/archives-popover-styles";
-import type { DeckCard, DeckMode, DeckType } from "@/types/types";
+import type { DeckCard, DeckMode, DeckType } from "@/types/deck";
 import { CardImage } from "@/components/ui/card-image";
 import { MdaCardPreview } from "@/components/mda/mda-card-preview";
 import { cn } from "@/lib/utils";

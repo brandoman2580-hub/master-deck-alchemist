@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { DeckArchiveCard } from "@/components/mda/deck-archive-card";
 import { DeckDetailsModal } from "@/components/mda/archives-dialogs";
 import { MdaSearchField } from "@/components/mda/search-field";
-import type { DeckType } from "@/types/types";
+import type { DeckType } from "@/types/deck";
 
 jest.mock("@/components/ui/card-image", () => ({
   CardImage: ({ className }: { className?: string }) => (

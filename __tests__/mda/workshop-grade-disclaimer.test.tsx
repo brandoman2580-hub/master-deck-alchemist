@@ -5,7 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { axe, toHaveNoViolations } from "jest-axe";
 import { WorkshopGradeDisclaimer } from "@/components/mda/workshop-grade-disclaimer";
 import { emptyWorkshopGradeAxes } from "@/lib/engine/grade";
-import { workshopGradeFromAxes } from "@/lib/workshop-grade";
+import { workshopGradeFromAxes } from "@/lib/workshop/grade";
 
 expect.extend(toHaveNoViolations);
 

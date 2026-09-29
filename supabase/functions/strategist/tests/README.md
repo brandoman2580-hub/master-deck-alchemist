@@ -4,7 +4,7 @@
 
 **Live gateway:** `supabase/functions/strategist/index.ts` → `coach-response.ts`.
 
-**NOT LIVE (do not extend for production):** `prompts.ts`, `response-generator.ts`, and the `deck-assistant/` twin (`../deck-assistant/NOT_LIVE.md`).
+**NOT LIVE (do not extend for production):** legacy `prompts.ts` / `response-generator.ts` and the `deck-assistant/` twin now live under `_deprecated/supabase-functions/` (Phase 1a). Undeploy remaining remote twins in Phase 5.
 
 Jest golden evals for modes / grounding / tone live in the app repo:
 
