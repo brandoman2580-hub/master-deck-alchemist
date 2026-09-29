@@ -3,7 +3,7 @@
  */
 import { readFileSync } from "fs";
 import { join } from "path";
-import { detectCardRole } from "@/lib/analysis/cardRoleDetector";
+import { detectCardRole } from "@/lib/deck/card-roles";
 import {
   detectHeuristicRoleSlugs,
   heuristicSlugsToCardRoleTags,

@@ -1,9 +1,9 @@
 import type { Card } from "@/types/card";
-import type { DeckType } from "@/types/types";
+import type { DeckType } from "@/types/deck";
 import {
   ARCHETYPE_KNOWLEDGE,
   findArchetypeKnowledge,
-} from "@/lib/analysis/archetypeKnowledge";
+} from "@/lib/engine/archetype-knowledge";
 import {
   detectHeuristicRoleSlugs,
   heuristicSlugsToCardRoleTags,

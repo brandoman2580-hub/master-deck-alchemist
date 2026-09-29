@@ -1,4 +1,4 @@
-import { workshopGradeFromAxes } from "@/lib/workshop-grade";
+import { workshopGradeFromAxes } from "@/lib/workshop/grade";
 import { emptyWorkshopGradeAxes } from "@/lib/engine/grade";
 import type { WorkshopGradeAxes } from "@/lib/engine/types";
 

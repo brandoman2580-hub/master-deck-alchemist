@@ -32,16 +32,13 @@ import {
   WorkshopCardFilters,
   type WorkshopFilterState,
 } from "@/components/mda/workshop-card-filters";
-import type { BanStatus, DeckCard, DeckSection } from "@/types/types";
+import type { BanStatus, DeckCard, DeckSection } from "@/types/deck";
 import type { Card } from "@/types/card";
 import type { WorkshopTab } from "@/components/mda/workshop-deck-chrome";
 import { useDeck } from "@/context/deck-context";
 import { useCardStore } from "@/store/cardStore";
 import { selectFilteredCards } from "@/store/cardPoolSelectors";
-import {
-  getRemainingCopies,
-  isExtraDeckCard,
-} from "@/app/deck-builder/utils";
+import { getRemainingCopies, isExtraDeckCard } from "@/lib/deck/copy-limits";
 import { cn } from "@/lib/utils";
 
 type RightPanel = "cards" | "strategist";

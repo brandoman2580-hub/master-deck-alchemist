@@ -4,7 +4,7 @@ import localFont from "next/font/local";
 import "./globals.css";
 import { Providers } from "./providers";
 import { LoginModal } from "../components/ui/login-modal";
-import { FocusManager } from "./(lib)/FocusManager";
+import { FocusManager } from "@/components/mda/focus-manager";
 import { SkipLink } from "../components/skip-link";
 import { StructuredData } from "../components/seo/structured-data";
 import {

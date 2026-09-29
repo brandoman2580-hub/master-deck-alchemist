@@ -7,7 +7,7 @@
 
 import { describe, it, expect, beforeAll } from "@jest/globals";
 import { createDeckShare, getDeckShare } from "@/lib/api/deckShare";
-import { DeckType } from "@/types/types";
+import type { DeckType } from "@/types/deck";
 
 // Mock environment
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;

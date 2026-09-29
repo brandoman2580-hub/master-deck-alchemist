@@ -29,7 +29,7 @@ import { LandingLoginButton } from "@/components/mda/landing-login-button";
 import { MdaBrandTitle } from "@/components/mda/brand-lockup";
 import { LandingSideNav } from "@/components/mda/landing-side-nav";
 import { MdaLoadingScreen } from "@/components/mda/mda-loading-screen";
-import { signup } from "@/app/login/actions";
+import { signup } from "@/app/auth/actions";
 import { supabase } from "@/lib/supabaseClient";
 import { useUserStore } from "@/store/useUserStore";
 import { cn } from "@/lib/utils";

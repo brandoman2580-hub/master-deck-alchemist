@@ -10,9 +10,9 @@ import {
   normalizeRarity,
   getCardMdRarity,
   MASTER_DUEL_CP_PER_CARD,
-} from "@/lib/utils/cardPricing";
+} from "@/lib/card/pricing";
 import type { Card } from "@/types/card";
-import type { DeckType } from "@/types/types";
+import type { DeckType } from "@/types/deck";
 
 const createCard = (overrides: Partial<Card> = {}): Card =>
   ({

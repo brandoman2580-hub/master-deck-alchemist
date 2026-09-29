@@ -1,4 +1,4 @@
-import type { DeckType } from "@/types/types";
+import type { DeckType } from "@/types/deck";
 import { buildFactsEnvelope } from "@/lib/engine/build-facts";
 import {
   evaluateAssistantEligibility,

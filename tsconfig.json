@@ -39,6 +39,7 @@
   "exclude": [
     "node_modules",
     "supabase/functions",
+    "_deprecated",
     "**/__tests__/**",
     "**/*.test.ts",
     "**/*.test.tsx",

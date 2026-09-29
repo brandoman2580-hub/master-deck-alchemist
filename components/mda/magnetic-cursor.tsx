@@ -12,7 +12,7 @@ import {
   useMotionValue,
   useSpring,
 } from "framer-motion";
-import { nearestMagneticTarget } from "@/lib/magnetic-targets";
+import { nearestMagneticTarget } from "@/components/mda/magnetic-cursor/magnetic-targets";
 
 const IDLE_RING = 16;
 /** Alchemy Sun cursor size (outer ring diameter). */

@@ -18,14 +18,14 @@ import { MdaLoadingScreen } from "@/components/mda/mda-loading-screen";
 import { useUserStore } from "@/store/useUserStore";
 import { useDeck } from "@/context/deck-context";
 import { useUserDecks } from "@/hooks/useUserDecks";
-import { deleteDeck, saveDeck, toggleDeckPin } from "@/lib/supabaseDecks";
+import { deleteDeck, saveDeck, toggleDeckPin } from "@/lib/data/decks";
 import {
   createDeckShare,
   getDeckShareFullUrl,
   toDeckShareRequest,
 } from "@/lib/api/deckShare";
 import { isDeckLegalForShare } from "@/lib/validation/deck-validator";
-import type { DeckMode, DeckType } from "@/types/types";
+import type { DeckMode, DeckType } from "@/types/deck";
 import { v4 as uuidv4 } from "uuid";
 
 export default function DeckArchivesPage(): ReactNode {

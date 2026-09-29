@@ -6,7 +6,7 @@ import {
   CARD_IMAGE_PLACEHOLDER,
   resolveCardImageUrl,
   type CardImageEntry,
-} from "@/lib/card-image-url";
+} from "@/lib/card/image-url";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 

@@ -13,8 +13,8 @@ import { WorkshopCombosPane } from "@/components/mda/workshop-combos-pane";
 import { useDeck } from "@/context/deck-context";
 import { useModeStore } from "@/store/modeStore";
 import { useWorkshopFacts } from "@/hooks/useWorkshopFacts";
-import { workshopGradeFromAxes } from "@/lib/workshop-grade";
-import type { DeckMode } from "@/types/types";
+import { workshopGradeFromAxes } from "@/lib/workshop/grade";
+import type { DeckMode } from "@/types/deck";
 
 const TAB_WATERMARK: Record<WorkshopTab, string> = {
   build: "Build",

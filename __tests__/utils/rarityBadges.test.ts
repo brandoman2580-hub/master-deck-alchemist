@@ -2,7 +2,7 @@
  * Unit tests for rarity badge utilities
  */
 
-import { getRarityBadge, getCardRarityForDisplay } from "@/lib/utils/rarityBadges";
+import { getRarityBadge, getCardRarityForDisplay } from "@/lib/card/rarity";
 import type { Card } from "@/types/card";
 
 const createCard = (overrides: Partial<Card> = {}): Card =>

@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import * as Tooltip from "@radix-ui/react-tooltip";
 import { Card } from "@/types/card";
 import { CardImage } from "@/components/ui/card-image";
-import { getArchetypeName } from "@/lib/helpers";
+import { getArchetypeName } from "@/lib/deck/import";
 import { MdaFrameCorners } from "@/components/mda/frame-corners";
 
 export type MdaCardPreviewProps = {

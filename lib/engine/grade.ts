@@ -1,4 +1,4 @@
-import type { BanStatus } from "@/types/types";
+import type { BanStatus } from "@/types/deck";
 import { applyFormatRulePack } from "./format-rule-packs";
 import {
   computePrimaryArchetypeShare,

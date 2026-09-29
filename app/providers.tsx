@@ -6,15 +6,15 @@ import { ThemeProvider } from "next-themes";
 import { DeckProvider } from "../context/deck-context";
 import Navbar from "../components/navbar";
 import { useCardStore } from "../store/cardStore";
-import { getCardData } from "../lib/api";
+import { getCardData } from "../lib/data/cards";
 import {
   readCardLibraryCache,
   writeCardLibraryCache,
-} from "../lib/card-library-cache";
+} from "../lib/card/library-cache";
 import { clearFilterCache } from "../store/cardPoolSelectors";
 import { useSupabaseUserSync } from "../hooks/useSupabaseUserSync";
 import { MagneticCursor } from "@/components/mda/magnetic-cursor";
-import { AppQueryProvider } from "@/lib/query-client";
+import { AppQueryProvider } from "@/lib/query/client";
 import { supabase } from "@/lib/supabaseClient";
 import type { Card } from "@/types/card";
 

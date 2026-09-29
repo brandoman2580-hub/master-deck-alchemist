@@ -1,7 +1,7 @@
 import {
   getMagneticSearchRoot,
   nearestMagneticTarget,
-} from "@/lib/magnetic-targets";
+} from "@/components/mda/magnetic-cursor/magnetic-targets";
 
 function mockRect(
   el: HTMLElement,

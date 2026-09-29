@@ -13,7 +13,7 @@ import {
   type DeckCardRef,
   type FactsEnvelope,
 } from "@/lib/engine";
-import type { DeckCard } from "@/types/types";
+import type { DeckCard } from "@/types/deck";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 

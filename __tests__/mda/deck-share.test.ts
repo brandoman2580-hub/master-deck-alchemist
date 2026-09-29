@@ -3,7 +3,7 @@ import {
   mapDeckCardToSharePayload,
   toDeckShareRequest,
 } from "@/lib/api/deckShare";
-import type { DeckType } from "@/types/types";
+import type { DeckType } from "@/types/deck";
 
 describe("deck share payload", () => {
   it("maps deck cards to cardId payloads expected by create-deck-share", () => {

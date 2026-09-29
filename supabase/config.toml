@@ -1,103 +1,32 @@
+# Supabase function config — Phase 1a sanitation
+# Only LIVE product + LIVE/UNKNOWN ops functions. Ghosts and NOT_LIVE removed.
+# Undeploy of retired functions is Phase 5 (see _deprecated/supabase-functions/).
 
-[functions.deck-analysis]
+[functions.strategist]
 enabled = true
 verify_jwt = true
-import_map = "./functions/deck-analysis/deno.json"
-# Uncomment to specify a custom file path to the entrypoint.
-# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
-entrypoint = "./functions/deck-analysis/index.ts"
-# Specifies static files to be bundled with the function. Supports glob patterns.
-# For example, if you want to serve static HTML pages in your function:
-# static_files = [ "./functions/deck-analysis/*.html" ]
-
-[functions.duel-simulation]
-enabled = true
-verify_jwt = true
-import_map = "./functions/duel-simulation/deno.json"
-# Uncomment to specify a custom file path to the entrypoint.
-# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
-entrypoint = "./functions/duel-simulation/index.ts"
-# Specifies static files to be bundled with the function. Supports glob patterns.
-# For example, if you want to serve static HTML pages in your function:
-# static_files = [ "./functions/duel-simulation/*.html" ]
-
-[functions.update-master-duel-banlist]
-enabled = true
-verify_jwt = true
-import_map = "./functions/update-master-duel-banlist/deno.json"
-# Uncomment to specify a custom file path to the entrypoint.
-# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
-entrypoint = "./functions/update-master-duel-banlist/index.ts"
-# Specifies static files to be bundled with the function. Supports glob patterns.
-# For example, if you want to serve static HTML pages in your function:
-# static_files = [ "./functions/update-master-duel-banlist/*.html" ]
-
-[functions.sync-card-pool]
-enabled = true
-verify_jwt = true
-import_map = "./functions/sync-card-pool/deno.json"
-# Uncomment to specify a custom file path to the entrypoint.
-# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
-entrypoint = "./functions/sync-card-pool/index.ts"
-# Specifies static files to be bundled with the function. Supports glob patterns.
-# For example, if you want to serve static HTML pages in your function:
-# static_files = [ "./functions/sync-card-pool/*.html" ]
-[functions.backfill-card-ai-profiles]
-enabled = true
-verify_jwt = true
-import_map = "./functions/backfill-card-ai-profiles/deno.json"
-# Uncomment to specify a custom file path to the entrypoint.
-# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
-entrypoint = "./functions/backfill-card-ai-profiles/index.ts"
-# Specifies static files to be bundled with the function. Supports glob patterns.
-# For example, if you want to serve static HTML pages in your function:
-# static_files = [ "./functions/backfill-card-ai-profiles/*.html" ]
-
-[functions.backfill-card-embeddings]
-enabled = true
-verify_jwt = true
-import_map = "./functions/backfill-card-embeddings/deno.json"
-# Uncomment to specify a custom file path to the entrypoint.
-# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
-entrypoint = "./functions/backfill-card-embeddings/index.ts"
-# Specifies static files to be bundled with the function. Supports glob patterns.
-# For example, if you want to serve static HTML pages in your function:
-# static_files = [ "./functions/backfill-card-embeddings/*.html" ]
-
-[functions.embed-cron]
-enabled = true
-verify_jwt = true
-import_map = "./functions/embed-cron/deno.json"
-# Uncomment to specify a custom file path to the entrypoint.
-# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
-entrypoint = "./functions/embed-cron/index.ts"
-# Specifies static files to be bundled with the function. Supports glob patterns.
-# For example, if you want to serve static HTML pages in your function:
-# static_files = [ "./functions/embed-cron/*.html" ]
-
-# [functions.recommend-cards] - REMOVED: Replaced by recommendation-agent
-
-[functions.stream-recommendations]
-enabled = true
-verify_jwt = true
-import_map = "./functions/stream-recommendations/deno.json"
-# Uncomment to specify a custom file path to the entrypoint.
-# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
-entrypoint = "./functions/stream-recommendations/index.ts"
-# Specifies static files to be bundled with the function. Supports glob patterns.
-# For example, if you want to serve static HTML pages in your function:
-# static_files = [ "./functions/stream-recommendations/*.html" ]
+entrypoint = "./functions/strategist/index.ts"
 
 [functions.embed]
 enabled = true
 verify_jwt = false
 import_map = "./functions/embed/deno.json"
-# Uncomment to specify a custom file path to the entrypoint.
-# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
 entrypoint = "./functions/embed/index.ts"
-# Specifies static files to be bundled with the function. Supports glob patterns.
-# For example, if you want to serve static HTML pages in your function:
-# static_files = [ "./functions/embed/*.html" ]
+
+[functions.create-deck-share]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/create-deck-share/index.ts"
+
+[functions.get-deck-share]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/get-deck-share/index.ts"
+
+[functions.combo-compiler]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/combo-compiler/index.ts"
 
 [functions.meta-stats]
 enabled = true
@@ -105,13 +34,28 @@ verify_jwt = false
 import_map = "./functions/meta-stats/deno.json"
 entrypoint = "./functions/meta-stats/index.ts"
 
+[functions.sync-card-pool]
+enabled = true
+verify_jwt = true
+import_map = "./functions/sync-card-pool/deno.json"
+entrypoint = "./functions/sync-card-pool/index.ts"
+
+[functions.update-master-duel-banlist]
+enabled = true
+verify_jwt = true
+import_map = "./functions/update-master-duel-banlist/deno.json"
+entrypoint = "./functions/update-master-duel-banlist/index.ts"
+
 [functions.update-meta]
 enabled = true
 verify_jwt = false
 import_map = "./functions/update-meta/deno.json"
 entrypoint = "./functions/update-meta/index.ts"
 
-# [functions.meta-health] - REMOVED: Not used by client code
+[functions.sync-master-duel-rarity]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/sync-master-duel-rarity/index.ts"
 
 # Email Templates Configuration
 [auth.email.template.recovery]

@@ -4,8 +4,8 @@
  */
 
 import { Card } from "@/types/card";
-import { SearchParams } from "@/types/types";
-import { getArchetypeName } from "@/lib/helpers";
+import type { SearchParams } from "@/types/search";
+import { getArchetypeName } from "@/lib/deck/import";
 
 /**
  * Memoized filter function for cards

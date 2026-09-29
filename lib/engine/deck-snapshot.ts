@@ -3,7 +3,7 @@
  * Client sends id + count only; the edge resolves names/text from `cards`.
  */
 
-import type { DeckCard, DeckType } from "@/types/types";
+import type { DeckCard, DeckType } from "@/types/deck";
 
 export interface DeckSnapshotEntry {
   id: number;

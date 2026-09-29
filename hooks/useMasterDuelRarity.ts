@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { getMasterDuelRarityMap } from "@/lib/api";
+import { getMasterDuelRarityMap } from "@/lib/data/cards";
 
 /**
  * Fetches Master Duel rarity map (card_id -> md_rarity) for given card IDs.

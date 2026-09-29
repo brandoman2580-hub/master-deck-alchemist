@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { Button } from "./ui/button";
 import { cn } from "../lib/utils";
 import { Layers, Save } from "lucide-react";
-import { openLoginModal } from "../lib/helpers";
+import { openLoginModal } from "@/hooks/useOpenLoginModal";
 import { useUserStore } from "../store/useUserStore";
 import { UserMenu } from "./ui/user-menu";
 import MDAIcon from "@/public/images/MDA_Logo_One.svg";

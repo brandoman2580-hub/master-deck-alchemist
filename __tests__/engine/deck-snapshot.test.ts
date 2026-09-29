@@ -5,7 +5,7 @@ import {
   buildLiveDeckSnapshot,
   countSectionEntries,
 } from "@/lib/engine/deck-snapshot";
-import type { DeckCard, DeckType } from "@/types/types";
+import type { DeckCard, DeckType } from "@/types/deck";
 
 function card(id: number, name: string): DeckCard {
   return {
