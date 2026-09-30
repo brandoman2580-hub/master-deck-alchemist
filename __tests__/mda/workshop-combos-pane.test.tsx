@@ -9,7 +9,7 @@ jest.mock("@/context/deck-context", () => ({
     currentDeck: {
       id: "deck-1",
       name: "Snake",
-      mode: "Master Duel",
+      deckFormat: "Master Duel",
       updated_at: "2026-09-08T00:00:00.000Z",
       mainDeck: [
         {

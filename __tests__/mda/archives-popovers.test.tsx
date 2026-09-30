@@ -16,8 +16,9 @@ describe("DeckArchiveActionPopovers share flow", () => {
     render(
       <DeckArchiveActionPopovers
         deckName="Test Deck"
-        mode="Master Duel"
+        deckFormat="Master Duel"
         onCopyConfirm={jest.fn()}
+        onRenameConfirm={jest.fn()}
         onDeleteConfirm={jest.fn()}
         onShareOpen={onShareOpen}
       />,

@@ -3,46 +3,63 @@
 import {
   createContext,
   useContext,
-  useState,
   useEffect,
-  type ReactNode,
   useCallback,
   useRef,
+  useMemo,
+  type ReactNode,
+  type Dispatch,
+  type SetStateAction,
 } from "react";
-import { useQueryClient } from "@tanstack/react-query";
 import { Card } from "../types/card";
-import type { BanStatus, Deck, DeckMode, DeckType } from "@/types/deck";
-import { v4 as uuidv4 } from "uuid";
+import type {
+  BanStatus,
+  ClientDeck,
+  Deck,
+  DeckFormat,
+  DeckSection,
+} from "@/types/deck";
 import { supabase } from "../lib/supabaseClient";
-import { getArchetypeName } from "@/lib/deck/import";
 import {
-  saveDeck as saveDeckToSupabase,
   deleteDeck as deleteDeckFromSupabase,
-  getUserDecks as getUserDecksFromSupabase,
   loadDeck as loadDeckFromSupabase,
+  saveDeck as saveDeckToSupabase,
 } from "@/lib/data/decks";
-import { invalidateAllUserDecks } from "@/hooks/useUserDecks";
-import { mergeDeckAfterSave } from "@/lib/deck/merge-deck-after-save";
-
-type DeckSection = "mainDeck" | "extraDeck" | "sideDeck";
+import { useQueryClient } from "@tanstack/react-query";
+import { invalidateAllUserDecks, useUserDecks } from "@/hooks/useUserDecks";
+import { useLiveDeckStore } from "@/store/liveDeckStore";
+import { useCardLibrary } from "@/hooks/queries/useCardLibrary";
+import { useUserStore } from "@/store/useUserStore";
+import {
+  clearLiveDeckSession,
+  isBrandNewEmptyDeck,
+  readLiveDeckSession,
+  writeLiveDeckSession,
+} from "@/lib/deck/live-deck-session";
 
 interface DeckContextType {
-  currentDeck: DeckType;
-  setCurrentDeck: React.Dispatch<React.SetStateAction<DeckType>>;
+  currentDeck: ClientDeck;
+  setCurrentDeck: Dispatch<SetStateAction<ClientDeck>>;
+  /** Query-backed alias — not a Context-owned copy. */
   savedDecks: Deck[];
   banlist: Record<string, BanStatus>;
   addCardToDeck: (card: Card, deckType: DeckSection) => void;
   removeCardFromDeck: (cardId: string, deckType: DeckSection) => void;
-  clearDeck: (mode?: DeckMode) => void;
-  saveDeck: (deckData?: DeckType) => Promise<void>;
+  clearDeck: (deckFormat?: DeckFormat) => void;
+  saveDeck: (deckData?: ClientDeck) => Promise<void>;
   loadDeck: (id: string) => Promise<void>;
-  copyDeck: (sourceDeck: DeckType, options?: { targetMode?: DeckMode; name?: string }) => void;
+  copyDeck: (
+    sourceDeck: ClientDeck,
+    options?: { targetFormat?: DeckFormat; name?: string },
+  ) => void;
   deleteDeck: (id: string) => Promise<void>;
   getUserDecks: () => Promise<void>;
   exportDeck: () => string;
   importDeck: (jsonData: string) => void;
   renameDeck: (name: string) => void;
-  updateDeckMode: (mode: DeckMode) => void;
+  updateDeckFormat: (deckFormat: DeckFormat) => void;
+  /** @deprecated Use `updateDeckFormat` */
+  updateDeckMode: (mode: DeckFormat) => void;
   getDeckStats: () => {
     mainCount: number;
     extraCount: number;
@@ -54,391 +71,364 @@ interface DeckContextType {
   getSynergyTips: () => string[];
   loading: boolean;
   error: string | null;
+  isDirty: boolean;
 }
 
 const DeckContext = createContext<DeckContextType | undefined>(undefined);
 
+/**
+ * Thin compatibility shim over Zustand liveDeck + TanStack Query archives.
+ * Zero duplicated deck card arrays after Phase 1b.
+ */
 export function DeckProvider({ children }: { children: ReactNode }) {
-  const [currentDeck, setCurrentDeck] = useState<DeckType>({
-    id: uuidv4(),
-    name: "New Deck",
-    mainDeck: [],
-    extraDeck: [],
-    sideDeck: [],
-    mode: "Master Duel" as DeckMode,
-  });
-  const [savedDecks, setSavedDecks] = useState<Deck[]>([]);
-  const [banlist, setBanlist] = useState<Record<string, BanStatus>>({});
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const saveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const queryClient = useQueryClient();
+  const { decks: queryDecks, invalidate } = useUserDecks();
+  // Hydrate catalog Query → cardStore mirror for Workshop consumers.
+  useCardLibrary();
 
-  const invalidateUserDecksCache = useCallback((): void => {
-    void invalidateAllUserDecks(queryClient);
-  }, [queryClient]);
+  const currentDeck = useLiveDeckStore((s) => s.currentDeck);
+  const banlist = useLiveDeckStore((s) => s.banlist);
+  const loading = useLiveDeckStore((s) => s.loading);
+  const error = useLiveDeckStore((s) => s.error);
+  const isDirty = useLiveDeckStore((s) => s.isDirty);
 
-  // Fetch banlist based on deck mode from Supabase
+  const saveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const saveInFlightRef = useRef(false);
+  const pendingResaveRef = useRef(false);
+  const currentDeckRef = useRef(currentDeck);
+  currentDeckRef.current = currentDeck;
+  /** Deck ids known to exist in Supabase — skip existence probe on updates. */
+  const knownPersistedIdsRef = useRef<Set<string>>(new Set());
+  /** Last list-visible meta we invalidated for — avoid archives refetch on card-only autosaves. */
+  const lastInvalidatedMetaRef = useRef<{
+    id: string;
+    name: string;
+    deckFormat: DeckFormat;
+  } | null>(null);
+  const didHydrateSessionRef = useRef(false);
+
+  // Restore last workshop deck after refresh (skip empty "New Deck" drafts).
   useEffect(() => {
-    const loadBanlist = async () => {
+    if (didHydrateSessionRef.current) return;
+    didHydrateSessionRef.current = true;
+    const session = readLiveDeckSession();
+    if (!session) return;
+    const current = useLiveDeckStore.getState().currentDeck;
+    if (!isBrandNewEmptyDeck(current)) return;
+    useLiveDeckStore.getState().hydrateDeck(session.currentDeck, {
+      isDirty: session.isDirty,
+    });
+    knownPersistedIdsRef.current.add(session.currentDeck.id);
+    lastInvalidatedMetaRef.current = {
+      id: session.currentDeck.id,
+      name: session.currentDeck.name,
+      deckFormat: session.currentDeck.deckFormat,
+    };
+  }, []);
+
+  // Persist live deck for refresh restore (debounced).
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      writeLiveDeckSession(currentDeck, isDirty);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [currentDeck, isDirty]);
+
+  // Banlist follows live deck format (SSoT).
+  useEffect(() => {
+    let cancelled = false;
+    const loadBanlist = async (): Promise<void> => {
       try {
-        const { getMasterDuelBanlist, getTCGBanlist } = await import("../lib/data/cards");
-        const banlistData = currentDeck.mode === "TCG" 
-          ? await getTCGBanlist()
-          : await getMasterDuelBanlist();
-        setBanlist(banlistData);
-      } catch (error) {
-        // Banlist loading failed - use empty banlist for graceful degradation
-        // This allows the app to continue functioning without banlist validation
-        // Errors are expected if database is unavailable or banlist hasn't been populated
-        setBanlist({});
-        // Optionally set error state if you want to show a warning to users
-        // setError("Unable to load banlist. Some features may be limited.");
+        const { getMasterDuelBanlist, getTCGBanlist } = await import(
+          "../lib/data/cards"
+        );
+        const banlistData =
+          currentDeck.deckFormat === "TCG"
+            ? await getTCGBanlist()
+            : await getMasterDuelBanlist();
+        if (!cancelled) {
+          useLiveDeckStore.getState().setBanlist(banlistData);
+        }
+      } catch {
+        if (!cancelled) {
+          useLiveDeckStore.getState().setBanlist({});
+        }
       }
     };
-    loadBanlist();
-  }, [currentDeck.mode]);
+    void loadBanlist();
+    return () => {
+      cancelled = true;
+    };
+  }, [currentDeck.deckFormat]);
 
-  // --- Deck Operations ---
-
-  const addCardToDeck = useCallback(
-    (card: Card, deckType: DeckSection) => {
-      setCurrentDeck((prev) => {
-        const currentSection = Array.isArray(prev[deckType])
-          ? prev[deckType]
-          : [];
-        const banStatus = banlist[card.name] || "Unlimited";
-        let maxCopies = 3;
-        if (banStatus === "Limited") maxCopies = 1;
-        if (banStatus === "Semi-Limited") maxCopies = 2;
-        if (banStatus === "Forbidden") maxCopies = 0;
-
-        // Count copies across ALL deck sections (mainDeck, extraDeck, sideDeck)
-        // Banlist applies to the entire deck, not just individual sections
-        const totalCount = [
-          ...(prev.mainDeck || []),
-          ...(prev.extraDeck || []),
-          ...(prev.sideDeck || []),
-        ].filter((c) => c.id === card.id).length;
-
-        if (totalCount >= maxCopies) return prev;
-        const cardWithInstanceId = { ...card, deckInstanceId: uuidv4() };
-        return {
-          ...prev,
-          [deckType]: [...currentSection, cardWithInstanceId],
-        };
-      });
-    },
-    [banlist],
-  );
-
-  const removeCardFromDeck = useCallback(
-    (deckInstanceId: string, deckType: DeckSection) => {
-      setCurrentDeck((prev) => ({
-        ...prev,
-        [deckType]: prev[deckType].filter(
-          (card) => card.deckInstanceId !== deckInstanceId,
-        ),
-      }));
+  const setCurrentDeck = useCallback<Dispatch<SetStateAction<ClientDeck>>>(
+    (value) => {
+      useLiveDeckStore.getState().setCurrentDeck(value);
     },
     [],
   );
 
-  const clearDeck = useCallback((mode: DeckMode = "Master Duel") => {
-    setCurrentDeck({
-      id: uuidv4(),
-      name: "New Deck",
-      mainDeck: [],
-      extraDeck: [],
-      sideDeck: [],
-      mode,
-    });
+  const addCardToDeck = useCallback((card: Card, deckType: DeckSection) => {
+    useLiveDeckStore.getState().addCardToDeck(card, deckType);
   }, []);
 
-  // --- Supabase CRUD ---
+  const removeCardFromDeck = useCallback(
+    (deckInstanceId: string, deckType: DeckSection) => {
+      useLiveDeckStore.getState().removeCardFromDeck(deckInstanceId, deckType);
+    },
+    [],
+  );
+
+  const clearDeck = useCallback((deckFormat: DeckFormat = "Master Duel") => {
+    useLiveDeckStore.getState().clearDeck(deckFormat);
+    clearLiveDeckSession();
+    lastInvalidatedMetaRef.current = null;
+  }, []);
 
   const getUserDecks = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
-        setSavedDecks([]);
+    await invalidate();
+  }, [invalidate]);
+
+  const saveDeck = useCallback(
+    async (deckData?: ClientDeck) => {
+      if (saveInFlightRef.current) {
+        pendingResaveRef.current = true;
         return;
       }
 
-      // Use supabaseDecks function
-      const decks = await getUserDecksFromSupabase(user.id);
-      setSavedDecks(decks);
-    } catch (err: any) {
-      setError(err.message || "Failed to load decks");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+      const store = useLiveDeckStore.getState();
+      store.setLoading(true);
+      store.setError(null);
+      saveInFlightRef.current = true;
 
-  const saveDeck = useCallback(
-    async (deckData?: DeckType) => {
-      setLoading(true);
-      setError(null);
       try {
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-        if (!user) throw new Error("User not authenticated");
-
-        const deckToSave = deckData || currentDeck;
-
-        // Don't save decks named "New Deck" - user must rename first
-        if (deckToSave.name === "New Deck") {
-          setError("Please rename your deck before saving.");
-          setLoading(false);
-          return;
+        // Prefer synced Zustand user — avoid auth/v1/user on every autosave.
+        let userId = useUserStore.getState().user?.id ?? null;
+        if (!userId) {
+          const {
+            data: { user },
+          } = await supabase.auth.getUser();
+          userId = user?.id ?? null;
         }
+        if (!userId) throw new Error("User not authenticated");
 
-        // Validate deck data before saving
-        if (!deckToSave.id || !deckToSave.name) {
-          throw new Error("Invalid deck data: missing id or name");
+        let overrideDeck = deckData;
+        let iterations = 0;
+        do {
+          pendingResaveRef.current = false;
+          iterations += 1;
+          const generationAtStart =
+            useLiveDeckStore.getState().editGeneration;
+          const deckToSave = overrideDeck ?? currentDeckRef.current;
+          overrideDeck = undefined;
+
+          if (deckToSave.name === "New Deck") {
+            store.setError("Please rename your deck before saving.");
+            break;
+          }
+
+          if (!deckToSave.id || !deckToSave.name) {
+            throw new Error("Invalid deck data: missing id or name");
+          }
+
+          const validatedDeck: ClientDeck = {
+            ...deckToSave,
+            mainDeck: deckToSave.mainDeck || [],
+            extraDeck: deckToSave.extraDeck || [],
+            sideDeck: deckToSave.sideDeck || [],
+            deckFormat: deckToSave.deckFormat || "Master Duel",
+          };
+
+          const isNewDeckId = !knownPersistedIdsRef.current.has(
+            validatedDeck.id,
+          );
+
+          await saveDeckToSupabase(validatedDeck, userId, { isNewDeckId });
+          knownPersistedIdsRef.current.add(validatedDeck.id);
+
+          // Never replace main/extra/side from the save payload — a newer local
+          // add can land while this request is in flight (merge-after-save).
+          useLiveDeckStore.getState().applyMergeAfterSave(
+            {
+              id: validatedDeck.id,
+              name: validatedDeck.name,
+              deckFormat: validatedDeck.deckFormat,
+              updated_at: new Date().toISOString(),
+            },
+            generationAtStart,
+          );
+
+          // Archives list only needs a refetch when list-visible fields change.
+          const prevMeta = lastInvalidatedMetaRef.current;
+          const metaChanged =
+            !prevMeta ||
+            prevMeta.id !== validatedDeck.id ||
+            prevMeta.name !== validatedDeck.name ||
+            prevMeta.deckFormat !== validatedDeck.deckFormat;
+
+          if (metaChanged || isNewDeckId) {
+            lastInvalidatedMetaRef.current = {
+              id: validatedDeck.id,
+              name: validatedDeck.name,
+              deckFormat: validatedDeck.deckFormat,
+            };
+            await invalidateAllUserDecks(queryClient);
+          }
+        } while (pendingResaveRef.current && iterations < 5);
+
+        // Mid-flight edits that flipped dirty after the last merge: debounce again.
+        if (
+          useLiveDeckStore.getState().isDirty &&
+          currentDeckRef.current.name !== "New Deck"
+        ) {
+          if (saveTimeout.current) clearTimeout(saveTimeout.current);
+          saveTimeout.current = setTimeout(() => {
+            void saveDeck(currentDeckRef.current);
+          }, 1000);
         }
-
-        // Ensure arrays are properly initialized
-        const validatedDeck = {
-          ...deckToSave,
-          mainDeck: deckToSave.mainDeck || [],
-          extraDeck: deckToSave.extraDeck || [],
-          sideDeck: deckToSave.sideDeck || [],
-          mode: deckToSave.mode || "Master Duel",
-        };
-
-        // Use supabaseDecks function
-        await saveDeckToSupabase(validatedDeck, user.id);
-
-        // Never replace main/extra/side from the save payload — a newer local
-        // add can land while this request is in flight (Workshop Assistant Add).
-        setCurrentDeck((prev) =>
-          mergeDeckAfterSave(prev, {
-            id: validatedDeck.id,
-            name: validatedDeck.name,
-            mode: validatedDeck.mode,
-            updated_at: new Date().toISOString(),
-          }),
-        );
-
-        await getUserDecks();
-        invalidateUserDecksCache();
-      } catch (err: any) {
+      } catch (err: unknown) {
+        // Do not roll back live card arrays on save failure — that would wipe
+        // cards added while the request was in flight. Surface error only.
         const errorMessage =
-          err?.message ||
-          err?.error_description ||
-          err?.details ||
-          "Failed to save deck";
-        setError(errorMessage);
-        // Error saving deck - error message already set above
+          err instanceof Error
+            ? err.message
+            : typeof err === "object" &&
+                err &&
+                "message" in err &&
+                typeof (err as { message: unknown }).message === "string"
+              ? (err as { message: string }).message
+              : "Failed to save deck";
+        useLiveDeckStore.getState().setError(errorMessage);
       } finally {
-        setLoading(false);
+        saveInFlightRef.current = false;
+        useLiveDeckStore.getState().setLoading(false);
       }
     },
-    [currentDeck, getUserDecks, invalidateUserDecksCache],
+    [queryClient],
   );
 
   const copyDeck = useCallback(
     (
-      sourceDeck: DeckType,
-      options?: { targetMode?: DeckMode; name?: string }
+      sourceDeck: ClientDeck,
+      options?: { targetFormat?: DeckFormat; name?: string },
     ) => {
-      const targetMode = options?.targetMode ?? sourceDeck.mode;
-      const baseName = options?.name ?? `Copy of ${sourceDeck.name}`;
-      const newDeck: DeckType = {
-        id: uuidv4(),
-        name: baseName,
-        mainDeck: sourceDeck.mainDeck.map((c) => ({ ...c, deckInstanceId: uuidv4() })),
-        extraDeck: sourceDeck.extraDeck.map((c) => ({ ...c, deckInstanceId: uuidv4() })),
-        sideDeck: sourceDeck.sideDeck.map((c) => ({ ...c, deckInstanceId: uuidv4() })),
-        mode: targetMode,
-      };
-      setCurrentDeck(newDeck);
+      useLiveDeckStore.getState().copyDeck(sourceDeck, options);
     },
-    []
+    [],
   );
 
   const loadDeck = useCallback(async (id: string) => {
-    setLoading(true);
-    setError(null);
+    const store = useLiveDeckStore.getState();
+    store.setLoading(true);
+    store.setError(null);
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) throw new Error("User not authenticated");
+      let userId = useUserStore.getState().user?.id ?? null;
+      if (!userId) {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        userId = user?.id ?? null;
+      }
+      if (!userId) throw new Error("User not authenticated");
 
-      // Use supabaseDecks function
-      const deck = await loadDeckFromSupabase(id, user.id);
-      setCurrentDeck(deck);
-    } catch (err: any) {
-      setError(err.message || "Failed to load deck");
+      const deck = await loadDeckFromSupabase(id, userId);
+      store.hydrateDeck(deck, { isDirty: false });
+      knownPersistedIdsRef.current.add(deck.id);
+      lastInvalidatedMetaRef.current = {
+        id: deck.id,
+        name: deck.name,
+        deckFormat: deck.deckFormat,
+      };
+    } catch (err: unknown) {
+      store.setError(
+        err instanceof Error ? err.message : "Failed to load deck",
+      );
     } finally {
-      setLoading(false);
+      store.setLoading(false);
     }
   }, []);
 
   const deleteDeck = useCallback(
     async (id: string) => {
-      setLoading(true);
-      setError(null);
+      const store = useLiveDeckStore.getState();
+      store.setLoading(true);
+      store.setError(null);
       try {
         const {
           data: { user },
         } = await supabase.auth.getUser();
         if (!user) throw new Error("User not authenticated");
 
-        // Use supabaseDecks function
         await deleteDeckFromSupabase(id, user.id);
-        await getUserDecks();
-        invalidateUserDecksCache();
-      } catch (err: any) {
-        setError(err.message || "Failed to delete deck");
+        await invalidateAllUserDecks(queryClient);
+      } catch (err: unknown) {
+        store.setError(
+          err instanceof Error ? err.message : "Failed to delete deck",
+        );
       } finally {
-        setLoading(false);
+        store.setLoading(false);
       }
     },
-    [getUserDecks, invalidateUserDecksCache],
+    [queryClient],
   );
 
-  // Debounced auto-save effect
+  // Debounced auto-save — only when dirty (prevents merge-after-save → loop).
   useEffect(() => {
     if (saveTimeout.current) clearTimeout(saveTimeout.current);
-    // Don't auto-save decks named "New Deck" - user must rename before saving to DB
-    if (currentDeck.name === "New Deck") {
-      return;
-    }
+    if (!isDirty) return;
+    if (currentDeck.name === "New Deck") return;
+    if (!useUserStore.getState().user?.id) return;
 
-    // Check if user is authenticated before auto-saving
-    const checkUserAndSave = async () => {
-      try {
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-        if (user) {
-          saveDeck(currentDeck);
-        }
-      } catch (error) {
-        // Silently fail if user check fails - don't auto-save
-      }
-    };
+    saveTimeout.current = setTimeout(() => {
+      void saveDeck(currentDeckRef.current);
+    }, 1000);
 
-    saveTimeout.current = setTimeout(checkUserAndSave, 1000); // Increased delay to 1000ms to reduce interference with drag operations
     return () => {
       if (saveTimeout.current) clearTimeout(saveTimeout.current);
     };
-  }, [currentDeck, saveDeck]); // Triggers on any deck change
-
-  // --- Utility Functions ---
-
-  const exportDeck = () => JSON.stringify(currentDeck);
-
-  const importDeck = (jsonData: string) => {
-    try {
-      const importedDeck = JSON.parse(jsonData) as DeckType;
-      // Ensure the imported deck has a mode property, default to "Master Duel" if missing
-      const deckWithMode = {
-        ...importedDeck,
-        mode: importedDeck.mode || ("Master Duel" as const),
-      };
-      setCurrentDeck(deckWithMode);
-    } catch (error) {
-      setError("Failed to import deck: Invalid JSON");
-    }
-  };
+  }, [isDirty, currentDeck, saveDeck]);
 
   const renameDeck = useCallback((name: string) => {
-    setCurrentDeck((prev) =>
-      prev.name === name ? prev : { ...prev, name },
-    );
+    useLiveDeckStore.getState().renameDeck(name);
   }, []);
 
-  const updateDeckMode = useCallback((mode: DeckMode) => {
-    setCurrentDeck((prev) => (prev.mode === mode ? prev : { ...prev, mode }));
+  const updateDeckFormat = useCallback((deckFormat: DeckFormat) => {
+    useLiveDeckStore.getState().updateDeckFormat(deckFormat);
   }, []);
 
-  const getDeckStats = () => {
-    const { mainDeck, extraDeck, sideDeck } = currentDeck;
-    const mainCount = mainDeck?.length ?? 0;
-    const extraCount = extraDeck?.length ?? 0;
-    const sideCount = sideDeck?.length ?? 0;
+  const exportDeck = useCallback(
+    () => useLiveDeckStore.getState().exportDeck(),
+    [],
+  );
 
-    const monsterCount = mainDeck.filter((card) =>
-      card.type.includes("Monster"),
-    ).length;
-    const spellCount = mainDeck.filter((card) =>
-      card.type.includes("Spell"),
-    ).length;
-    const trapCount = mainDeck.filter((card) =>
-      card.type.includes("Trap"),
-    ).length;
+  const importDeck = useCallback((jsonData: string) => {
+    useLiveDeckStore.getState().importDeck(jsonData);
+  }, []);
 
-    return {
-      mainCount,
-      extraCount,
-      sideCount,
-      monsterCount,
-      spellCount,
-      trapCount,
-    };
-  };
+  const getDeckStats = useCallback(
+    () => useLiveDeckStore.getState().getDeckStats(),
+    [],
+  );
 
-  const getSynergyTips = () => {
-    const tips: string[] = [];
-    const stats = getDeckStats();
+  const getSynergyTips = useCallback(
+    () => useLiveDeckStore.getState().getSynergyTips(),
+    [],
+  );
 
-    if (stats.monsterCount > 25) {
-      tips.push(
-        "Your deck has too many monsters. Consider adding more Spell cards for balance.",
-      );
-    }
-    if (stats.spellCount < 8 && stats.mainCount > 30) {
-      tips.push("Consider adding more Spell cards to support your monsters.");
-    }
-    if (stats.trapCount < 5 && stats.mainCount > 30) {
-      tips.push("Your deck could benefit from more Trap cards for protection.");
-    }
-    const archetypes = new Map<string, number>();
-    currentDeck.mainDeck.forEach((card) => {
-      const archetypeName = getArchetypeName(card);
-      if (archetypeName) {
-        archetypes.set(archetypeName, (archetypes.get(archetypeName) || 0) + 1);
-      }
-    });
-    const hasDarkMagician = currentDeck.mainDeck.some(
-      (card) => card.name === "Dark Magician",
-    );
-    const hasDarkMagicalCircle = currentDeck.mainDeck.some(
-      (card) => card.name === "Dark Magical Circle",
-    );
-    if (hasDarkMagician && !hasDarkMagicalCircle) {
-      tips.push(
-        "Consider adding Dark Magical Circle to synergize with your Dark Magician.",
-      );
-    }
-    if (stats.mainCount < 40) {
-      tips.push(
-        `Your Main Deck has ${stats.mainCount} cards. The minimum required is 40.`,
-      );
-    } else if (stats.mainCount > 50) {
-      tips.push(
-        "Your Main Deck exceeds 50 cards. Consider reducing it for better consistency.",
-      );
-    }
-    return tips;
-  };
+  const savedDecks = useMemo((): Deck[] => {
+    return queryDecks.map((d) => ({
+      id: d.id,
+      name: d.name,
+      mainDeck: d.mainDeck,
+      extraDeck: d.extraDeck,
+      sideDeck: d.sideDeck,
+      created_at: d.updated_at ?? "",
+      updated_at: d.updated_at ?? "",
+      is_pinned: d.isPinned,
+      deckFormat: d.deckFormat,
+    }));
+  }, [queryDecks]);
 
-  // --- Initial Deck Load on Mount ---
-  useEffect(() => {
-    getUserDecks();
-    // Optionally, load the most recent deck as currentDeck here
-  }, [getUserDecks]);
-
-  // --- Context Value ---
   const value: DeckContextType = {
     currentDeck,
     setCurrentDeck,
@@ -455,11 +445,13 @@ export function DeckProvider({ children }: { children: ReactNode }) {
     exportDeck,
     importDeck,
     renameDeck,
-    updateDeckMode,
+    updateDeckFormat,
+    updateDeckMode: updateDeckFormat,
     getDeckStats,
     getSynergyTips,
     loading,
     error,
+    isDirty,
   };
 
   return <DeckContext.Provider value={value}>{children}</DeckContext.Provider>;

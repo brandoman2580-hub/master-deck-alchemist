@@ -25,7 +25,7 @@ describe("user decks query helpers", () => {
         extraDeck: [],
         sideDeck: [],
         updated_at: "2026-01-01T00:00:00Z",
-        mode: "TCG",
+        deckFormat: "TCG",
         isPinned: true,
       },
     ]);

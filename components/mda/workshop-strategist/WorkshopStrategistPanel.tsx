@@ -63,7 +63,7 @@ export function WorkshopStrategistPanel({
 
   const isAuthenticated = !!user;
   const isReady = isAuthenticated && eligibility.ok;
-  const format = toEngineFormat(currentDeck.mode);
+  const format = toEngineFormat(currentDeck.deckFormat);
 
   const {
     messages,

@@ -1,4 +1,4 @@
-import type { DeckType } from "@/types/deck";
+import type { ClientDeck } from "@/types/deck";
 
 /**
  * After a successful persist, merge save metadata into live deck state
@@ -9,17 +9,17 @@ import type { DeckType } from "@/types/deck";
  * wipe those newer copies (card appears, then vanishes ~1s later).
  */
 export function mergeDeckAfterSave(
-  prev: DeckType,
-  saved: Pick<DeckType, "id" | "name" | "mode"> & {
+  prev: ClientDeck,
+  saved: Pick<ClientDeck, "id" | "name" | "deckFormat"> & {
     updated_at?: string;
   },
-): DeckType {
+): ClientDeck {
   return {
     ...prev,
     id: saved.id || prev.id,
-    // Prefer live local name/mode in case the user edited during the save.
+    // Prefer live local name/format in case the user edited during the save.
     name: prev.name || saved.name,
-    mode: prev.mode || saved.mode,
+    deckFormat: prev.deckFormat || saved.deckFormat,
     updated_at: saved.updated_at ?? new Date().toISOString(),
   };
 }

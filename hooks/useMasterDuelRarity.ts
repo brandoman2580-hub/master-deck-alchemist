@@ -5,11 +5,11 @@ import { getMasterDuelRarityMap } from "@/lib/data/cards";
 
 /**
  * Fetches Master Duel rarity map (card_id -> md_rarity) for given card IDs.
- * Only fetches when deckMode is Master Duel and cardIds is non-empty.
+ * Only fetches when deckFormat is Master Duel and cardIds is non-empty.
  */
 export function useMasterDuelRarity(
   cardIds: number[],
-  deckMode: "Master Duel" | "TCG",
+  deckFormat: "Master Duel" | "TCG",
 ): Map<number, string> {
   const [rarityMap, setRarityMap] = useState<Map<number, string>>(new Map());
 
@@ -29,7 +29,7 @@ export function useMasterDuelRarity(
   );
 
   useEffect(() => {
-    if (deckMode !== "Master Duel" || uniqueIds.length === 0) {
+    if (deckFormat !== "Master Duel" || uniqueIds.length === 0) {
       setRarityMap(new Map());
       return;
     }
@@ -45,7 +45,7 @@ export function useMasterDuelRarity(
     return () => {
       cancelled = true;
     };
-  }, [deckMode, idsKey]);
+  }, [deckFormat, idsKey]);
 
   return rarityMap;
 }

@@ -14,12 +14,14 @@ import {
   Copy,
   Gamepad2,
   Loader2,
+  Pencil,
   QrCode,
   Share2,
   Trash2,
   X,
 } from "lucide-react";
 import { Crown } from "lucide-react";
+import { normalizeDeckName } from "@/lib/deck/normalize-deck-name";
 import { QRCodeSVG } from "qrcode.react";
 import {
   Popover,
@@ -75,10 +77,11 @@ const cancelIconBtn =
 
 export type DeckArchiveActionPopoversProps = {
   deckName: string;
-  mode: DeckMode;
+  deckFormat: DeckMode;
   /** False when PersistedDeck fails legal share size/copy rules. */
   canShare?: boolean;
-  onCopyConfirm: (mode: DeckMode) => void;
+  onCopyConfirm: (deckFormat: DeckMode) => void;
+  onRenameConfirm: (name: string) => void | Promise<void>;
   onDeleteConfirm: () => void;
   onShareOpen: () => Promise<string>;
 };
@@ -89,16 +92,21 @@ export type DeckArchiveActionPopoversProps = {
  */
 export function DeckArchiveActionPopovers({
   deckName,
-  mode: initialMode,
+  deckFormat: initialDeckFormat,
   canShare = true,
   onCopyConfirm,
+  onRenameConfirm,
   onDeleteConfirm,
   onShareOpen,
 }: DeckArchiveActionPopoversProps): ReactNode {
   const [copyOpen, setCopyOpen] = useState(false);
+  const [renameOpen, setRenameOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [copyMode, setCopyMode] = useState<DeckMode>(initialMode);
+  const [copyDeckFormat, setCopyDeckFormat] = useState<DeckMode>(initialDeckFormat);
+  const [renameDraft, setRenameDraft] = useState(deckName);
+  const [renameError, setRenameError] = useState<string | null>(null);
+  const [renameSaving, setRenameSaving] = useState(false);
   const [shareUrl, setShareUrl] = useState("");
   const [shareLoading, setShareLoading] = useState(false);
   const [shareError, setShareError] = useState<string | null>(null);
@@ -108,6 +116,7 @@ export function DeckArchiveActionPopovers({
   const copiedTipTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const copy = usePreferLeft();
+  const rename = usePreferLeft();
   const share = usePreferLeft();
   const del = usePreferLeft();
 
@@ -175,6 +184,30 @@ export function DeckArchiveActionPopovers({
     [beginShareGeneration, canShare, share, shareLoading],
   );
 
+  const commitRename = async (): Promise<void> => {
+    const next = normalizeDeckName(renameDraft);
+    if (!next) {
+      setRenameError("Enter a deck name.");
+      return;
+    }
+    if (next === deckName) {
+      setRenameOpen(false);
+      return;
+    }
+    setRenameSaving(true);
+    setRenameError(null);
+    try {
+      await onRenameConfirm(next);
+      setRenameOpen(false);
+    } catch (err) {
+      setRenameError(
+        err instanceof Error ? err.message : "Failed to rename deck",
+      );
+    } finally {
+      setRenameSaving(false);
+    }
+  };
+
   return (
     <div className="flex items-center gap-1.5">
       <Popover
@@ -183,7 +216,7 @@ export function DeckArchiveActionPopovers({
         onOpenChange={(next) => {
           if (next) copy.captureSide();
           setCopyOpen(next);
-          if (next) setCopyMode(initialMode);
+          if (next) setCopyDeckFormat(initialDeckFormat);
         }}
       >
         <PopoverTrigger asChild>
@@ -219,11 +252,11 @@ export function DeckArchiveActionPopovers({
                 <button
                   key={key}
                   type="button"
-                  onClick={() => setCopyMode(key)}
+                  onClick={() => setCopyDeckFormat(key)}
                   data-magnetic
                   className={cn(
                     "inline-flex items-center gap-1.5 px-3 py-2 font-mda text-sm font-bold uppercase transition-colors duration-200",
-                    copyMode === key
+                    copyDeckFormat === key
                       ? "bg-mda-chrome text-mda-inverse-text"
                       : "bg-mda-panel text-mda-ink hover:bg-mda-chrome hover:text-mda-inverse-text",
                   )}
@@ -237,7 +270,7 @@ export function DeckArchiveActionPopovers({
               type="button"
               data-magnetic
               onClick={() => {
-                onCopyConfirm(copyMode);
+                onCopyConfirm(copyDeckFormat);
                 setCopyOpen(false);
               }}
               aria-label="Confirm copy"
@@ -254,6 +287,92 @@ export function DeckArchiveActionPopovers({
             >
               <X className="h-6 w-6" aria-hidden />
             </button>
+          </div>
+        </PopoverContent>
+      </Popover>
+
+      <Popover
+        modal
+        open={renameOpen}
+        onOpenChange={(next) => {
+          if (next) {
+            rename.captureSide();
+            setRenameDraft(deckName);
+            setRenameError(null);
+          }
+          setRenameOpen(next);
+        }}
+      >
+        <PopoverTrigger asChild>
+          <button
+            ref={rename.triggerRef}
+            type="button"
+            aria-label={`Rename ${deckName}`}
+            className={iconBtn}
+          >
+            <Pencil className="h-5 w-5" aria-hidden />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent
+          side={rename.side}
+          align="center"
+          sideOffset={10}
+          collisionPadding={ARCHIVE_POPOVER_EDGE_PAD}
+          className={ARCHIVE_POPOVER_CONTENT_CLASS}
+          data-mda-action-popover
+        >
+          <div className="flex min-w-[220px] flex-col gap-2 p-3">
+            <label
+              htmlFor="archive-rename-input"
+              className="font-mda text-xs font-bold uppercase tracking-wide text-white"
+            >
+              Rename deck
+            </label>
+            <input
+              id="archive-rename-input"
+              type="text"
+              value={renameDraft}
+              maxLength={80}
+              disabled={renameSaving}
+              onChange={(event) => {
+                setRenameDraft(event.target.value);
+                setRenameError(null);
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  void commitRename();
+                }
+              }}
+              className="border border-white/20 bg-black/30 px-2 py-1.5 font-mda text-sm text-white outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mda-cyan"
+            />
+            {renameError ? (
+              <p className="font-mda text-xs text-mda-danger" role="alert">
+                {renameError}
+              </p>
+            ) : null}
+            <div className="flex items-center justify-end gap-1">
+              <button
+                type="button"
+                data-magnetic
+                disabled={renameSaving}
+                onClick={() => void commitRename()}
+                aria-label="Confirm rename"
+                className={confirmIconBtn}
+              >
+                <Check className="h-6 w-6" aria-hidden />
+              </button>
+              <button
+                type="button"
+                data-magnetic
+                disabled={renameSaving}
+                onClick={() => setRenameOpen(false)}
+                aria-label="Cancel rename"
+                className={cancelIconBtn}
+              >
+                <X className="h-6 w-6" aria-hidden />
+              </button>
+            </div>
           </div>
         </PopoverContent>
       </Popover>

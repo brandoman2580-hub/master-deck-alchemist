@@ -39,7 +39,7 @@ describe("deck share payload", () => {
     const deck: DeckType = {
       id: "deck-1",
       name: "Test Deck",
-      mode: "Master Duel",
+      deckFormat: "Master Duel",
       mainDeck: [
         {
           id: 123,

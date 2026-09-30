@@ -25,17 +25,17 @@ import { resolveCardImageUrl } from "@/lib/card/image-url";
 import { useMasterDuelRarity } from "@/hooks/useMasterDuelRarity";
 
 function SharePageDeckCost({ deck }: { deck: ClientDeck }) {
-  const deckMode = deck.mode ?? "Master Duel";
+  const deckFormat = deck.deckFormat ?? "Master Duel";
   const cardIds = [
     ...deck.mainDeck,
     ...deck.extraDeck,
     ...deck.sideDeck,
   ].map((c) => c.id);
-  const mdRarityMap = useMasterDuelRarity(cardIds, deckMode);
+  const mdRarityMap = useMasterDuelRarity(cardIds, deckFormat);
   return (
     <DeckCostDisplay
       deck={deck}
-      deckMode={deckMode}
+      deckFormat={deckFormat}
       mdRarityMap={mdRarityMap}
     />
   );
@@ -150,7 +150,7 @@ export function ShareDeckClient() {
             mainDeck: result.deck.mainDeck.map(mapToDeckCard),
             extraDeck: result.deck.extraDeck.map(mapToDeckCard),
             sideDeck: result.deck.sideDeck.map(mapToDeckCard),
-            mode: result.deck.mode,
+            deckFormat: result.deck.mode,
             isPinned: false,
           };
 
@@ -264,7 +264,7 @@ export function ShareDeckClient() {
             </div>
 
             <div className="text-sm text-white/70">
-              <span className="font-medium">Mode:</span> {previewDeck.mode}
+              <span className="font-medium">Format:</span> {previewDeck.deckFormat}
             </div>
 
             <SharePageDeckCost deck={previewDeck} />

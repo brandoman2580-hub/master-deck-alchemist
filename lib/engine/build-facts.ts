@@ -56,7 +56,7 @@ export function buildFactsEnvelope(
   deck: DeckType,
   options: BuildFactsOptions = {},
 ): FactsEnvelope {
-  const format = toEngineFormat(deck.mode);
+  const format = toEngineFormat(deck.deckFormat);
   const isPersisted = isDeckPersisted(deck, options.savedDeckIds);
   const legality = evaluateDeckLegality(deck, {
     banlist: options.banlist,

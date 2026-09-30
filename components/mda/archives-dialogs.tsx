@@ -1,11 +1,12 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   Check,
   Crown,
   Gamepad2,
+  Pencil,
   X,
   type LucideIcon,
 } from "lucide-react";
@@ -23,7 +24,122 @@ import {
 import type { DeckCard, DeckMode, DeckType } from "@/types/deck";
 import { CardImage } from "@/components/ui/card-image";
 import { MdaCardPreview } from "@/components/mda/mda-card-preview";
+import { normalizeDeckName } from "@/lib/deck/normalize-deck-name";
 import { cn } from "@/lib/utils";
+
+function DeckDetailsRenameRow({
+  name,
+  onRename,
+}: {
+  name: string;
+  onRename: (name: string) => void | Promise<void>;
+}): ReactNode {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(name);
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const commit = async (): Promise<void> => {
+    const next = normalizeDeckName(draft);
+    if (!next) {
+      setError("Enter a deck name.");
+      return;
+    }
+    if (next === name) {
+      setEditing(false);
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    try {
+      await onRename(next);
+      setEditing(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to rename");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (!editing) {
+    return (
+      <div className="flex items-center justify-center gap-2 px-4 py-2">
+        <p className="min-w-0 truncate text-center font-mda text-xl font-bold uppercase text-mda-ink">
+          {name}
+        </p>
+        <button
+          type="button"
+          data-magnetic
+          onClick={() => {
+            setDraft(name);
+            setError(null);
+            setEditing(true);
+          }}
+          aria-label={`Rename ${name}`}
+          className="shrink-0 rounded p-1 text-mda-ink transition-colors hover:bg-mda-ink/10"
+        >
+          <Pencil className="h-4 w-4" aria-hidden />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-2 px-4 py-2">
+      <input
+        type="text"
+        value={draft}
+        maxLength={80}
+        disabled={saving}
+        aria-label="Deck name"
+        onChange={(event) => {
+          setDraft(event.target.value);
+          setError(null);
+        }}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            void commit();
+          }
+          if (event.key === "Escape") {
+            event.preventDefault();
+            setEditing(false);
+            setDraft(name);
+          }
+        }}
+        className="border border-mda-ink/20 bg-mda-panel px-2 py-1.5 text-center font-mda text-lg font-bold uppercase text-mda-ink-strong outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mda-cyan"
+      />
+      {error ? (
+        <p className="text-center font-mda text-xs text-mda-danger" role="alert">
+          {error}
+        </p>
+      ) : null}
+      <div className="flex justify-center gap-2">
+        <button
+          type="button"
+          data-magnetic
+          disabled={saving}
+          onClick={() => void commit()}
+          className="bg-mda-sky px-3 py-1.5 font-mda text-xs font-black uppercase text-white"
+        >
+          Save name
+        </button>
+        <button
+          type="button"
+          data-magnetic
+          disabled={saving}
+          onClick={() => {
+            setEditing(false);
+            setDraft(name);
+          }}
+          className="bg-mda-chrome px-3 py-1.5 font-mda text-xs font-bold uppercase text-mda-inverse-text"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
 
 /**
  * Full-viewport interaction lock without a visual backdrop.
@@ -76,14 +192,14 @@ const FORMAT_OPTIONS: { key: DeckMode; icon: LucideIcon; label: string }[] = [
 
 function FormatPickerPanel({
   title,
-  mode,
-  onModeChange,
+  deckFormat,
+  onDeckFormatChange,
   onConfirm,
   onCancel,
 }: {
   title: string;
-  mode: DeckMode;
-  onModeChange: (mode: DeckMode) => void;
+  deckFormat: DeckMode;
+  onDeckFormatChange: (deckFormat: DeckMode) => void;
   onConfirm: () => void;
   onCancel: () => void;
 }): ReactNode {
@@ -95,11 +211,11 @@ function FormatPickerPanel({
           <button
             key={key}
             type="button"
-            onClick={() => onModeChange(key)}
+            onClick={() => onDeckFormatChange(key)}
             data-magnetic
             className={cn(
               "inline-flex items-center gap-1.5 px-3 py-2 font-mda text-sm font-bold uppercase transition-colors duration-200 ease-in-out",
-              mode === key
+              deckFormat === key
                 ? "bg-mda-chrome text-mda-inverse-text"
                 : "bg-mda-panel text-mda-ink hover:bg-mda-chrome hover:text-mda-inverse-text",
             )}
@@ -137,8 +253,8 @@ export function FormatPickerPopover({
   open,
   onOpenChange,
   trigger,
-  mode,
-  onModeChange,
+  deckFormat,
+  onDeckFormatChange,
   onConfirm,
   onCancel,
   side = "bottom",
@@ -148,8 +264,8 @@ export function FormatPickerPopover({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   trigger: ReactNode;
-  mode: DeckMode;
-  onModeChange: (mode: DeckMode) => void;
+  deckFormat: DeckMode;
+  onDeckFormatChange: (deckFormat: DeckMode) => void;
   onConfirm: () => void;
   onCancel: () => void;
   side?: "top" | "right" | "bottom" | "left";
@@ -168,8 +284,8 @@ export function FormatPickerPopover({
       >
         <FormatPickerPanel
           title={title}
-          mode={mode}
-          onModeChange={onModeChange}
+          deckFormat={deckFormat}
+          onDeckFormatChange={onDeckFormatChange}
           onConfirm={onConfirm}
           onCancel={onCancel}
         />
@@ -181,15 +297,15 @@ export function FormatPickerPopover({
 export function FormatPickerDialog({
   title,
   open,
-  mode,
-  onModeChange,
+  deckFormat,
+  onDeckFormatChange,
   onConfirm,
   onCancel,
 }: {
   title: string;
   open: boolean;
-  mode: DeckMode;
-  onModeChange: (mode: DeckMode) => void;
+  deckFormat: DeckMode;
+  onDeckFormatChange: (deckFormat: DeckMode) => void;
   onConfirm: () => void;
   onCancel: () => void;
 }): ReactNode {
@@ -200,8 +316,8 @@ export function FormatPickerDialog({
           <div className="border border-mda-ink/15 bg-mda-surface shadow-mda-lift">
             <FormatPickerPanel
               title={title}
-              mode={mode}
-              onModeChange={onModeChange}
+              deckFormat={deckFormat}
+              onDeckFormatChange={onDeckFormatChange}
               onConfirm={onConfirm}
               onCancel={onCancel}
             />
@@ -284,11 +400,13 @@ export function DeckDetailsModal({
   deck,
   onClose,
   onOpenWorkshop,
+  onRename,
 }: {
   open: boolean;
   deck: DeckType | null;
   onClose: () => void;
   onOpenWorkshop: () => void;
+  onRename?: (name: string) => void | Promise<void>;
 }): ReactNode {
   const sections: { title: string; cards: DeckCard[] }[] = deck
     ? [
@@ -306,9 +424,17 @@ export function DeckDetailsModal({
             <div className="bg-mda-chrome px-4 py-2 text-center font-mda text-2xl font-bold uppercase tracking-wide text-mda-inverse-text">
               Deck List
             </div>
-            <p className="px-4 py-2 text-center font-mda text-xl font-bold uppercase text-mda-ink">
-              {deck.name}
-            </p>
+            {onRename ? (
+              <DeckDetailsRenameRow
+                key={deck.id}
+                name={deck.name}
+                onRename={onRename}
+              />
+            ) : (
+              <p className="px-4 py-2 text-center font-mda text-xl font-bold uppercase text-mda-ink">
+                {deck.name}
+              </p>
+            )}
             <div className="max-h-[70vh] space-y-3 overflow-y-auto px-2 pb-4">
               {sections.map((section) =>
                 section.cards.length === 0 ? null : (

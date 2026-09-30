@@ -1,22 +1,13 @@
 "use client";
 
-import { useEffect, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { ThemeProvider } from "next-themes";
 import { DeckProvider } from "../context/deck-context";
 import Navbar from "../components/navbar";
-import { useCardStore } from "../store/cardStore";
-import { getCardData } from "../lib/data/cards";
-import {
-  readCardLibraryCache,
-  writeCardLibraryCache,
-} from "../lib/card/library-cache";
-import { clearFilterCache } from "../store/cardPoolSelectors";
 import { useSupabaseUserSync } from "../hooks/useSupabaseUserSync";
 import { MagneticCursor } from "@/components/mda/magnetic-cursor";
 import { AppQueryProvider } from "@/lib/query/client";
-import { supabase } from "@/lib/supabaseClient";
-import type { Card } from "@/types/card";
 
 function usesMdaShell(pathname: string): boolean {
   return (
@@ -27,113 +18,13 @@ function usesMdaShell(pathname: string): boolean {
   );
 }
 
-/** Deduplicate concurrent network loads across mount + auth events. */
-let cardLibraryLoadPromise: Promise<Card[]> | null = null;
-
-async function fetchAndCacheCardLibrary(): Promise<Card[]> {
-  if (cardLibraryLoadPromise) return cardLibraryLoadPromise;
-
-  cardLibraryLoadPromise = (async (): Promise<Card[]> => {
-    const results = await getCardData({
-      name: "",
-      sort: "name",
-      sortDirection: "asc",
-    });
-    if (results.length > 0) {
-      await writeCardLibraryCache(results);
-    }
-    return results;
-  })().finally(() => {
-    cardLibraryLoadPromise = null;
-  });
-
-  return cardLibraryLoadPromise;
-}
-
 export function Providers({ children }: { children: ReactNode }) {
   const pathname = usePathname() ?? "/";
   const hideLegacyNavbar = usesMdaShell(pathname);
   const showMagneticCursor = hideLegacyNavbar;
-  const setCardList = useCardStore((state) => state.setCardList);
-  const setLoading = useCardStore((state) => state.setLoading);
   useSupabaseUserSync();
 
-  useEffect(() => {
-    let cancelled = false;
-
-    const hydrateCardLibrary = async (): Promise<void> => {
-      const existing = useCardStore.getState().cardList;
-      if (existing.length > 0) return;
-
-      setLoading(true);
-      try {
-        const cached = await readCardLibraryCache();
-        if (cancelled) return;
-
-        if (cached && cached.length > 0) {
-          clearFilterCache();
-          setCardList(cached);
-          setLoading(false);
-          // Revalidate in the background so DB cleanups (provisional IDs, etc.) land.
-          void fetchAndCacheCardLibrary()
-            .then((results) => {
-              if (cancelled || results.length === 0) return;
-              clearFilterCache();
-              setCardList(results);
-            })
-            .catch(() => {
-              // Keep cached library on refresh failure.
-            });
-          return;
-        }
-
-        const results = await fetchAndCacheCardLibrary();
-        if (cancelled) return;
-        clearFilterCache();
-        setCardList(results);
-      } catch {
-        // Cards remain empty on failure
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    };
-
-    void hydrateCardLibrary();
-
-    // Warm / refresh the library when the user signs in so Workshop is ready.
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        if (event !== "SIGNED_IN" || !session?.user) return;
-
-        void (async (): Promise<void> => {
-          const existing = useCardStore.getState().cardList;
-          if (existing.length > 0) return;
-
-          const cached = await readCardLibraryCache();
-          if (cached && cached.length > 0) {
-            setCardList(cached);
-            return;
-          }
-
-          setLoading(true);
-          try {
-            const results = await fetchAndCacheCardLibrary();
-            clearFilterCache();
-            setCardList(results);
-          } catch {
-            // Keep empty on failure
-          } finally {
-            setLoading(false);
-          }
-        })();
-      },
-    );
-
-    return () => {
-      cancelled = true;
-      authListener.subscription.unsubscribe();
-    };
-  }, [setCardList, setLoading]);
+  // Catalog hydrate lives in DeckProvider via useCardLibrary (Query + IDB).
 
   return (
     <ThemeProvider

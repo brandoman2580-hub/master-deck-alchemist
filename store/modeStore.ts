@@ -1,12 +1,16 @@
-import type { DeckMode } from "@/types/deck";
+import type { DeckFormat } from "@/types/deck";
 import { create } from "zustand";
 
-type ModeStore = {
-  deckMode: "TCG" | "Master Duel";
-  setDeckMode: (deckMode: DeckMode) => void;
+type FormatStore = {
+  /** Global UI preference mirror — live deck SSoT is `useLiveDeckStore.currentDeck.deckFormat`. */
+  deckFormat: DeckFormat;
+  setDeckFormat: (deckFormat: DeckFormat) => void;
 };
 
-export const useModeStore = create<ModeStore>((set) => ({
-  deckMode: "Master Duel",
-  setDeckMode: (deckMode) => set({ deckMode }),
+export const useFormatStore = create<FormatStore>((set) => ({
+  deckFormat: "Master Duel",
+  setDeckFormat: (deckFormat) => set({ deckFormat }),
 }));
+
+/** @deprecated Use `useFormatStore` */
+export const useModeStore = useFormatStore;

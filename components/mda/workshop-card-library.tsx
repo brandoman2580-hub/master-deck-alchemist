@@ -45,7 +45,10 @@ function BanlistCornerBadge({ status }: { status: BanStatus }): ReactNode {
   );
 }
 
-function measureColumnCount(containerWidth: number, tileWidth: number): number {
+export function measureColumnCount(
+  containerWidth: number,
+  tileWidth: number,
+): number {
   if (containerWidth <= 0 || tileWidth <= 0) return 1;
   return Math.max(
     1,
@@ -80,9 +83,13 @@ export function WorkshopCardLibrary({
   const scrollRef = useRef<HTMLDivElement>(null);
   const [columnCount, setColumnCount] = useState(4);
   const [tileWidth, setTileWidth] = useState(104);
+  const showGrid = cardPoolSize > 0 && cards.length > 0;
 
   const updateLayout = useCallback((): void => {
     const width = scrollRef.current?.clientWidth ?? 0;
+    // Skip zero-width measurements (loading branch / pre-flex layout) so we
+    // don't lock the grid to a single column after refresh hydrate.
+    if (width <= 0) return;
     const nextTileWidth = workshopCardTileWidthPx(
       typeof window !== "undefined" ? window.innerWidth : 1024,
     );
@@ -91,17 +98,31 @@ export function WorkshopCardLibrary({
   }, []);
 
   useEffect(() => {
-    updateLayout();
+    if (!showGrid) return;
+
+    let rafId = 0;
+    const measure = (): void => {
+      updateLayout();
+      // Flex parents often resolve width one frame after mount.
+      rafId = window.requestAnimationFrame(() => updateLayout());
+    };
+    measure();
+
     const node = scrollRef.current;
-    if (!node || typeof ResizeObserver === "undefined") return;
+    if (!node || typeof ResizeObserver === "undefined") {
+      return () => {
+        if (rafId) window.cancelAnimationFrame(rafId);
+      };
+    }
     const observer = new ResizeObserver(() => updateLayout());
     observer.observe(node);
     window.addEventListener("resize", updateLayout);
     return () => {
+      if (rafId) window.cancelAnimationFrame(rafId);
       observer.disconnect();
       window.removeEventListener("resize", updateLayout);
     };
-  }, [updateLayout]);
+  }, [showGrid, updateLayout]);
 
   const rowCount = Math.ceil(cards.length / columnCount) || 0;
   const rowHeight =
@@ -117,7 +138,7 @@ export function WorkshopCardLibrary({
   // Keep row size in sync when viewport/tile width changes.
   useEffect(() => {
     virtualizer.measure?.();
-  }, [rowHeight, virtualizer]);
+  }, [rowHeight, columnCount, virtualizer]);
 
   const rows = virtualizer.getVirtualItems().map((virtualRow) => {
     const start = virtualRow.index * columnCount;

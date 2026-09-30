@@ -23,7 +23,7 @@ const AXIS_BLURBS: Record<string, string> = {
 };
 
 export type WorkshopGradeDisclaimerProps = {
-  mode: DeckMode;
+  deckFormat: DeckMode;
   grade: WorkshopGrade;
   className?: string;
 };
@@ -33,12 +33,12 @@ export type WorkshopGradeDisclaimerProps = {
  * and optional Facts Brain breakdown without claiming tournament prediction.
  */
 export function WorkshopGradeDisclaimer({
-  mode,
+  deckFormat,
   grade,
   className,
 }: WorkshopGradeDisclaimerProps): ReactNode {
   const titleId = useId();
-  const isTcg = mode === "TCG";
+  const isTcg = deckFormat === "TCG";
   const banlistLabel = isTcg
     ? "TCG tournament banlist (US / world tournament standard)"
     : "Master Duel banlist (sets and list updates typically lag TCG)";

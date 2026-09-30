@@ -64,7 +64,7 @@ export function evaluateDeckLegality(
 
   const structurePayload = {
     name: deck.name || "Deck",
-    mode: deck.mode === "TCG" ? "TCG" : "Master Duel",
+    mode: deck.deckFormat === "TCG" ? "TCG" : "Master Duel",
     mainDeck: toNamedCards(deck.mainDeck || []),
     extraDeck: toNamedCards(deck.extraDeck || []),
     sideDeck: toNamedCards(deck.sideDeck || []),

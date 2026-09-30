@@ -1,6 +1,13 @@
 "use client";
 
-import { useMemo, type ReactNode } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type ReactNode,
+} from "react";
 import {
   Archive,
   BarChart3,
@@ -8,19 +15,21 @@ import {
   FlaskConical,
   Gamepad2,
   Hammer,
+  Pencil,
 } from "lucide-react";
 import { CardImage } from "@/components/ui/card-image";
 import { MdaAnimatedNumber } from "@/components/mda/deck-cap-badge";
 import { WorkshopGradeDisclaimer } from "@/components/mda/workshop-grade-disclaimer";
 import { gradeFromCounts, type WorkshopGrade } from "@/lib/workshop/grade";
-import type { DeckCard, DeckMode } from "@/types/deck";
+import { normalizeDeckName } from "@/lib/deck/normalize-deck-name";
+import type { DeckCard, DeckFormat } from "@/types/deck";
 import { cn } from "@/lib/utils";
 
 export type WorkshopTab = "build" | "matchups" | "combos";
 
 export type WorkshopDeckChromeProps = {
   deckName: string;
-  mode: DeckMode;
+  deckFormat: DeckFormat;
   mainCount: number;
   extraCount: number;
   sideCount: number;
@@ -28,6 +37,8 @@ export type WorkshopDeckChromeProps = {
   activeTab: WorkshopTab;
   onTabChange: (tab: WorkshopTab) => void;
   onBackToArchives: () => void;
+  /** Commit a renamed deck title (trimmed). */
+  onRename: (name: string) => void;
   /** Facts Brain grade when available; falls back to size placeholder. */
   grade?: WorkshopGrade | null;
   gradeLoading?: boolean;
@@ -89,7 +100,7 @@ function WorkshopTabButton({
 
 export function WorkshopDeckChrome({
   deckName,
-  mode,
+  deckFormat,
   mainCount,
   extraCount,
   sideCount,
@@ -97,15 +108,57 @@ export function WorkshopDeckChrome({
   activeTab,
   onTabChange,
   onBackToArchives,
+  onRename,
   grade: gradeProp,
   gradeLoading = false,
 }: WorkshopDeckChromeProps): ReactNode {
-  const isTcg = mode === "TCG";
+  const isTcg = deckFormat === "TCG";
   const fallbackGrade = useMemo(
     () => gradeFromCounts(mainCount, extraCount),
     [mainCount, extraCount],
   );
   const grade = gradeProp ?? fallbackGrade;
+  const [editingName, setEditingName] = useState(false);
+  const [draftName, setDraftName] = useState(deckName);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!editingName) setDraftName(deckName);
+  }, [deckName, editingName]);
+
+  useEffect(() => {
+    if (!editingName) return;
+    inputRef.current?.focus();
+    inputRef.current?.select();
+  }, [editingName]);
+
+  const commitRename = (): void => {
+    const next = normalizeDeckName(draftName);
+    if (!next) {
+      setDraftName(deckName);
+      setEditingName(false);
+      return;
+    }
+    if (next !== deckName) {
+      onRename(next);
+    }
+    setEditingName(false);
+  };
+
+  const cancelRename = (): void => {
+    setDraftName(deckName);
+    setEditingName(false);
+  };
+
+  const onNameKeyDown = (event: KeyboardEvent<HTMLInputElement>): void => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      commitRename();
+    } else if (event.key === "Escape") {
+      event.preventDefault();
+      cancelRename();
+    }
+  };
 
   return (
     <div className="relative z-[1] shrink-0 bg-transparent px-6 pb-0 pt-1">
@@ -130,9 +183,40 @@ export function WorkshopDeckChrome({
             </div>
           </div>
           <div className="flex min-w-0 flex-col gap-2 pt-1">
-            <p className="truncate font-mda text-xl font-bold uppercase tracking-wide text-mda-ink-strong">
-              {deckName}
-            </p>
+            {editingName ? (
+              <input
+                ref={inputRef}
+                type="text"
+                value={draftName}
+                onChange={(event) => setDraftName(event.target.value)}
+                onBlur={commitRename}
+                onKeyDown={onNameKeyDown}
+                maxLength={80}
+                aria-label="Deck name"
+                className="w-full min-w-0 border border-mda-chrome bg-mda-panel px-2 py-1 font-mda text-xl font-bold uppercase tracking-wide text-mda-ink-strong outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mda-cyan"
+              />
+            ) : (
+              <div className="flex min-w-0 items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingName(true)}
+                  data-magnetic
+                  className="min-w-0 truncate text-left font-mda text-xl font-bold uppercase tracking-wide text-mda-ink-strong transition-colors hover:text-mda-cyan"
+                  aria-label={`Rename deck ${deckName}`}
+                >
+                  {deckName}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditingName(true)}
+                  data-magnetic
+                  aria-label="Rename deck"
+                  className="shrink-0 rounded p-1 text-mda-ink transition-colors hover:bg-mda-ink/10 hover:text-mda-ink-strong"
+                >
+                  <Pencil className="h-4 w-4" aria-hidden />
+                </button>
+              </div>
+            )}
             <span className="inline-flex items-center gap-1.5 font-mda text-md font-medium uppercase tracking-wide text-mda-ink">
               {isTcg ? (
                 <Crown className="h-5 w-5" aria-hidden />
@@ -159,7 +243,7 @@ export function WorkshopDeckChrome({
                 {gradeLoading && !gradeProp ? "—" : grade.letter}
               </span>
             </div>
-            <WorkshopGradeDisclaimer mode={mode} grade={grade} />
+            <WorkshopGradeDisclaimer deckFormat={deckFormat} grade={grade} />
           </div>
           <div className="grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-4">
             {grade.scores.map((score) => (

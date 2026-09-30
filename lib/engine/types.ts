@@ -192,7 +192,7 @@ export interface HashableDeckCard {
 }
 
 export interface HashableDeck {
-  mode: "TCG" | "Master Duel" | string;
+  deckFormat: "TCG" | "Master Duel" | string;
   mainDeck: HashableDeckCard[];
   extraDeck: HashableDeckCard[];
   sideDeck: HashableDeckCard[];

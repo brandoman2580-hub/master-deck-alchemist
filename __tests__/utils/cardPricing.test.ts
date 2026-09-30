@@ -203,7 +203,7 @@ describe("cardPricing", () => {
       const deck: DeckType = {
         id: "1",
         name: "Test",
-        mode: "TCG",
+        deckFormat: "TCG",
         mainDeck: [
           createCard({
             id: 1,
@@ -223,7 +223,7 @@ describe("cardPricing", () => {
       const deck: DeckType = {
         id: "1",
         name: "Test",
-        mode: "Master Duel",
+        deckFormat: "Master Duel",
         mainDeck: [
           createCard({ id: 1, misc_info: [{ md_rarity: "N" }] }),
           createCard({ id: 2, misc_info: [{ md_rarity: "N" }] }),
@@ -245,7 +245,7 @@ describe("cardPricing", () => {
       const deck: DeckType = {
         id: "1",
         name: "Test",
-        mode: "Master Duel",
+        deckFormat: "Master Duel",
         mainDeck: [
           createCard({ id: 1, misc_info: [{ md_rarity: "UR" }] }),
           createCard({ id: 2, misc_info: [{ md_rarity: "UR" }] }),

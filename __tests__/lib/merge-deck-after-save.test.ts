@@ -5,7 +5,7 @@ describe("mergeDeckAfterSave", () => {
   const base: DeckType = {
     id: "deck-1",
     name: "Pure Darkness",
-    mode: "Master Duel",
+    deckFormat: "Master Duel",
     mainDeck: [
       {
         id: 1,
@@ -47,7 +47,7 @@ describe("mergeDeckAfterSave", () => {
     const staleSave = {
       id: "deck-1",
       name: "Pure Darkness",
-      mode: "Master Duel" as const,
+      deckFormat: "Master Duel" as const,
       mainDeck: base.mainDeck,
       extraDeck: [],
       sideDeck: [],
