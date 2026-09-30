@@ -9,7 +9,7 @@ function sampleDeck(overrides: Partial<DeckType> = {}): DeckType {
   return {
     id: "11111111-1111-1111-1111-111111111111",
     name: "Test Snake-Eye",
-    mode: "Master Duel",
+    deckFormat: "Master Duel",
     mainDeck: [],
     extraDeck: [],
     sideDeck: [],

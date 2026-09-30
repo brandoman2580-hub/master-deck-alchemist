@@ -10,7 +10,7 @@ import type { Card } from "@/types/card";
 
 interface DeckCostDisplayProps {
   deck: DeckType;
-  deckMode: DeckMode;
+  deckFormat: DeckMode;
   mdRarityMap?: Map<number, string>;
   /** Card pool lookup (id -> card) to enrich deck cards with prices when missing */
   cardLookup?: Map<number, Card>;
@@ -21,7 +21,7 @@ interface DeckCostDisplayProps {
  */
 export function DeckCostDisplay({
   deck,
-  deckMode,
+  deckFormat,
   mdRarityMap,
   cardLookup,
 }: DeckCostDisplayProps) {
@@ -29,11 +29,11 @@ export function DeckCostDisplay({
     () =>
       getDeckCostSummary(
         deck,
-        deckMode === "TCG" ? "TCG" : "Master Duel",
+        deckFormat === "TCG" ? "TCG" : "Master Duel",
         mdRarityMap,
         cardLookup,
       ),
-    [deck, deckMode, mdRarityMap, cardLookup],
+    [deck, deckFormat, mdRarityMap, cardLookup],
   );
 
   if (summary.format === "Master Duel" && summary.masterDuel?.totalCards === 0) {

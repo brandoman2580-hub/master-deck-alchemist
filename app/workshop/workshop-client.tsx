@@ -11,10 +11,10 @@ import { WorkshopBuildPane } from "@/components/mda/workshop-build-pane";
 import { WorkshopMatchupsPane } from "@/components/mda/workshop-matchups-pane";
 import { WorkshopCombosPane } from "@/components/mda/workshop-combos-pane";
 import { useDeck } from "@/context/deck-context";
-import { useModeStore } from "@/store/modeStore";
+import { useFormatStore } from "@/store/modeStore";
 import { useWorkshopFacts } from "@/hooks/useWorkshopFacts";
 import { workshopGradeFromAxes } from "@/lib/workshop/grade";
-import type { DeckMode } from "@/types/deck";
+import type { DeckFormat } from "@/types/deck";
 
 const TAB_WATERMARK: Record<WorkshopTab, string> = {
   build: "Build",
@@ -25,9 +25,9 @@ const TAB_WATERMARK: Record<WorkshopTab, string> = {
 export default function WorkshopPage(): ReactNode {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { currentDeck, updateDeckMode } = useDeck();
-  const deckMode = useModeStore((state) => state.deckMode);
-  const setDeckMode = useModeStore((state) => state.setDeckMode);
+  const { currentDeck, updateDeckFormat, renameDeck } = useDeck();
+  const deckFormat = useFormatStore((state) => state.deckFormat);
+  const setDeckFormat = useFormatStore((state) => state.setDeckFormat);
   const [tab, setTab] = useState<WorkshopTab>("build");
   const { facts, loading: factsLoading, error: factsError } = useWorkshopFacts();
 
@@ -40,14 +40,14 @@ export default function WorkshopPage(): ReactNode {
     const modeParam = searchParams.get("mode");
     if (modeParam !== "TCG" && modeParam !== "Master Duel") return;
 
-    const mode = modeParam as DeckMode;
-    if (currentDeck.mode !== mode) {
-      updateDeckMode(mode);
+    const format = modeParam as DeckFormat;
+    if (currentDeck.deckFormat !== format) {
+      updateDeckFormat(format);
     }
-    if (deckMode !== mode) {
-      setDeckMode(mode);
+    if (deckFormat !== format) {
+      setDeckFormat(format);
     }
-  }, [searchParams, currentDeck.mode, deckMode, setDeckMode, updateDeckMode]);
+  }, [searchParams, currentDeck.deckFormat, deckFormat, setDeckFormat, updateDeckFormat]);
 
   return (
     <div className="relative flex h-full min-h-0 flex-col overflow-hidden bg-mda-bg text-mda-ink">
@@ -61,7 +61,7 @@ export default function WorkshopPage(): ReactNode {
         </p>
         <WorkshopDeckChrome
           deckName={currentDeck.name}
-          mode={currentDeck.mode}
+          deckFormat={currentDeck.deckFormat}
           mainCount={currentDeck.mainDeck.length}
           extraCount={currentDeck.extraDeck.length}
           sideCount={currentDeck.sideDeck.length}
@@ -69,6 +69,7 @@ export default function WorkshopPage(): ReactNode {
           activeTab={tab}
           onTabChange={setTab}
           onBackToArchives={() => router.push("/deck-archives")}
+          onRename={renameDeck}
           grade={grade}
           gradeLoading={factsLoading}
         />

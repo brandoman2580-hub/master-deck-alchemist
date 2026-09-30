@@ -17,7 +17,7 @@ describe("DeckArchiveCard polish", () => {
     render(
       <DeckArchiveCard
         name="Blue-Eyes"
-        mode="Master Duel"
+        deckFormat="Master Duel"
         isPinned={false}
         mainCount={40}
         extraCount={15}
@@ -40,7 +40,7 @@ describe("DeckArchiveCard polish", () => {
     const { container } = render(
       <DeckArchiveCard
         name="Blue-Eyes"
-        mode="Master Duel"
+        deckFormat="Master Duel"
         isPinned={false}
         mainCount={40}
         extraCount={15}
@@ -68,21 +68,29 @@ describe("Deck List dialog magnetic targets", () => {
     mainDeck: [],
     extraDeck: [],
     sideDeck: [],
-    mode: "Master Duel",
+    deckFormat: "Master Duel",
   };
 
-  it("marks only Open in Workshop and Close as magnetic", () => {
+  it("marks Open in Workshop, Close, and rename control as magnetic", () => {
     render(
-      <DeckDetailsModal open deck={deck} onClose={noop} onOpenWorkshop={noop} />,
+      <DeckDetailsModal
+        open
+        deck={deck}
+        onClose={noop}
+        onOpenWorkshop={noop}
+        onRename={noop}
+      />,
     );
 
     const open = screen.getByRole("button", { name: "Open in Workshop" });
     const close = screen.getByRole("button", { name: "Close" });
+    const rename = screen.getByRole("button", { name: "Rename Test Deck" });
     expect(open).toHaveAttribute("data-magnetic");
     expect(close).toHaveAttribute("data-magnetic");
+    expect(rename).toHaveAttribute("data-magnetic");
 
     const magnetic = document.querySelectorAll("[data-magnetic]");
-    expect(magnetic).toHaveLength(2);
+    expect(magnetic).toHaveLength(3);
   });
 });
 

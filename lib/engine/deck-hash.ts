@@ -42,11 +42,11 @@ function fnv1aHex(input: string): string {
  * Content hash of a deck list + format.
  * Same cards/copies/zones/format ⇒ same hash regardless of order or instance ids.
  *
- * @param deck - Hashable deck sections and mode
+ * @param deck - Hashable deck sections and format
  * @returns Opaque hex string suitable for `deck_analysis_cache.deck_hash`
  */
 export function computeDeckHash(deck: HashableDeck): string {
-  const format = toEngineFormat(deck.mode);
+  const format = toEngineFormat(deck.deckFormat);
   const payload = [
     format,
     `main:${zoneSignature(deck.mainDeck)}`,

@@ -22,7 +22,7 @@ describe("buildLiveDeckSnapshot", () => {
     const deck = {
       id: "deck-1",
       name: "Test",
-      mode: "Master Duel",
+      deckFormat: "Master Duel",
       mainDeck: [card(1, "Ash"), card(1, "Ash"), card(2, "Imperm")],
       extraDeck: [card(9, "Accesscode")],
       sideDeck: [card(3, "Nibiru"), card(3, "Nibiru"), card(3, "Nibiru")],

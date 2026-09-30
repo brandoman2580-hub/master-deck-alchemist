@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 
 export type DeckArchiveCardProps = {
   name: string;
-  mode: DeckMode;
+  deckFormat: DeckMode;
   isPinned: boolean;
   mainCount: number;
   extraCount: number;
@@ -32,7 +32,7 @@ const controlBtnClass =
 
 export function DeckArchiveCard({
   name,
-  mode,
+  deckFormat,
   isPinned,
   mainCount,
   extraCount,
@@ -47,7 +47,7 @@ export function DeckArchiveCard({
   className,
   actionControls,
 }: DeckArchiveCardProps): ReactNode {
-  const isTcg = mode === "TCG";
+  const isTcg = deckFormat === "TCG";
   const reduceMotion = useReducedMotion();
 
   const handleOpenKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {

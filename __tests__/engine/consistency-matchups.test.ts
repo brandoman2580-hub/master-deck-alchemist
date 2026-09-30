@@ -183,7 +183,7 @@ describe("scoreMatchupReadiness + grade", () => {
       {
         id: "11111111-1111-1111-1111-111111111111",
         name: "Test",
-        mode: "Master Duel",
+        deckFormat: "Master Duel",
         updated_at: "2026-09-08T00:00:00.000Z",
         mainDeck: Array.from({ length: 40 }, (_, i) => ({
           id: 4000 + i,

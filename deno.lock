@@ -6521,7 +6521,6 @@
         "npm:cheerio@^1.1.2",
         "npm:class-variance-authority@0.7",
         "npm:clsx@2",
-        "npm:cypress-axe@^1.7.0",
         "npm:dotenv@^17.2.0",
         "npm:eslint-config-next@^16.0.7",
         "npm:eslint-config-prettier@^10.1.5",

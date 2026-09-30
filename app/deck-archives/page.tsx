@@ -25,7 +25,15 @@ import {
   toDeckShareRequest,
 } from "@/lib/api/deckShare";
 import { isDeckLegalForShare } from "@/lib/validation/deck-validator";
-import type { DeckMode, DeckType } from "@/types/deck";
+import {
+  DECK_CAP_HARD,
+  deckCapExceededMessage,
+  deckCapSoftWarningMessage,
+  getDeckCapStatus,
+} from "@/lib/deck/deck-caps";
+import { normalizeDeckName } from "@/lib/deck/normalize-deck-name";
+import { useLiveDeckStore } from "@/store/liveDeckStore";
+import type { DeckFormat, DeckType } from "@/types/deck";
 import { v4 as uuidv4 } from "uuid";
 
 export default function DeckArchivesPage(): ReactNode {
@@ -38,11 +46,14 @@ export default function DeckArchivesPage(): ReactNode {
   const [pinnedOpen, setPinnedOpen] = useState(true);
   const [tcgOpen, setTcgOpen] = useState(true);
   const [mdOpen, setMdOpen] = useState(true);
+  const [capError, setCapError] = useState<string | null>(null);
 
   const [detailsDeck, setDetailsDeck] = useState<DeckType | null>(null);
   const [newDeckOpen, setNewDeckOpen] = useState(false);
-  const [newDeckMode, setNewDeckMode] = useState<DeckMode>("Master Duel");
+  const [newDeckFormat, setNewDeckFormat] = useState<DeckFormat>("Master Duel");
   const [alertsOpen, setAlertsOpen] = useState(false);
+
+  const capStatus = useMemo(() => getDeckCapStatus(decks.length), [decks.length]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -51,9 +62,9 @@ export default function DeckArchivesPage(): ReactNode {
   }, [decks, query]);
 
   const pinned = filtered.filter((deck) => deck.isPinned);
-  const tcg = filtered.filter((deck) => deck.mode === "TCG" && !deck.isPinned);
+  const tcg = filtered.filter((deck) => deck.deckFormat === "TCG" && !deck.isPinned);
   const masterDuel = filtered.filter(
-    (deck) => deck.mode !== "TCG" && !deck.isPinned,
+    (deck) => deck.deckFormat !== "TCG" && !deck.isPinned,
   );
 
   const requireAuth = (): boolean => {
@@ -70,30 +81,67 @@ export default function DeckArchivesPage(): ReactNode {
 
   const handleNewDeckConfirm = (): void => {
     if (!requireAuth()) return;
-    clearDeck(newDeckMode);
+    if (capStatus.hardExceeded) {
+      setCapError(deckCapExceededMessage(capStatus.count));
+      setNewDeckOpen(false);
+      return;
+    }
+    setCapError(null);
+    clearDeck(newDeckFormat);
     setNewDeckOpen(false);
-    router.push(`/workshop?mode=${encodeURIComponent(newDeckMode)}`);
+    router.push(`/workshop?mode=${encodeURIComponent(newDeckFormat)}`);
   };
 
   const handleCopyConfirm = async (
     source: DeckType,
-    mode: DeckMode,
+    format: DeckFormat,
   ): Promise<void> => {
     if (!user) return;
+    if (capStatus.hardExceeded) {
+      setCapError(deckCapExceededMessage(capStatus.count));
+      return;
+    }
+    setCapError(null);
     const duplicate: DeckType = {
       ...source,
       id: uuidv4(),
       name: `${source.name} (Copy)`,
-      mode,
+      deckFormat: format,
       isPinned: false,
     };
-    await saveDeck(duplicate, user.id);
-    await invalidate();
+    try {
+      await saveDeck(duplicate, user.id);
+      await invalidate();
+    } catch (err) {
+      setCapError(
+        err instanceof Error ? err.message : deckCapExceededMessage(capStatus.count),
+      );
+    }
   };
 
   const handleDeleteConfirm = async (deck: DeckType): Promise<void> => {
     if (!user) return;
     await deleteDeck(deck.id, user.id);
+    await invalidate();
+  };
+
+  const handleRenameConfirm = async (
+    deck: DeckType,
+    nextName: string,
+  ): Promise<void> => {
+    if (!user) return;
+    const name = normalizeDeckName(nextName);
+    if (!name) throw new Error("Enter a deck name.");
+    const updated: DeckType = { ...deck, name };
+    await saveDeck(updated, user.id, { isNewDeckId: false });
+    const live = useLiveDeckStore.getState().currentDeck;
+    if (live.id === deck.id) {
+      useLiveDeckStore.getState().renameDeck(name);
+      useLiveDeckStore.getState().markClean();
+    }
+    setDetailsDeck((prev) =>
+      prev && prev.id === deck.id ? { ...prev, name } : prev,
+    );
     await invalidate();
   };
 
@@ -111,7 +159,7 @@ export default function DeckArchivesPage(): ReactNode {
         <DeckArchiveCard
           key={deck.id}
           name={deck.name}
-          mode={deck.mode}
+          deckFormat={deck.deckFormat}
           isPinned={Boolean(deck.isPinned)}
           mainCount={deck.mainDeck.length}
           extraCount={deck.extraDeck.length}
@@ -134,11 +182,15 @@ export default function DeckArchivesPage(): ReactNode {
           actionControls={
             <DeckArchiveActionPopovers
               deckName={deck.name}
-              mode={deck.mode}
+              deckFormat={deck.deckFormat}
               canShare={isDeckLegalForShare(deck)}
               onCopyConfirm={(mode) => {
                 if (!requireAuth()) return;
                 void handleCopyConfirm(deck, mode);
+              }}
+              onRenameConfirm={async (name) => {
+                if (!requireAuth()) throw new Error("Auth required");
+                await handleRenameConfirm(deck, name);
               }}
               onDeleteConfirm={() => {
                 if (!requireAuth()) return;
@@ -202,10 +254,14 @@ export default function DeckArchivesPage(): ReactNode {
               open={newDeckOpen}
               onOpenChange={(next) => {
                 if (next && !requireAuth()) return;
+                if (next && capStatus.hardExceeded) {
+                  setCapError(deckCapExceededMessage(capStatus.count));
+                  return;
+                }
                 setNewDeckOpen(next);
               }}
-              mode={newDeckMode}
-              onModeChange={setNewDeckMode}
+              deckFormat={newDeckFormat}
+              onDeckFormatChange={setNewDeckFormat}
               onCancel={() => setNewDeckOpen(false)}
               onConfirm={handleNewDeckConfirm}
               side="bottom"
@@ -215,6 +271,8 @@ export default function DeckArchivesPage(): ReactNode {
                   size="sm"
                   variant="surface"
                   className="shrink-0 gap-2 pl-4 pr-7"
+                  disabled={capStatus.hardExceeded}
+                  aria-disabled={capStatus.hardExceeded}
                 >
                   <Plus className="h-4 w-4" aria-hidden />
                   New Deck
@@ -235,6 +293,26 @@ export default function DeckArchivesPage(): ReactNode {
               Log in
             </button>
           </div>
+        ) : null}
+
+        {user && capStatus.softExceeded ? (
+          <p
+            className="mx-6 border border-mda-ink/20 bg-mda-panel px-4 py-3 font-mda text-sm text-mda-ink"
+            role="status"
+          >
+            {capStatus.hardExceeded
+              ? deckCapExceededMessage(capStatus.count)
+              : deckCapSoftWarningMessage(capStatus.count)}{" "}
+            <span className="text-mda-ink-muted">
+              ({capStatus.count}/{DECK_CAP_HARD})
+            </span>
+          </p>
+        ) : null}
+
+        {capError ? (
+          <p className="px-6 font-mda text-sm text-mda-danger" role="alert">
+            {capError}
+          </p>
         ) : null}
 
         {error ? (
@@ -311,6 +389,11 @@ export default function DeckArchivesPage(): ReactNode {
         onClose={() => setDetailsDeck(null)}
         onOpenWorkshop={() => {
           if (detailsDeck) void openWorkshop(detailsDeck);
+        }}
+        onRename={async (name) => {
+          if (!detailsDeck) return;
+          if (!requireAuth()) throw new Error("Auth required");
+          await handleRenameConfirm(detailsDeck, name);
         }}
       />
     </div>

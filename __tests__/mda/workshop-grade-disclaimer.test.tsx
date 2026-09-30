@@ -57,7 +57,7 @@ describe("WorkshopGradeDisclaimer", () => {
   it("exposes a labeled control that explains format-separated banlists", async () => {
     const user = userEvent.setup();
     const { container } = render(
-      <WorkshopGradeDisclaimer mode="Master Duel" grade={grade} />,
+      <WorkshopGradeDisclaimer deckFormat="Master Duel" grade={grade} />,
     );
     const trigger = screen.getByRole("button", {
       name: /How workshop grade scores work/i,
@@ -80,7 +80,7 @@ describe("WorkshopGradeDisclaimer", () => {
     const user = userEvent.setup();
     render(
       <WorkshopGradeDisclaimer
-        mode="TCG"
+        deckFormat="TCG"
         grade={{
           ...grade,
           formatRulePack: "tcgTournament",

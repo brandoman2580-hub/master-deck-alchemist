@@ -3,8 +3,11 @@
  * and tiles share deck-builder dimensions.
  */
 
-import { render, screen } from "@testing-library/react";
-import { WorkshopCardLibrary } from "@/components/mda/workshop-card-library";
+import { render, screen, waitFor } from "@testing-library/react";
+import {
+  measureColumnCount,
+  WorkshopCardLibrary,
+} from "@/components/mda/workshop-card-library";
 import { WORKSHOP_CARD_TILE } from "@/components/mda/workshop-card-dims";
 import type { Card } from "@/types/card";
 
@@ -111,5 +114,61 @@ describe("WorkshopCardLibrary", () => {
       />,
     );
     expect(screen.getByText(/loading card library/i)).toBeInTheDocument();
+  });
+
+  it("measures multi-column layouts for wide containers", () => {
+    expect(measureColumnCount(420, 104)).toBeGreaterThan(1);
+    expect(measureColumnCount(0, 104)).toBe(1);
+  });
+
+  it("remeasures columns after the library finishes hydrating", async () => {
+    const cards = Array.from({ length: 12 }, (_, index) =>
+      makeCard(index + 1, `Card ${index + 1}`),
+    );
+
+    const { rerender, container } = render(
+      <div style={{ width: 420, height: 640 }}>
+        <WorkshopCardLibrary
+          cards={[]}
+          cardPoolSize={0}
+          banlist={{}}
+          getRemainingCopies={() => 3}
+          onAdd={jest.fn()}
+          onDragStart={jest.fn()}
+        />
+      </div>,
+    );
+
+    expect(screen.getByText(/loading card library/i)).toBeInTheDocument();
+
+    rerender(
+      <div style={{ width: 420, height: 640 }}>
+        <WorkshopCardLibrary
+          cards={cards}
+          cardPoolSize={cards.length}
+          banlist={{}}
+          getRemainingCopies={() => 3}
+          onAdd={jest.fn()}
+          onDragStart={jest.fn()}
+        />
+      </div>,
+    );
+
+    const scroll = container.querySelector(".overflow-y-auto");
+    expect(scroll).toBeTruthy();
+    Object.defineProperty(scroll, "clientWidth", {
+      configurable: true,
+      value: 420,
+    });
+    window.dispatchEvent(new Event("resize"));
+
+    await waitFor(() => {
+      // Wide 420px container with ~104px tiles ⇒ multiple cards per row.
+      // Virtualizer mock emits one virtual item per row; with 12 cards and
+      // ≥3 columns we should see fewer than 12 row wrappers.
+      const rows = container.querySelectorAll("[data-index]");
+      expect(rows.length).toBeLessThan(12);
+      expect(rows.length).toBeGreaterThan(0);
+    });
   });
 });

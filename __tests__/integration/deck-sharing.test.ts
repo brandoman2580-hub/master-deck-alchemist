@@ -43,7 +43,7 @@ const testDeck: DeckType = {
     },
   ],
   sideDeck: [],
-  mode: "Master Duel",
+  deckFormat: "Master Duel",
   isPinned: false,
 };
 
@@ -68,7 +68,7 @@ describeIntegration("Deck Sharing Integration", () => {
         mainDeck: testDeck.mainDeck,
         extraDeck: testDeck.extraDeck,
         sideDeck: testDeck.sideDeck,
-        mode: testDeck.mode,
+        mode: testDeck.deckFormat,
       },
       options: {
         expiresInDays: 30,
@@ -96,7 +96,7 @@ describeIntegration("Deck Sharing Integration", () => {
     expect(result.success).toBe(true);
     expect(result.deck).toBeDefined();
     expect(result.deck.name).toBe(testDeck.name);
-    expect(result.deck.mode).toBe(testDeck.mode);
+    expect(result.deck.mode).toBe(testDeck.deckFormat);
     expect(result.deck.mainDeck.length).toBe(testDeck.mainDeck.length);
     expect(result.deck.extraDeck.length).toBe(testDeck.extraDeck.length);
     expect(result.metadata).toBeDefined();

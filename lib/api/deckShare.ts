@@ -1,4 +1,4 @@
-import type { DeckType } from "@/types/deck";
+import type { DeckFormat, DeckType } from "@/types/deck";
 import type { DeckCard } from "@/types/deck";
 import { getAccessToken } from "@/lib/supabaseClient";
 
@@ -25,7 +25,7 @@ export interface CreateDeckShareRequest {
     mainDeck: Array<ShareDeckCard | DeckType["mainDeck"][number]>;
     extraDeck: Array<ShareDeckCard | DeckType["extraDeck"][number]>;
     sideDeck: Array<ShareDeckCard | DeckType["sideDeck"][number]>;
-    mode: DeckType["mode"];
+    mode: DeckFormat;
   };
   options?: {
     expiresInDays?: number;
@@ -68,7 +68,7 @@ export function toDeckShareRequest(
     mainDeck: deck.mainDeck.map(mapDeckCardToSharePayload),
     extraDeck: deck.extraDeck.map(mapDeckCardToSharePayload),
     sideDeck: deck.sideDeck.map(mapDeckCardToSharePayload),
-    mode: deck.mode,
+    mode: deck.deckFormat,
   };
 }
 

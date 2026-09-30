@@ -4,7 +4,9 @@ import {
 } from "@/lib/engine/deck-hash";
 import type { HashableDeck } from "@/lib/engine/types";
 
-function deck(partial: Partial<HashableDeck> & Pick<HashableDeck, "mode">): HashableDeck {
+function deck(
+  partial: Partial<HashableDeck> & Pick<HashableDeck, "deckFormat">,
+): HashableDeck {
   return {
     mainDeck: [],
     extraDeck: [],
@@ -27,11 +29,11 @@ describe("toEngineFormat", () => {
 describe("computeDeckHash", () => {
   it("is stable for the same multiset regardless of card order", () => {
     const a = deck({
-      mode: "Master Duel",
+      deckFormat: "Master Duel",
       mainDeck: [{ id: 1 }, { id: 2 }, { id: 1 }],
     });
     const b = deck({
-      mode: "Master Duel",
+      deckFormat: "Master Duel",
       mainDeck: [{ id: 2 }, { id: 1 }, { id: 1 }],
     });
     expect(computeDeckHash(a)).toBe(computeDeckHash(b));
@@ -39,11 +41,11 @@ describe("computeDeckHash", () => {
 
   it("changes when a card copy count changes", () => {
     const one = deck({
-      mode: "TCG",
+      deckFormat: "TCG",
       mainDeck: [{ id: 10 }, { id: 10 }],
     });
     const two = deck({
-      mode: "TCG",
+      deckFormat: "TCG",
       mainDeck: [{ id: 10 }, { id: 10 }, { id: 10 }],
     });
     expect(computeDeckHash(one)).not.toBe(computeDeckHash(two));
@@ -51,18 +53,18 @@ describe("computeDeckHash", () => {
 
   it("changes when format/mode changes with identical lists", () => {
     const cards = [{ id: 99 }];
-    const md = deck({ mode: "Master Duel", mainDeck: cards });
-    const tcg = deck({ mode: "TCG", mainDeck: cards });
+    const md = deck({ deckFormat: "Master Duel", mainDeck: cards });
+    const tcg = deck({ deckFormat: "TCG", mainDeck: cards });
     expect(computeDeckHash(md)).not.toBe(computeDeckHash(tcg));
   });
 
   it("treats zone membership as distinct (main vs extra)", () => {
     const inMain = deck({
-      mode: "Master Duel",
+      deckFormat: "Master Duel",
       mainDeck: [{ id: 7 }],
     });
     const inExtra = deck({
-      mode: "Master Duel",
+      deckFormat: "Master Duel",
       extraDeck: [{ id: 7 }],
     });
     expect(computeDeckHash(inMain)).not.toBe(computeDeckHash(inExtra));
@@ -70,7 +72,7 @@ describe("computeDeckHash", () => {
 
   it("returns an 8-char lowercase hex string", () => {
     const hash = computeDeckHash(
-      deck({ mode: "TCG", mainDeck: [{ id: 1 }] }),
+      deck({ deckFormat: "TCG", mainDeck: [{ id: 1 }] }),
     );
     expect(hash).toMatch(/^[0-9a-f]{8}$/);
   });

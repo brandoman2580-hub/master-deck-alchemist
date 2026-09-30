@@ -1,6 +1,10 @@
 import type { Card } from "./card";
 
-export type DeckMode = "TCG" | "Master Duel";
+/** Banlist / rules format for a deck (TCG vs Master Duel). */
+export type DeckFormat = "TCG" | "Master Duel";
+
+/** @deprecated Use `DeckFormat` */
+export type DeckMode = DeckFormat;
 
 export interface DeckCard extends Card {
   deckInstanceId: string;
@@ -16,6 +20,8 @@ export type PersistedDeck = {
   created_at: string;
   updated_at: string;
   is_pinned?: boolean;
+  /** DB column remains `mode`; mapped at the data layer. */
+  deckFormat?: DeckFormat;
 };
 
 /** @deprecated Use `PersistedDeck` */
@@ -31,7 +37,8 @@ export type ClientDeck = {
   extraDeck: DeckCard[];
   sideDeck: DeckCard[];
   updated_at?: string;
-  mode: DeckMode;
+  /** Rules format (TCG | Master Duel). Persisted as DB column `mode`. */
+  deckFormat: DeckFormat;
   isPinned?: boolean;
 };
 

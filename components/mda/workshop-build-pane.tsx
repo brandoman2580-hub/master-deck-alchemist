@@ -418,7 +418,7 @@ export function WorkshopBuildPane({
     event.dataTransfer.effectAllowed = "copy";
   };
 
-  const isTcg = currentDeck.mode === "TCG";
+  const isTcg = currentDeck.deckFormat === "TCG";
 
   return (
     <div className="grid h-full min-h-0 grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(280px,420px)]">

@@ -39,7 +39,7 @@ jest.mock("@/context/deck-context", () => ({
       mainDeck: [],
       extraDeck: [],
       sideDeck: [],
-      mode: "Master Duel",
+      deckFormat: "Master Duel",
       isPinned: false,
     },
     banlist: {},
@@ -278,7 +278,7 @@ describe("Workshop Strategist UI", () => {
     const deck: DeckType = {
       id: "d1",
       name: "Saved",
-      mode: "Master Duel",
+      deckFormat: "Master Duel",
       mainDeck: [
         { ...card, deckInstanceId: "a" },
         { ...card, deckInstanceId: "b" },

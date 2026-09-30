@@ -69,7 +69,7 @@ export async function getFacts(
     return null;
   }
 
-  const format = toEngineFormat(deck.mode);
+  const format = toEngineFormat(deck.deckFormat);
   const deckHash = computeDeckHash(deck);
 
   if (options.readCache !== false) {

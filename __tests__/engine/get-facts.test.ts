@@ -58,7 +58,7 @@ function makeDeck(mainCount: number): DeckType {
   return {
     id: "deck-1",
     name: "Test Deck",
-    mode: "Master Duel",
+    deckFormat: "Master Duel",
     mainDeck: Array.from({ length: mainCount }, (_, i) => ({
       id: i + 1,
       name: `Card ${i + 1}`,
