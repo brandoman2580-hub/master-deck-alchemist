@@ -33,7 +33,11 @@
     "strategist:eval:status": "node scripts/strategist-eval.mjs status",
     "strategist:eval:promote": "node scripts/strategist-eval.mjs promote",
     "seed:metadata": "tsx scripts/seed-card-metadata.ts",
-    "verify:embeddings": "tsx scripts/verify-embeddings.ts"
+    "verify:embeddings": "tsx scripts/verify-embeddings.ts",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build",
+    "test:storybook": "vitest run --project=storybook",
+    "chromatic": "npx chromatic --exit-zero-on-changes"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.1.0",
@@ -84,9 +88,14 @@
   },
   "devDependencies": {
     "@axe-core/react": "^4.11.0",
+    "@chromatic-com/storybook": "^5.3.1",
     "@eslint/eslintrc": "^3.3.5",
     "@lhci/cli": "^0.12.0",
     "@next/eslint-plugin-next": "^16.0.7",
+    "@storybook/addon-a11y": "^10.6.1",
+    "@storybook/addon-docs": "^10.6.1",
+    "@storybook/addon-vitest": "^10.6.1",
+    "@storybook/nextjs-vite": "^10.6.1",
     "@svgr/webpack": "^8.1.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^14.3.1",
@@ -95,7 +104,10 @@
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
+    "@vitest/browser-playwright": "^4",
+    "@vitest/coverage-v8": "^4",
     "autoprefixer": "^10.0.1",
+    "baseline-browser-mapping": "^2.11.26",
     "eslint": "^9.39.1",
     "eslint-config-next": "^16.0.7",
     "eslint-config-prettier": "^10.1.5",
@@ -106,13 +118,17 @@
     "jest-axe": "^8.0.0",
     "jest-environment-jsdom": "^29.7.0",
     "pa11y-ci": "^3.1.0",
+    "playwright": "latest",
     "postcss": "^8",
     "start-server-and-test": "^2.1.3",
+    "storybook": "^10.6.1",
     "supabase": "^2.30.4",
     "tailwindcss": "^3.3.0",
     "ts-node": "^10.9.2",
     "tsx": "^4.20.3",
     "typescript": "^5.8.3",
+    "vite": "^6.4.3",
+    "vitest": "^4",
     "wait-on": "^7.2.0"
   }
 }

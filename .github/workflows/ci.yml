@@ -34,6 +34,44 @@ jobs:
       - run: npm ci
       - run: npm run test:unit
 
+  storybook-tests:
+    name: Storybook Vitest
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install chromium --with-deps
+      - run: npm run test:storybook
+        env:
+          CI: true
+
+  chromatic:
+    name: Chromatic
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Requires repo secret CHROMATIC_PROJECT_TOKEN (chromatic.config.json already has projectId).
+    if: ${{ secrets.CHROMATIC_PROJECT_TOKEN != '' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci
+      - name: Publish to Chromatic
+        uses: chromaui/action@latest
+        with:
+          projectToken: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
+          buildScriptName: build-storybook
+          exitZeroOnChanges: true
+
   edge-tests:
     name: Edge function tests
     runs-on: ubuntu-latest
@@ -60,7 +98,7 @@ jobs:
 
   build:
     name: Build
-    needs: [unit-tests, edge-tests, lint]
+    needs: [unit-tests, storybook-tests, edge-tests, lint]
     if: github.event_name == 'push' && (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/master')
     runs-on: ubuntu-latest
     timeout-minutes: 20
