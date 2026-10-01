@@ -120,7 +120,7 @@ function DeckDetailsRenameRow({
           data-magnetic
           disabled={saving}
           onClick={() => void commit()}
-          className="bg-mda-sky px-3 py-1.5 font-mda text-xs font-black uppercase text-white"
+          className="bg-mda-sky px-3 py-1.5 font-mda text-xs font-black uppercase text-mda-cta-ink"
         >
           Save name
         </button>
@@ -460,7 +460,7 @@ export function DeckDetailsModal({
                 type="button"
                 onClick={onOpenWorkshop}
                 data-magnetic
-                className="flex-1 bg-mda-sky py-3 font-mda text-sm font-black uppercase text-white transition-colors duration-200 ease-in-out hover:bg-mda-sky-strong"
+                className="flex-1 bg-mda-sky py-3 font-mda text-sm font-black uppercase text-mda-cta-ink transition-colors duration-200 ease-in-out hover:bg-mda-sky-strong"
               >
                 Open in Workshop
               </button>

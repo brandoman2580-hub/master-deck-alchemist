@@ -32,7 +32,7 @@ function LoginBracket({
         isLeft ? "left-0" : "right-0",
       )}
     >
-      <path d={d} stroke="#4D6676" strokeWidth={2} strokeLinecap="square" />
+      <path d={d} stroke="var(--mda-ink-soft)" strokeWidth={2} strokeLinecap="square" />
     </svg>
   );
 }

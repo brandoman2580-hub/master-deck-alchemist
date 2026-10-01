@@ -159,7 +159,7 @@ export function DeckArchiveCard({
             type="button"
             onClick={onDetails}
             data-magnetic
-            className="min-h-[31px] flex-1 bg-mda-sky px-3 font-mda text-sm font-bold uppercase tracking-wide text-white transition-[background-color,color] duration-200 ease-in-out hover:bg-mda-sky-strong"
+            className="min-h-[31px] flex-1 bg-mda-sky px-3 font-mda text-sm font-bold uppercase tracking-wide text-mda-cta-ink transition-[background-color,color] duration-200 ease-in-out hover:bg-mda-sky-strong"
           >
             Details
           </button>
