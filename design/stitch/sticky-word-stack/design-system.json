@@ -1,0 +1,159 @@
+{
+  "id": "8b95e1cb4ebf48489181339d44887ad7",
+  "displayName": "Alchemic Editorial",
+  "theme": {
+    "bodyFont": "OPEN_SANS",
+    "bodyFontFamily": "Open Sans",
+    "colorMode": "DARK",
+    "colorVariant": "FIDELITY",
+    "customColor": "#bfe5f3",
+    "designMd": "---\nname: Alchemic Editorial\ncolors:\n  surface: '#111317'\n  surface-dim: '#111317'\n  surface-bright: '#37393e'\n  surface-container-lowest: '#0c0e12'\n  surface-container-low: '#1a1c20'\n  surface-container: '#1e2024'\n  surface-container-high: '#282a2e'\n  surface-container-highest: '#333539'\n  on-surface: '#e2e2e8'\n  on-surface-variant: '#c1c7cb'\n  inverse-surface: '#e2e2e8'\n  inverse-on-surface: '#2f3035'\n  outline: '#8b9295'\n  outline-variant: '#41484a'\n  surface-tint: '#a7ccda'\n  primary: '#f7fcff'\n  on-primary: '#0c3540'\n  primary-container: '#bfe5f3'\n  on-primary-container: '#436773'\n  inverse-primary: '#3f646f'\n  secondary: '#bbc8d9'\n  on-secondary: '#26313f'\n  secondary-container: '#3c4856'\n  on-secondary-container: '#aab6c7'\n  tertiary: '#fffaff'\n  on-tertiary: '#422c0b'\n  tertiary-container: '#ffd9aa'\n  on-tertiary-container: '#795d38'\n  error: '#ffb4ab'\n  on-error: '#690005'\n  error-container: '#93000a'\n  on-error-container: '#ffdad6'\n  primary-fixed: '#c3e9f7'\n  primary-fixed-dim: '#a7ccda'\n  on-primary-fixed: '#001f27'\n  on-primary-fixed-variant: '#274c57'\n  secondary-fixed: '#d7e3f5'\n  secondary-fixed-dim: '#bbc8d9'\n  on-secondary-fixed: '#111c29'\n  on-secondary-fixed-variant: '#3c4856'\n  tertiary-fixed: '#ffddb4'\n  tertiary-fixed-dim: '#e5c193'\n  on-tertiary-fixed: '#291800'\n  on-tertiary-fixed-variant: '#5b421f'\n  background: '#111317'\n  on-background: '#e2e2e8'\n  surface-variant: '#333539'\ntypography:\n  display-hero:\n    fontFamily: Space Grotesk\n    fontSize: 56px\n    fontWeight: '700'\n    lineHeight: 64px\n    letterSpacing: -0.02em\n  display-hero-mobile:\n    fontFamily: Space Grotesk\n    fontSize: 36px\n    fontWeight: '700'\n    lineHeight: 44px\n    letterSpacing: -0.01em\n  headline-lg:\n    fontFamily: Space Grotesk\n    fontSize: 40px\n    fontWeight: '600'\n    lineHeight: 48px\n    letterSpacing: -0.01em\n  headline-lg-mobile:\n    fontFamily: Space Grotesk\n    fontSize: 28px\n    fontWeight: '600'\n    lineHeight: 36px\n    letterSpacing: 0em\n  headline-md:\n    fontFamily: Space Grotesk\n    fontSize: 24px\n    fontWeight: '600'\n    lineHeight: 32px\n    letterSpacing: 0em\n  headline-sm:\n    fontFamily: Space Grotesk\n    fontSize: 18px\n    fontWeight: '500'\n    lineHeight: 24px\n    letterSpacing: 0.02em\n  body-lg:\n    fontFamily: Open Sans\n    fontSize: 18px\n    fontWeight: '400'\n    lineHeight: 28px\n  body-md:\n    fontFamily: Open Sans\n    fontSize: 15px\n    fontWeight: '400'\n    lineHeight: 24px\n  body-sm:\n    fontFamily: Open Sans\n    fontSize: 13px\n    fontWeight: '400'\n    lineHeight: 20px\n  label-caps:\n    fontFamily: Space Grotesk\n    fontSize: 11px\n    fontWeight: '600'\n    lineHeight: 16px\n    letterSpacing: 0.12em\n  label-code:\n    fontFamily: Space Grotesk\n    fontSize: 13px\n    fontWeight: '500'\n    lineHeight: 16px\n    letterSpacing: 0.04em\nspacing:\n  gutter: 1.5rem\n  gutter-sm: 1rem\n  gutter-lg: 2rem\n  margin: 3rem\n  margin-mobile: 1rem\n  space-xs: 0.5rem\n  space-sm: 1rem\n  space-md: 1.5rem\n  space-lg: 2rem\n  space-xl: 3rem\n  space-2xl: 4rem\n---\n\n## Brand & Style\n\nThe design system projects surgical precision, scholarly authority, and an uncompromising, technical minimalism. It positions Master Deck Alchemist not as a playful toy or another generic SaaS utility, but as an austere instrument of mastery for strategic deck builders.\n\nThe aesthetic philosophy merges severe brutalist structure with high-end editorial discipline. Key tenets:\n- **Monastic Discipline:** Completely devoid of frivolous decorative gradients, purple blurs, floating drop-shadows, and organic rounded contours.\n- **Structural Integrity:** Layouts resemble an archivist's technical manuscript or high-grade architectural plans. Every section is framed like a numbered chapter or plate.\n- **Restraint Over Noise:** Contrast is achieved strictly through sharp borders, distinct surface values, and typographic scale, keeping visual friction minimal while maximizing legibility and focus.\n\n## Colors\n\nThe palette operates under a non-negotiable 60/30/10 spatial distribution rule:\n\n### Dominant Ground (60%)\n- **Canvas Base (`#0c0e12`):** Primary background across all pages and root containers.\n- **Surface Elevation 1 (`#14181f`):** Chapter frames, table segments, and persistent side rails.\n- **Surface Elevation 2 (`#1b2028`):** Inset cards, modules, and form viewports.\n\n### Structural Framework & Typography (30%)\n- **Borders & Rules (`#28303b`):** Hairline divisional borders, panel separators, and inactive bounds.\n- **Interactive Framings (`#333d4b`):** Hover-state outlines, table headers, and structural badges.\n- **Secondary Text & Symbols (`#8a96a6`):** Captions, chapter subtitles, inactive tab indicators, and technical readouts. High legibility against base surfaces.\n- **Primary Body Text (`#e2e8f0`):** Crisp neutral-tinted text reserved for all editorial body copy, ensuring strict WCAG AAA / AA contrast ratios against all dark surfaces.\n\n### High-Precision Accent (10%)\n- **Pale Ice Blue (`#bfe5f3`):** Strictly reserved for focal interaction cues.\n  - Used *exclusively* for: Primary action key targets (\"Enter\"), selected authentication states, and terminal focus cursors.\n  - **Forbidden:** Never apply as a background wash, ambient glow, radial fill, illustration element, or full-width button canvas. Use solely as a razor-sharp, solid line, indicator pip, or high-contrast ink fill.\n\n## Typography\n\nThe typographic hierarchy balances cold, geometric structural headers against human-readable, legible body copy. Space Grotesk provides technical and calculated authority for indexing and titling, while Open Sans delivers effortless reading for analytical prose.\n\n- **Editorial Chapter Indexing:** All major section headers are preceded by structural prefixes in `label-caps` (e.g., `CHAPTER // 01`, `INDEX // FORMATION`).\n- **Body Styling:** Body text must strictly use `#e2e8f0` for dominant prose and `#8a96a6` for structural secondary metadata. Line lengths are anchored to a maximum of 68 characters to preserve editorial legibility.\n- **Numbers and Readouts:** All technical metrics, card ratios, and deck counts leverage Space Grotesk with tabular numerals to ensure baseline vertical alignment.\n\n## Layout & Spacing\n\nThe layout is grounded in a strict 8px rhythmic increment. White space is wide, intentional, and structural—emulating technical broadsheets and architectural documentation.\n\n### Grid Framework\n- **Desktop (1200px+):** 12-column structured grid. Content is enclosed in high-definition chapter frames anchored by an explicit `#28303b` single-pixel border line.\n- **Tablet (768px - 1199px):** 8-column layout. Horizontal borders stretch corner-to-corner; margin collapses to 2rem.\n- **Mobile (< 768px):** 4-column layout. Structural frame strokes collapse along outer edges, relying on top and bottom 1px dividing lines to maintain sectional pacing.\n\n### Structural Chapter Rhythm\nSections are treated as numbered volumes. Instead of organic wave dividers or floating cards, sections terminate with a continuous horizontal 1px rule (`#28303b`), punctuated by structural corner crosses or indices in Space Grotesk.\n\n## Elevation & Depth\n\nThis design system completely disavows simulated atmospheric lighting, ambient blur radius, and soft drop-shadows. Elevation is expressed entirely through:\n\n1. **Surface Tone Stepping:** Depth layers move strictly from darkest (`#0c0e12`) at canvas level, up to `#14181f` for contained modules, and `#1b2028` for active surfaces.\n2. **Crisp 1px Boundaries:** Boundaries are hard-cut structural lines using `#28303b`. Higher-level active elements elevate by shifting border color to `#333d4b` or the primary accent `#bfe5f3`.\n3. **Overlapped Segmented Planes:** Visual prominence is achieved via high-contrast framing lines and 1px edge gutters rather than z-axis drop shadows.\n\n## Shapes\n\nThe shape system enforces pure 90-degree orthogonal geometry across all components:\n\n- **Zero Radii (`0px`):** Buttons, cards, inputs, tabs, frame enclosures, chips, and modals must always terminate with crisp, sharp corners.\n- **Structural Integrity:** No organic bevels, no skeuomorphic curves, and strictly zero arbitrary clip-path angular cuts. The design derives power from unyielding grid alignment and immaculate balance.\n\n## Components\n\n### Buttons\n- **Primary Action (Enter / Execute):** Dark foundation (`#14181f`), solid 1px `#28303b` outline, text in white (`#ffffff`). Contains a precise 2px wide by 10px tall solid pip of `#bfe5f3` at the trailing edge. On hover, the border becomes `#bfe5f3` with zero glow.\n- **Secondary Action:** Transparent background with `#28303b` stroke; text in `#8a96a6`. On hover, stroke shifts to `#333d4b` and text becomes `#e2e8f0`.\n\n### Cards & Chapter Frames\n- **Structure:** Background `#14181f`, crisp 1px `#28303b` border. Padding strictly at 24px (`space-md`) or 32px (`space-lg`).\n- **Header Plate:** Top structural bar demarcated by an internal 1px horizontal rule, displaying a Space Grotesk uppercase identifier (e.g., `PLATE // 04`).\n\n### Authentication & Input Controls\n- **Inputs:** Background `#0c0e12`, border 1px `#28303b`, text `#e2e8f0`, placeholder `#8a96a6`. \n- **Active Focus:** Border transitions instantly to solid `#bfe5f3` with a blinking non-rounded cursor in identical ice blue.\n- **Authentication Toggle:** Tab control seated flush against an internal grid. Active state is flagged solely by a 2px horizontal top-line of `#bfe5f3` and crisp white text.\n\n### Badges & Technical Chips\n- **Aesthetic:** Sharp-cornered rectangular boxes. Background `#1b2028`, border 1px `#28303b`.\n- **Text:** Space Grotesk `label-caps` in `#8a96a6`. Zero pill shapes.\n\n### Selection Controls (Checkboxes & Radios)\n- **Checkboxes:** Exact 14px x 14px square boxes. Inactive: `#0c0e12` fill, `#28303b` border. Checked: `#14181f` fill with a centered 6px solid `#bfe5f3` square marker.\n- **Radio Buttons:** Exact 14px x 14px squares (no circles). Active state displays an internal 4px concentric square stroke.\n\n### Data Tables & Deck Matrices\n- **Table Headers:** Background `#1b2028`, text in `#8a96a6` (`label-caps`), bottom 1px border `#333d4b`.\n- **Cells:** Alternating rows using `#14181f` and `#0c0e12`. Zero vertical column rules; horizontal separation managed with 1px `#28303b`. Numeric data strictly aligned right using Space Grotesk.",
+    "font": "SPACE_GROTESK",
+    "headlineFont": "SPACE_GROTESK",
+    "headlineFontFamily": "Space Grotesk",
+    "labelFont": "SPACE_GROTESK",
+    "labelFontFamily": "Space Grotesk",
+    "namedColors": {
+      "background": "#111317",
+      "error": "#ffb4ab",
+      "error_container": "#93000a",
+      "inverse_on_surface": "#2f3035",
+      "inverse_primary": "#3f646f",
+      "inverse_surface": "#e2e2e8",
+      "on_background": "#e2e2e8",
+      "on_error": "#690005",
+      "on_error_container": "#ffdad6",
+      "on_primary": "#0c3540",
+      "on_primary_container": "#436773",
+      "on_primary_fixed": "#001f27",
+      "on_primary_fixed_variant": "#274c57",
+      "on_secondary": "#26313f",
+      "on_secondary_container": "#aab6c7",
+      "on_secondary_fixed": "#111c29",
+      "on_secondary_fixed_variant": "#3c4856",
+      "on_surface": "#e2e2e8",
+      "on_surface_variant": "#c1c7cb",
+      "on_tertiary": "#422c0b",
+      "on_tertiary_container": "#795d38",
+      "on_tertiary_fixed": "#291800",
+      "on_tertiary_fixed_variant": "#5b421f",
+      "outline": "#8b9295",
+      "outline_variant": "#41484a",
+      "primary": "#f7fcff",
+      "primary_container": "#bfe5f3",
+      "primary_fixed": "#c3e9f7",
+      "primary_fixed_dim": "#a7ccda",
+      "secondary": "#bbc8d9",
+      "secondary_container": "#3c4856",
+      "secondary_fixed": "#d7e3f5",
+      "secondary_fixed_dim": "#bbc8d9",
+      "surface": "#111317",
+      "surface_bright": "#37393e",
+      "surface_container": "#1e2024",
+      "surface_container_high": "#282a2e",
+      "surface_container_highest": "#333539",
+      "surface_container_low": "#1a1c20",
+      "surface_container_lowest": "#0c0e12",
+      "surface_dim": "#111317",
+      "surface_tint": "#a7ccda",
+      "surface_variant": "#333539",
+      "tertiary": "#fffaff",
+      "tertiary_container": "#ffd9aa",
+      "tertiary_fixed": "#ffddb4",
+      "tertiary_fixed_dim": "#e5c193"
+    },
+    "overrideNeutralColor": "#0c0e12",
+    "overridePrimaryColor": "#bfe5f3",
+    "overrideSecondaryColor": "#8a96a6",
+    "spacing": {
+      "gutter": "1.5rem",
+      "gutter-lg": "2rem",
+      "gutter-sm": "1rem",
+      "margin": "3rem",
+      "margin-mobile": "1rem",
+      "space-2xl": "4rem",
+      "space-lg": "2rem",
+      "space-md": "1.5rem",
+      "space-sm": "1rem",
+      "space-xl": "3rem",
+      "space-xs": "0.5rem"
+    },
+    "spacingScale": 2,
+    "typography": {
+      "body-lg": {
+        "fontFamily": "Open Sans",
+        "fontSize": "18px",
+        "fontWeight": "400",
+        "lineHeight": "28px"
+      },
+      "body-md": {
+        "fontFamily": "Open Sans",
+        "fontSize": "15px",
+        "fontWeight": "400",
+        "lineHeight": "24px"
+      },
+      "body-sm": {
+        "fontFamily": "Open Sans",
+        "fontSize": "13px",
+        "fontWeight": "400",
+        "lineHeight": "20px"
+      },
+      "display-hero": {
+        "fontFamily": "Space Grotesk",
+        "fontSize": "56px",
+        "fontWeight": "700",
+        "letterSpacing": "-0.02em",
+        "lineHeight": "64px"
+      },
+      "display-hero-mobile": {
+        "fontFamily": "Space Grotesk",
+        "fontSize": "36px",
+        "fontWeight": "700",
+        "letterSpacing": "-0.01em",
+        "lineHeight": "44px"
+      },
+      "headline-lg": {
+        "fontFamily": "Space Grotesk",
+        "fontSize": "40px",
+        "fontWeight": "600",
+        "letterSpacing": "-0.01em",
+        "lineHeight": "48px"
+      },
+      "headline-lg-mobile": {
+        "fontFamily": "Space Grotesk",
+        "fontSize": "28px",
+        "fontWeight": "600",
+        "letterSpacing": "0em",
+        "lineHeight": "36px"
+      },
+      "headline-md": {
+        "fontFamily": "Space Grotesk",
+        "fontSize": "24px",
+        "fontWeight": "600",
+        "letterSpacing": "0em",
+        "lineHeight": "32px"
+      },
+      "headline-sm": {
+        "fontFamily": "Space Grotesk",
+        "fontSize": "18px",
+        "fontWeight": "500",
+        "letterSpacing": "0.02em",
+        "lineHeight": "24px"
+      },
+      "label-caps": {
+        "fontFamily": "Space Grotesk",
+        "fontSize": "11px",
+        "fontWeight": "600",
+        "letterSpacing": "0.12em",
+        "lineHeight": "16px"
+      },
+      "label-code": {
+        "fontFamily": "Space Grotesk",
+        "fontSize": "13px",
+        "fontWeight": "500",
+        "letterSpacing": "0.04em",
+        "lineHeight": "16px"
+      }
+    }
+  }
+}

@@ -80,7 +80,7 @@ export function StrategistThread({
       data-testid="strategist-thread-scroll"
       aria-label="Strategist conversation"
     >
-      <p className="font-mda text-[11px] font-bold uppercase tracking-[0.18em] text-mda-ink-muted">
+      <p className="font-mda text-xs font-bold uppercase tracking-[0.18em] text-mda-ink-muted">
         Strategist
       </p>
 
@@ -88,7 +88,7 @@ export function StrategistThread({
         if (message.role === "user") {
           return (
             <div key={message.id} className="space-y-1.5">
-              <p className="font-mda text-[10px] font-bold uppercase tracking-wider text-mda-purple">
+              <p className="font-mda text-xs font-bold uppercase tracking-wider text-mda-ink-muted">
                 You
               </p>
               <div className="bg-mda-chrome px-3 py-2.5 font-open-sans text-sm leading-relaxed text-mda-inverse-text">
@@ -131,7 +131,7 @@ export function StrategistThread({
 
         return (
           <div key={message.id} className="space-y-2.5 text-mda-ink">
-            <p className="font-mda text-[10px] font-bold uppercase tracking-wider text-mda-cyan">
+            <p className="font-mda text-xs font-bold uppercase tracking-wider text-mda-cyan">
               Strategist
             </p>
             <p className="whitespace-pre-wrap font-open-sans text-sm leading-relaxed text-mda-ink">
@@ -161,7 +161,7 @@ export function StrategistThread({
                 {tuning.length > MAX_TUNING_VISIBLE ? (
                   <button
                     type="button"
-                    className="font-mda text-[10px] uppercase tracking-wide text-mda-ink-muted hover:text-mda-ink"
+                    className="min-h-11 text-left font-mda text-xs uppercase tracking-wide text-mda-cyan underline underline-offset-2 hover:text-mda-sky-strong"
                     onClick={() =>
                       setShowAllTuning((prev) => ({
                         ...prev,
@@ -175,7 +175,7 @@ export function StrategistThread({
                   </button>
                 ) : null}
                 {message.tuning?.tradeoffs?.length ? (
-                  <p className="font-open-sans text-[11px] text-mda-ink-muted">
+                  <p className="font-open-sans text-sm text-mda-ink">
                     Tradeoffs: {message.tuning.tradeoffs.slice(0, 2).join(" · ")}
                   </p>
                 ) : null}
@@ -276,7 +276,7 @@ export function StrategistThread({
                 {synergies.length > MAX_SYNERGY_VISIBLE ? (
                   <button
                     type="button"
-                    className="font-mda text-[10px] uppercase tracking-wide text-mda-ink-muted hover:text-mda-ink"
+                    className="min-h-11 text-left font-mda text-xs uppercase tracking-wide text-mda-cyan underline underline-offset-2 hover:text-mda-sky-strong"
                     onClick={() =>
                       setShowAllSynergy((prev) => ({
                         ...prev,
@@ -347,7 +347,7 @@ export function StrategistThread({
 
       {isLoading ? (
         <div className="space-y-1.5 text-mda-ink-muted">
-          <p className="font-mda text-[10px] font-bold uppercase tracking-wider text-mda-cyan">
+          <p className="font-mda text-xs font-bold uppercase tracking-wider text-mda-cyan">
             Strategist
           </p>
           <p className="font-open-sans text-sm">Reviewing your current list…</p>

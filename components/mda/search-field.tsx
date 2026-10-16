@@ -27,7 +27,7 @@ export function MdaSearchField({
       data-magnetic
       className={cn(
         "flex h-11 w-full items-center gap-2.5 rounded-sm bg-mda-chrome px-[18px] text-mda-inverse-text ring-1 ring-transparent transition-[background-color,box-shadow,ring-color] duration-200 ease-in-out",
-        "focus-within:bg-mda-chrome-muted focus-within:ring-mda-cyan/60",
+        "focus-within:bg-mda-chrome-muted focus-within:ring-2 focus-within:ring-mda-cyan-soft",
         containerClassName,
       )}
     >
@@ -38,7 +38,7 @@ export function MdaSearchField({
       <input
         type="search"
         className={cn(
-          "peer w-full bg-transparent font-mda text-base uppercase tracking-wide text-mda-inverse-text placeholder:text-mda-inverse-text/55 focus:outline-none",
+          "peer w-full bg-transparent font-mda text-base uppercase tracking-wide text-mda-inverse-text placeholder:text-mda-cyan-soft focus:outline-none",
           className,
         )}
         {...props}

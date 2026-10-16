@@ -27,7 +27,7 @@ export type MdaAppHeaderProps = {
 function BrandMark(): ReactNode {
   return (
     <>
-      <MDAIcon className="h-8 w-8 shrink-0 text-mda-purple" aria-hidden />
+      <MDAIcon className="h-8 w-8 shrink-0 text-mda-ink-strong" aria-hidden />
       <MdaBrandTitle />
     </>
   );
@@ -72,7 +72,7 @@ export function MdaAppHeader({
           size="sm"
           variant="headerLogin"
           onClick={onLoginClick}
-          className="min-w-[115px] text-2xl"
+          className="min-w-[115px]"
         >
           Login
         </ClipButton>

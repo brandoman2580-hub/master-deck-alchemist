@@ -1,15 +1,16 @@
 "use client";
 
-import { useUserStore } from "../../store/useUserStore";
-import { useState, useRef, useEffect } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { Button } from "./button";
 import { HelpCircle, LogOut } from "lucide-react";
-import { supabase } from "../../lib/supabaseClient";
+import { useUserStore } from "@/store/useUserStore";
+import { supabase } from "@/lib/supabaseClient";
+import { MdaGlassPopover } from "@/components/mda/glass-popover";
+import { cn } from "@/lib/utils";
 
 function getInitials(
   user: { user_metadata?: { name?: string }; email?: string } | null,
-) {
+): string {
   if (!user) return "U";
   const name = user.user_metadata?.name as string | undefined;
   if (name) {
@@ -23,11 +24,19 @@ function getInitials(
   return "U";
 }
 
-export function UserMenu() {
+const menuItemClass =
+  "flex w-full items-center gap-2 px-3 py-2.5 text-left font-mda text-sm font-semibold uppercase tracking-wide text-mda-ink transition-[background-color,color] duration-200 ease-in-out hover:bg-mda-ink/10 hover:text-mda-ink-strong focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-mda-focus disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent";
+
+/**
+ * Avatar menu — {@link MdaGlassPopover} shell, portaled above page chrome.
+ * Stay below the magnetic cursor (z≈10000) so the morph ring paints on top.
+ * While open, magnetic targeting scopes to this menu (see magnetic-targets).
+ */
+export function UserMenu(): ReactNode {
   const user = useUserStore((state) => state.user);
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  const buttonRef = useRef<HTMLButtonElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const [dropdownPosition, setDropdownPosition] = useState({
     top: 0,
     right: 0,
@@ -38,15 +47,14 @@ export function UserMenu() {
     setMounted(true);
   }, []);
 
-  // Calculate dropdown position when opening or scrolling
   useEffect(() => {
     if (!mounted) return;
 
-    const updatePosition = () => {
-      if (dropdownOpen && buttonRef.current) {
-        const rect = buttonRef.current.getBoundingClientRect();
+    const updatePosition = (): void => {
+      if (dropdownOpen && triggerRef.current) {
+        const rect = triggerRef.current.getBoundingClientRect();
         setDropdownPosition({
-          top: rect.bottom + 8, // mt-2 = 8px
+          top: rect.bottom + 8,
           right: window.innerWidth - rect.right,
         });
       }
@@ -64,31 +72,39 @@ export function UserMenu() {
     };
   }, [dropdownOpen, mounted]);
 
-  // Close dropdown on outside click
   useEffect(() => {
-    function handleClick(e: MouseEvent) {
+    function handleClick(e: MouseEvent): void {
+      const target = e.target as Node;
       if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(e.target as Node) &&
-        buttonRef.current &&
-        !buttonRef.current.contains(e.target as Node)
+        menuRef.current?.contains(target) ||
+        triggerRef.current?.contains(target)
       ) {
-        setDropdownOpen(false);
+        return;
       }
+      setDropdownOpen(false);
     }
-    if (dropdownOpen) {
-      // Use a small delay to avoid immediate closure
-      const timeoutId = setTimeout(() => {
-        document.addEventListener("mousedown", handleClick);
-      }, 0);
-      return () => {
-        clearTimeout(timeoutId);
-        document.removeEventListener("mousedown", handleClick);
-      };
+
+    function handleKeyDown(e: KeyboardEvent): void {
+      if (e.key !== "Escape") return;
+      setDropdownOpen(false);
+      triggerRef.current?.focus();
     }
+
+    if (!dropdownOpen) return;
+
+    const timeoutId = setTimeout(() => {
+      document.addEventListener("mousedown", handleClick);
+      document.addEventListener("keydown", handleKeyDown);
+    }, 0);
+
+    return () => {
+      clearTimeout(timeoutId);
+      document.removeEventListener("mousedown", handleClick);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
   }, [dropdownOpen]);
 
-  const handleLogout = async () => {
+  const handleLogout = async (): Promise<void> => {
     await supabase.auth.signOut();
     setDropdownOpen(false);
     globalThis.location.reload();
@@ -97,11 +113,20 @@ export function UserMenu() {
   if (!user) return null;
 
   return (
-    <div className="relative" ref={dropdownRef}>
+    <div className="relative">
       <button
-        ref={buttonRef}
-        className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-mda-ink/40 font-display text-sm font-bold text-mda-ink transition-colors hover:bg-mda-ink/10"
+        ref={triggerRef}
+        type="button"
+        data-magnetic
+        className={cn(
+          "relative flex h-10 w-10 items-center justify-center border-2 border-mda-ink/40 font-display text-sm font-bold text-mda-ink",
+          "transition-[background-color,border-color] duration-200 ease-in-out",
+          "hover:bg-mda-ink/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mda-focus",
+          dropdownOpen && "border-mda-cyan bg-mda-ink/10",
+        )}
         aria-label="User menu"
+        aria-expanded={dropdownOpen}
+        aria-haspopup="menu"
         onClick={() => setDropdownOpen((v) => !v)}
       >
         {getInitials(user)}
@@ -110,31 +135,45 @@ export function UserMenu() {
         dropdownOpen &&
         createPortal(
           <div
-            ref={dropdownRef}
-            className="fixed z-[100] w-48"
+            ref={menuRef}
+            data-mda-user-menu
+            role="menu"
+            aria-label="User menu"
+            className="pointer-events-auto fixed z-[1000] w-56"
             style={{
               top: `${dropdownPosition.top}px`,
               right: `${dropdownPosition.right}px`,
             }}
           >
-            <div className="rounded-md border border-mda-ink/15 bg-mda-surface-raised py-2 shadow-mda-lift">
-              <Button
-                variant="ghost"
-                className="w-full cursor-not-allowed justify-start text-mda-ink/60 hover:bg-mda-ink/5 hover:text-mda-ink"
-                startIcon={<HelpCircle className="mr-2" />}
+            <MdaGlassPopover panelClassName="py-1">
+              {user.email ? (
+                <p className="truncate px-3 py-2 font-open-sans text-xs text-mda-ink-muted">
+                  {user.email}
+                </p>
+              ) : null}
+              <button
+                type="button"
+                role="menuitem"
+                data-magnetic
                 disabled
+                className={menuItemClass}
               >
+                <HelpCircle className="h-4 w-4 shrink-0" aria-hidden />
                 Help
-              </Button>
-              <Button
-                variant="ghost"
-                className="w-full justify-start text-mda-ink hover:bg-mda-ink/10 hover:text-mda-ink-strong"
-                startIcon={<LogOut className="mr-2" />}
-                onClick={handleLogout}
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                data-magnetic
+                className={menuItemClass}
+                onClick={() => {
+                  void handleLogout();
+                }}
               >
+                <LogOut className="h-4 w-4 shrink-0" aria-hidden />
                 Logout
-              </Button>
-            </div>
+              </button>
+            </MdaGlassPopover>
           </div>,
           document.body,
         )}

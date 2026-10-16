@@ -382,7 +382,7 @@ export function LandingAuthModal({
                             <button
                               type="button"
                               onClick={onForgotPassword}
-                              className="text-mda-sky-strong hover:underline"
+                              className="inline-flex min-h-11 items-center text-mda-cyan underline underline-offset-2 hover:text-mda-sky-strong"
                             >
                               Forgot Password?
                             </button>
@@ -427,7 +427,7 @@ export function LandingAuthModal({
                               <button
                                 type="button"
                                 onClick={goSignup}
-                                className="text-mda-sky-strong hover:underline"
+                                className="inline-flex min-h-11 items-center text-mda-cyan underline underline-offset-2 hover:text-mda-sky-strong"
                               >
                                 Create one
                               </button>
@@ -437,7 +437,7 @@ export function LandingAuthModal({
                           <button
                             type="button"
                             onClick={goLogin}
-                            className="text-center font-mda text-sm text-mda-sky-strong hover:underline"
+                            className="text-center font-mda text-sm text-mda-cyan underline underline-offset-2 hover:text-mda-sky-strong"
                           >
                             Back to login
                           </button>

@@ -1,0 +1,7 @@
+https://fonts.googleapis.com
+https://fonts.gstatic.com
+https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&amp;family=Open+Sans:wght@400;500;600&amp;family=Orbitron:wght@500;700;800;900&amp;family=Space+Grotesk:wght@400;500;600&amp;display=swap
+https://cdn.tailwindcss.com?plugins=forms,container-queries
+https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js
+https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js
+http://www.w3.org/2000/svg

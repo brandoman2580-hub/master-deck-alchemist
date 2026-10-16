@@ -422,16 +422,13 @@ export function WorkshopBuildPane({
 
   return (
     <div className="grid h-full min-h-0 grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(280px,420px)]">
-      <div className="relative h-full min-h-0 bg-transparent">
+      <div className="relative h-full min-h-0 bg-transparent [container-type:size]">
         {/*
           Brackets sit on the outer frame. The filled panel is inset so the
           L-arms read as a separate frame, not painted on the same edge.
         */}
-        <MdaFrameCorners
-          sizeClassName="h-8 w-8"
-          thicknessClassName="border-[4px]"
-        />
-        <div className="absolute inset-3 z-[1] space-y-2 overflow-y-auto bg-[#BEBEBE]/75 p-3 sm:inset-4">
+        <MdaFrameCorners />
+        <div className="mda-l-gutter absolute z-[1] space-y-2 overflow-y-auto bg-[#BEBEBE]/75 p-3">
           <DeckSectionBlock
             title="Main"
             section="mainDeck"
@@ -520,7 +517,7 @@ export function WorkshopBuildPane({
               >
                 <SlidersHorizontal className="h-5 w-5" aria-hidden />
                 {activeFilterCount > 0 ? (
-                  <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-mda-chrome px-1 font-mda text-[10px] font-bold text-mda-inverse-text">
+                  <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-mda-chrome px-1 font-mda text-xs font-bold text-mda-inverse-text">
                     {activeFilterCount}
                   </span>
                 ) : null}

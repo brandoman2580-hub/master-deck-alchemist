@@ -1,14 +1,12 @@
 "use server";
 
-import { redirect } from "next/navigation";
-
 import { createClient } from "../../utils/supabase/server";
 import type { SignupFormState } from "@/types/auth";
 import process from "node:process";
 
 /**
- * Email/password signup server action used by landing + signup form.
- * On failure redirects to `/error?code=auth-signup-failed`.
+ * Email/password signup server action used by the landing dialog.
+ * Failures return `{ success: false, error }` so the dialog can show them.
  */
 export async function signup(
   prevState: SignupFormState,
@@ -28,7 +26,7 @@ export async function signup(
   });
 
   if (error) {
-    redirect("/error?code=auth-signup-failed");
+    return { success: false, error: error.message };
   }
 
   return { success: true, email };

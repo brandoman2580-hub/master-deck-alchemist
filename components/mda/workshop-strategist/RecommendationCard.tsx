@@ -42,7 +42,7 @@ export function RecommendationCard({
           sizes="48px"
         />
       ) : (
-        <div className="flex h-full items-center justify-center font-mda text-[9px] text-mda-ink-muted">
+        <div className="flex h-full items-center justify-center font-mda text-xs text-mda-ink-muted">
           N/A
         </div>
       )}
@@ -62,13 +62,13 @@ export function RecommendationCard({
               {title}
             </h3>
             {roleTag ? (
-              <span className="font-mda text-[9px] font-semibold uppercase tracking-wider text-mda-purple">
+              <span className="font-mda text-xs font-semibold uppercase tracking-wider text-mda-ink-muted">
                 {roleTag}
               </span>
             ) : null}
           </div>
           {lines.length > 0 ? (
-            <ul className="space-y-0.5 font-open-sans text-[11px] leading-snug text-mda-ink-muted">
+            <ul className="space-y-0.5 font-open-sans text-sm leading-snug text-mda-ink">
               {lines.map((line) => (
                 <li key={line} className="flex gap-1.5">
                   <span aria-hidden className="text-mda-cyan">
@@ -88,7 +88,7 @@ export function RecommendationCard({
           disabled={disabled}
           title={disabledReason}
           data-magnetic={!disabled ? true : undefined}
-          className="bg-transparent px-1 py-0.5 font-mda text-[10px] font-bold uppercase tracking-wide text-mda-cyan transition-colors hover:text-mda-cyan-soft disabled:cursor-not-allowed disabled:opacity-40"
+          className="min-h-11 bg-transparent px-2 font-mda text-xs font-bold uppercase tracking-wide text-mda-cyan underline underline-offset-2 transition-colors hover:text-mda-sky-strong disabled:cursor-not-allowed disabled:opacity-40"
           aria-label={
             disabled
               ? disabledReason || `Cannot add ${title}`

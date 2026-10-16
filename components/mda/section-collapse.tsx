@@ -26,7 +26,12 @@ export function SectionCollapse({
   className,
 }: SectionCollapseProps): ReactNode {
   return (
-    <section className={cn("w-full", className)}>
+    <section
+      className={cn(
+        "w-full border border-solid border-mda-ink/15 bg-mda-surface/40",
+        className,
+      )}
+    >
       <button
         type="button"
         onClick={onToggle}

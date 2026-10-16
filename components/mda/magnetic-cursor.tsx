@@ -17,7 +17,10 @@ import { nearestMagneticTarget } from "@/components/mda/magnetic-cursor/magnetic
 const IDLE_RING = 16;
 /** Alchemy Sun cursor size (outer ring diameter). */
 const SUN_SIZE = 22;
-/** Above Radix portals (dialogs/popovers ~z-50–100) so the cursor stays visible. */
+/**
+ * Above app overlays (Radix ~50–100, sheets ~999, user menu ~1000)
+ * so the Sun + morph ring always paint in front of glass popovers.
+ */
 const CURSOR_Z = 10000;
 
 function prefersReducedMotion(): boolean {

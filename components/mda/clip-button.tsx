@@ -39,7 +39,7 @@ export function ClipButton({
       data-magnetic
       className={cn(
         "relative inline-flex items-center justify-center gap-2 border-0 font-mda font-black uppercase tracking-wide transition-[background-color,color,filter,transform] duration-200 ease-in-out focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mda-focus disabled:pointer-events-none disabled:opacity-40 active:scale-[0.98]",
-        size === "sm" && "h-10 px-4 text-sm",
+        size === "sm" && "h-11 px-4 text-sm",
         size === "md" && "h-12 px-6 text-lg",
         size === "lg" && "h-[71px] min-w-[200px] px-8 text-2xl",
         techCut &&

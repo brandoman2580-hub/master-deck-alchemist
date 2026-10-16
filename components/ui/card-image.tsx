@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import Image, { type ImageProps } from "next/image";
 import {
   CARD_IMAGE_PLACEHOLDER,
@@ -15,6 +15,27 @@ export type CardImageSource = {
   name?: string;
   card_images?: CardImageEntry[] | null;
 };
+
+/** URLs that have already decoded in this session. Sort/filter must not refetch them. */
+const loadedCardImageUrls = new Set<string>();
+
+export function hasLoadedCardImage(url: string): boolean {
+  return loadedCardImageUrls.has(url);
+}
+
+export function rememberLoadedCardImage(url: string): void {
+  if (!url || url === CARD_IMAGE_PLACEHOLDER) return;
+  loadedCardImageUrls.add(url);
+}
+
+/** Test hook — session cache is module state. */
+export function clearLoadedCardImageCache(): void {
+  loadedCardImageUrls.clear();
+}
+
+function imageHasPixels(img: HTMLImageElement | null): boolean {
+  return Boolean(img && img.naturalWidth > 0);
+}
 
 type CardImageProps = Omit<ImageProps, "src"> & {
   card: CardImageSource;
@@ -88,15 +109,47 @@ export function CardImage({
   const resolved = resolveCardImageUrl(card.id, card.card_images, {
     preferSmall,
   });
+  const rootRef = useRef<HTMLSpanElement>(null);
   const [src, setSrc] = useState(resolved);
-  const [loaded, setLoaded] = useState(false);
+  const [loaded, setLoaded] = useState(() => hasLoadedCardImage(resolved));
   const [failed, setFailed] = useState(false);
+
+  const markLoaded = (url: string): void => {
+    rememberLoadedCardImage(url);
+    setLoaded(true);
+  };
 
   useEffect(() => {
     setSrc(resolved);
-    setLoaded(false);
     setFailed(false);
+    // Same URL already shown this session — keep the pixels, do not restart the skeleton.
+    setLoaded(hasLoadedCardImage(resolved));
   }, [resolved, card.id]);
+
+  useEffect(() => {
+    if (src === CARD_IMAGE_PLACEHOLDER || hasLoadedCardImage(src)) return;
+    const img = rootRef.current?.querySelector("img");
+    if (!img) return;
+
+    const tryMark = (): void => {
+      if (imageHasPixels(img)) markLoaded(src);
+    };
+
+    tryMark();
+    img.addEventListener("load", tryMark);
+    let cancelled = false;
+    // decode() resolves for memory-cached images even when the load event already fired.
+    img.decode?.()
+      .then(() => {
+        if (!cancelled) tryMark();
+      })
+      .catch(() => undefined);
+
+    return () => {
+      cancelled = true;
+      img.removeEventListener("load", tryMark);
+    };
+  }, [src]);
 
   const resolvedAlt = alt ?? card.name ?? "Card image";
   const isPlaceholder = src === CARD_IMAGE_PLACEHOLDER || failed;
@@ -128,7 +181,7 @@ export function CardImage({
         className,
       )}
       onLoad={(event) => {
-        setLoaded(true);
+        markLoaded(src);
         onLoad?.(event);
       }}
       onError={(event) => {
@@ -147,7 +200,7 @@ export function CardImage({
   }
 
   return (
-    <>
+    <span ref={rootRef} className={fill ? "absolute inset-0 block" : "relative block"}>
       {showSkeleton ? (
         <Skeleton
           aria-hidden
@@ -155,7 +208,7 @@ export function CardImage({
         />
       ) : null}
       {image}
-    </>
+    </span>
   );
 }
 

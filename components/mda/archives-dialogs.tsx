@@ -21,6 +21,7 @@ import {
   ARCHIVE_POPOVER_EDGE_PAD,
   ARCHIVE_POPOVER_PANEL_CLASS,
 } from "@/components/mda/archives-popover-styles";
+import { MdaGlassPopover } from "@/components/mda/glass-popover";
 import type { DeckCard, DeckMode, DeckType } from "@/types/deck";
 import { CardImage } from "@/components/ui/card-image";
 import { MdaCardPreview } from "@/components/mda/mda-card-preview";
@@ -107,7 +108,7 @@ function DeckDetailsRenameRow({
             setDraft(name);
           }
         }}
-        className="border border-mda-ink/20 bg-mda-panel px-2 py-1.5 text-center font-mda text-lg font-bold uppercase text-mda-ink-strong outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mda-cyan"
+        className="border border-mda-bezel bg-mda-panel px-2 py-1.5 text-center font-mda text-lg font-bold uppercase text-mda-ink-strong outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mda-focus"
       />
       {error ? (
         <p className="text-center font-mda text-xs text-mda-danger" role="alert">
@@ -120,7 +121,7 @@ function DeckDetailsRenameRow({
           data-magnetic
           disabled={saving}
           onClick={() => void commit()}
-          className="bg-mda-sky px-3 py-1.5 font-mda text-xs font-black uppercase text-mda-cta-ink"
+          className="min-h-11 bg-mda-sky px-3 font-mda text-xs font-black uppercase text-mda-cta-ink hover:bg-mda-sky-strong"
         >
           Save name
         </button>
@@ -132,7 +133,7 @@ function DeckDetailsRenameRow({
             setEditing(false);
             setDraft(name);
           }}
-          className="bg-mda-chrome px-3 py-1.5 font-mda text-xs font-bold uppercase text-mda-inverse-text"
+          className="min-h-11 bg-mda-chrome px-3 font-mda text-xs font-bold uppercase text-mda-inverse-text"
         >
           Cancel
         </button>
@@ -282,13 +283,15 @@ export function FormatPickerPopover({
         className={ARCHIVE_POPOVER_CONTENT_CLASS}
         data-mda-action-popover
       >
-        <FormatPickerPanel
-          title={title}
-          deckFormat={deckFormat}
-          onDeckFormatChange={onDeckFormatChange}
-          onConfirm={onConfirm}
-          onCancel={onCancel}
-        />
+        <MdaGlassPopover>
+          <FormatPickerPanel
+            title={title}
+            deckFormat={deckFormat}
+            onDeckFormatChange={onDeckFormatChange}
+            onConfirm={onConfirm}
+            onCancel={onCancel}
+          />
+        </MdaGlassPopover>
       </PopoverContent>
     </Popover>
   );
@@ -313,7 +316,7 @@ export function FormatPickerDialog({
     <AnimatePresence>
       {open ? (
         <Overlay onClose={onCancel} key="format-picker">
-          <div className="border border-mda-ink/15 bg-mda-surface shadow-mda-lift">
+          <MdaGlassPopover>
             <FormatPickerPanel
               title={title}
               deckFormat={deckFormat}
@@ -321,7 +324,7 @@ export function FormatPickerDialog({
               onConfirm={onConfirm}
               onCancel={onCancel}
             />
-          </div>
+          </MdaGlassPopover>
         </Overlay>
       ) : null}
     </AnimatePresence>

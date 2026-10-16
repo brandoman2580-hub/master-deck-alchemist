@@ -42,13 +42,13 @@ export function StrategistInputBar({
           placeholder={placeholder}
           disabled={disabled || isLoading}
           aria-label="Ask Strategist about your deck"
-          className="w-full bg-transparent font-open-sans text-sm text-mda-inverse-text placeholder:font-mda placeholder:text-mda-inverse-text/45 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
+          className="w-full bg-transparent font-open-sans text-sm text-mda-inverse-text placeholder:font-mda placeholder:text-mda-cyan-soft focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
         />
         <button
           type="submit"
           aria-label="Send message"
           disabled={disabled || isLoading || !value.trim()}
-          className="shrink-0 text-mda-cyan-soft transition-colors hover:text-mda-cyan disabled:cursor-not-allowed disabled:opacity-40"
+          className="inline-flex size-11 shrink-0 items-center justify-center text-mda-cyan-soft transition-colors hover:text-mda-inverse-text disabled:cursor-not-allowed disabled:opacity-40"
         >
           <Send className="h-4 w-4" aria-hidden />
         </button>

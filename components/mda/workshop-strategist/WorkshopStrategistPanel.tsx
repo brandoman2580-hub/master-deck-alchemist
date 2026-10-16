@@ -190,14 +190,14 @@ export function WorkshopStrategistPanel({
           onClick={handleNewConversation}
           aria-label="Start new conversation"
           data-magnetic
-          className="shrink-0 bg-mda-chrome p-2 text-mda-inverse-text hover:bg-mda-chrome-deep"
+          className="inline-flex size-11 shrink-0 items-center justify-center bg-mda-chrome text-mda-inverse-text hover:bg-mda-chrome-deep"
           title="New conversation"
         >
           <History className="h-4 w-4" aria-hidden />
         </button>
       </div>
 
-      <p className="mb-2 flex items-start gap-1.5 font-open-sans text-[11px] text-mda-ink-muted">
+      <p className="mb-2 flex items-start gap-1.5 font-open-sans text-sm text-mda-ink">
         <Info className="mt-0.5 h-3 w-3 shrink-0" aria-hidden />
         Reviews your current Workshop list. Apply and Add update the deck
         immediately.

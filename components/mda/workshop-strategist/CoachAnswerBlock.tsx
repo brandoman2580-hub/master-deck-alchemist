@@ -26,7 +26,7 @@ export function CoachAnswerBlock({
   return (
     <div className="space-y-1.5">
       {mode ? (
-        <p className="font-mda text-[10px] font-semibold uppercase tracking-wide text-mda-ink-muted">
+        <p className="font-mda text-xs font-semibold uppercase tracking-wide text-mda-ink-muted">
           {MODE_LABEL[mode]}
           {confidence ? ` · ${confidence}` : ""}
         </p>

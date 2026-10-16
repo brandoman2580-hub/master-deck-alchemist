@@ -46,52 +46,48 @@
     --font-mda: 'Orbitron', var(--font-orbitron), system-ui, sans-serif;
 
     /*
-     * MDA v2 light token set (Phase 2a — WCAG AA hardened).
-     * See docs/mda-design-tokens.md for roles + contrast notes.
-     * Cyan/sky/hazard fills are accents — never use as body text on light canvas.
+     * Light silver / steel / ice. 60% paper, 30% steel, 10% ice.
+     * Ice on silver is #0C6E8A. Ice on navy is #7EB6C9 (cyan-soft).
+     * Primary button label is inverse-text silver via --mda-cta-ink.
      */
-    --mda-bg: #e6e9ea;
-    --mda-bg-deep: #d5dade;
-    --mda-surface: #eef1f3;
-    --mda-surface-raised: #f5f7f8;
-    --mda-panel: #dde2e5;
-    /* Body default promoted from former ink-strong (~7:1 on bg). */
-    --mda-ink: #3a4f5c;
-    --mda-ink-strong: #2f414c;
-    --mda-ink-soft: #4d6676;
-    /* Solid muted (legacy rgba failed AA for secondary copy). */
-    --mda-ink-muted: #4a5f6e;
-    --mda-chrome: #425969;
-    --mda-chrome-muted: #5a6f7e;
-    --mda-chrome-deep: #374a56;
-    /* Dark ink for text sitting on sky/cyan CTA fills. */
-    --mda-cta-ink: #2a3d48;
-    --mda-cyan: #38d6ff;
-    --mda-cyan-soft: #7ee8ff;
-    --mda-cyan-muted: rgba(56, 214, 255, 0.22);
-    --mda-sky: #7ec8e8;
-    --mda-sky-strong: #63b3ed;
-    /* Demoted — do not expand purple UI (moodboard). */
-    --mda-purple: #8565e4;
-    --mda-danger: #e95e70;
-    --mda-danger-text: #b42338;
-    --mda-success: #3edb8c;
-    --mda-success-text: #1a6b42;
-    --mda-hazard: #d97706;
-    --mda-hazard-text: #8a5a00;
-    --mda-hazard-stripe-a: #d97706;
-    --mda-hazard-stripe-b: #f5e6c8;
-    --mda-grid-mark: rgba(58, 79, 92, 0.12);
-    --mda-bezel: #425969;
-    --mda-focus: #38d6ff;
-    --mda-tier-1: #7efcfd;
-    --mda-tier-2: #3edb8c;
-    --mda-tier-3: #7e5b3e;
-    --mda-inverse: #425969;
-    --mda-inverse-deep: #374a56;
-    --mda-inverse-text: #f3f6f8;
-    --mda-watermark: rgba(77, 102, 118, 0.06);
-    --mda-header-bar: #6b8ead;
+    --mda-bg: #e6eef3;
+    --mda-bg-deep: #d5e0e8;
+    --mda-surface: #f2f7fa;
+    --mda-surface-raised: #f7fbfd;
+    --mda-panel: #dce6ee;
+    --mda-ink: #243e50;
+    --mda-ink-strong: #1e3a4c;
+    --mda-ink-soft: #3e5870;
+    --mda-ink-muted: #3e5870;
+    --mda-chrome: #1b3048;
+    --mda-chrome-muted: #2a4660;
+    --mda-chrome-deep: #122433;
+    --mda-cta-ink: #f7fbfd;
+    --mda-cyan: #0c6e8a;
+    --mda-cyan-soft: #7eb6c9;
+    --mda-cyan-muted: rgba(12, 110, 138, 0.12);
+    --mda-sky: #0c6e8a;
+    --mda-sky-strong: #095a72;
+    --mda-purple: #3e5870;
+    --mda-danger: #9f1239;
+    --mda-danger-text: #9f1239;
+    --mda-success: #0f6b45;
+    --mda-success-text: #0f6b45;
+    --mda-hazard: #8a4b08;
+    --mda-hazard-text: #8a4b08;
+    --mda-hazard-stripe-a: #8a4b08;
+    --mda-hazard-stripe-b: #f3e6d4;
+    --mda-grid-mark: rgba(30, 58, 76, 0.12);
+    --mda-bezel: #6a8ba0;
+    --mda-focus: #0c6e8a;
+    --mda-tier-1: #7eb6c9;
+    --mda-tier-2: #0f6b45;
+    --mda-tier-3: #8a4b08;
+    --mda-inverse: #1b3048;
+    --mda-inverse-deep: #122433;
+    --mda-inverse-text: #f7fbfd;
+    --mda-watermark: rgba(62, 88, 112, 0.06);
+    --mda-header-bar: #1b3048;
     /* Motion durations (CSS transitions; honor prefers-reduced-motion in components). */
     --mda-duration-fast: 150ms;
     --mda-duration-base: 200ms;
@@ -167,6 +163,135 @@
 :focus-visible {
   outline: 2px solid var(--mda-focus);
   outline-offset: 2px;
+}
+
+/*
+ * L-brackets scale to the frame that contains them.
+ * Both arms use the shorter side so a wide, short panel stays square.
+ * 12cqmin is 12% of that shorter side, with an 8px floor.
+ */
+.mda-l-frame {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  container-type: size;
+  --mda-l-arm: min(48px, max(8px, 12cqmin));
+  --mda-l-stroke: min(4px, max(2px, 1.25cqmin));
+}
+
+.mda-l-arm {
+  position: absolute;
+  pointer-events: none;
+  width: var(--mda-l-arm);
+  height: var(--mda-l-arm);
+  border-style: solid;
+  border-width: 0;
+}
+
+.mda-l-arm-tl {
+  top: 0;
+  left: 0;
+  border-top-width: min(4px, max(2px, 1.25cqmin));
+  border-left-width: min(4px, max(2px, 1.25cqmin));
+}
+
+.mda-l-arm-tr {
+  top: 0;
+  right: 0;
+  border-top-width: min(4px, max(2px, 1.25cqmin));
+  border-right-width: min(4px, max(2px, 1.25cqmin));
+}
+
+.mda-l-arm-bl {
+  bottom: 0;
+  left: 0;
+  border-bottom-width: min(4px, max(2px, 1.25cqmin));
+  border-left-width: min(4px, max(2px, 1.25cqmin));
+}
+
+.mda-l-arm-br {
+  bottom: 0;
+  right: 0;
+  border-bottom-width: min(4px, max(2px, 1.25cqmin));
+  border-right-width: min(4px, max(2px, 1.25cqmin));
+}
+
+/* Content inset that clears a scaled L-bracket on the same size container. */
+.mda-l-gutter {
+  inset: max(12px, min(48px, 12cqmin));
+}
+
+.mda-l-tick {
+  position: absolute;
+  pointer-events: none;
+}
+
+.mda-l-tick-tl-y,
+.mda-l-tick-bl-y {
+  left: 0;
+  width: var(--mda-l-stroke);
+  height: calc(var(--mda-l-arm) * 0.45);
+}
+
+.mda-l-tick-tr-y,
+.mda-l-tick-br-y {
+  right: 0;
+  width: var(--mda-l-stroke);
+  height: calc(var(--mda-l-arm) * 0.45);
+}
+
+.mda-l-tick-tl-x,
+.mda-l-tick-tr-x {
+  top: 0;
+  height: var(--mda-l-stroke);
+  width: calc(var(--mda-l-arm) * 0.45);
+}
+
+.mda-l-tick-bl-x,
+.mda-l-tick-br-x {
+  bottom: 0;
+  height: var(--mda-l-stroke);
+  width: calc(var(--mda-l-arm) * 0.45);
+}
+
+.mda-l-tick-tl-y {
+  top: 0;
+  transform: translate(calc(var(--mda-l-stroke) * -2), var(--mda-l-arm));
+}
+
+.mda-l-tick-tl-x {
+  left: 0;
+  transform: translate(var(--mda-l-arm), calc(var(--mda-l-stroke) * -2));
+}
+
+.mda-l-tick-tr-y {
+  top: 0;
+  transform: translate(calc(var(--mda-l-stroke) * 2), var(--mda-l-arm));
+}
+
+.mda-l-tick-tr-x {
+  right: 0;
+  transform: translate(calc(var(--mda-l-arm) * -1), calc(var(--mda-l-stroke) * -2));
+}
+
+.mda-l-tick-bl-y {
+  bottom: 0;
+  transform: translate(calc(var(--mda-l-stroke) * -2), calc(var(--mda-l-arm) * -1));
+}
+
+.mda-l-tick-bl-x {
+  left: 0;
+  transform: translate(var(--mda-l-arm), calc(var(--mda-l-stroke) * 2));
+}
+
+.mda-l-tick-br-y {
+  bottom: 0;
+  transform: translate(calc(var(--mda-l-stroke) * 2), calc(var(--mda-l-arm) * -1));
+}
+
+.mda-l-tick-br-x {
+  right: 0;
+  transform: translate(calc(var(--mda-l-arm) * -1), calc(var(--mda-l-stroke) * 2));
 }
 
 /* Technical grid watermark — opt-in on command shells only (not card cells). */
