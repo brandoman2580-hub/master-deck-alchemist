@@ -39,6 +39,7 @@ import {
   ARCHIVE_POPOVER_EDGE_PAD,
   ARCHIVE_POPOVER_PANEL_CLASS,
 } from "@/components/mda/archives-popover-styles";
+import { MdaGlassPopover } from "@/components/mda/glass-popover";
 import type { DeckMode } from "@/types/deck";
 import { cn } from "@/lib/utils";
 import { toAbsoluteShareUrl } from "@/lib/share/urls";
@@ -67,13 +68,13 @@ function usePreferLeft(): {
 }
 
 const iconBtn =
-  "rounded p-1 text-white/70 transition-[background-color,color,transform] duration-200 ease-in-out hover:bg-white hover:text-mda-inverse-deep active:scale-95 disabled:pointer-events-none disabled:opacity-40";
+  "inline-flex size-11 items-center justify-center rounded text-mda-ink-muted transition-[background-color,color,transform] duration-200 ease-in-out hover:bg-mda-ink/10 hover:text-mda-ink-strong active:scale-95 disabled:pointer-events-none disabled:opacity-40";
 
 const confirmIconBtn =
-  "rounded p-2 text-mda-success transition-[background-color,color,transform] duration-200 ease-in-out hover:bg-mda-success/20 hover:scale-105 active:scale-95";
+  "rounded p-2 text-mda-success ring-1 ring-transparent transition-[background-color,color,transform,box-shadow,ring-color] duration-200 ease-in-out hover:bg-mda-success/20 hover:ring-mda-success hover:scale-105 active:scale-95";
 
 const cancelIconBtn =
-  "rounded p-2 text-mda-danger transition-[background-color,color,transform] duration-200 ease-in-out hover:bg-mda-danger/20 hover:scale-105 active:scale-95";
+  "rounded p-2 text-mda-danger ring-1 ring-transparent transition-[background-color,color,transform,box-shadow,ring-color] duration-200 ease-in-out hover:bg-mda-danger/20 hover:ring-mda-danger hover:scale-105 active:scale-95";
 
 export type DeckArchiveActionPopoversProps = {
   deckName: string;
@@ -209,7 +210,7 @@ export function DeckArchiveActionPopovers({
   };
 
   return (
-    <div className="flex items-center gap-1.5">
+    <div className="flex flex-col items-center gap-1">
       <Popover
         modal
         open={copyOpen}
@@ -237,57 +238,59 @@ export function DeckArchiveActionPopovers({
           className={ARCHIVE_POPOVER_CONTENT_CLASS}
           data-mda-action-popover
         >
-          <div className={ARCHIVE_POPOVER_PANEL_CLASS}>
-            <div className="flex overflow-hidden rounded">
-              {(
-                [
-                  { key: "TCG" as const, icon: Crown, label: "TCG" },
-                  {
-                    key: "Master Duel" as const,
-                    icon: Gamepad2,
-                    label: "MD",
-                  },
-                ] as const
-              ).map(({ key, icon: Icon, label }) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => setCopyDeckFormat(key)}
-                  data-magnetic
-                  className={cn(
-                    "inline-flex items-center gap-1.5 px-3 py-2 font-mda text-sm font-bold uppercase transition-colors duration-200",
-                    copyDeckFormat === key
-                      ? "bg-mda-chrome text-mda-inverse-text"
-                      : "bg-mda-panel text-mda-ink hover:bg-mda-chrome hover:text-mda-inverse-text",
-                  )}
-                >
-                  <Icon className="h-4 w-4" aria-hidden />
-                  {label}
-                </button>
-              ))}
+          <MdaGlassPopover>
+            <div className={ARCHIVE_POPOVER_PANEL_CLASS}>
+              <div className="flex overflow-hidden rounded">
+                {(
+                  [
+                    { key: "TCG" as const, icon: Crown, label: "TCG" },
+                    {
+                      key: "Master Duel" as const,
+                      icon: Gamepad2,
+                      label: "MD",
+                    },
+                  ] as const
+                ).map(({ key, icon: Icon, label }) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setCopyDeckFormat(key)}
+                    data-magnetic
+                    className={cn(
+                      "inline-flex items-center gap-1.5 px-3 py-2 font-mda text-sm font-bold uppercase transition-colors duration-200",
+                      copyDeckFormat === key
+                        ? "bg-mda-chrome text-mda-inverse-text"
+                        : "bg-mda-panel text-mda-ink hover:bg-mda-chrome hover:text-mda-inverse-text",
+                    )}
+                  >
+                    <Icon className="h-4 w-4" aria-hidden />
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <button
+                type="button"
+                data-magnetic
+                onClick={() => {
+                  onCopyConfirm(copyDeckFormat);
+                  setCopyOpen(false);
+                }}
+                aria-label="Confirm copy"
+                className={confirmIconBtn}
+              >
+                <Check className="h-6 w-6" aria-hidden />
+              </button>
+              <button
+                type="button"
+                data-magnetic
+                onClick={() => setCopyOpen(false)}
+                aria-label="Cancel copy"
+                className={cancelIconBtn}
+              >
+                <X className="h-6 w-6" aria-hidden />
+              </button>
             </div>
-            <button
-              type="button"
-              data-magnetic
-              onClick={() => {
-                onCopyConfirm(copyDeckFormat);
-                setCopyOpen(false);
-              }}
-              aria-label="Confirm copy"
-              className={confirmIconBtn}
-            >
-              <Check className="h-6 w-6" aria-hidden />
-            </button>
-            <button
-              type="button"
-              data-magnetic
-              onClick={() => setCopyOpen(false)}
-              aria-label="Cancel copy"
-              className={cancelIconBtn}
-            >
-              <X className="h-6 w-6" aria-hidden />
-            </button>
-          </div>
+          </MdaGlassPopover>
         </PopoverContent>
       </Popover>
 
@@ -321,59 +324,61 @@ export function DeckArchiveActionPopovers({
           className={ARCHIVE_POPOVER_CONTENT_CLASS}
           data-mda-action-popover
         >
-          <div className="flex min-w-[220px] flex-col gap-2 p-3">
-            <label
-              htmlFor="archive-rename-input"
-              className="font-mda text-xs font-bold uppercase tracking-wide text-white"
-            >
-              Rename deck
-            </label>
-            <input
-              id="archive-rename-input"
-              type="text"
-              value={renameDraft}
-              maxLength={80}
-              disabled={renameSaving}
-              onChange={(event) => {
-                setRenameDraft(event.target.value);
-                setRenameError(null);
-              }}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  event.preventDefault();
-                  void commitRename();
-                }
-              }}
-              className="border border-white/20 bg-black/30 px-2 py-1.5 font-mda text-sm text-white outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mda-cyan"
-            />
-            {renameError ? (
-              <p className="font-mda text-xs text-mda-danger" role="alert">
-                {renameError}
-              </p>
-            ) : null}
-            <div className="flex items-center justify-end gap-1">
-              <button
-                type="button"
-                data-magnetic
-                disabled={renameSaving}
-                onClick={() => void commitRename()}
-                aria-label="Confirm rename"
-                className={confirmIconBtn}
+          <MdaGlassPopover>
+            <div className="flex min-w-[220px] flex-col gap-2 p-3">
+              <label
+                htmlFor="archive-rename-input"
+                className="font-mda text-xs font-bold uppercase tracking-wide text-mda-ink"
               >
-                <Check className="h-6 w-6" aria-hidden />
-              </button>
-              <button
-                type="button"
-                data-magnetic
+                Rename deck
+              </label>
+              <input
+                id="archive-rename-input"
+                type="text"
+                value={renameDraft}
+                maxLength={80}
                 disabled={renameSaving}
-                onClick={() => setRenameOpen(false)}
-                aria-label="Cancel rename"
-                className={cancelIconBtn}
-              >
-                <X className="h-6 w-6" aria-hidden />
-              </button>
+                onChange={(event) => {
+                  setRenameDraft(event.target.value);
+                  setRenameError(null);
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    void commitRename();
+                  }
+                }}
+                className="border border-mda-cyan/50 bg-mda-inverse px-2 py-1.5 font-mda text-sm text-mda-inverse-text outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mda-focus disabled:opacity-60"
+              />
+              {renameError ? (
+                <p className="font-mda text-xs text-mda-danger-text" role="alert">
+                  {renameError}
+                </p>
+              ) : null}
+              <div className="flex items-center justify-end gap-1">
+                <button
+                  type="button"
+                  data-magnetic
+                  disabled={renameSaving}
+                  onClick={() => void commitRename()}
+                  aria-label="Confirm rename"
+                  className={confirmIconBtn}
+                >
+                  <Check className="h-6 w-6" aria-hidden />
+                </button>
+                <button
+                  type="button"
+                  data-magnetic
+                  disabled={renameSaving}
+                  onClick={() => setRenameOpen(false)}
+                  aria-label="Cancel rename"
+                  className={cancelIconBtn}
+                >
+                  <X className="h-6 w-6" aria-hidden />
+                </button>
+              </div>
             </div>
-          </div>
+          </MdaGlassPopover>
         </PopoverContent>
       </Popover>
 
@@ -410,82 +415,84 @@ export function DeckArchiveActionPopovers({
               }
             }}
           >
-            <div className="flex flex-col bg-[color:var(--mda-surface-raised)]">
-              <div className={ARCHIVE_POPOVER_PANEL_CLASS}>
-                <div
-                  className="flex min-w-[260px] max-w-[320px] items-center gap-2 rounded border border-white/10 bg-[color:var(--mda-bg-deep)] px-3 py-2"
-                  aria-live="polite"
-                >
-                  {shareLoading ? (
-                    <Loader2
-                      className="h-4 w-4 shrink-0 animate-spin text-mda-cyan"
-                      aria-hidden
-                    />
-                  ) : null}
-                  <span className="flex-1 truncate font-mda text-sm text-white/80">
-                    {shareLoading
-                      ? "Generating share link…"
-                      : shareError
-                        ? shareError
-                        : shareUrl || "Share link unavailable"}
-                  </span>
-                  <TooltipProvider delayDuration={0}>
-                    <Tooltip open={copiedTipOpen}>
-                      <TooltipTrigger asChild>
-                        <button
-                          type="button"
-                          data-magnetic
-                          onClick={() => {
-                            if (!shareUrl) return;
-                            void navigator.clipboard.writeText(shareUrl);
-                            showCopiedTooltip();
-                          }}
-                          disabled={!shareUrl || shareLoading}
-                          aria-label="Copy share link"
-                          className="rounded p-1 text-white/70 hover:bg-white/10 hover:text-white disabled:opacity-40"
+            <MdaGlassPopover>
+              <div className="flex flex-col">
+                <div className={ARCHIVE_POPOVER_PANEL_CLASS}>
+                  <div
+                    className="flex min-w-[260px] max-w-[320px] items-center gap-2 border border-mda-ink/15 bg-mda-panel/80 px-3 py-2"
+                    aria-live="polite"
+                  >
+                    {shareLoading ? (
+                      <Loader2
+                        className="h-4 w-4 shrink-0 animate-spin text-mda-cyan"
+                        aria-hidden
+                      />
+                    ) : null}
+                    <span className="flex-1 truncate font-mda text-sm text-mda-ink">
+                      {shareLoading
+                        ? "Generating share link…"
+                        : shareError
+                          ? shareError
+                          : shareUrl || "Share link unavailable"}
+                    </span>
+                    <TooltipProvider delayDuration={0}>
+                      <Tooltip open={copiedTipOpen}>
+                        <TooltipTrigger asChild>
+                          <button
+                            type="button"
+                            data-magnetic
+                            onClick={() => {
+                              if (!shareUrl) return;
+                              void navigator.clipboard.writeText(shareUrl);
+                              showCopiedTooltip();
+                            }}
+                            disabled={!shareUrl || shareLoading}
+                            aria-label="Copy share link"
+                            className="rounded p-1 text-mda-ink-muted hover:bg-mda-ink/10 hover:text-mda-ink-strong disabled:opacity-40"
+                          >
+                            <Copy className="h-5 w-5" aria-hidden />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent
+                          side="top"
+                          className="z-[110] border-mda-ink/15 bg-mda-surface font-mda text-xs font-bold text-mda-ink"
                         >
-                          <Copy className="h-5 w-5" aria-hidden />
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent
-                        side="top"
-                        className="z-[110] border-mda-ink/15 bg-mda-surface font-mda text-xs font-bold text-mda-ink"
-                      >
-                        Copied!
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
-                <button
-                  type="button"
-                  data-magnetic
-                  onClick={() => handleShareOpenChange(false)}
-                  disabled={shareLoading}
-                  aria-label="Close share"
-                  className={cn(cancelIconBtn, "disabled:opacity-40")}
-                >
-                  <X className="h-6 w-6" aria-hidden />
-                </button>
-              </div>
-              {shareUrl && !shareLoading && !shareError ? (
-                <div className="border-t border-white/10 px-3 pb-3 pt-2">
+                          Copied!
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
                   <button
                     type="button"
                     data-magnetic
-                    onClick={() => setShowShareQr((prev) => !prev)}
-                    className="inline-flex w-full items-center justify-center gap-2 rounded border border-white/15 bg-white/5 px-3 py-2 font-mda text-xs font-bold uppercase tracking-wide text-white/80 transition-colors hover:bg-white/10"
+                    onClick={() => handleShareOpenChange(false)}
+                    disabled={shareLoading}
+                    aria-label="Close share"
+                    className={cn(cancelIconBtn, "disabled:opacity-40")}
                   >
-                    <QrCode className="h-4 w-4" aria-hidden />
-                    {showShareQr ? "Hide QR Code" : "Show QR Code"}
+                    <X className="h-6 w-6" aria-hidden />
                   </button>
-                  {showShareQr ? (
-                    <div className="mt-2 flex justify-center rounded bg-white p-3">
-                      <QRCodeSVG value={shareUrl} size={160} />
-                    </div>
-                  ) : null}
                 </div>
-              ) : null}
-            </div>
+                {shareUrl && !shareLoading && !shareError ? (
+                  <div className="border-t border-mda-ink/15 px-3 pb-3 pt-2">
+                    <button
+                      type="button"
+                      data-magnetic
+                      onClick={() => setShowShareQr((prev) => !prev)}
+                      className="inline-flex w-full items-center justify-center gap-2 border border-mda-ink/15 bg-mda-panel/60 px-3 py-2 font-mda text-xs font-bold uppercase tracking-wide text-mda-ink transition-colors hover:bg-mda-panel"
+                    >
+                      <QrCode className="h-4 w-4" aria-hidden />
+                      {showShareQr ? "Hide QR Code" : "Show QR Code"}
+                    </button>
+                    {showShareQr ? (
+                      <div className="mt-2 flex justify-center bg-white p-3">
+                        <QRCodeSVG value={shareUrl} size={160} />
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
+            </MdaGlassPopover>
           </PopoverContent>
         </Popover>
       ) : (
@@ -494,7 +501,7 @@ export function DeckArchiveActionPopovers({
           disabled
           aria-label={`Share unavailable — ${deckName} is incomplete`}
           title="Deck must meet legal size rules to share"
-          className="cursor-not-allowed rounded p-1 text-white/30"
+          className="cursor-not-allowed rounded p-1 text-mda-ink/30"
         >
           <Ban className="h-5 w-5" aria-hidden />
         </button>
@@ -513,7 +520,7 @@ export function DeckArchiveActionPopovers({
             ref={del.triggerRef}
             type="button"
             aria-label={`Delete ${deckName}`}
-            className={cn(iconBtn, "hover:text-mda-danger")}
+            className={cn(iconBtn, "hover:text-mda-danger-text")}
           >
             <Trash2 className="h-5 w-5" aria-hidden />
           </button>
@@ -526,37 +533,39 @@ export function DeckArchiveActionPopovers({
           className={ARCHIVE_POPOVER_CONTENT_CLASS}
           data-mda-action-popover
         >
-          <div
-            className={cn(
-              ARCHIVE_POPOVER_PANEL_CLASS,
-              "max-w-[360px] px-4 py-3",
-            )}
-          >
-            <p className="font-mda text-sm text-white">
-              Delete <span className="font-bold">{deckName}</span>?
-            </p>
-            <button
-              type="button"
-              data-magnetic
-              onClick={() => {
-                onDeleteConfirm();
-                setDeleteOpen(false);
-              }}
-              aria-label="Confirm delete"
-              className={confirmIconBtn}
+          <MdaGlassPopover>
+            <div
+              className={cn(
+                ARCHIVE_POPOVER_PANEL_CLASS,
+                "max-w-[360px] px-4 py-3",
+              )}
             >
-              <Check className="h-6 w-6" aria-hidden />
-            </button>
-            <button
-              type="button"
-              data-magnetic
-              onClick={() => setDeleteOpen(false)}
-              aria-label="Cancel delete"
-              className={cancelIconBtn}
-            >
-              <X className="h-6 w-6" aria-hidden />
-            </button>
-          </div>
+              <p className="font-mda text-sm text-mda-ink">
+                Delete <span className="font-bold text-mda-ink-strong">{deckName}</span>?
+              </p>
+              <button
+                type="button"
+                data-magnetic
+                onClick={() => {
+                  onDeleteConfirm();
+                  setDeleteOpen(false);
+                }}
+                aria-label="Confirm delete"
+                className={confirmIconBtn}
+              >
+                <Check className="h-6 w-6" aria-hidden />
+              </button>
+              <button
+                type="button"
+                data-magnetic
+                onClick={() => setDeleteOpen(false)}
+                aria-label="Cancel delete"
+                className={cancelIconBtn}
+              >
+                <X className="h-6 w-6" aria-hidden />
+              </button>
+            </div>
+          </MdaGlassPopover>
         </PopoverContent>
       </Popover>
     </div>

@@ -42,7 +42,7 @@ export function StrategistModeControl({
             data-magnetic
             onClick={() => onChange(mode.value)}
             className={cn(
-              "flex-1 px-2 py-2 font-mda text-[10px] font-bold uppercase tracking-wide text-mda-inverse-text transition-colors",
+              "min-h-11 flex-1 px-2 font-mda text-xs font-bold uppercase tracking-wide text-mda-inverse-text transition-colors",
               selected
                 ? "bg-mda-chrome-deep"
                 : "bg-mda-chrome hover:bg-mda-chrome-deep/80",

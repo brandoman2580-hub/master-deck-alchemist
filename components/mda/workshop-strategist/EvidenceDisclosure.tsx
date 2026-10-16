@@ -20,13 +20,13 @@ export function EvidenceDisclosure({
 
   return (
     <details className="border border-mda-chrome/40 bg-mda-surface/40 px-2 py-1.5">
-      <summary className="cursor-pointer font-mda text-[11px] font-semibold uppercase tracking-wide text-mda-ink-muted">
+      <summary className="cursor-pointer font-mda text-xs font-semibold uppercase tracking-wide text-mda-ink-muted">
         Why I&apos;m saying this
       </summary>
       <div className="mt-2 space-y-2 font-open-sans text-xs text-mda-ink">
         {limitations.length > 0 ? (
           <div>
-            <p className="font-mda text-[10px] uppercase tracking-wide text-mda-ink-muted">
+            <p className="font-mda text-xs uppercase tracking-wide text-mda-ink-muted">
               Caveats
             </p>
             <ul className="mt-1 list-disc space-y-0.5 pl-4">
@@ -38,7 +38,7 @@ export function EvidenceDisclosure({
         ) : null}
         {evidence.length > 0 ? (
           <div>
-            <p className="font-mda text-[10px] uppercase tracking-wide text-mda-ink-muted">
+            <p className="font-mda text-xs uppercase tracking-wide text-mda-ink-muted">
               Grounding
             </p>
             <ul className="mt-1 space-y-1">

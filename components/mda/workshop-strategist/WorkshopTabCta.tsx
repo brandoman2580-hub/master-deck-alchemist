@@ -41,7 +41,7 @@ export function WorkshopTabCta({
       data-magnetic
       aria-label={mapped.aria}
       onClick={() => onOpenWorkshopTab(mapped.tab as "matchups" | "combos")}
-      className="mt-1 bg-mda-chrome px-3 py-1.5 font-mda text-[10px] font-bold uppercase tracking-wide text-mda-inverse-text transition-colors hover:bg-mda-chrome-deep"
+      className="mt-1 inline-flex min-h-11 items-center bg-mda-chrome px-3 font-mda text-xs font-bold uppercase tracking-wide text-mda-inverse-text transition-colors hover:bg-mda-chrome-deep"
     >
       {mapped.label}
     </button>

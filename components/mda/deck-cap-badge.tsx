@@ -13,6 +13,8 @@ export type DeckCapBadgeProps = {
   label: string;
   value: number;
   className?: string;
+  /** light = Archives light shell; inverse = dark islands (legacy). */
+  tone?: "light" | "inverse";
 };
 
 function AnimatedCount({
@@ -50,21 +52,37 @@ function AnimatedCount({
   );
 }
 
-/** Capacity chip matching Deck Archives card (M / E / S). */
+/** Capacity chip for Deck Archives (count above the section name). */
 export function DeckCapBadge({
   label,
   value,
   className,
+  tone = "light",
 }: DeckCapBadgeProps): ReactNode {
+  const isLight = tone === "light";
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded bg-black/20 px-1.5 py-0.5 font-mda text-sm text-mda-sky",
+        "inline-flex flex-col items-center gap-0.5 px-1.5 py-0.5 font-mda",
+        isLight
+          ? "bg-mda-panel text-mda-ink-strong"
+          : "rounded bg-black/20 text-mda-inverse-text",
         className,
       )}
+      aria-label={`${label}, ${value}`}
     >
-      <span className="text-white">{label}</span>
-      <AnimatedCount value={value} />
+      <span aria-hidden className="text-base leading-none">
+        <AnimatedCount value={value} />
+      </span>
+      <span
+        aria-hidden
+        className={cn(
+          "whitespace-nowrap text-xs leading-none",
+          isLight ? "text-mda-ink-muted" : "text-white",
+        )}
+      >
+        {label}
+      </span>
     </span>
   );
 }

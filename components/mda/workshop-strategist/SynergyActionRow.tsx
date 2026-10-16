@@ -41,7 +41,7 @@ export function SynergyActionRow({
           sizes="40px"
         />
       ) : (
-        <div className="flex h-full items-center justify-center font-mda text-[9px] text-mda-ink-muted">
+        <div className="flex h-full items-center justify-center font-mda text-xs text-mda-ink-muted">
           N/A
         </div>
       )}
@@ -55,7 +55,7 @@ export function SynergyActionRow({
         <p className="truncate font-mda text-xs font-semibold text-mda-ink">
           {synergy.title}
         </p>
-        <p className="line-clamp-2 font-open-sans text-[11px] text-mda-ink-muted">
+        <p className="line-clamp-2 font-open-sans text-sm text-mda-ink">
           {blurb}
         </p>
       </div>
@@ -65,7 +65,7 @@ export function SynergyActionRow({
         disabled={disabled}
         title={disabledReason}
         data-magnetic={!disabled ? true : undefined}
-        className="shrink-0 bg-mda-chrome px-2.5 py-1.5 font-mda text-[10px] font-bold uppercase tracking-wide text-mda-inverse-text transition-colors hover:bg-mda-chrome-deep disabled:cursor-not-allowed disabled:opacity-40"
+        className="inline-flex min-h-11 shrink-0 items-center bg-mda-chrome px-3 font-mda text-xs font-bold uppercase tracking-wide text-mda-inverse-text transition-colors hover:bg-mda-chrome-deep disabled:cursor-not-allowed disabled:opacity-40"
         aria-label={
           disabled
             ? disabledReason || `Cannot add ${synergy.title}`

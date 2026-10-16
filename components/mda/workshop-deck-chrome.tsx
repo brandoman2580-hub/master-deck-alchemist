@@ -193,7 +193,7 @@ export function WorkshopDeckChrome({
                 onKeyDown={onNameKeyDown}
                 maxLength={80}
                 aria-label="Deck name"
-                className="w-full min-w-0 border border-mda-chrome bg-mda-panel px-2 py-1 font-mda text-xl font-bold uppercase tracking-wide text-mda-ink-strong outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mda-cyan"
+                className="w-full min-w-0 border border-mda-bezel bg-mda-panel px-2 py-1 font-mda text-xl font-bold uppercase tracking-wide text-mda-ink-strong outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mda-focus"
               />
             ) : (
               <div className="flex min-w-0 items-center gap-2">
@@ -211,7 +211,7 @@ export function WorkshopDeckChrome({
                   onClick={() => setEditingName(true)}
                   data-magnetic
                   aria-label="Rename deck"
-                  className="shrink-0 rounded p-1 text-mda-ink transition-colors hover:bg-mda-ink/10 hover:text-mda-ink-strong"
+                  className="inline-flex size-11 shrink-0 items-center justify-center rounded text-mda-ink transition-colors hover:bg-mda-ink/10 hover:text-mda-ink-strong"
                 >
                   <Pencil className="h-4 w-4" aria-hidden />
                 </button>
@@ -236,7 +236,7 @@ export function WorkshopDeckChrome({
         <div className="flex flex-wrap items-center gap-4 lg:justify-end lg:border-l-[6px] lg:border-mda-chrome lg:pl-4">
           <div className="flex items-center gap-2">
             <div className="flex h-full max-h-[74px] min-w-[72px] flex-col items-center justify-center bg-mda-chrome px-3 py-1.5 text-mda-inverse-text">
-              <span className="font-mda text-[10px] font-bold uppercase tracking-widest">
+              <span className="font-mda text-xs font-bold uppercase tracking-widest">
                 Grade
               </span>
               <span className="font-display text-3xl font-bold leading-none">

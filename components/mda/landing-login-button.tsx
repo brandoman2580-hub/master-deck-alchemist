@@ -32,7 +32,7 @@ function LoginBracket({
         isLeft ? "left-0" : "right-0",
       )}
     >
-      <path d={d} stroke="var(--mda-ink-soft)" strokeWidth={2} strokeLinecap="square" />
+      <path d={d} stroke="var(--mda-inverse-text)" strokeWidth={2} strokeLinecap="square" />
     </svg>
   );
 }
@@ -59,7 +59,7 @@ export function LandingLoginButton({
           onClick={onClick}
           data-magnetic
           aria-label="Open login"
-          className="absolute inset-0 z-0 flex items-center gap-2.5 bg-black/15 pl-[30px] pr-4 text-mda-ink transition-[background-color,transform] duration-200 ease-in-out hover:bg-black/25 active:scale-[0.98]"
+          className="absolute inset-0 z-0 flex items-center gap-2.5 bg-mda-sky pl-[30px] pr-4 text-mda-cta-ink transition-[background-color,color,transform] duration-200 ease-in-out hover:bg-mda-sky-strong focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mda-focus active:scale-[0.98]"
         >
           <span className="font-display text-[36px] font-semibold uppercase leading-none tracking-wide">
             Login
@@ -79,11 +79,11 @@ export function LandingLoginButton({
       data-magnetic
       aria-label="Open login"
       className={cn(
-        "inline-flex items-center gap-2.5 px-[17px] py-1.5 text-mda-ink transition-[background-color,color,transform] duration-200 ease-in-out hover:bg-mda-cyan-soft/40 active:scale-[0.98]",
+        "inline-flex min-h-11 items-center gap-2.5 bg-mda-sky px-[17px] text-mda-cta-ink transition-[background-color,color,transform] duration-200 ease-in-out hover:bg-mda-sky-strong focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mda-focus active:scale-[0.98]",
         className,
       )}
     >
-      <span className="font-display text-2xl font-semibold uppercase leading-none tracking-wide">
+      <span className="font-display text-lg font-semibold uppercase leading-none tracking-wide">
         Login
       </span>
       <ArrowUpRight className="size-6" strokeWidth={2} aria-hidden />

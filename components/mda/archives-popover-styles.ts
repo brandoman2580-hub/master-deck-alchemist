@@ -1,8 +1,11 @@
-/** Shared popover chrome for deck archive action menus. */
+/**
+ * Host PopoverContent chrome — transparent so {@link MdaGlassPopover} owns the shell.
+ */
 export const ARCHIVE_POPOVER_CONTENT_CLASS =
-  "w-auto border border-white/10 p-0 bg-[color:var(--mda-surface-raised)] shadow-[0_8px_24px_rgba(0,0,0,0.45)]";
+  "w-auto border-0 bg-transparent p-0 shadow-none";
 
+/** Inner row layout for copy / share / delete action panels. */
 export const ARCHIVE_POPOVER_PANEL_CLASS =
-  "flex items-center gap-3 bg-[color:var(--mda-surface-raised)] p-3";
+  "flex items-center gap-3 p-3";
 
 export const ARCHIVE_POPOVER_EDGE_PAD = 16;

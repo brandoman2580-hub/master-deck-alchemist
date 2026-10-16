@@ -18,7 +18,7 @@ const TONE_CLASS: Record<MdaStatusChipTone, string> = {
   hazard: "bg-mda-hazard-text text-mda-inverse-text",
   danger: "bg-mda-danger-text text-mda-inverse-text",
   success: "bg-mda-success-text text-mda-inverse-text",
-  cyan: "bg-mda-chrome-deep text-mda-inverse-text",
+  cyan: "bg-mda-cyan text-mda-cta-ink",
 };
 
 /**
@@ -33,7 +33,7 @@ export function MdaStatusChip({
   return (
     <span
       className={cn(
-        "inline-flex items-center px-2 py-0.5 font-mda text-[11px] font-bold uppercase tracking-[0.1em]",
+        "inline-flex items-center px-2 py-0.5 font-mda text-xs font-bold uppercase tracking-[0.1em]",
         TONE_CLASS[tone],
         className,
       )}

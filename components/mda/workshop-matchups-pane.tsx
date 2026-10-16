@@ -380,7 +380,7 @@ export function WorkshopMatchupsPane({
                             style={{ width: `${point.winRate}%` }}
                           />
                         </div>
-                        <span className="w-8 shrink-0 text-[11px] font-normal">
+                        <span className="w-8 shrink-0 text-xs font-normal">
                           {point.winRate}%
                         </span>
                       </div>

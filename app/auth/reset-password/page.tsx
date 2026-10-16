@@ -43,14 +43,14 @@ export default function ResetPasswordPage(): ReactNode {
   };
 
   return (
-    <div className="min-h-screen bg-[color:var(--mda-bg)] text-white">
+    <div className="min-h-screen bg-mda-bg text-mda-ink">
       <MdaAppHeader onLoginClick={() => router.push("/")} />
       <div className="mx-auto max-w-md px-6 py-16">
         <h1 className="mb-6 font-mda text-3xl font-bold uppercase">
           Reset Password
         </h1>
         {!ready ? (
-          <p className="font-mda text-white/70">
+          <p className="font-mda text-mda-ink-muted">
             Open the reset link from your email to continue.
           </p>
         ) : (
@@ -61,7 +61,7 @@ export default function ResetPasswordPage(): ReactNode {
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               placeholder="New password"
-              className="w-full bg-[color:var(--mda-cyan-muted)] px-4 py-3 font-mda text-white placeholder:text-white/50 focus:outline-none"
+              className="min-h-11 w-full border border-mda-bezel bg-mda-panel px-4 font-mda text-mda-ink placeholder:text-mda-ink-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mda-focus"
             />
             <input
               type="password"
@@ -69,7 +69,7 @@ export default function ResetPasswordPage(): ReactNode {
               value={confirm}
               onChange={(event) => setConfirm(event.target.value)}
               placeholder="Confirm password"
-              className="w-full bg-[color:var(--mda-cyan-muted)] px-4 py-3 font-mda text-white placeholder:text-white/50 focus:outline-none"
+              className="min-h-11 w-full border border-mda-bezel bg-mda-panel px-4 font-mda text-mda-ink placeholder:text-mda-ink-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mda-focus"
             />
             {error ? (
               <p className="font-mda text-sm text-[color:var(--mda-danger)]" role="alert">
