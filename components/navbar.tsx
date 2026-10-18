@@ -43,7 +43,7 @@ export default function Navbar() {
   return (
     <header className="w-full z-[30] border-b border-white/10 bg-white/5 backdrop-blur-xl">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex h-14 items-center w-full">
+        <div className="flex h-16 items-center w-full">
             <Link
               href="/"
               className="mr-6 flex items-center space-x-0"

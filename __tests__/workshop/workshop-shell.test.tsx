@@ -1,0 +1,176 @@
+import { useState, type ComponentProps } from "react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { axe, toHaveNoViolations } from "jest-axe";
+import { WorkshopShell } from "@/app/workshop/workshop-shell";
+
+expect.extend(toHaveNoViolations);
+
+const pillars = [
+  { label: "Consistency", value: 82 },
+  { label: "Power", value: 79 },
+  { label: "Resilience", value: 74 },
+  { label: "Disruption", value: 68 },
+];
+
+function renderShell(overrides: Partial<ComponentProps<typeof WorkshopShell>> = {}) {
+  const onRename = jest.fn();
+  const onBackToArchives = jest.fn();
+  const onTabChange = jest.fn();
+  render(
+    <WorkshopShell
+      deckName="Branded Despia"
+      deckFormat="TCG"
+      mainCount={40}
+      extraCount={15}
+      sideCount={15}
+      coverCard={null}
+      gradeLetter="B"
+      pillars={pillars}
+      gradeLoading={false}
+      banlistFault={false}
+      tab="build"
+      onTabChange={onTabChange}
+      onBackToArchives={onBackToArchives}
+      onRename={onRename}
+      {...overrides}
+    >
+      <p>Sheet body</p>
+    </WorkshopShell>,
+  );
+  return { onRename, onBackToArchives, onTabChange };
+}
+
+describe("WorkshopShell", () => {
+  it("has no detectable accessibility violations", async () => {
+    const { container } = render(
+      <WorkshopShell
+        deckName="Branded Despia"
+        deckFormat="TCG"
+        mainCount={40}
+        extraCount={15}
+        sideCount={15}
+        coverCard={null}
+        gradeLetter="B"
+        pillars={pillars}
+        gradeLoading={false}
+        banlistFault
+        tab="build"
+        onTabChange={jest.fn()}
+        onBackToArchives={jest.fn()}
+        onRename={jest.fn()}
+      >
+        <p>Sheet body</p>
+      </WorkshopShell>,
+    );
+    expect(await axe(container)).toHaveNoViolations();
+  });
+
+  it("shows TCG side count and hides it for Master Duel", () => {
+    const { unmount } = render(
+      <WorkshopShell
+        deckName="Branded Despia"
+        deckFormat="TCG"
+        mainCount={40}
+        extraCount={15}
+        sideCount={12}
+        coverCard={null}
+        gradeLetter="B"
+        pillars={pillars}
+        gradeLoading={false}
+        banlistFault={false}
+        tab="build"
+        onTabChange={jest.fn()}
+        onBackToArchives={jest.fn()}
+        onRename={jest.fn()}
+      >
+        <p>Sheet body</p>
+      </WorkshopShell>,
+    );
+    expect(screen.getByText("Side")).toBeInTheDocument();
+    expect(screen.getByText("12")).toBeInTheDocument();
+    unmount();
+
+    renderShell({ deckFormat: "Master Duel", sideCount: 12 });
+    expect(screen.getByText("MD")).toBeInTheDocument();
+    expect(screen.queryByText("Side")).not.toBeInTheDocument();
+  });
+
+  it("shows the banlist warning only when the deck has a fault", () => {
+    renderShell();
+    expect(screen.queryByRole("img", { name: "Banlist fault" })).not.toBeInTheDocument();
+    cleanup();
+    renderShell({ banlistFault: true });
+    expect(screen.getByRole("img", { name: "Banlist fault" })).toBeInTheDocument();
+  });
+
+  it("commits a renamed deck on Enter and cancels on Escape", () => {
+    const { onRename } = renderShell();
+    fireEvent.click(screen.getByRole("button", { name: "Edit deck name" }));
+    const field = screen.getByRole("textbox", { name: "Deck name" });
+    fireEvent.change(field, { target: { value: "Despia Endboard" } });
+    act(() => {
+      field.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+      field.dispatchEvent(new FocusEvent("blur", { bubbles: true }));
+    });
+    expect(onRename).toHaveBeenCalledTimes(1);
+    expect(onRename).toHaveBeenCalledWith("Despia Endboard");
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit deck name" }));
+    const again = screen.getByRole("textbox", { name: "Deck name" });
+    fireEvent.change(again, { target: { value: "Discarded" } });
+    act(() => {
+      again.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+      again.dispatchEvent(new FocusEvent("blur", { bubbles: true }));
+    });
+    expect(onRename).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("heading", { name: "Branded Despia" })).toBeInTheDocument();
+  });
+
+  it("commits a renamed deck when the field loses focus", () => {
+    const { onRename } = renderShell();
+    fireEvent.click(screen.getByRole("button", { name: "Edit deck name" }));
+    const field = screen.getByRole("textbox", { name: "Deck name" });
+    fireEvent.change(field, { target: { value: "Branded Opening" } });
+    fireEvent.blur(field);
+    expect(onRename).toHaveBeenCalledTimes(1);
+    expect(onRename).toHaveBeenCalledWith("Branded Opening");
+  });
+
+  it("returns to Archives and moves between modes from the keyboard", () => {
+    const onBackToArchives = jest.fn();
+    function Harness() {
+      const [tab, setTab] = useState<"build" | "matchups" | "combos">("build");
+      return (
+        <WorkshopShell
+          deckName="Branded Despia"
+          deckFormat="TCG"
+          mainCount={40}
+          extraCount={15}
+          sideCount={15}
+          coverCard={null}
+          gradeLetter="B"
+          pillars={pillars}
+          gradeLoading={false}
+          banlistFault={false}
+          tab={tab}
+          onTabChange={setTab}
+          onBackToArchives={onBackToArchives}
+          onRename={jest.fn()}
+        >
+          <p>Sheet body</p>
+        </WorkshopShell>
+      );
+    }
+    render(<Harness />);
+    fireEvent.click(screen.getByRole("button", { name: "Archives" }));
+    expect(onBackToArchives).toHaveBeenCalledTimes(1);
+
+    fireEvent.keyDown(screen.getByRole("tab", { name: "Build" }), { key: "ArrowRight" });
+    expect(screen.getByRole("tab", { name: "Matchups" })).toHaveFocus();
+    fireEvent.keyDown(screen.getByRole("tab", { name: "Matchups" }), { key: "End" });
+    expect(screen.getByRole("tab", { name: "Combos" })).toHaveFocus();
+    fireEvent.keyDown(screen.getByRole("tab", { name: "Combos" }), { key: "Home" });
+    expect(screen.getByRole("tab", { name: "Build" })).toHaveFocus();
+    expect(screen.getByText("Sheet body")).toBeInTheDocument();
+  });
+});

@@ -2,11 +2,6 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { MdaAppHeader } from "@/components/mda/app-header";
-import {
-  WorkshopDeckChrome,
-  type WorkshopTab,
-} from "@/components/mda/workshop-deck-chrome";
 import { WorkshopBuildPane } from "@/components/mda/workshop-build-pane";
 import { WorkshopMatchupsPane } from "@/components/mda/workshop-matchups-pane";
 import { WorkshopCombosPane } from "@/components/mda/workshop-combos-pane";
@@ -14,21 +9,19 @@ import { useDeck } from "@/context/deck-context";
 import { useFormatStore } from "@/store/modeStore";
 import { useWorkshopFacts } from "@/hooks/useWorkshopFacts";
 import { workshopGradeFromAxes } from "@/lib/workshop/grade";
+import { deckHasBanlistFault } from "@/lib/workshop/banlist-fault";
 import type { DeckFormat } from "@/types/deck";
+import { WorkshopShell, type WorkshopShellTab } from "./workshop-shell";
 
-const TAB_WATERMARK: Record<WorkshopTab, string> = {
-  build: "Build",
-  matchups: "Matchups",
-  combos: "Combos",
-};
+const PILLARS = ["Consistency", "Power", "Resilience", "Disruption"] as const;
 
 export default function WorkshopPage(): ReactNode {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { currentDeck, updateDeckFormat, renameDeck } = useDeck();
+  const { currentDeck, updateDeckFormat, renameDeck, banlist } = useDeck();
   const deckFormat = useFormatStore((state) => state.deckFormat);
   const setDeckFormat = useFormatStore((state) => state.setDeckFormat);
-  const [tab, setTab] = useState<WorkshopTab>("build");
+  const [tab, setTab] = useState<WorkshopShellTab>("build");
   const { facts, loading: factsLoading, error: factsError } = useWorkshopFacts();
 
   const grade = useMemo(
@@ -49,58 +42,49 @@ export default function WorkshopPage(): ReactNode {
     }
   }, [searchParams, currentDeck.deckFormat, deckFormat, setDeckFormat, updateDeckFormat]);
 
+  const coverCard = currentDeck.mainDeck[0] ?? currentDeck.extraDeck[0] ?? null;
+  const banlistFault = useMemo(
+    () => deckHasBanlistFault(currentDeck, banlist),
+    [banlist, currentDeck],
+  );
+
+  const pillars = PILLARS.map((label) => ({
+    label,
+    value: grade?.scores.find((score) => score.label === label)?.value ?? null,
+  }));
+
   return (
-    <div className="relative flex h-full min-h-0 flex-col overflow-hidden bg-mda-bg text-mda-ink">
-      <MdaAppHeader theme="light" onLoginClick={() => router.push("/")} />
-      <div className="relative flex min-h-0 flex-1 flex-col">
-        <p
-          className="pointer-events-none absolute inset-x-0 top-[48px] z-0 select-none overflow-hidden pr-4 text-right font-display text-[clamp(4rem,18vw,11rem)] font-bold uppercase leading-none text-mda-watermark sm:top-[24px] sm:pr-8"
-          aria-hidden
-        >
-          {TAB_WATERMARK[tab]}
-        </p>
-        <WorkshopDeckChrome
-          deckName={currentDeck.name}
-          deckFormat={currentDeck.deckFormat}
-          mainCount={currentDeck.mainDeck.length}
-          extraCount={currentDeck.extraDeck.length}
-          sideCount={currentDeck.sideDeck.length}
-          coverCard={currentDeck.mainDeck[0] ?? currentDeck.extraDeck[0] ?? null}
-          activeTab={tab}
-          onTabChange={setTab}
-          onBackToArchives={() => router.push("/deck-archives")}
-          onRename={renameDeck}
-          grade={grade}
-          gradeLoading={factsLoading}
-        />
-        <div className="relative z-[1] flex min-h-0 flex-1 flex-col px-4 pb-4 pt-3 sm:px-6">
-          {tab === "build" ? (
-            <div className="min-h-0 flex-1 overflow-hidden">
-              <WorkshopBuildPane
-                onOpenWorkshopTab={(next) => setTab(next)}
-              />
-            </div>
-          ) : null}
-          {tab === "matchups" ? (
-            <div className="relative min-h-0 flex-1 overflow-hidden bg-[#B9BEBE]/50">
-              <WorkshopMatchupsPane
-                facts={facts}
-                loading={factsLoading}
-                error={factsError}
-              />
-            </div>
-          ) : null}
-          {tab === "combos" ? (
-            <div className="relative min-h-0 flex-1 overflow-hidden">
-              <WorkshopCombosPane
-                facts={facts}
-                loading={factsLoading}
-                error={factsError}
-              />
-            </div>
-          ) : null}
+    <WorkshopShell
+      deckName={currentDeck.name}
+      deckFormat={currentDeck.deckFormat}
+      mainCount={currentDeck.mainDeck.length}
+      extraCount={currentDeck.extraDeck.length}
+      sideCount={currentDeck.sideDeck.length}
+      coverCard={coverCard}
+      gradeLetter={grade?.letter ?? null}
+      pillars={pillars}
+      gradeLoading={factsLoading}
+      banlistFault={banlistFault}
+      tab={tab}
+      onTabChange={setTab}
+      onBackToArchives={() => router.push("/deck-archives")}
+      onRename={renameDeck}
+    >
+      {tab === "build" ? (
+        <div className="h-full min-h-0 flex-1 overflow-hidden">
+          <WorkshopBuildPane onOpenWorkshopTab={setTab} />
         </div>
-      </div>
-    </div>
+      ) : null}
+      {tab === "matchups" ? (
+        <div className="h-full min-h-0 flex-1 overflow-hidden">
+          <WorkshopMatchupsPane facts={facts} loading={factsLoading} error={factsError} />
+        </div>
+      ) : null}
+      {tab === "combos" ? (
+        <div className="h-full min-h-0 flex-1 overflow-hidden">
+          <WorkshopCombosPane facts={facts} loading={factsLoading} error={factsError} />
+        </div>
+      ) : null}
+    </WorkshopShell>
   );
 }
