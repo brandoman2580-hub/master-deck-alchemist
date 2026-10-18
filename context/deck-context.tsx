@@ -180,7 +180,12 @@ export function DeckProvider({ children }: { children: ReactNode }) {
   );
 
   const clearDeck = useCallback((deckFormat: DeckFormat = "Master Duel") => {
+    if (saveTimeout.current) {
+      clearTimeout(saveTimeout.current);
+      saveTimeout.current = null;
+    }
     useLiveDeckStore.getState().clearDeck(deckFormat);
+    currentDeckRef.current = useLiveDeckStore.getState().currentDeck;
     clearLiveDeckSession();
     lastInvalidatedMetaRef.current = null;
   }, []);

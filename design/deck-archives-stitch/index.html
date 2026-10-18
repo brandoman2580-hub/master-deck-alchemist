@@ -1,0 +1,1507 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en" style="height: 100vh; overflow: hidden; margin: 0; padding: 0;"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Deck Archives - Vault Refined - Controls and Costs</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="fonts/families.css" rel="stylesheet"/>
+<link href="fonts/material-symbols.css" rel="stylesheet"/>
+<script src="vendor/tailwind.js"></script>
+<style>
+  * {
+    border-radius: 0px !important;
+    box-shadow: none !important;
+  }
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    background-color: #0c0e12;
+    color: #e2e8f0;
+    font-family: 'Open Sans', sans-serif;
+    margin: 0;
+    padding: 0;
+    -webkit-font-smoothing: antialiased;
+    height: 100vh;
+    overflow: hidden;
+  }
+  .font-orbitron {
+    font-family: 'Orbitron', monospace;
+  }
+  .font-space {
+    font-family: 'Space Grotesk', sans-serif;
+    font-variant-numeric: tabular-nums;
+  }
+  .focus-ice:focus-visible, .focus-ice:focus {
+    outline: none;
+    border: 1px solid #bfe5f3 !important;
+  }
+
+  /* SIDE NAV LABELS: Resting transparent/subtle, on hover background #28303b and color #e2e8f0 */
+  .side-nav-link {
+    min-height: 44px;
+    border-left: 2px solid transparent;
+    border: 1px solid transparent;
+    color: #8a96a6;
+    background-color: transparent;
+    transition: background-color 0.15s ease, color 0.15s ease;
+    text-decoration: none;
+    cursor: pointer;
+    user-select: none;
+  }
+  .side-nav-link:hover {
+    background-color: #28303b !important;
+    color: #e2e8f0 !important;
+    border-left: 2px solid transparent !important;
+  }
+
+  /* Active tab styling via :has() on body referencing jump radios */
+  body:has(#jump-top:checked) label[for="jump-top"],
+  body:has(#jump-pinned:checked) label[for="jump-pinned"],
+  body:has(#jump-tcg:checked) label[for="jump-tcg"],
+  body:has(#jump-master-duel:checked) label[for="jump-master-duel"] {
+    border-left: 2px solid #bfe5f3 !important;
+    color: #e2e8f0 !important;
+    background-color: #28303b !important;
+  }
+
+  /* Focusable Radio Jump targets */
+  .jump-target-radio {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  /* ALL BUTTONS & INVERTIBLE CONTROLS:
+     Resting: background #14181f, text #e2e8f0, border 1px solid #28303b
+     Hover: background #e2e8f0, text #0c0e12, border 1px solid #28303b */
+  .btn-editorial {
+    min-height: 44px;
+    background-color: #14181f;
+    border: 1px solid #28303b;
+    color: #e2e8f0;
+    transition: background-color 0.15s ease, color 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
+    box-sizing: border-box;
+    cursor: pointer;
+  }
+  .btn-editorial:hover, .btn-editorial:active {
+    background-color: #e2e8f0 !important;
+    color: #0c0e12 !important;
+    border: 1px solid #28303b !important;
+  }
+  .btn-editorial:hover .material-symbols-outlined,
+  .btn-editorial:hover svg {
+    color: #0c0e12 !important;
+    stroke: #0c0e12 !important;
+    fill: #0c0e12 !important;
+  }
+  .btn-editorial:hover .sub-accent-bar {
+    background-color: #0c0e12 !important;
+  }
+
+  /* SORT MENU ROWS: invert on hover */
+  .sort-menu-row {
+    min-height: 44px;
+    padding: 0 16px;
+    display: flex;
+    align-items: center;
+    width: 100%;
+    text-align: left;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    background-color: #14181f;
+    color: #e2e8f0;
+    border-bottom: 1px solid #28303b;
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease;
+  }
+  .sort-menu-row:last-child {
+    border-bottom: none;
+  }
+  .sort-menu-row:hover {
+    background-color: #e2e8f0 !important;
+    color: #0c0e12 !important;
+    border-color: #28303b !important;
+  }
+
+  /* MORE MENU DROPDOWN & ITEMS */
+  .more-menu {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: calc(100% + 4px);
+    z-index: 70;
+    min-width: 140px;
+    background: #161a20;
+    border: 1px solid #28303b;
+    flex-direction: column;
+  }
+  .menu-item {
+    min-height: 40px;
+    padding: 0 16px;
+    display: flex;
+    align-items: center;
+    color: #e2e8f0;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    border-bottom: 1px solid #28303b;
+    cursor: pointer;
+    background: #161a20;
+    transition: background-color 0.15s ease;
+  }
+  .menu-item:last-child {
+    border-bottom: none;
+  }
+  .menu-item:hover {
+    background-color: #28303b !important;
+    color: #e2e8f0 !important;
+    text-decoration: none !important;
+  }
+
+  /* OVERLAYS & MODALS (Controlled by vault-layer radio group) */
+  .overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 80;
+    background: rgba(12, 14, 18, 0.88);
+    align-items: center;
+    justify-content: center;
+  }
+  .global-more-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 65;
+  }
+
+  /* UNIFIED RADIO GROUP DISPLAY LOGIC VIA :has() */
+  body:has(#modal-alerts:checked) #alerts-modal { display: flex; }
+  body:has(#modal-deck-tcg:checked) #deck-list-tcg-modal { display: flex; }
+  body:has(#modal-deck-md:checked) #deck-list-md-modal { display: flex; }
+  body:has(#modal-rename:checked) #rename-modal { display: flex; }
+  body:has(#modal-copy:checked) #copy-modal { display: flex; }
+  body:has(#modal-share:checked) #share-modal { display: flex; }
+  body:has(#modal-delete:checked) #delete-modal { display: flex; }
+
+  /* More menus opening via radio group */
+  body:has(#more-pinned-1:checked) #menu-pinned-1 { display: flex; }
+  body:has(#more-pinned-2:checked) #menu-pinned-2 { display: flex; }
+  body:has(#more-tcg-1:checked) #menu-tcg-1 { display: flex; }
+  body:has(#more-tcg-2:checked) #menu-tcg-2 { display: flex; }
+  body:has(#more-tcg-3:checked) #menu-tcg-3 { display: flex; }
+  body:has(#more-tcg-4:checked) #menu-tcg-4 { display: flex; }
+  body:has(#more-md-1:checked) #menu-md-1 { display: flex; }
+  body:has(#more-md-2:checked) #menu-md-2 { display: flex; }
+  body:has(#more-md-3:checked) #menu-md-3 { display: flex; }
+  body:has(#more-md-4:checked) #menu-md-4 { display: flex; }
+
+  /* Show global backdrop when ANY more menu is checked */
+  body:has(input[name="vault-layer"][id^="more-"]:checked) .global-more-backdrop {
+    display: block;
+  }
+
+  /* Sort dropdown via checkbox */
+  .sort-dropdown-menu {
+    display: none;
+    position: absolute;
+    left: 0;
+    top: calc(100% + 4px);
+    z-index: 70;
+    min-width: 160px;
+    background: #161a20;
+    border: 1px solid #28303b;
+    flex-direction: column;
+  }
+  #sort-dropdown-state:checked ~ .sort-dropdown-menu {
+    display: flex;
+  }
+  #sort-dropdown-state:checked ~ .sort-backdrop {
+    display: block;
+  }
+  .sort-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+  }
+
+  /* TCG Details List/Grid tabs */
+  #view-tcg-list:checked ~ .view-tcg-list-content { display: flex; }
+  #view-tcg-grid:checked ~ .view-tcg-list-content { display: none; }
+  #view-tcg-list:checked ~ .view-tcg-grid-content { display: none; }
+  #view-tcg-grid:checked ~ .view-tcg-grid-content { display: grid; }
+  #view-tcg-list:checked ~ .tcg-tab-controls label[for="view-tcg-list"] {
+    background-color: #e2e8f0;
+    color: #0c0e12;
+  }
+  #view-tcg-grid:checked ~ .tcg-tab-controls label[for="view-tcg-grid"] {
+    background-color: #e2e8f0;
+    color: #0c0e12;
+  }
+
+  /* MD Details List/Grid tabs */
+  #view-md-list:checked ~ .view-md-list-content { display: flex; }
+  #view-md-grid:checked ~ .view-md-list-content { display: none; }
+  #view-md-list:checked ~ .view-md-grid-content { display: none; }
+  #view-md-grid:checked ~ .view-md-grid-content { display: grid; }
+  #view-md-list:checked ~ .md-tab-controls label[for="view-md-list"] {
+    background-color: #e2e8f0;
+    color: #0c0e12;
+  }
+  #view-md-grid:checked ~ .md-tab-controls label[for="view-md-grid"] {
+    background-color: #e2e8f0;
+    color: #0c0e12;
+  }
+
+  /* Format option radio styling */
+  input[name="format-choice"]:checked + label {
+    background-color: #e2e8f0;
+    color: #0c0e12;
+  }
+
+  .custom-scroll::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .custom-scroll::-webkit-scrollbar-track {
+    background: #0c0e12;
+  }
+  .custom-scroll::-webkit-scrollbar-thumb {
+    background: #28303b;
+  }
+  .custom-scroll::-webkit-scrollbar-thumb:hover {
+    background: #41484a;
+  }
+
+  /* MD Rarity Badges */
+  .rarity-n {
+    background-color: #8a96a6;
+    color: #0c0e12;
+  }
+  .rarity-r {
+    background-color: #3b82f6;
+    color: #0c0e12;
+  }
+  .rarity-sr {
+    background-color: #d4a017;
+    color: #0c0e12;
+  }
+  .rarity-ur {
+    background: linear-gradient(135deg, #7c3aed, #67e8f9);
+    color: #0c0e12;
+  }
+</style>
+</head>
+<body class="bg-[#0c0e12] text-[#e2e8f0] antialiased select-none" style="height: 100vh; overflow: hidden; margin: 0; padding: 0; display: flex; flex-direction: column;">
+<!-- ======================================================== -->
+<!-- UNIFIED VAULT-LAYER RADIO GROUP FOR ALL MENUS AND MODALS -->
+<!-- ======================================================== -->
+<!-- Default inactive/closed state -->
+<input checked="" class="hidden" id="vault-none" name="vault-layer" type="radio"/>
+<!-- Dialog / Modal Radios -->
+<input class="hidden" id="modal-alerts" name="vault-layer" type="radio"/>
+<input class="hidden" id="modal-deck-tcg" name="vault-layer" type="radio"/>
+<input class="hidden" id="modal-deck-md" name="vault-layer" type="radio"/>
+<input class="hidden" id="modal-rename" name="vault-layer" type="radio"/>
+<input class="hidden" id="modal-copy" name="vault-layer" type="radio"/>
+<input class="hidden" id="modal-share" name="vault-layer" type="radio"/>
+<input class="hidden" id="modal-delete" name="vault-layer" type="radio"/>
+<!-- Card More Menu Radios -->
+<input class="hidden" id="more-pinned-1" name="vault-layer" type="radio"/>
+<input class="hidden" id="more-pinned-2" name="vault-layer" type="radio"/>
+<input class="hidden" id="more-tcg-1" name="vault-layer" type="radio"/>
+<input class="hidden" id="more-tcg-2" name="vault-layer" type="radio"/>
+<input class="hidden" id="more-tcg-3" name="vault-layer" type="radio"/>
+<input class="hidden" id="more-tcg-4" name="vault-layer" type="radio"/>
+<input class="hidden" id="more-md-1" name="vault-layer" type="radio"/>
+<input class="hidden" id="more-md-2" name="vault-layer" type="radio"/>
+<input class="hidden" id="more-md-3" name="vault-layer" type="radio"/>
+<input class="hidden" id="more-md-4" name="vault-layer" type="radio"/>
+<!-- Global backdrop for more menus (clicking outside resets to vault-none) -->
+<label class="global-more-backdrop cursor-pointer" for="vault-none"></label>
+<!-- Full-width header above everything: flex-none / shrink-0, left-aligned, padding 32px 48px -->
+<header class="w-full bg-[#0c0e12] border-b border-[#28303b] select-none shrink-0 z-40" style="padding: 32px 48px;">
+<div class="font-orbitron font-semibold text-[14px] tracking-[0.25em] uppercase text-[#f1f5f9] text-left" style="font-family: 'Orbitron', monospace; white-space: nowrap;">MASTER DECK ALCHEMIST</div>
+</header>
+<!-- RAIL AND LIBRARY ROW CONTAINER: flex: 1 1 0%; min-height: 0; display: flex; flex-direction: row; overflow: hidden; -->
+<div class="flex-1 min-h-0 flex flex-row w-full overflow-hidden" style="flex: 1 1 0%;">
+<!-- SIDE RAIL (<aside>): flex-none, width ~260px, height: 100%; border-right: 1px solid #28303b; background: #0c0e12; meets footer directly -->
+<aside class="w-[260px] min-w-[260px] max-w-[260px] shrink-0 h-full border-r border-[#28303b] flex flex-col justify-between z-30 overflow-y-auto custom-scroll bg-[#0c0e12]">
+<div class="flex flex-col">
+<nav class="flex flex-col p-2 gap-1.5" id="side-nav">
+<!-- ALL DECKS Jump Label -->
+<label class="side-nav-link flex items-center px-4 font-space text-[12px] font-semibold tracking-wider uppercase focus-ice" for="jump-top">
+<span class="material-symbols-outlined text-[18px] mr-2.5">view_agenda</span>
+<span>ALL DECKS</span>
+</label>
+<!-- PINNED Jump Label -->
+<label class="side-nav-link flex items-center px-4 font-space text-[12px] font-semibold tracking-wider uppercase focus-ice" for="jump-pinned">
+<span class="material-symbols-outlined text-[18px] mr-2.5">push_pin</span>
+<span>PINNED</span>
+</label>
+<!-- TCG Jump Label -->
+<label class="side-nav-link flex items-center px-4 font-space text-[12px] font-semibold tracking-wider uppercase focus-ice" for="jump-tcg">
+<span class="material-symbols-outlined text-[18px] mr-2.5">style</span>
+<span>TCG</span>
+</label>
+<!-- MASTER DUEL Jump Label -->
+<label class="side-nav-link flex items-center px-4 font-space text-[12px] font-semibold tracking-wider uppercase focus-ice" for="jump-master-duel">
+<span class="material-symbols-outlined text-[18px] mr-2.5">videogame_asset</span>
+<span>MASTER DUEL</span>
+</label>
+<!-- NEW DECK button (Inverts on hover, NOT a tab) -->
+<button class="btn-editorial flex items-center justify-between px-4 mt-2 font-space text-[12px] font-semibold tracking-wider uppercase focus-ice w-full text-left" type="button">
+<span class="flex items-center">
+<span class="material-symbols-outlined text-[18px] mr-2">add</span>
+<span>NEW DECK</span>
+</span>
+<span class="sub-accent-bar w-[2px] h-[10px] bg-[#bfe5f3]"></span>
+</button>
+</nav>
+</div>
+<!-- Status Inset Footer -->
+<div class="p-4 border-t border-[#28303b] bg-[#0c0e12]">
+<div class="flex items-center justify-between font-space text-[12px] font-semibold tracking-wider uppercase text-[#8a96a6]">
+<span>STATUS: ONLINE</span>
+<span class="w-[2px] h-[10px] bg-[#bfe5f3]"></span>
+</div>
+<div class="font-space text-[12px] text-[#8a96a6] mt-2 tracking-wider">SYS // REV 4.2.0</div>
+</div>
+</aside>
+<!-- MAIN LIBRARY COLUMN: flex: 1 1 0%; min-width: 0; height: 100%; (the ONLY region that scrolls!) -->
+<main class="flex-1 min-w-0 h-full flex flex-col bg-[#0c0e12] overflow-hidden" id="main-content" style="flex: 1 1 0%;">
+<!-- TOP COMMAND BAR -->
+<header class="min-h-[56px] border-b border-[#28303b] flex flex-wrap items-center justify-between px-4 lg:px-8 py-2 bg-[#0c0e12] gap-4 select-none shrink-0">
+<!-- Search field -->
+<div class="relative flex items-center flex-1 max-w-sm min-w-[200px]">
+<span class="material-symbols-outlined absolute left-3 text-[18px] text-[#8a96a6]">search</span>
+<input aria-label="Search decks" class="w-full min-h-[44px] pl-10 pr-4 bg-[#0c0e12] border border-[#28303b] text-[15px] font-normal leading-6 text-[#e2e8f0] placeholder-[#8a96a6] focus-ice" placeholder="Search decks" type="text"/>
+</div>
+<!-- Controls on Right -->
+<div class="flex items-center flex-wrap gap-4">
+<span class="font-space text-[12px] font-semibold tracking-wider uppercase text-[#8a96a6]">
+          8 DECKS · 2 PINNED
+        </span>
+<span class="h-6 w-[1px] bg-[#28303b] hidden sm:block"></span>
+<!-- SORT CONTROL: Pure CSS Checkbox dropdown with strict invert hover rows -->
+<div class="relative">
+<input class="hidden" id="sort-dropdown-state" type="checkbox"/>
+<label class="sort-backdrop" for="sort-dropdown-state"></label>
+<label class="btn-editorial sort-btn px-3 flex items-center gap-2 font-space text-[12px] font-semibold tracking-wider uppercase focus-ice cursor-pointer" for="sort-dropdown-state">
+<span>SORT: NEWEST ▾</span>
+</label>
+<div class="sort-dropdown-menu">
+<label class="sort-menu-row" for="sort-dropdown-state">NEWEST</label>
+<label class="sort-menu-row text-[#8a96a6]" for="sort-dropdown-state">OLDEST</label>
+<label class="sort-menu-row text-[#8a96a6]" for="sort-dropdown-state">A–Z</label>
+<label class="sort-menu-row text-[#8a96a6]" for="sort-dropdown-state">Z–A</label>
+<label class="sort-menu-row text-[#8a96a6]" for="sort-dropdown-state">FORMAT</label>
+</div>
+</div>
+<!-- ALERTS BUTTON: Trigger modal-alerts via label with currentColor notifications icon -->
+<label class="btn-editorial alerts-btn px-4 font-space text-[12px] font-semibold tracking-wider uppercase flex items-center gap-2 focus-ice cursor-pointer" for="modal-alerts">
+<span class="material-symbols-outlined text-[18px]" style="color: currentColor;">notifications</span>
+<span>ALERTS (1)</span>
+</label>
+</div>
+</header>
+<!-- MAIN SCROLL AREA (ONLY REGION THAT SCROLLS) -->
+<div class="flex-1 overflow-y-auto px-4 lg:px-8 py-6 custom-scroll scroll-smooth relative">
+<!-- Radio jump target for ALL DECKS / TOP -->
+<input checked="" class="jump-target-radio" id="jump-top" name="section-jump" type="radio"/>
+<div class="scroll-mt-6" id="top"></div>
+<!-- 1. Header breadcrumb and description -->
+<div class="mb-6 pb-3 border-b border-[#28303b] flex flex-col md:flex-row md:items-baseline justify-between gap-2">
+<div>
+<div class="font-space text-[12px] font-semibold tracking-wider uppercase text-[#8a96a6]">ARCHIVES // DECKLISTS</div>
+<p class="text-[15px] leading-6 font-normal text-[#e2e8f0] mt-1">Resume editing a decklist or initiate a new build.</p>
+</div>
+</div>
+<!-- 2. CONTINUE SHELF -->
+<section class="mb-10 scroll-mt-6" id="continue">
+<div class="flex items-center gap-2 mb-4">
+<span class="w-[2px] h-[10px] bg-[#bfe5f3]"></span>
+<h2 class="font-space text-[12px] font-semibold tracking-wider uppercase text-[#8a96a6]">CONTINUE</h2>
+</div>
+<!-- Continue Lead Tile -->
+<div class="bg-[#14181f] border border-[#28303b] p-6 flex flex-col lg:flex-row gap-6 items-stretch justify-between">
+<div class="flex flex-col sm:flex-row gap-6 items-start">
+<!-- Cover placeholder -->
+<div class="w-[140px] h-[140px] min-w-[140px] bg-[#0c0e12] border border-[#28303b] flex items-center justify-center select-none shrink-0">
+<span class="font-space text-[12px] font-semibold tracking-wider uppercase text-[#8a96a6]">COVER</span>
+</div>
+<!-- Tile Details -->
+<div class="flex flex-col justify-between py-1">
+<div>
+<div class="flex items-center gap-3">
+<span class="font-space text-[12px] font-semibold tracking-wider uppercase border border-[#28303b] px-2 py-1 text-white">MASTER DUEL</span>
+<span class="font-space text-[12px] font-semibold tracking-wider uppercase text-[#8a96a6]">MODIFIED 18M AGO</span>
+</div>
+<h3 class="font-space text-[24px] font-semibold text-white tracking-normal mt-2">BRANDED DESPIA</h3>
+<div class="font-space text-[12px] font-semibold tracking-wider uppercase text-[#8a96a6] mt-2">
+                  MAIN 40 · EXTRA 15 · SIDE 15
+                </div>
+</div>
+<div class="mt-4 pt-2">
+<!-- Resume control with play_arrow icon -->
+<label class="btn-editorial px-5 font-space text-[12px] font-semibold tracking-wider uppercase flex items-center gap-2 focus-ice cursor-pointer" for="modal-deck-md">
+<span class="material-symbols-outlined text-[16px]">play_arrow</span>
+<span>RESUME</span>
+<span class="sub-accent-bar w-[2px] h-[10px] bg-[#bfe5f3] ml-2"></span>
+</label>
+</div>
+</div>
+</div>
+<!-- Diagnostic Matrix box on the right -->
+<div class="border border-[#28303b] p-6 lg:min-w-[360px] flex flex-col justify-between bg-[#14181f]">
+<div>
+<div class="font-space text-[12px] font-semibold text-[#8a96a6] tracking-wider uppercase pb-2 mb-3 border-b border-[#28303b] flex justify-between items-center">
+<span>DIAGNOSTIC MATRIX</span>
+<span class="px-2 py-0.5 border border-[#28303b] text-[#bfe5f3] text-[11px]">SAMPLE</span>
+</div>
+<div class="space-y-2">
+<div class="flex items-center justify-between py-1 border-b border-[#28303b]">
+<span class="font-space text-[12px] font-semibold tracking-wider uppercase text-[#8a96a6]">GRADE</span>
+<span class="font-space text-[13px] font-semibold uppercase text-[#e2e8f0]">A</span>
+</div>
+<div class="flex items-center justify-between py-1 border-b border-[#28303b]">
+<span class="font-space text-[12px] font-semibold tracking-wider uppercase text-[#8a96a6]">COMBO LINES</span>
+<span class="font-space text-[13px] font-semibold uppercase text-[#e2e8f0]">6</span>
+</div>
+<div class="flex items-center justify-between py-1">
+<span class="font-space text-[12px] font-semibold tracking-wider uppercase text-[#8a96a6]">MATCHUP</span>
+<span class="font-space text-[13px] font-semibold uppercase text-[#e2e8f0]">WEAK VS KASHTIRA</span>
+</div>
+</div>
+</div>
+<div class="pt-3 border-t border-[#28303b] mt-3 font-space text-[11px] font-semibold tracking-wider uppercase text-[#8a96a6]">
+              TELEMETRY SYNCHRONIZED // ZERO LATENCY
+            </div>
+</div>
+</div>
+</section>
+<!-- 3. PINNED [2 DECKS] SECTION -->
+<input class="jump-target-radio" id="jump-pinned" name="section-jump" type="radio"/>
+<section class="mb-10 scroll-mt-6" id="pinned">
+<div class="flex items-center gap-2 mb-4">
+<span class="w-[2px] h-[10px] bg-[#bfe5f3]"></span>
+<h2 class="font-space text-[12px] font-semibold tracking-wider uppercase text-[#8a96a6]">PINNED</h2>
+<span class="font-space text-[12px] font-semibold tracking-wider text-[#8a96a6]">[2 DECKS]</span>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+<!-- Pinned Tile 1: BRANDED DESPIA (Master Duel) -->
+<div class="bg-[#14181f] border border-[#28303b] p-6 flex flex-col justify-between">
+<div>
+<div class="w-full aspect-square max-h-[180px] bg-[#0c0e12] border border-[#28303b] flex items-center justify-center text-[#8a96a6] text-[12px] font-space tracking-wider uppercase mb-4 select-none">COVER</div>
+<h4 class="font-space text-[16px] font-semibold text-white tracking-normal leading-snug min-h-[2.5rem] mb-2">BRANDED DESPIA</h4>
+<div class="mb-2">
+<span class="inline-block font-space text-[11px] font-semibold tracking-wider uppercase px-2 py-0.5 border border-[#28303b] text-[#bfe5f3]">MASTER DUEL</span>
+</div>
+<div class="font-space text-[12px] text-[#8a96a6] tracking-wider uppercase mb-4">MAIN 40 · EXTRA 15 · SIDE 15</div>
+</div>
+<!-- Actions [UNPIN, RESUME, MORE] -->
+<div class="flex items-center gap-2 pt-3 border-t border-[#28303b] w-full relative">
+<span class="btn-editorial px-3 flex items-center gap-1.5 focus-ice cursor-pointer" title="Unpin Deck">
+<svg class="w-4 h-4 text-[#bfe5f3] fill-current" viewbox="0 0 24 24"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"></path></svg>
+<span class="font-space text-[12px] font-semibold tracking-wider uppercase">UNPIN</span>
+</span>
+<label class="btn-editorial px-3 flex-1 flex items-center justify-center gap-1.5 focus-ice cursor-pointer" for="modal-deck-md">
+<span class="material-symbols-outlined text-[16px]">play_arrow</span>
+<span class="font-space text-[12px] font-semibold tracking-wider uppercase">RESUME</span>
+</label>
+<div class="relative">
+<label class="btn-editorial px-3 flex items-center justify-center focus-ice cursor-pointer" for="more-pinned-1" title="More Options">
+<span class="material-symbols-outlined text-[16px]">more_vert</span>
+<span class="sr-only">MORE</span>
+</label>
+<div class="more-menu" id="menu-pinned-1">
+<label class="menu-item cursor-pointer" for="modal-deck-md">DETAILS</label>
+<label class="menu-item cursor-pointer" for="modal-rename">RENAME</label>
+<label class="menu-item cursor-pointer" for="modal-copy">COPY</label>
+<label class="menu-item cursor-pointer" for="modal-share">SHARE</label>
+<label class="menu-item cursor-pointer text-red-400" for="modal-delete">DELETE</label>
+</div>
+</div>
+</div>
+</div>
+<!-- Pinned Tile 2: LABRYNTH (TCG) -->
+<div class="bg-[#14181f] border border-[#28303b] p-6 flex flex-col justify-between">
+<div>
+<div class="w-full aspect-square max-h-[180px] bg-[#0c0e12] border border-[#28303b] flex items-center justify-center text-[#8a96a6] text-[12px] font-space tracking-wider uppercase mb-4 select-none">COVER</div>
+<h4 class="font-space text-[16px] font-semibold text-white tracking-normal leading-snug min-h-[2.5rem] mb-2">LABRYNTH</h4>
+<div class="mb-2">
+<span class="inline-block font-space text-[11px] font-semibold tracking-wider uppercase px-2 py-0.5 border border-[#28303b] text-[#bfe5f3]">TCG</span>
+</div>
+<div class="font-space text-[12px] text-[#8a96a6] tracking-wider uppercase mb-4">MAIN 40 · EXTRA 15 · SIDE 15</div>
+</div>
+<!-- Actions [UNPIN, RESUME, MORE] -->
+<div class="flex items-center gap-2 pt-3 border-t border-[#28303b] w-full relative">
+<span class="btn-editorial px-3 flex items-center gap-1.5 focus-ice cursor-pointer" title="Unpin Deck">
+<svg class="w-4 h-4 text-[#bfe5f3] fill-current" viewbox="0 0 24 24"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"></path></svg>
+<span class="font-space text-[12px] font-semibold tracking-wider uppercase">UNPIN</span>
+</span>
+<label class="btn-editorial px-3 flex-1 flex items-center justify-center gap-1.5 focus-ice cursor-pointer" for="modal-deck-tcg">
+<span class="material-symbols-outlined text-[16px]">play_arrow</span>
+<span class="font-space text-[12px] font-semibold tracking-wider uppercase">RESUME</span>
+</label>
+<div class="relative">
+<label class="btn-editorial px-3 flex items-center justify-center focus-ice cursor-pointer" for="more-pinned-2" title="More Options">
+<span class="material-symbols-outlined text-[16px]">more_vert</span>
+<span class="sr-only">MORE</span>
+</label>
+<div class="more-menu" id="menu-pinned-2">
+<label class="menu-item cursor-pointer" for="modal-deck-tcg">DETAILS</label>
+<label class="menu-item cursor-pointer" for="modal-rename">RENAME</label>
+<label class="menu-item cursor-pointer" for="modal-copy">COPY</label>
+<label class="menu-item cursor-pointer" for="modal-share">SHARE</label>
+<label class="menu-item cursor-pointer text-red-400" for="modal-delete">DELETE</label>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- 4. TCG [4 DECKS] SECTION -->
+<input class="jump-target-radio" id="jump-tcg" name="section-jump" type="radio"/>
+<section class="mb-10 scroll-mt-6" id="tcg">
+<div class="flex items-center gap-2 mb-4">
+<span class="w-[2px] h-[10px] bg-[#bfe5f3]"></span>
+<h2 class="font-space text-[12px] font-semibold tracking-wider uppercase text-[#8a96a6]">TCG</h2>
+<span class="font-space text-[12px] font-semibold tracking-wider text-[#8a96a6]">[4 DECKS]</span>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+<!-- Tile 1: LABRYNTH (Pinned deck: filled pin icon & UNPIN) -->
+<div class="bg-[#14181f] border border-[#28303b] p-6 flex flex-col justify-between">
+<div>
+<div class="w-full aspect-square max-h-[180px] bg-[#0c0e12] border border-[#28303b] flex items-center justify-center text-[#8a96a6] text-[12px] font-space tracking-wider uppercase mb-4 select-none">COVER</div>
+<h4 class="font-space text-[16px] font-semibold text-white tracking-normal leading-snug min-h-[2.5rem] mb-2">LABRYNTH</h4>
+<div class="mb-2">
+<span class="inline-block font-space text-[11px] font-semibold tracking-wider uppercase px-2 py-0.5 border border-[#28303b] text-[#bfe5f3]">TCG</span>
+</div>
+<div class="font-space text-[12px] text-[#8a96a6] tracking-wider uppercase mb-4">MAIN 40 · EXTRA 15 · SIDE 15</div>
+</div>
+<div class="flex items-center gap-2 pt-3 border-t border-[#28303b] w-full relative">
+<span class="btn-editorial px-3 flex items-center gap-1.5 focus-ice cursor-pointer" title="Unpin Deck">
+<svg class="w-4 h-4 text-[#bfe5f3] fill-current" viewbox="0 0 24 24"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"></path></svg>
+<span class="font-space text-[12px] font-semibold tracking-wider uppercase">UNPIN</span>
+</span>
+<label class="btn-editorial px-3 flex-1 flex items-center justify-center gap-1.5 focus-ice cursor-pointer" for="modal-deck-tcg">
+<span class="material-symbols-outlined text-[16px]">play_arrow</span>
+<span class="font-space text-[12px] font-semibold tracking-wider uppercase">RESUME</span>
+</label>
+<div class="relative">
+<label class="btn-editorial px-3 flex items-center justify-center focus-ice cursor-pointer" for="more-tcg-1" title="More Options">
+<span class="material-symbols-outlined text-[16px]">more_vert</span>
+<span class="sr-only">MORE</span>
+</label>
+<div class="more-menu" id="menu-tcg-1">
+<label class="menu-item cursor-pointer" for="modal-deck-tcg">DETAILS</label>
+<label class="menu-item cursor-pointer" for="modal-rename">RENAME</label>
+<label class="menu-item cursor-pointer" for="modal-copy">COPY</label>
+<label class="menu-item cursor-pointer" for="modal-share">SHARE</label>
+<label class="menu-item cursor-pointer text-red-400" for="modal-delete">DELETE</label>
+</div>
+</div>
+</div>
+</div>
+<!-- Tile 2: VANQUISH SOUL (Outlined pin & PIN) -->
+<div class="bg-[#14181f] border border-[#28303b] p-6 flex flex-col justify-between">
+<div>
+<div class="w-full aspect-square max-h-[180px] bg-[#0c0e12] border border-[#28303b] flex items-center justify-center text-[#8a96a6] text-[12px] font-space tracking-wider uppercase mb-4 select-none">COVER</div>
+<h4 class="font-space text-[16px] font-semibold text-white tracking-normal leading-snug min-h-[2.5rem] mb-2">VANQUISH SOUL</h4>
+<div class="mb-2">
+<span class="inline-block font-space text-[11px] font-semibold tracking-wider uppercase px-2 py-0.5 border border-[#28303b] text-[#bfe5f3]">TCG</span>
+</div>
+<div class="font-space text-[12px] text-[#8a96a6] tracking-wider uppercase mb-4">MAIN 41 · EXTRA 15 · SIDE 15</div>
+</div>
+<div class="flex items-center gap-2 pt-3 border-t border-[#28303b] w-full relative">
+<span class="btn-editorial px-3 flex items-center gap-1.5 focus-ice cursor-pointer" title="Pin Deck">
+<svg class="w-4 h-4 stroke-current fill-none" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"></path></svg>
+<span class="font-space text-[12px] font-semibold tracking-wider uppercase">PIN</span>
+</span>
+<label class="btn-editorial px-3 flex-1 flex items-center justify-center gap-1.5 focus-ice cursor-pointer" for="modal-deck-tcg">
+<span class="material-symbols-outlined text-[16px]">play_arrow</span>
+<span class="font-space text-[12px] font-semibold tracking-wider uppercase">RESUME</span>
+</label>
+<div class="relative">
+<label class="btn-editorial px-3 flex items-center justify-center focus-ice cursor-pointer" for="more-tcg-2" title="More Options">
+<span class="material-symbols-outlined text-[16px]">more_vert</span>
+<span class="sr-only">MORE</span>
+</label>
+<div class="more-menu" id="menu-tcg-2">
+<label class="menu-item cursor-pointer" for="modal-deck-tcg">DETAILS</label>
+<label class="menu-item cursor-pointer" for="modal-rename">RENAME</label>
+<label class="menu-item cursor-pointer" for="modal-copy">COPY</label>
+<label class="menu-item cursor-pointer" for="modal-share">SHARE</label>
+<label class="menu-item cursor-pointer text-red-400" for="modal-delete">DELETE</label>
+</div>
+</div>
+</div>
+</div>
+<!-- Tile 3: MANNADIUM (Outlined pin & PIN) -->
+<div class="bg-[#14181f] border border-[#28303b] p-6 flex flex-col justify-between">
+<div>
+<div class="w-full aspect-square max-h-[180px] bg-[#0c0e12] border border-[#28303b] flex items-center justify-center text-[#8a96a6] text-[12px] font-space tracking-wider uppercase mb-4 select-none">COVER</div>
+<h4 class="font-space text-[16px] font-semibold text-white tracking-normal leading-snug min-h-[2.5rem] mb-2">MANNADIUM</h4>
+<div class="mb-2">
+<span class="inline-block font-space text-[11px] font-semibold tracking-wider uppercase px-2 py-0.5 border border-[#28303b] text-[#bfe5f3]">TCG</span>
+</div>
+<div class="font-space text-[12px] text-[#8a96a6] tracking-wider uppercase mb-4">MAIN 40 · EXTRA 15 · SIDE 15</div>
+</div>
+<div class="flex items-center gap-2 pt-3 border-t border-[#28303b] w-full relative">
+<span class="btn-editorial px-3 flex items-center gap-1.5 focus-ice cursor-pointer" title="Pin Deck">
+<svg class="w-4 h-4 stroke-current fill-none" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"></path></svg>
+<span class="font-space text-[12px] font-semibold tracking-wider uppercase">PIN</span>
+</span>
+<label class="btn-editorial px-3 flex-1 flex items-center justify-center gap-1.5 focus-ice cursor-pointer" for="modal-deck-tcg">
+<span class="material-symbols-outlined text-[16px]">play_arrow</span>
+<span class="font-space text-[12px] font-semibold tracking-wider uppercase">RESUME</span>
+</label>
+<div class="relative">
+<label class="btn-editorial px-3 flex items-center justify-center focus-ice cursor-pointer" for="more-tcg-3" title="More Options">
+<span class="material-symbols-outlined text-[16px]">more_vert</span>
+<span class="sr-only">MORE</span>
+</label>
+<div class="more-menu" id="menu-tcg-3">
+<label class="menu-item cursor-pointer" for="modal-deck-tcg">DETAILS</label>
+<label class="menu-item cursor-pointer" for="modal-rename">RENAME</label>
+<label class="menu-item cursor-pointer" for="modal-copy">COPY</label>
+<label class="menu-item cursor-pointer" for="modal-share">SHARE</label>
+<label class="menu-item cursor-pointer text-red-400" for="modal-delete">DELETE</label>
+</div>
+</div>
+</div>
+</div>
+<!-- Tile 4: UNCHAINED (Outlined pin & PIN) -->
+<div class="bg-[#14181f] border border-[#28303b] p-6 flex flex-col justify-between">
+<div>
+<div class="w-full aspect-square max-h-[180px] bg-[#0c0e12] border border-[#28303b] flex items-center justify-center text-[#8a96a6] text-[12px] font-space tracking-wider uppercase mb-4 select-none">COVER</div>
+<h4 class="font-space text-[16px] font-semibold text-white tracking-normal leading-snug min-h-[2.5rem] mb-2">UNCHAINED</h4>
+<div class="mb-2">
+<span class="inline-block font-space text-[11px] font-semibold tracking-wider uppercase px-2 py-0.5 border border-[#28303b] text-[#bfe5f3]">TCG</span>
+</div>
+<div class="font-space text-[12px] text-[#8a96a6] tracking-wider uppercase mb-4">MAIN 40 · EXTRA 15 · SIDE 15</div>
+</div>
+<div class="flex items-center gap-2 pt-3 border-t border-[#28303b] w-full relative">
+<span class="btn-editorial px-3 flex items-center gap-1.5 focus-ice cursor-pointer" title="Pin Deck">
+<svg class="w-4 h-4 stroke-current fill-none" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"></path></svg>
+<span class="font-space text-[12px] font-semibold tracking-wider uppercase">PIN</span>
+</span>
+<label class="btn-editorial px-3 flex-1 flex items-center justify-center gap-1.5 focus-ice cursor-pointer" for="modal-deck-tcg">
+<span class="material-symbols-outlined text-[16px]">play_arrow</span>
+<span class="font-space text-[12px] font-semibold tracking-wider uppercase">RESUME</span>
+</label>
+<div class="relative">
+<label class="btn-editorial px-3 flex items-center justify-center focus-ice cursor-pointer" for="more-tcg-4" title="More Options">
+<span class="material-symbols-outlined text-[16px]">more_vert</span>
+<span class="sr-only">MORE</span>
+</label>
+<div class="more-menu" id="menu-tcg-4">
+<label class="menu-item cursor-pointer" for="modal-deck-tcg">DETAILS</label>
+<label class="menu-item cursor-pointer" for="modal-rename">RENAME</label>
+<label class="menu-item cursor-pointer" for="modal-copy">COPY</label>
+<label class="menu-item cursor-pointer" for="modal-share">SHARE</label>
+<label class="menu-item cursor-pointer text-red-400" for="modal-delete">DELETE</label>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- 5. MASTER DUEL [4 DECKS] SECTION -->
+<input class="jump-target-radio" id="jump-master-duel" name="section-jump" type="radio"/>
+<section class="mb-10 scroll-mt-6" id="master-duel">
+<div class="flex items-center gap-2 mb-4">
+<span class="w-[2px] h-[10px] bg-[#bfe5f3]"></span>
+<h2 class="font-space text-[12px] font-semibold tracking-wider uppercase text-[#8a96a6]">MASTER DUEL</h2>
+<span class="font-space text-[12px] font-semibold tracking-wider text-[#8a96a6]">[4 DECKS]</span>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+<!-- Tile 1: BRANDED DESPIA (Pinned deck: filled pin icon & UNPIN) -->
+<div class="bg-[#14181f] border border-[#28303b] p-6 flex flex-col justify-between">
+<div>
+<div class="w-full aspect-square max-h-[180px] bg-[#0c0e12] border border-[#28303b] flex items-center justify-center text-[#8a96a6] text-[12px] font-space tracking-wider uppercase mb-4 select-none">COVER</div>
+<h4 class="font-space text-[16px] font-semibold text-white tracking-normal leading-snug min-h-[2.5rem] mb-2">BRANDED DESPIA</h4>
+<div class="mb-2">
+<span class="inline-block font-space text-[11px] font-semibold tracking-wider uppercase px-2 py-0.5 border border-[#28303b] text-[#bfe5f3]">MASTER DUEL</span>
+</div>
+<div class="font-space text-[12px] text-[#8a96a6] tracking-wider uppercase mb-4">MAIN 40 · EXTRA 15 · SIDE 15</div>
+</div>
+<div class="flex items-center gap-2 pt-3 border-t border-[#28303b] w-full relative">
+<span class="btn-editorial px-3 flex items-center gap-1.5 focus-ice cursor-pointer" title="Unpin Deck">
+<svg class="w-4 h-4 text-[#bfe5f3] fill-current" viewbox="0 0 24 24"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"></path></svg>
+<span class="font-space text-[12px] font-semibold tracking-wider uppercase">UNPIN</span>
+</span>
+<label class="btn-editorial px-3 flex-1 flex items-center justify-center gap-1.5 focus-ice cursor-pointer" for="modal-deck-md">
+<span class="material-symbols-outlined text-[16px]">play_arrow</span>
+<span class="font-space text-[12px] font-semibold tracking-wider uppercase">RESUME</span>
+</label>
+<div class="relative">
+<label class="btn-editorial px-3 flex items-center justify-center focus-ice cursor-pointer" for="more-md-1" title="More Options">
+<span class="material-symbols-outlined text-[16px]">more_vert</span>
+<span class="sr-only">MORE</span>
+</label>
+<div class="more-menu" id="menu-md-1">
+<label class="menu-item cursor-pointer" for="modal-deck-md">DETAILS</label>
+<label class="menu-item cursor-pointer" for="modal-rename">RENAME</label>
+<label class="menu-item cursor-pointer" for="modal-copy">COPY</label>
+<label class="menu-item cursor-pointer" for="modal-share">SHARE</label>
+<label class="menu-item cursor-pointer text-red-400" for="modal-delete">DELETE</label>
+</div>
+</div>
+</div>
+</div>
+<!-- Tile 2: PURRELY (Outlined pin & PIN) -->
+<div class="bg-[#14181f] border border-[#28303b] p-6 flex flex-col justify-between">
+<div>
+<div class="w-full aspect-square max-h-[180px] bg-[#0c0e12] border border-[#28303b] flex items-center justify-center text-[#8a96a6] text-[12px] font-space tracking-wider uppercase mb-4 select-none">COVER</div>
+<h4 class="font-space text-[16px] font-semibold text-white tracking-normal leading-snug min-h-[2.5rem] mb-2">PURRELY</h4>
+<div class="mb-2">
+<span class="inline-block font-space text-[11px] font-semibold tracking-wider uppercase px-2 py-0.5 border border-[#28303b] text-[#bfe5f3]">MASTER DUEL</span>
+</div>
+<div class="font-space text-[12px] text-[#8a96a6] tracking-wider uppercase mb-4">MAIN 40 · EXTRA 15 · SIDE 15</div>
+</div>
+<div class="flex items-center gap-2 pt-3 border-t border-[#28303b] w-full relative">
+<span class="btn-editorial px-3 flex items-center gap-1.5 focus-ice cursor-pointer" title="Pin Deck">
+<svg class="w-4 h-4 stroke-current fill-none" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"></path></svg>
+<span class="font-space text-[12px] font-semibold tracking-wider uppercase">PIN</span>
+</span>
+<label class="btn-editorial px-3 flex-1 flex items-center justify-center gap-1.5 focus-ice cursor-pointer" for="modal-deck-md">
+<span class="material-symbols-outlined text-[16px]">play_arrow</span>
+<span class="font-space text-[12px] font-semibold tracking-wider uppercase">RESUME</span>
+</label>
+<div class="relative">
+<label class="btn-editorial px-3 flex items-center justify-center focus-ice cursor-pointer" for="more-md-2" title="More Options">
+<span class="material-symbols-outlined text-[16px]">more_vert</span>
+<span class="sr-only">MORE</span>
+</label>
+<div class="more-menu" id="menu-md-2">
+<label class="menu-item cursor-pointer" for="modal-deck-md">DETAILS</label>
+<label class="menu-item cursor-pointer" for="modal-rename">RENAME</label>
+<label class="menu-item cursor-pointer" for="modal-copy">COPY</label>
+<label class="menu-item cursor-pointer" for="modal-share">SHARE</label>
+<label class="menu-item cursor-pointer text-red-400" for="modal-delete">DELETE</label>
+</div>
+</div>
+</div>
+</div>
+<!-- Tile 3: RESCUE-ACE (Outlined pin & PIN) -->
+<div class="bg-[#14181f] border border-[#28303b] p-6 flex flex-col justify-between">
+<div>
+<div class="w-full aspect-square max-h-[180px] bg-[#0c0e12] border border-[#28303b] flex items-center justify-center text-[#8a96a6] text-[12px] font-space tracking-wider uppercase mb-4 select-none">COVER</div>
+<h4 class="font-space text-[16px] font-semibold text-white tracking-normal leading-snug min-h-[2.5rem] mb-2">RESCUE-ACE</h4>
+<div class="mb-2">
+<span class="inline-block font-space text-[11px] font-semibold tracking-wider uppercase px-2 py-0.5 border border-[#28303b] text-[#bfe5f3]">MASTER DUEL</span>
+</div>
+<div class="font-space text-[12px] text-[#8a96a6] tracking-wider uppercase mb-4">MAIN 42 · EXTRA 15 · SIDE 15</div>
+</div>
+<div class="flex items-center gap-2 pt-3 border-t border-[#28303b] w-full relative">
+<span class="btn-editorial px-3 flex items-center gap-1.5 focus-ice cursor-pointer" title="Pin Deck">
+<svg class="w-4 h-4 stroke-current fill-none" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"></path></svg>
+<span class="font-space text-[12px] font-semibold tracking-wider uppercase">PIN</span>
+</span>
+<label class="btn-editorial px-3 flex-1 flex items-center justify-center gap-1.5 focus-ice cursor-pointer" for="modal-deck-md">
+<span class="material-symbols-outlined text-[16px]">play_arrow</span>
+<span class="font-space text-[12px] font-semibold tracking-wider uppercase">RESUME</span>
+</label>
+<div class="relative">
+<label class="btn-editorial px-3 flex items-center justify-center focus-ice cursor-pointer" for="more-md-3" title="More Options">
+<span class="material-symbols-outlined text-[16px]">more_vert</span>
+<span class="sr-only">MORE</span>
+</label>
+<div class="more-menu" id="menu-md-3">
+<label class="menu-item cursor-pointer" for="modal-deck-md">DETAILS</label>
+<label class="menu-item cursor-pointer" for="modal-rename">RENAME</label>
+<label class="menu-item cursor-pointer" for="modal-copy">COPY</label>
+<label class="menu-item cursor-pointer" for="modal-share">SHARE</label>
+<label class="menu-item cursor-pointer text-red-400" for="modal-delete">DELETE</label>
+</div>
+</div>
+</div>
+</div>
+<!-- Tile 4: RUNICK (Outlined pin & PIN) -->
+<div class="bg-[#14181f] border border-[#28303b] p-6 flex flex-col justify-between">
+<div>
+<div class="w-full aspect-square max-h-[180px] bg-[#0c0e12] border border-[#28303b] flex items-center justify-center text-[#8a96a6] text-[12px] font-space tracking-wider uppercase mb-4 select-none">COVER</div>
+<h4 class="font-space text-[16px] font-semibold text-white tracking-normal leading-snug min-h-[2.5rem] mb-2">RUNICK</h4>
+<div class="mb-2">
+<span class="inline-block font-space text-[11px] font-semibold tracking-wider uppercase px-2 py-0.5 border border-[#28303b] text-[#bfe5f3]">MASTER DUEL</span>
+</div>
+<div class="font-space text-[12px] text-[#8a96a6] tracking-wider uppercase mb-4">MAIN 40 · EXTRA 15 · SIDE 15</div>
+</div>
+<div class="flex items-center gap-2 pt-3 border-t border-[#28303b] w-full relative">
+<span class="btn-editorial px-3 flex items-center gap-1.5 focus-ice cursor-pointer" title="Pin Deck">
+<svg class="w-4 h-4 stroke-current fill-none" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"></path></svg>
+<span class="font-space text-[12px] font-semibold tracking-wider uppercase">PIN</span>
+</span>
+<label class="btn-editorial px-3 flex-1 flex items-center justify-center gap-1.5 focus-ice cursor-pointer" for="modal-deck-md">
+<span class="material-symbols-outlined text-[16px]">play_arrow</span>
+<span class="font-space text-[12px] font-semibold tracking-wider uppercase">RESUME</span>
+</label>
+<div class="relative">
+<label class="btn-editorial px-3 flex items-center justify-center focus-ice cursor-pointer" for="more-md-4" title="More Options">
+<span class="material-symbols-outlined text-[16px]">more_vert</span>
+<span class="sr-only">MORE</span>
+</label>
+<div class="more-menu" id="menu-md-4">
+<label class="menu-item cursor-pointer" for="modal-deck-md">DETAILS</label>
+<label class="menu-item cursor-pointer" for="modal-rename">RENAME</label>
+<label class="menu-item cursor-pointer" for="modal-copy">COPY</label>
+<label class="menu-item cursor-pointer" for="modal-share">SHARE</label>
+<label class="menu-item cursor-pointer text-red-400" for="modal-delete">DELETE</label>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+</div>
+</main>
+</div>
+<!-- EDITORIAL FOOTER PINNED TO VIEWPORT BOTTOM -->
+<footer class="w-full shrink-0 flex flex-row justify-between items-center px-6 border-t border-[#28303b] bg-[#0c0e12] select-none z-20 min-h-[48px] h-[52px]">
+<div class="font-space text-[12px] font-semibold tracking-wider uppercase text-[#8a96a6]">
+    © 2025 MASTER DECK ALCHEMIST. TECHNICAL MANUSCRIPT SPECIFICATION.
+  </div>
+<div class="font-space text-[12px] tracking-wider uppercase text-[#8a96a6]">
+    YU-GI-OH! IS THE INTELLECTUAL PROPERTY OF KONAMI AND 4K TV.
+  </div>
+</footer>
+<!-- ======================================================== -->
+<!-- PURE CSS OVERLAYS / MODALS (CONTROLLED BY VAULT-LAYER)   -->
+<!-- ======================================================== -->
+<!-- 1. #alerts-modal -->
+<div class="overlay" id="alerts-modal">
+<label aria-label="Close alerts modal backdrop" class="absolute inset-0 cursor-pointer" for="vault-none"></label>
+<div aria-labelledby="alerts-modal-title" aria-modal="true" class="relative z-10 w-full max-w-lg bg-[#14181f] border border-[#28303b] p-6 flex flex-col" role="dialog">
+<div class="flex items-center justify-between pb-3 border-b border-[#28303b] mb-4">
+<div class="flex items-center gap-2">
+<span class="w-[2px] h-[10px] bg-[#bfe5f3]"></span>
+<h3 class="font-space text-[13px] font-semibold tracking-wider uppercase text-white" id="alerts-modal-title">
+          ALERTS // SYSTEM DIAGNOSTICS
+        </h3>
+</div>
+<label aria-label="Close" class="btn-editorial min-h-[32px] min-w-[32px] px-2 flex items-center justify-center text-[#8a96a6] hover:text-[#0c0e12] focus-ice cursor-pointer" for="vault-none">✕</label>
+</div>
+<div class="flex flex-col gap-5">
+<div>
+<div class="font-space text-[12px] font-semibold tracking-wider uppercase text-[#8a96a6] mb-2">FEED STATUS</div>
+<div class="border border-[#28303b] bg-[#0c0e12] p-3 space-y-2">
+<div class="flex items-center justify-between font-space text-[12px] py-1 border-b border-[#28303b]">
+<span class="text-[#e2e8f0] uppercase">DATABASE</span>
+<span class="text-[#8a96a6]">SYNCHRONIZED (12ms ago)</span>
+</div>
+<div class="flex items-center justify-between font-space text-[12px] py-1 border-b border-[#28303b]">
+<span class="text-[#e2e8f0] uppercase">TCG BANLIST</span>
+<span class="text-[#8a96a6]">ACTIVE 2025.01</span>
+</div>
+<div class="flex items-center justify-between font-space text-[12px] py-1 border-b border-[#28303b]">
+<span class="text-[#e2e8f0] uppercase">MASTER DUEL BANLIST</span>
+<span class="text-[#8a96a6]">ACTIVE 2025.02</span>
+</div>
+<div class="flex items-center justify-between font-space text-[12px] py-1">
+<span class="text-[#e2e8f0] uppercase">META DECK DATA</span>
+<span class="text-[#8a96a6]">UPDATED 3M AGO</span>
+</div>
+</div>
+</div>
+<div>
+<div class="font-space text-[12px] font-semibold tracking-wider uppercase text-[#8a96a6] mb-2">LEGALITY</div>
+<div class="border border-[#28303b] bg-[#0c0e12] p-3 space-y-2">
+<div class="flex items-start gap-2">
+<span class="material-symbols-outlined text-red-400 text-[18px] shrink-0 pt-0.5">warning</span>
+<div>
+<div class="font-space text-[13px] font-semibold text-white uppercase">LEGALITY: Purrely, copy limit exceeded</div>
+</div>
+</div>
+<div class="pt-2 border-t border-[#28303b] font-space text-[12px] text-[#8a96a6]">
+            No other legality issues.
+          </div>
+</div>
+</div>
+</div>
+<div class="mt-6 pt-4 border-t border-[#28303b]">
+<label class="btn-editorial w-full font-space text-[12px] font-semibold tracking-wider uppercase flex items-center justify-center focus-ice cursor-pointer" for="vault-none">
+        CLOSE
+      </label>
+</div>
+</div>
+</div>
+<!-- 2. #deck-list-tcg-modal (TCG ARCHIVE - LABRYNTH WITH USD COSTS) -->
+<div class="overlay" id="deck-list-tcg-modal">
+<label aria-label="Close TCG deck list modal backdrop" class="modal-backdrop absolute inset-0 cursor-pointer" for="vault-none"></label>
+<div aria-modal="true" class="relative z-10 w-full max-w-3xl bg-[#14181f] border border-[#28303b] p-6 flex flex-col max-h-[90vh]" role="dialog">
+<div class="flex items-center justify-between pb-3 border-b border-[#28303b] mb-4">
+<div>
+<div class="flex items-center gap-2">
+<span class="w-[2px] h-[10px] bg-[#bfe5f3]"></span>
+<h3 class="font-space text-[13px] font-semibold tracking-wider uppercase text-[#8a96a6]">DECK LIST // TCG ARCHIVE</h3>
+</div>
+<div class="font-space text-[20px] font-semibold text-white mt-1">Labrynth</div>
+<div class="font-space text-[12px] font-semibold tracking-wider uppercase text-[#8a96a6] mt-0.5">
+        TCG · MAIN 40 · EXTRA 15 · SIDE 15
+      </div>
+</div>
+<label class="btn-editorial min-h-[32px] min-w-[32px] px-2 flex items-center justify-center text-[#8a96a6] hover:text-[#0c0e12] focus-ice cursor-pointer" for="vault-none">✕</label>
+</div>
+<!-- SAMPLE DECK COST READOUT (TCG USD) -->
+<div class="mb-4 p-3 bg-[#0c0e12] border border-[#28303b] flex items-center justify-between">
+<div>
+<span class="font-space text-[12px] font-semibold tracking-wider uppercase text-[#8a96a6] block">SAMPLE DECK COST (MARKET VALUATION)</span>
+<span class="font-space text-[20px] font-bold text-white">$482.50 USD <span class="text-[12px] font-normal text-[#bfe5f3]">[SAMPLE]</span></span>
+</div>
+<div class="text-right font-space text-[12px] text-[#8a96a6] tracking-wider uppercase">
+      BASED ON AGGREGATED TCGPLAYER LOW / MID
+    </div>
+</div>
+<!-- View switcher radio architecture -->
+<input checked="" class="hidden" id="view-tcg-list" name="deck-tcg-view" type="radio"/>
+<input class="hidden" id="view-tcg-grid" name="deck-tcg-view" type="radio"/>
+<div class="tcg-tab-controls flex items-center gap-2 mb-4">
+<label class="btn-editorial px-3 py-1 text-[12px] font-space font-semibold tracking-wider uppercase cursor-pointer" for="view-tcg-list">LIST VIEW</label>
+<label class="btn-editorial px-3 py-1 text-[12px] font-space font-semibold tracking-wider uppercase cursor-pointer" for="view-tcg-grid">GRID VIEW</label>
+</div>
+<!-- TCG LIST VIEW CONTENT -->
+<div class="view-tcg-list-content flex-col gap-4 overflow-y-auto custom-scroll pr-1 flex-1">
+<!-- Main Deck -->
+<div>
+<div class="font-space text-[12px] font-semibold tracking-wider uppercase text-[#8a96a6] mb-2 pb-1 border-b border-[#28303b]">MAIN DECK (40)</div>
+<div class="space-y-1 font-space text-[13px]">
+<div class="flex justify-between items-center py-2 px-3 border border-[#28303b] bg-[#0c0e12]">
+<div class="flex items-center gap-3 min-w-0">
+<span class="w-8 h-8 border border-[#28303b] bg-[#14181f] flex items-center justify-center text-[12px] text-[#8a96a6] shrink-0 font-space font-semibold">CVR</span>
+<span class="text-white font-medium truncate">Lady Labrynth of the Silver Castle</span>
+<span class="text-[12px] text-[#8a96a6] uppercase tracking-wider hidden sm:inline">Fiend / Dark / Level 8</span>
+</div>
+<div class="flex items-center gap-4 shrink-0 font-mono text-[12px]">
+<span class="text-[#8a96a6]">$18.50 ea · $55.50 [SAMPLE]</span>
+<span class="text-[#bfe5f3] font-semibold font-space">×3</span>
+</div>
+</div>
+<div class="flex justify-between items-center py-2 px-3 border border-[#28303b] bg-[#0c0e12]">
+<div class="flex items-center gap-3 min-w-0">
+<span class="w-8 h-8 border border-[#28303b] bg-[#14181f] flex items-center justify-center text-[12px] text-[#8a96a6] shrink-0 font-space font-semibold">CVR</span>
+<span class="text-white font-medium truncate">Arianna the Labrynth Servant</span>
+<span class="text-[12px] text-[#8a96a6] uppercase tracking-wider hidden sm:inline">Fiend / Dark / Level 4</span>
+</div>
+<div class="flex items-center gap-4 shrink-0 font-mono text-[12px]">
+<span class="text-[#8a96a6]">$12.00 ea · $36.00 [SAMPLE]</span>
+<span class="text-[#bfe5f3] font-semibold font-space">×3</span>
+</div>
+</div>
+<div class="flex justify-between items-center py-2 px-3 border border-[#28303b] bg-[#0c0e12]">
+<div class="flex items-center gap-3 min-w-0">
+<span class="w-8 h-8 border border-[#28303b] bg-[#14181f] flex items-center justify-center text-[12px] text-[#8a96a6] shrink-0 font-space font-semibold">CVR</span>
+<span class="text-white font-medium truncate">Big Welcome Labrynth</span>
+<span class="text-[12px] text-[#8a96a6] uppercase tracking-wider hidden sm:inline">Trap / Normal</span>
+</div>
+<div class="flex items-center gap-4 shrink-0 font-mono text-[12px]">
+<span class="text-[#8a96a6]">$24.00 ea · $72.00 [SAMPLE]</span>
+<span class="text-[#bfe5f3] font-semibold font-space">×3</span>
+</div>
+</div>
+<div class="flex justify-between items-center py-2 px-3 border border-[#28303b] bg-[#0c0e12]">
+<div class="flex items-center gap-3 min-w-0">
+<span class="w-8 h-8 border border-[#28303b] bg-[#14181f] flex items-center justify-center text-[12px] text-[#8a96a6] shrink-0 font-space font-semibold">CVR</span>
+<span class="text-white font-medium truncate">Welcome Labrynth</span>
+<span class="text-[12px] text-[#8a96a6] uppercase tracking-wider hidden sm:inline">Trap / Normal</span>
+</div>
+<div class="flex items-center gap-4 shrink-0 font-mono text-[12px]">
+<span class="text-[#8a96a6]">$5.00 ea · $15.00 [SAMPLE]</span>
+<span class="text-[#bfe5f3] font-semibold font-space">×3</span>
+</div>
+</div>
+<div class="flex justify-between items-center py-2 px-3 border border-[#28303b] bg-[#0c0e12]">
+<div class="flex items-center gap-3 min-w-0">
+<span class="w-8 h-8 border border-[#28303b] bg-[#14181f] flex items-center justify-center text-[12px] text-[#8a96a6] shrink-0 font-space font-semibold">CVR</span>
+<span class="text-white font-medium truncate">Ash Blossom &amp; Joyous Spring</span>
+<span class="text-[12px] text-[#8a96a6] uppercase tracking-wider hidden sm:inline">Zombie / Fire / Tuner</span>
+</div>
+<div class="flex items-center gap-4 shrink-0 font-mono text-[12px]">
+<span class="text-[#8a96a6]">$6.50 ea · $19.50 [SAMPLE]</span>
+<span class="text-[#bfe5f3] font-semibold font-space">×3</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Extra Deck -->
+<div>
+<div class="font-space text-[12px] font-semibold tracking-wider uppercase text-[#8a96a6] mb-2 pb-1 border-b border-[#28303b]">EXTRA DECK (15)</div>
+<div class="space-y-1 font-space text-[13px]">
+<div class="flex justify-between items-center py-2 px-3 border border-[#28303b] bg-[#0c0e12]">
+<div class="flex items-center gap-3 min-w-0">
+<span class="w-8 h-8 border border-[#28303b] bg-[#14181f] flex items-center justify-center text-[12px] text-[#8a96a6] shrink-0 font-space font-semibold">CVR</span>
+<span class="text-white font-medium truncate">Chaos Angel</span>
+<span class="text-[12px] text-[#8a96a6] uppercase tracking-wider hidden sm:inline">Fiend / Synchro / Level 10</span>
+</div>
+<div class="flex items-center gap-4 shrink-0 font-mono text-[12px]">
+<span class="text-[#8a96a6]">$65.00 ea · $65.00 [SAMPLE]</span>
+<span class="text-[#bfe5f3] font-semibold font-space">×1</span>
+</div>
+</div>
+<div class="flex justify-between items-center py-2 px-3 border border-[#28303b] bg-[#0c0e12]">
+<div class="flex items-center gap-3 min-w-0">
+<span class="w-8 h-8 border border-[#28303b] bg-[#14181f] flex items-center justify-center text-[12px] text-[#8a96a6] shrink-0 font-space font-semibold">CVR</span>
+<span class="text-white font-medium truncate">Muckraker From the Underworld</span>
+<span class="text-[12px] text-[#8a96a6] uppercase tracking-wider hidden sm:inline">Fiend / Link / Link-2</span>
+</div>
+<div class="flex items-center gap-4 shrink-0 font-mono text-[12px]">
+<span class="text-[#8a96a6]">$14.00 ea · $14.00 [SAMPLE]</span>
+<span class="text-[#bfe5f3] font-semibold font-space">×1</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Side Deck -->
+<div>
+<div class="font-space text-[12px] font-semibold tracking-wider uppercase text-[#8a96a6] mb-2 pb-1 border-b border-[#28303b]">SIDE DECK (15)</div>
+<div class="space-y-1 font-space text-[13px]">
+<div class="flex justify-between items-center py-2 px-3 border border-[#28303b] bg-[#0c0e12]">
+<div class="flex items-center gap-3 min-w-0">
+<span class="w-8 h-8 border border-[#28303b] bg-[#14181f] flex items-center justify-center text-[12px] text-[#8a96a6] shrink-0 font-space font-semibold">CVR</span>
+<span class="text-white font-medium truncate">Dimensional Barrier</span>
+<span class="text-[12px] text-[#8a96a6] uppercase tracking-wider hidden sm:inline">Trap / Normal</span>
+</div>
+<div class="flex items-center gap-4 shrink-0 font-mono text-[12px]">
+<span class="text-[#8a96a6]">$2.50 ea · $7.50 [SAMPLE]</span>
+<span class="text-[#bfe5f3] font-semibold font-space">×3</span>
+</div>
+</div>
+<div class="flex justify-between items-center py-2 px-3 border border-[#28303b] bg-[#0c0e12]">
+<div class="flex items-center gap-3 min-w-0">
+<span class="w-8 h-8 border border-[#28303b] bg-[#14181f] flex items-center justify-center text-[12px] text-[#8a96a6] shrink-0 font-space font-semibold">CVR</span>
+<span class="text-white font-medium truncate">Eradicator Epidemic Virus</span>
+<span class="text-[12px] text-[#8a96a6] uppercase tracking-wider hidden sm:inline">Trap / Normal</span>
+</div>
+<div class="flex items-center gap-4 shrink-0 font-mono text-[12px]">
+<span class="text-[#8a96a6]">$3.00 ea · $9.00 [SAMPLE]</span>
+<span class="text-[#bfe5f3] font-semibold font-space">×3</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- TCG GRID VIEW CONTENT -->
+<div class="view-tcg-grid-content grid-cols-2 sm:grid-cols-4 gap-2 overflow-y-auto custom-scroll pr-1 flex-1">
+<div class="border border-[#28303b] bg-[#0c0e12] p-2 flex flex-col items-center justify-between text-center h-28">
+<span class="font-space text-[12px] text-white font-semibold">Lady Labrynth</span>
+<span class="font-mono text-[12px] text-[#8a96a6]">$18.50 [SAMPLE]</span>
+<span class="font-space text-[12px] text-[#bfe5f3]">×3</span>
+</div>
+<div class="border border-[#28303b] bg-[#0c0e12] p-2 flex flex-col items-center justify-between text-center h-28">
+<span class="font-space text-[12px] text-white font-semibold">Arianna</span>
+<span class="font-mono text-[12px] text-[#8a96a6]">$12.00 [SAMPLE]</span>
+<span class="font-space text-[12px] text-[#bfe5f3]">×3</span>
+</div>
+<div class="border border-[#28303b] bg-[#0c0e12] p-2 flex flex-col items-center justify-between text-center h-28">
+<span class="font-space text-[12px] text-white font-semibold">Big Welcome</span>
+<span class="font-mono text-[12px] text-[#8a96a6]">$24.00 [SAMPLE]</span>
+<span class="font-space text-[12px] text-[#bfe5f3]">×3</span>
+</div>
+<div class="border border-[#28303b] bg-[#0c0e12] p-2 flex flex-col items-center justify-between text-center h-28">
+<span class="font-space text-[12px] text-white font-semibold">Welcome Labrynth</span>
+<span class="font-mono text-[12px] text-[#8a96a6]">$5.00 [SAMPLE]</span>
+<span class="font-space text-[12px] text-[#bfe5f3]">×3</span>
+</div>
+<div class="border border-[#28303b] bg-[#0c0e12] p-2 flex flex-col items-center justify-between text-center h-28">
+<span class="font-space text-[12px] text-white font-semibold">Chaos Angel</span>
+<span class="font-mono text-[12px] text-[#8a96a6]">$65.00 [SAMPLE]</span>
+<span class="font-space text-[12px] text-[#bfe5f3]">×1</span>
+</div>
+<div class="border border-[#28303b] bg-[#0c0e12] p-2 flex flex-col items-center justify-between text-center h-28">
+<span class="font-space text-[12px] text-white font-semibold">Muckraker</span>
+<span class="font-mono text-[12px] text-[#8a96a6]">$14.00 [SAMPLE]</span>
+<span class="font-space text-[12px] text-[#bfe5f3]">×1</span>
+</div>
+<div class="border border-[#28303b] bg-[#0c0e12] p-2 flex flex-col items-center justify-between text-center h-28">
+<span class="font-space text-[12px] text-white font-semibold">Dim Barrier</span>
+<span class="font-mono text-[12px] text-[#8a96a6]">$2.50 [SAMPLE]</span>
+<span class="font-space text-[12px] text-[#bfe5f3]">×3</span>
+</div>
+<div class="border border-[#28303b] bg-[#0c0e12] p-2 flex flex-col items-center justify-between text-center h-28">
+<span class="font-space text-[12px] text-white font-semibold">Eradicator Virus</span>
+<span class="font-mono text-[12px] text-[#8a96a6]">$3.00 [SAMPLE]</span>
+<span class="font-space text-[12px] text-[#bfe5f3]">×3</span>
+</div>
+</div>
+<!-- Modal Actions -->
+<div class="mt-6 pt-4 border-t border-[#28303b] flex items-center justify-end gap-3">
+<label class="btn-editorial px-5 font-space text-[12px] font-semibold tracking-wider uppercase focus-ice cursor-pointer" for="vault-none">CLOSE</label>
+<label class="btn-editorial px-5 font-space text-[12px] font-semibold tracking-wider uppercase focus-ice cursor-pointer" for="vault-none">
+<span>RESUME</span>
+<span class="sub-accent-bar w-[2px] h-[10px] bg-[#bfe5f3] ml-2"></span>
+</label>
+</div>
+</div>
+</div>
+<!-- 3. #deck-list-md-modal (MASTER DUEL ARCHIVE - BRANDED DESPIA WITH INSIDE RARITY BADGES & 12PX TEXT) -->
+<div class="overlay" id="deck-list-md-modal">
+<label aria-label="Close MD deck list modal backdrop" class="modal-backdrop absolute inset-0 cursor-pointer" for="vault-none"></label>
+<div aria-modal="true" class="relative z-10 w-full max-w-3xl bg-[#14181f] border border-[#28303b] p-6 flex flex-col max-h-[90vh]" role="dialog">
+<div class="flex items-center justify-between pb-3 border-b border-[#28303b] mb-4">
+<div>
+<div class="flex items-center gap-2">
+<span class="w-[2px] h-[10px] bg-[#bfe5f3]"></span>
+<h3 class="font-space text-[13px] font-semibold tracking-wider uppercase text-[#8a96a6]">DECK LIST // MASTER DUEL ARCHIVE</h3>
+</div>
+<div class="font-space text-[20px] font-semibold text-white mt-1">Branded Despia</div>
+<div class="font-space text-[12px] font-semibold tracking-wider uppercase text-[#8a96a6] mt-0.5">
+        MASTER DUEL · MAIN 40 · EXTRA 15 · SIDE 15
+      </div>
+</div>
+<label class="btn-editorial min-h-[32px] min-w-[32px] px-2 flex items-center justify-center text-[#8a96a6] hover:text-[#0c0e12] focus-ice cursor-pointer" for="vault-none">✕</label>
+</div>
+<!-- SAMPLE DECK COST READOUT (MD CRAFTING POINTS) -->
+<div class="mb-4 p-3 bg-[#0c0e12] border border-[#28303b] flex flex-col gap-1">
+<div class="flex items-center justify-between">
+<span class="font-space text-[12px] font-semibold tracking-wider uppercase text-[#8a96a6]">SAMPLE DECK COST (CRAFTING POINT CALCULATION)</span>
+<span class="font-space text-[18px] font-bold text-white">70 × 30 = 2,100 CP <span class="text-[12px] font-normal text-[#bfe5f3]">[SAMPLE]</span></span>
+</div>
+<div class="font-space text-[12px] text-[#e2e8f0] tracking-wide pt-1 border-t border-[#28303b]">
+      SR and UR cards cost the same 30 points and are harder to pull.
+    </div>
+</div>
+<!-- View switcher radio architecture -->
+<input checked="" class="hidden" id="view-md-list" name="deck-md-view" type="radio"/>
+<input class="hidden" id="view-md-grid" name="deck-md-view" type="radio"/>
+<div class="md-tab-controls flex items-center gap-2 mb-4">
+<label class="btn-editorial px-3 py-1 text-[12px] font-space font-semibold tracking-wider uppercase cursor-pointer" for="view-md-list">LIST VIEW</label>
+<label class="btn-editorial px-3 py-1 text-[12px] font-space font-semibold tracking-wider uppercase cursor-pointer" for="view-md-grid">GRID VIEW</label>
+</div>
+<!-- MD LIST VIEW CONTENT -->
+<div class="view-md-list-content flex-col gap-4 overflow-y-auto custom-scroll pr-1 flex-1">
+<!-- Main Deck -->
+<div>
+<div class="font-space text-[12px] font-semibold tracking-wider uppercase text-[#8a96a6] mb-2 pb-1 border-b border-[#28303b]">MAIN DECK (40)</div>
+<div class="space-y-1 font-space text-[13px]">
+<div class="flex justify-between items-center py-2 px-3 border border-[#28303b] bg-[#0c0e12]">
+<div class="flex items-center gap-3 min-w-0">
+<div class="w-12 h-12 border border-[#28303b] bg-[#14181f] relative overflow-hidden flex items-center justify-center shrink-0">
+<span class="text-[12px] text-[#8a96a6] font-space">CVR</span>
+<span class="rarity-ur absolute top-[4px] right-[4px] text-[12px] font-bold px-2 py-0.5 leading-none tracking-wider uppercase">UR</span>
+</div>
+<span class="text-white font-medium truncate">Branded Fusion</span>
+<span class="text-[12px] text-[#8a96a6] uppercase tracking-wider hidden sm:inline">Spell / Normal</span>
+</div>
+<span class="text-[#bfe5f3] font-semibold font-space shrink-0">×3</span>
+</div>
+<div class="flex justify-between items-center py-2 px-3 border border-[#28303b] bg-[#0c0e12]">
+<div class="flex items-center gap-3 min-w-0">
+<div class="w-12 h-12 border border-[#28303b] bg-[#14181f] relative overflow-hidden flex items-center justify-center shrink-0">
+<span class="text-[12px] text-[#8a96a6] font-space">CVR</span>
+<span class="rarity-ur absolute top-[4px] right-[4px] text-[12px] font-bold px-2 py-0.5 leading-none tracking-wider uppercase">UR</span>
+</div>
+<span class="text-white font-medium truncate">Fallen of Albaz</span>
+<span class="text-[12px] text-[#8a96a6] uppercase tracking-wider hidden sm:inline">Dragon / Dark</span>
+</div>
+<span class="text-[#bfe5f3] font-semibold font-space shrink-0">×3</span>
+</div>
+<div class="flex justify-between items-center py-2 px-3 border border-[#28303b] bg-[#0c0e12]">
+<div class="flex items-center gap-3 min-w-0">
+<div class="w-12 h-12 border border-[#28303b] bg-[#14181f] relative overflow-hidden flex items-center justify-center shrink-0">
+<span class="text-[12px] text-[#8a96a6] font-space">CVR</span>
+<span class="rarity-ur absolute top-[4px] right-[4px] text-[12px] font-bold px-2 py-0.5 leading-none tracking-wider uppercase">UR</span>
+</div>
+<span class="text-white font-medium truncate">Branded Opening</span>
+<span class="text-[12px] text-[#8a96a6] uppercase tracking-wider hidden sm:inline">Spell / Quick-Play</span>
+</div>
+<span class="text-[#bfe5f3] font-semibold font-space shrink-0">×2</span>
+</div>
+<div class="flex justify-between items-center py-2 px-3 border border-[#28303b] bg-[#0c0e12]">
+<div class="flex items-center gap-3 min-w-0">
+<div class="w-12 h-12 border border-[#28303b] bg-[#14181f] relative overflow-hidden flex items-center justify-center shrink-0">
+<span class="text-[12px] text-[#8a96a6] font-space">CVR</span>
+<span class="rarity-ur absolute top-[4px] right-[4px] text-[12px] font-bold px-2 py-0.5 leading-none tracking-wider uppercase">UR</span>
+</div>
+<span class="text-white font-medium truncate">Aluber the Jester of Despia</span>
+<span class="text-[12px] text-[#8a96a6] uppercase tracking-wider hidden sm:inline">Fairy / Dark</span>
+</div>
+<span class="text-[#bfe5f3] font-semibold font-space shrink-0">×3</span>
+</div>
+<div class="flex justify-between items-center py-2 px-3 border border-[#28303b] bg-[#0c0e12]">
+<div class="flex items-center gap-3 min-w-0">
+<div class="w-12 h-12 border border-[#28303b] bg-[#14181f] relative overflow-hidden flex items-center justify-center shrink-0">
+<span class="text-[12px] text-[#8a96a6] font-space">CVR</span>
+<span class="rarity-r absolute top-[4px] right-[4px] text-[12px] font-bold px-2 py-0.5 leading-none tracking-wider uppercase">R</span>
+</div>
+<span class="text-white font-medium truncate">Despian Tragedy</span>
+<span class="text-[12px] text-[#8a96a6] uppercase tracking-wider hidden sm:inline">Fairy / Dark</span>
+</div>
+<span class="text-[#bfe5f3] font-semibold font-space shrink-0">×3</span>
+</div>
+<div class="flex justify-between items-center py-2 px-3 border border-[#28303b] bg-[#0c0e12]">
+<div class="flex items-center gap-3 min-w-0">
+<div class="w-12 h-12 border border-[#28303b] bg-[#14181f] relative overflow-hidden flex items-center justify-center shrink-0">
+<span class="text-[12px] text-[#8a96a6] font-space">CVR</span>
+<span class="rarity-sr absolute top-[4px] right-[4px] text-[12px] font-bold px-2 py-0.5 leading-none tracking-wider uppercase">SR</span>
+</div>
+<span class="text-white font-medium truncate">Edge Imp Chain</span>
+<span class="text-[12px] text-[#8a96a6] uppercase tracking-wider hidden sm:inline">Fiend / Dark</span>
+</div>
+<span class="text-[#bfe5f3] font-semibold font-space shrink-0">×3</span>
+</div>
+<div class="flex justify-between items-center py-2 px-3 border border-[#28303b] bg-[#0c0e12]">
+<div class="flex items-center gap-3 min-w-0">
+<div class="w-12 h-12 border border-[#28303b] bg-[#14181f] relative overflow-hidden flex items-center justify-center shrink-0">
+<span class="text-[12px] text-[#8a96a6] font-space">CVR</span>
+<span class="rarity-n absolute top-[4px] right-[4px] text-[12px] font-bold px-2 py-0.5 leading-none tracking-wider uppercase">N</span>
+</div>
+<span class="text-white font-medium truncate">Polymerization</span>
+<span class="text-[12px] text-[#8a96a6] uppercase tracking-wider hidden sm:inline">Spell / Normal</span>
+</div>
+<span class="text-[#bfe5f3] font-semibold font-space shrink-0">×2</span>
+</div>
+<div class="flex justify-between items-center py-2 px-3 border border-[#28303b] bg-[#0c0e12]">
+<div class="flex items-center gap-3 min-w-0">
+<div class="w-12 h-12 border border-[#28303b] bg-[#14181f] relative overflow-hidden flex items-center justify-center shrink-0">
+<span class="text-[12px] text-[#8a96a6] font-space">CVR</span>
+<span class="rarity-n absolute top-[4px] right-[4px] text-[12px] font-bold px-2 py-0.5 leading-none tracking-wider uppercase">N</span>
+</div>
+<span class="text-white font-medium truncate">Despian Comedy</span>
+<span class="text-[12px] text-[#8a96a6] uppercase tracking-wider hidden sm:inline">Fairy / Dark</span>
+</div>
+<span class="text-[#bfe5f3] font-semibold font-space shrink-0">×1</span>
+</div>
+</div>
+</div>
+<!-- Extra Deck -->
+<div>
+<div class="font-space text-[12px] font-semibold tracking-wider uppercase text-[#8a96a6] mb-2 pb-1 border-b border-[#28303b]">EXTRA DECK (15)</div>
+<div class="space-y-1 font-space text-[13px]">
+<div class="flex justify-between items-center py-2 px-3 border border-[#28303b] bg-[#0c0e12]">
+<div class="flex items-center gap-3 min-w-0">
+<div class="w-12 h-12 border border-[#28303b] bg-[#14181f] relative overflow-hidden flex items-center justify-center shrink-0">
+<span class="text-[12px] text-[#8a96a6] font-space">CVR</span>
+<span class="rarity-ur absolute top-[4px] right-[4px] text-[12px] font-bold px-2 py-0.5 leading-none tracking-wider uppercase">UR</span>
+</div>
+<span class="text-white font-medium truncate">Mirrorjade the Iceblade Dragon</span>
+<span class="text-[12px] text-[#8a96a6] uppercase tracking-wider hidden sm:inline">Wyrm / Fusion</span>
+</div>
+<span class="text-[#bfe5f3] font-semibold font-space shrink-0">×1</span>
+</div>
+<div class="flex justify-between items-center py-2 px-3 border border-[#28303b] bg-[#0c0e12]">
+<div class="flex items-center gap-3 min-w-0">
+<div class="w-12 h-12 border border-[#28303b] bg-[#14181f] relative overflow-hidden flex items-center justify-center shrink-0">
+<span class="text-[12px] text-[#8a96a6] font-space">CVR</span>
+<span class="rarity-ur absolute top-[4px] right-[4px] text-[12px] font-bold px-2 py-0.5 leading-none tracking-wider uppercase">UR</span>
+</div>
+<span class="text-white font-medium truncate">Lubellion the Searing Dragon</span>
+<span class="text-[12px] text-[#8a96a6] uppercase tracking-wider hidden sm:inline">Dragon / Fusion</span>
+</div>
+<span class="text-[#bfe5f3] font-semibold font-space shrink-0">×1</span>
+</div>
+</div>
+</div>
+<!-- Side Deck -->
+<div>
+<div class="font-space text-[12px] font-semibold tracking-wider uppercase text-[#8a96a6] mb-2 pb-1 border-b border-[#28303b]">SIDE DECK (15)</div>
+<div class="space-y-1 font-space text-[13px]">
+<div class="flex justify-between items-center py-2 px-3 border border-[#28303b] bg-[#0c0e12]">
+<div class="flex items-center gap-3 min-w-0">
+<div class="w-12 h-12 border border-[#28303b] bg-[#14181f] relative overflow-hidden flex items-center justify-center shrink-0">
+<span class="text-[12px] text-[#8a96a6] font-space">CVR</span>
+<span class="rarity-ur absolute top-[4px] right-[4px] text-[12px] font-bold px-2 py-0.5 leading-none tracking-wider uppercase">UR</span>
+</div>
+<span class="text-white font-medium truncate">Ash Blossom &amp; Joyous Spring</span>
+<span class="text-[12px] text-[#8a96a6] uppercase tracking-wider hidden sm:inline">Zombie / Tuner</span>
+</div>
+<span class="text-[#bfe5f3] font-semibold font-space shrink-0">×3</span>
+</div>
+<div class="flex justify-between items-center py-2 px-3 border border-[#28303b] bg-[#0c0e12]">
+<div class="flex items-center gap-3 min-w-0">
+<div class="w-12 h-12 border border-[#28303b] bg-[#14181f] relative overflow-hidden flex items-center justify-center shrink-0">
+<span class="text-[12px] text-[#8a96a6] font-space">CVR</span>
+<span class="rarity-ur absolute top-[4px] right-[4px] text-[12px] font-bold px-2 py-0.5 leading-none tracking-wider uppercase">UR</span>
+</div>
+<span class="text-white font-medium truncate">Infinite Impermanence</span>
+<span class="text-[12px] text-[#8a96a6] uppercase tracking-wider hidden sm:inline">Trap / Normal</span>
+</div>
+<span class="text-[#bfe5f3] font-semibold font-space shrink-0">×3</span>
+</div>
+</div>
+</div>
+</div>
+<!-- MD GRID VIEW CONTENT -->
+<div class="view-md-grid-content grid-cols-2 sm:grid-cols-4 gap-2 overflow-y-auto custom-scroll pr-1 flex-1">
+<div class="border border-[#28303b] bg-[#0c0e12] p-2 flex flex-col items-center justify-between text-center h-28 relative overflow-hidden">
+<span class="rarity-ur absolute top-[4px] right-[4px] text-[12px] font-bold px-2 py-0.5 leading-none tracking-wider uppercase">UR</span>
+<span class="font-space text-[12px] text-white font-semibold mt-4">Branded Fusion</span>
+<span class="font-space text-[12px] text-[#bfe5f3]">×3</span>
+</div>
+<div class="border border-[#28303b] bg-[#0c0e12] p-2 flex flex-col items-center justify-between text-center h-28 relative overflow-hidden">
+<span class="rarity-ur absolute top-[4px] right-[4px] text-[12px] font-bold px-2 py-0.5 leading-none tracking-wider uppercase">UR</span>
+<span class="font-space text-[12px] text-white font-semibold mt-4">Fallen of Albaz</span>
+<span class="font-space text-[12px] text-[#bfe5f3]">×3</span>
+</div>
+<div class="border border-[#28303b] bg-[#0c0e12] p-2 flex flex-col items-center justify-between text-center h-28 relative overflow-hidden">
+<span class="rarity-ur absolute top-[4px] right-[4px] text-[12px] font-bold px-2 py-0.5 leading-none tracking-wider uppercase">UR</span>
+<span class="font-space text-[12px] text-white font-semibold mt-4">Branded Opening</span>
+<span class="font-space text-[12px] text-[#bfe5f3]">×2</span>
+</div>
+<div class="border border-[#28303b] bg-[#0c0e12] p-2 flex flex-col items-center justify-between text-center h-28 relative overflow-hidden">
+<span class="rarity-ur absolute top-[4px] right-[4px] text-[12px] font-bold px-2 py-0.5 leading-none tracking-wider uppercase">UR</span>
+<span class="font-space text-[12px] text-white font-semibold mt-4">Aluber</span>
+<span class="font-space text-[12px] text-[#bfe5f3]">×3</span>
+</div>
+<div class="border border-[#28303b] bg-[#0c0e12] p-2 flex flex-col items-center justify-between text-center h-28 relative overflow-hidden">
+<span class="rarity-r absolute top-[4px] right-[4px] text-[12px] font-bold px-2 py-0.5 leading-none tracking-wider uppercase">R</span>
+<span class="font-space text-[12px] text-white font-semibold mt-4">Despian Tragedy</span>
+<span class="font-space text-[12px] text-[#bfe5f3]">×3</span>
+</div>
+<div class="border border-[#28303b] bg-[#0c0e12] p-2 flex flex-col items-center justify-between text-center h-28 relative overflow-hidden">
+<span class="rarity-sr absolute top-[4px] right-[4px] text-[12px] font-bold px-2 py-0.5 leading-none tracking-wider uppercase">SR</span>
+<span class="font-space text-[12px] text-white font-semibold mt-4">Edge Imp Chain</span>
+<span class="font-space text-[12px] text-[#bfe5f3]">×3</span>
+</div>
+<div class="border border-[#28303b] bg-[#0c0e12] p-2 flex flex-col items-center justify-between text-center h-28 relative overflow-hidden">
+<span class="rarity-n absolute top-[4px] right-[4px] text-[12px] font-bold px-2 py-0.5 leading-none tracking-wider uppercase">N</span>
+<span class="font-space text-[12px] text-white font-semibold mt-4">Polymerization</span>
+<span class="font-space text-[12px] text-[#bfe5f3]">×2</span>
+</div>
+<div class="border border-[#28303b] bg-[#0c0e12] p-2 flex flex-col items-center justify-between text-center h-28 relative overflow-hidden">
+<span class="rarity-ur absolute top-[4px] right-[4px] text-[12px] font-bold px-2 py-0.5 leading-none tracking-wider uppercase">UR</span>
+<span class="font-space text-[12px] text-white font-semibold mt-4">Mirrorjade</span>
+<span class="font-space text-[12px] text-[#bfe5f3]">×1</span>
+</div>
+</div>
+<!-- Modal Actions -->
+<div class="mt-6 pt-4 border-t border-[#28303b] flex items-center justify-end gap-3">
+<label class="btn-editorial px-5 font-space text-[12px] font-semibold tracking-wider uppercase focus-ice cursor-pointer" for="vault-none">CLOSE</label>
+<label class="btn-editorial px-5 font-space text-[12px] font-semibold tracking-wider uppercase focus-ice cursor-pointer" for="vault-none">
+<span>RESUME</span>
+<span class="sub-accent-bar w-[2px] h-[10px] bg-[#bfe5f3] ml-2"></span>
+</label>
+</div>
+</div>
+</div>
+<!-- 4. #rename-modal -->
+<div class="overlay" id="rename-modal">
+<label aria-label="Close rename modal backdrop" class="absolute inset-0 cursor-pointer" for="vault-none"></label>
+<div aria-modal="true" class="relative z-10 w-full max-w-md bg-[#14181f] border border-[#28303b] p-6 flex flex-col" role="dialog">
+<div class="flex items-center justify-between pb-3 border-b border-[#28303b] mb-4">
+<div class="flex items-center gap-2">
+<span class="w-[2px] h-[10px] bg-[#bfe5f3]"></span>
+<h3 class="font-space text-[13px] font-semibold tracking-wider uppercase text-white">RENAME DECK</h3>
+</div>
+<label class="btn-editorial min-h-[32px] min-w-[32px] px-2 flex items-center justify-center text-[#8a96a6] hover:text-[#0c0e12] focus-ice cursor-pointer" for="vault-none">✕</label>
+</div>
+<div class="space-y-4">
+<div>
+<label class="font-space text-[11px] font-semibold tracking-wider uppercase text-[#8a96a6] block mb-2">NEW IDENTIFIER</label>
+<input class="w-full bg-[#0c0e12] border border-[#28303b] text-white p-2 font-space text-[14px] focus-ice" type="text" value="Branded Despia"/>
+</div>
+</div>
+<div class="mt-6 pt-4 border-t border-[#28303b] flex items-center justify-end gap-3">
+<label class="btn-editorial px-5 font-space text-[12px] font-semibold tracking-wider uppercase focus-ice cursor-pointer" for="vault-none">CANCEL</label>
+<label class="btn-editorial px-5 font-space text-[12px] font-semibold tracking-wider uppercase focus-ice cursor-pointer" for="vault-none">SAVE</label>
+</div>
+</div>
+</div>
+<!-- 5. #copy-modal -->
+<div class="overlay" id="copy-modal">
+<label aria-label="Close copy modal backdrop" class="absolute inset-0 cursor-pointer" for="vault-none"></label>
+<div aria-modal="true" class="relative z-10 w-full max-w-md bg-[#14181f] border border-[#28303b] p-6 flex flex-col" role="dialog">
+<div class="flex items-center justify-between pb-3 border-b border-[#28303b] mb-4">
+<div class="flex items-center gap-2">
+<span class="w-[2px] h-[10px] bg-[#bfe5f3]"></span>
+<h3 class="font-space text-[13px] font-semibold tracking-wider uppercase text-white">COPY DECK</h3>
+</div>
+<label class="btn-editorial min-h-[32px] min-w-[32px] px-2 flex items-center justify-center text-[#8a96a6] hover:text-[#0c0e12] focus-ice cursor-pointer" for="vault-none">✕</label>
+</div>
+<p class="text-[14px] text-[#e2e8f0] mb-4">Copy Branded Despia into a new deck.</p>
+<div class="space-y-3">
+<div class="font-space text-[11px] font-semibold tracking-wider uppercase text-[#8a96a6]">TARGET FORMAT</div>
+<div class="grid grid-cols-2 gap-3">
+<div>
+<input checked="" class="hidden" id="format-md" name="format-choice" type="radio"/>
+<label class="btn-editorial w-full px-4 py-3 flex items-center justify-center font-space text-[12px] font-semibold tracking-wider uppercase cursor-pointer" for="format-md">MASTER DUEL</label>
+</div>
+<div>
+<input class="hidden" id="format-tcg" name="format-choice" type="radio"/>
+<label class="btn-editorial w-full px-4 py-3 flex items-center justify-center font-space text-[12px] font-semibold tracking-wider uppercase cursor-pointer" for="format-tcg">TCG</label>
+</div>
+</div>
+</div>
+<div class="mt-6 pt-4 border-t border-[#28303b] flex items-center justify-end gap-3">
+<label class="btn-editorial px-5 font-space text-[12px] font-semibold tracking-wider uppercase focus-ice cursor-pointer" for="vault-none">CANCEL</label>
+<label class="btn-editorial px-5 font-space text-[12px] font-semibold tracking-wider uppercase focus-ice cursor-pointer" for="vault-none">COPY</label>
+</div>
+</div>
+</div>
+<!-- 6. #share-modal -->
+<div class="overlay" id="share-modal">
+<label aria-label="Close share modal backdrop" class="absolute inset-0 cursor-pointer" for="vault-none"></label>
+<div aria-modal="true" class="relative z-10 w-full max-w-md bg-[#14181f] border border-[#28303b] p-6 flex flex-col" role="dialog">
+<div class="flex items-center justify-between pb-3 border-b border-[#28303b] mb-4">
+<div class="flex items-center gap-2">
+<span class="w-[2px] h-[10px] bg-[#bfe5f3]"></span>
+<h3 class="font-space text-[13px] font-semibold tracking-wider uppercase text-white">SHARE DECK</h3>
+</div>
+<label class="btn-editorial min-h-[32px] min-w-[32px] px-2 flex items-center justify-center text-[#8a96a6] hover:text-[#0c0e12] focus-ice cursor-pointer" for="vault-none">✕</label>
+</div>
+<div class="space-y-4">
+<div>
+<label class="font-space text-[11px] font-semibold tracking-wider uppercase text-[#8a96a6] block mb-1">PUBLIC VAULT ENCLAVE URL</label>
+<input class="w-full bg-[#0c0e12] border border-[#28303b] text-[#e2e8f0] p-2 font-mono text-[12px] focus-ice" readonly="" type="text" value="https://mda.vault/decks/share/branded-despia-0994"/>
+</div>
+<!-- Checkbox toggle for QR: pure CSS peer -->
+<div class="pt-2 border-t border-[#28303b]">
+<input class="hidden peer/qr" id="show-qr" type="checkbox"/>
+<label class="btn-editorial px-3 py-1 font-space text-[11px] font-semibold tracking-wider uppercase cursor-pointer inline-flex mb-3" for="show-qr">
+          SHOW QR
+        </label>
+<div class="hidden peer-checked/qr:flex items-center justify-center p-4 border border-[#28303b] bg-[#0c0e12] flex-col gap-2">
+<div class="w-32 h-32 border border-[#28303b] flex items-center justify-center bg-[#14181f]">
+<span class="font-space text-[11px] text-[#8a96a6]">QR MATRIX</span>
+</div>
+<span class="font-space text-[10px] text-[#8a96a6] tracking-wider uppercase">SCAN TO IMPORT IN MASTER DECK ALCHEMIST</span>
+</div>
+</div>
+<div class="font-space text-[11px] text-[#8a96a6] tracking-wider uppercase">
+        the link and QR appear only when the deck is a legal size.
+      </div>
+</div>
+<div class="mt-6 pt-4 border-t border-[#28303b]">
+<label class="btn-editorial w-full font-space text-[12px] font-semibold tracking-wider uppercase flex items-center justify-center focus-ice cursor-pointer" for="vault-none">
+        CLOSE
+      </label>
+</div>
+</div>
+</div>
+<!-- 7. #delete-modal -->
+<div class="overlay" id="delete-modal">
+<label aria-label="Close delete modal backdrop" class="absolute inset-0 cursor-pointer" for="vault-none"></label>
+<div aria-modal="true" class="relative z-10 w-full max-w-md bg-[#14181f] border border-[#28303b] p-6 flex flex-col" role="dialog">
+<div class="flex items-center justify-between pb-3 border-b border-[#28303b] mb-4">
+<div class="flex items-center gap-2">
+<span class="w-[2px] h-[10px] bg-red-400"></span>
+<h3 class="font-space text-[13px] font-semibold tracking-wider uppercase text-red-400">DELETE DECK</h3>
+</div>
+<label class="btn-editorial min-h-[32px] min-w-[32px] px-2 flex items-center justify-center text-[#8a96a6] hover:text-[#0c0e12] focus-ice cursor-pointer" for="vault-none">✕</label>
+</div>
+<p class="text-[14px] text-[#e2e8f0] mb-2">Delete Branded Despia? This cannot be undone.</p>
+<div class="font-space text-[11px] font-semibold tracking-wider uppercase text-[#8a96a6] mb-4">ENTRY REF // MDA-0994-BD</div>
+<div class="mt-6 pt-4 border-t border-[#28303b] flex items-center justify-end gap-3">
+<label class="btn-editorial px-5 font-space text-[12px] font-semibold tracking-wider uppercase focus-ice cursor-pointer" for="vault-none">CANCEL</label>
+<label class="btn-editorial px-5 font-space text-[12px] font-semibold tracking-wider uppercase text-red-400 hover:text-red-600 focus-ice cursor-pointer" for="vault-none">DELETE</label>
+</div>
+</div>
+</div>
+</body></html>
