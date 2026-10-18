@@ -1,0 +1,144 @@
+.archives-shell {
+  font-family: "Open Sans", sans-serif;
+}
+
+.archives-shell button:focus,
+.archives-shell input:focus {
+  border-color: #bfe5f3;
+}
+
+.archives-shell button:focus:not([class*="border"]),
+.archives-shell input:focus:not([class*="border"]) {
+  outline: 2px solid #bfe5f3;
+  outline-offset: 2px;
+}
+
+.archives-shell .font-space,
+.archives-dialog,
+.archives-dialog .font-space,
+.archives-menu,
+.archives-menu .font-space {
+  font-family: "Space Grotesk", sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+
+.archives-shell .font-orbitron {
+  font-family: "Orbitron", monospace;
+}
+
+.archives-scroll::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.archives-scroll::-webkit-scrollbar-track {
+  background: #0c0e12;
+}
+
+.archives-scroll::-webkit-scrollbar-thumb {
+  background: #28303b;
+}
+
+.rarity-n {
+  background-color: #8a96a6;
+  color: #0c0e12;
+}
+
+.rarity-r {
+  background-color: #3b82f6;
+  color: #0c0e12;
+}
+
+.rarity-sr {
+  background-color: #d4a017;
+  color: #0c0e12;
+}
+
+.rarity-ur {
+  background: linear-gradient(135deg, #7c3aed, #67e8f9);
+  color: #0c0e12;
+}
+
+@keyframes archives-ice-rule {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes archives-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.ice-swipe {
+  position: relative;
+  overflow: hidden;
+}
+
+.ice-swipe::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  background: #bfe5f3;
+  transform: scaleX(0);
+  transform-origin: left center;
+  pointer-events: none;
+}
+
+.ice-swipe-run::after {
+  animation: archives-ice-rule 160ms ease-out forwards;
+}
+
+.archives-dialog-rule,
+.archives-menu-rule {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 2;
+  height: 2px;
+  background: #bfe5f3;
+  transform: scaleX(0);
+  transform-origin: left center;
+  pointer-events: none;
+}
+
+.archives-dialog[data-state="open"] .archives-dialog-rule,
+.archives-menu[data-state="open"] .archives-menu-rule {
+  animation: archives-ice-rule 160ms ease-out both;
+}
+
+.archives-dialog[data-state="open"] .archives-dialog-panel,
+.archives-dialog-overlay[data-state="open"],
+.archives-menu[data-state="open"] .archives-menu-rows {
+  animation: archives-fade 160ms ease-out 160ms both;
+}
+
+.archives-dialog[data-state="closed"],
+.archives-dialog-overlay[data-state="closed"],
+.archives-menu[data-state="closed"] {
+  animation: archives-fade 160ms ease-out reverse both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ice-swipe-run::after,
+  .archives-dialog-rule,
+  .archives-menu-rule,
+  .archives-dialog-panel,
+  .archives-dialog-overlay,
+  .archives-menu-rows,
+  .archives-dialog,
+  .archives-menu {
+    animation: none;
+  }
+}

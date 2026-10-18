@@ -23,6 +23,7 @@ export function Providers({ children }: { children: ReactNode }) {
   const hideLegacyNavbar = usesMdaShell(pathname);
   const showMagneticCursor = hideLegacyNavbar;
   const landingOwnsLandmarks = pathname === "/";
+  const archivesOwnsLandmarks = pathname.startsWith("/deck-archives");
   useSupabaseUserSync();
 
   // Catalog hydrate lives in DeckProvider via useCardLibrary (Query + IDB).
@@ -39,11 +40,11 @@ export function Providers({ children }: { children: ReactNode }) {
           <div className="relative z-20 flex h-dvh max-h-dvh flex-col overflow-hidden">
             {hideLegacyNavbar ? null : <Navbar />}
             {showMagneticCursor ? <MagneticCursor /> : null}
-            {landingOwnsLandmarks ? (
+            {landingOwnsLandmarks || archivesOwnsLandmarks ? (
               <div
-                id="main-content"
+                id={archivesOwnsLandmarks ? undefined : "main-content"}
                 className="min-h-0 flex-1 overflow-y-auto scroll-smooth"
-                tabIndex={-1}
+                tabIndex={archivesOwnsLandmarks ? undefined : -1}
               >
                 {children}
               </div>
