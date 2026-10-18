@@ -233,6 +233,7 @@ export function WorkshopCardLibrary({
                           card={card}
                           preferSmall
                           fill
+                          priority={virtualRow.index === 0 && card === rowCards[0]}
                           alt={card.name}
                           className="object-contain"
                           sizes={WORKSHOP_CARD_SIZES}

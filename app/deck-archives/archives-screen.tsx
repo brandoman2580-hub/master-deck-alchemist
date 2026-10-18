@@ -614,7 +614,7 @@ export function ArchivesScreen() {
 
   return (
     <div className="archives-shell fixed inset-0 z-20 flex flex-col overflow-hidden bg-[#0c0e12] text-[#e2e8f0]">
-      <header className="z-40 w-full shrink-0 border-b border-[#28303b] bg-[#0c0e12] px-12 py-8">
+      <header className="z-40 flex h-16 w-full shrink-0 items-center border-b border-[#28303b] bg-[#0c0e12] px-12">
         <div className="font-orbitron whitespace-nowrap text-left text-[14px] font-semibold uppercase tracking-[0.25em] text-[#f1f5f9]">
           MASTER DECK ALCHEMIST
         </div>

@@ -300,7 +300,7 @@ function DeckSectionBlock({
         >
           {grouped.length === 0 ? (
             <p className="py-8 text-center font-mda text-sm text-mda-ink-muted">
-              Drop cards here or add from the library
+              Drop cards into {title}, or add them from the library
             </p>
           ) : (
             <div className="flex flex-wrap gap-2">

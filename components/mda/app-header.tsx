@@ -46,7 +46,7 @@ export function MdaAppHeader({
   return (
     <header
       className={cn(
-        "flex h-auto min-h-[68px] w-full items-center justify-between px-6 py-2.5",
+        "flex h-16 w-full items-center justify-between px-6",
         className,
       )}
       data-theme={theme}
