@@ -129,9 +129,7 @@ function PreviewTrigger({
   return (
     <Tooltip.Trigger asChild>
       <div
-        ref={(node) => {
-          triggerRef.current = node;
-        }}
+        ref={triggerRef as RefObject<HTMLDivElement>}
         className="inline-block max-w-full"
       >
         {describedBy ? describeControls(children, describedBy) : children}
