@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { History, Info, Lock } from "lucide-react";
 import { useDeck } from "@/context/deck-context";
 import { useUserStore } from "@/store/useUserStore";
 import { useCardStore } from "@/store/cardStore";
@@ -19,12 +18,28 @@ import type { AssistantMode } from "@/lib/engine/assistant-contract";
 import type { Card } from "@/types/card";
 import type { DeckSection } from "@/types/deck";
 import type { WorkshopTab } from "@/components/mda/workshop-deck-chrome";
+import { useWorkshopFacts } from "@/hooks/useWorkshopFacts";
 import { StrategistEmptyState } from "./StrategistEmptyState";
 import { StrategistInputBar } from "./StrategistInputBar";
 import { StrategistModeControl } from "./StrategistModeControl";
 import { StrategistThread } from "./StrategistThread";
 import { applyMainCopyTarget } from "./apply-tuning";
+import type { WorkshopGradeAxes } from "@/lib/engine/types";
 import type { StrategistMessage } from "./types";
+
+function shortPillarLabel(grade: WorkshopGradeAxes | undefined): string | null {
+  if (!grade) return null;
+  const scores = [
+    ["Consistency", grade.consistency],
+    ["Power", grade.power],
+    ["Resilience", grade.resilience],
+    ["Disruption", grade.disruption],
+  ] as const;
+  const lowest = Math.min(...scores.map(([, value]) => value));
+  const shorts = scores.filter(([, value]) => value === lowest);
+  if (shorts.length !== 1) return null;
+  return shorts[0][0];
+}
 
 /**
  * Workshop Build Strategist panel — Facts Brain coach with Figma DEFAULT/QUERY/REQUEST chrome.
@@ -46,6 +61,8 @@ export function WorkshopStrategistPanel({
 
   const [mode, setMode] = useState<AssistantMode>("auto");
   const [input, setInput] = useState("");
+  const { facts } = useWorkshopFacts();
+  const shortPillar = shortPillarLabel(facts?.grade);
 
   const savedDeckIds = useMemo(
     () => new Set(savedDecks.map((deck) => deck.id)),
@@ -71,7 +88,6 @@ export function WorkshopStrategistPanel({
     conversationId,
     setConversationId,
     isLoadingHistory,
-    startNewConversation,
   } = useConversationPersistence({
     currentDeckId: currentDeck.id,
   });
@@ -123,6 +139,19 @@ export function WorkshopStrategistPanel({
     await sendMessage(question, setMessages);
   };
 
+  const handleStarter = async (prompt: string, starterMode: AssistantMode) => {
+    if (!isReady || isLoading) return;
+    setMode(starterMode);
+    const userMessage: StrategistMessage = {
+      id: Date.now().toString(),
+      role: "user",
+      content: prompt,
+      timestamp: new Date(),
+    };
+    setMessages((prev) => [...prev, userMessage]);
+    await sendMessage(prompt, setMessages, starterMode);
+  };
+
   const handleApplyTuning = (cardId: string, toCopies: number) => {
     const idNum = Number(cardId);
     const card = cardList.find((c) => c.id === idNum);
@@ -141,22 +170,14 @@ export function WorkshopStrategistPanel({
     addCardToDeck(card, section);
   };
 
-  const handleNewConversation = () => {
-    startNewConversation();
-  };
-
   if (!isAuthenticated) {
     return (
-      <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 p-4 text-center">
-        <Lock className="h-8 w-8 text-mda-ink-muted" aria-hidden />
-        <p className="font-open-sans text-sm text-mda-ink">
-          Log in to review a legal deck with Strategist.
-        </p>
+      <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 bg-[#eef3f6] p-4 text-center">
+        <p className="text-sm text-[#0c0e12]">Log in to review a legal deck with Strategist.</p>
         <button
           type="button"
           onClick={() => openLoginModal()}
-          data-magnetic
-          className="bg-mda-chrome px-4 py-2 font-mda text-xs font-bold uppercase tracking-wide text-mda-inverse-text"
+          className="border border-[#28303b] bg-[#14181f] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#e2e2e8]"
         >
           Log in
         </button>
@@ -166,11 +187,9 @@ export function WorkshopStrategistPanel({
 
   if (!eligibility.ok) {
     return (
-      <div className="flex min-h-0 flex-1 flex-col gap-3 p-3">
-        <p className="font-open-sans text-sm text-mda-ink">
-          Strategist needs a saved, renamed, legal deck.
-        </p>
-        <ul className="list-disc space-y-1 pl-4 font-open-sans text-xs text-mda-ink-muted">
+      <div className="flex min-h-0 flex-1 flex-col gap-3 bg-[#eef3f6] p-3">
+        <p className="text-sm text-[#0c0e12]">Strategist needs a saved, renamed, legal deck.</p>
+        <ul className="list-disc space-y-1 pl-4 text-xs text-[#5b6369]">
           {eligibility.errors.map((err) => (
             <li key={err}>{err}</li>
           ))}
@@ -179,48 +198,35 @@ export function WorkshopStrategistPanel({
     );
   }
 
-  const showEmpty = !isLoadingHistory && messages.length === 0 && !isLoading;
-
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      <div className="mb-2 flex items-center gap-2">
-        <StrategistModeControl value={mode} onChange={setMode} />
-        <button
-          type="button"
-          onClick={handleNewConversation}
-          aria-label="Start new conversation"
-          data-magnetic
-          className="inline-flex size-11 shrink-0 items-center justify-center bg-mda-chrome text-mda-inverse-text hover:bg-mda-chrome-deep"
-          title="New conversation"
-        >
-          <History className="h-4 w-4" aria-hidden />
-        </button>
+    <div className="flex h-full min-h-0 flex-1 flex-col bg-[#eef3f6]">
+      <StrategistModeControl value={mode} onChange={setMode} />
+
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        {isLoadingHistory ? (
+          <p className="p-3.5 text-[13px] text-[#5b6369]">Loading history…</p>
+        ) : (
+          <StrategistThread
+            messages={messages}
+            isLoading={isLoading}
+            onApplyTuning={handleApplyTuning}
+            onAddSynergy={handleAddSynergy}
+            onOpenWorkshopTab={onOpenWorkshopTab}
+            welcome={
+              <StrategistEmptyState
+                deckName={currentDeck.name}
+                shortPillar={shortPillar}
+                onStarter={(prompt, starterMode) => {
+                  void handleStarter(prompt, starterMode);
+                }}
+              />
+            }
+          />
+        )}
       </div>
 
-      <p className="mb-2 flex items-start gap-1.5 font-open-sans text-sm text-mda-ink">
-        <Info className="mt-0.5 h-3 w-3 shrink-0" aria-hidden />
-        Reviews your current Workshop list. Apply and Add update the deck
-        immediately.
-      </p>
-
-      {isLoadingHistory ? (
-        <p className="font-open-sans text-sm text-mda-ink-muted">
-          Loading history…
-        </p>
-      ) : showEmpty ? (
-        <StrategistEmptyState />
-      ) : (
-        <StrategistThread
-          messages={messages}
-          isLoading={isLoading}
-          onApplyTuning={handleApplyTuning}
-          onAddSynergy={handleAddSynergy}
-          onOpenWorkshopTab={onOpenWorkshopTab}
-        />
-      )}
-
       {error ? (
-        <p className="mt-2 font-open-sans text-xs text-red-700" role="alert">
+        <p className="shrink-0 px-3 pb-2 text-xs text-red-700" role="alert">
           {error}
         </p>
       ) : null}

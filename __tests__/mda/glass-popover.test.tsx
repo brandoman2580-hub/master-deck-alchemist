@@ -10,7 +10,7 @@ import { DeckArchiveActionPopovers } from "@/components/mda/archives-popovers";
 expect.extend(toHaveNoViolations);
 
 describe("MdaGlassPopover", () => {
-  it("uses card-preview glass classes and edge sky L-brackets", () => {
+  it("uses a frosted fill and a steel border instead of L-brackets", () => {
     const { container } = render(
       <MdaGlassPopover panelClassName="p-3">
         <p>Popover body</p>
@@ -23,16 +23,29 @@ describe("MdaGlassPopover", () => {
 
     const surface = container.querySelector("[data-mda-glass-surface]");
     expect(surface).toBeInTheDocument();
-    expect(surface?.className).toMatch(/bg-\[rgba\(247,251,253,0\.3\)\]/);
+    expect(surface?.className).toMatch(/bg-\[rgba\(247,251,253,0\.72\)\]/);
+    expect(surface?.className).toMatch(/border-\[#5b6369\]/);
     expect(surface?.className).not.toMatch(/border-2/);
     expect(surface?.className).toMatch(/backdrop-blur-\[12px\]/);
     expect(surface?.className).toMatch(/backdrop-saturate-\[1\.6\]/);
     expect(surface?.className).toMatch(/shadow-mda-lift/);
-    const arms = container.querySelectorAll(".mda-l-arm");
-    expect(arms).toHaveLength(4);
-    expect(container.querySelector(".mda-l-frame")).toBeInTheDocument();
-    expect(container.querySelector(".size-6")).not.toBeInTheDocument();
+    expect(container.querySelector(".mda-l-arm")).not.toBeInTheDocument();
+    expect(container.querySelector(".mda-l-frame")).not.toBeInTheDocument();
     expect(screen.getByText("Popover body")).toBeInTheDocument();
+  });
+
+  it("leaves the blur off when an ancestor owns it", () => {
+    const { container } = render(
+      <MdaGlassPopover blur={false} panelClassName="p-3">
+        <p>Popover body</p>
+      </MdaGlassPopover>,
+    );
+
+    const surface = container.querySelector("[data-mda-glass-surface]");
+    expect(surface).toBeInstanceOf(HTMLElement);
+    expect(surface?.className).toMatch(/bg-\[rgba\(247,251,253,0\.72\)\]/);
+    expect(surface?.className).not.toMatch(/backdrop-blur/);
+    expect((surface as HTMLElement).style.backdropFilter || "").toBe("");
   });
 
   it("has no axe violations", async () => {

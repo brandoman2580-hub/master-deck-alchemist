@@ -8,6 +8,9 @@ export type MdaCollapseProps = {
   open: boolean;
   children: ReactNode;
   className?: string;
+  /** Seconds. The filter drawer passes 0.2. Other collapses keep 0.28. */
+  duration?: number;
+  ease?: "easeInOut" | "easeOut" | [number, number, number, number];
 };
 
 /**
@@ -17,6 +20,8 @@ export function MdaCollapse({
   open,
   children,
   className,
+  duration = 0.28,
+  ease = "easeInOut",
 }: MdaCollapseProps): ReactNode {
   const reduceMotion = useReducedMotion();
 
@@ -28,7 +33,7 @@ export function MdaCollapse({
           initial={reduceMotion ? { opacity: 0 } : { height: 0, opacity: 0 }}
           animate={reduceMotion ? { opacity: 1 } : { height: "auto", opacity: 1 }}
           exit={reduceMotion ? { opacity: 0 } : { height: 0, opacity: 0 }}
-          transition={{ duration: 0.28, ease: "easeInOut" }}
+          transition={{ duration, ease }}
           className={cn("overflow-hidden", className)}
         >
           {children}

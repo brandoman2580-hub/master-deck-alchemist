@@ -30,7 +30,7 @@ export function ToggleFilter({
       <Label
         className={cn(
           "font-medium",
-          isChrome ? "font-mda text-sm text-mda-ink" : "text-white/80",
+          isChrome ? "font-spaceGrotesk text-sm text-mda-ink" : "text-white/80",
         )}
       >
         {label}
@@ -59,10 +59,10 @@ export function ToggleFilter({
                 "relative z-10 flex items-center justify-center gap-1 px-3 py-2 text-xs font-semibold transition-colors duration-200 focus:outline-none",
                 isChrome
                   ? cn(
-                      "font-mda uppercase tracking-wide text-mda-inverse-text",
+                      "font-spaceGrotesk uppercase tracking-wide text-mda-inverse-text hover:bg-[#e2e8f0] hover:text-[#14181f]",
                       value.includes(option.value)
                         ? "bg-mda-chrome-deep"
-                        : "hover:bg-mda-chrome-deep/80",
+                        : "bg-transparent",
                     )
                   : cn(
                       "rounded-lg font-display",

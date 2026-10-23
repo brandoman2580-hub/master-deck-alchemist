@@ -332,12 +332,6 @@
   margin: 0 !important;
 }
 
-/* === MDA magnetic cursor (desktop fine pointer) === */
-html.mda-magnetic-cursor,
-html.mda-magnetic-cursor * {
-  cursor: none !important;
-}
-
 @keyframes onAutoFillStart {
   from {
     opacity: 0.99;
@@ -436,7 +430,48 @@ input:-webkit-autofill:focus {
   height: 55%;
 }
 
+/*
+ * The preview opens to the right of the card. The popper wrapper is what
+ * actually receives the hit test, so without this the next card to the right
+ * never sees the pointer. The wrapper is also translated, and a translated
+ * ancestor drops a child's backdrop-filter. The blur lives on the wrapper.
+ */
+[data-radix-popper-content-wrapper]:has(.mda-preview-content) {
+  pointer-events: none;
+  background-color: transparent;
+  -webkit-backdrop-filter: blur(12px) saturate(160%);
+  backdrop-filter: blur(12px) saturate(160%);
+}
+
+
+/* Workshop ↔ Archives. 200ms crossfade. Snapshots only; nothing is morphed. */
+::view-transition-old(root) {
+  animation: 200ms cubic-bezier(0, 0, 0.2, 1) both mda-vt-fade-out;
+}
+
+::view-transition-new(root) {
+  animation: 200ms cubic-bezier(0, 0, 0.2, 1) both mda-vt-fade-in;
+}
+
+@keyframes mda-vt-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes mda-vt-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+
   .mda-loader-quad-cell,
   .mda-loader-wave-bar {
     animation: none;

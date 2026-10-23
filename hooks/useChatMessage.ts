@@ -60,6 +60,7 @@ export function useChatMessage({
     userQuery: string,
     convId: string | undefined,
     deckSnapshot: DeckSnapshot | undefined,
+    requestMode: AssistantMode,
     retries = 3,
   ): Promise<DeckAssistantChatResponse> => {
     let lastError: Error | null = null;
@@ -70,7 +71,7 @@ export function useChatMessage({
           deckId,
           userQuery,
           conversationId: convId,
-          mode,
+          mode: requestMode,
           format,
           deckSnapshot,
         });
@@ -113,7 +114,9 @@ export function useChatMessage({
   const sendMessage = async (
     userQuery: string,
     setMessages: React.Dispatch<React.SetStateAction<StrategistMessage[]>>,
+    modeOverride?: AssistantMode,
   ): Promise<void> => {
+    const requestMode = modeOverride ?? mode;
     setIsLoading(true);
     setError(null);
 
@@ -130,6 +133,7 @@ export function useChatMessage({
         userQuery,
         conversationId,
         deckSnapshot,
+        requestMode,
         3,
       );
 

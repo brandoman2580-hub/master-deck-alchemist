@@ -11,6 +11,7 @@ import { useWorkshopFacts } from "@/hooks/useWorkshopFacts";
 import { workshopGradeFromAxes } from "@/lib/workshop/grade";
 import { deckHasBanlistFault } from "@/lib/workshop/banlist-fault";
 import type { DeckFormat } from "@/types/deck";
+import { navigateWithViewTransition } from "@/lib/motion/view-transition";
 import { WorkshopShell, type WorkshopShellTab } from "./workshop-shell";
 
 const PILLARS = ["Consistency", "Power", "Resilience", "Disruption"] as const;
@@ -67,7 +68,7 @@ export default function WorkshopPage(): ReactNode {
       banlistFault={banlistFault}
       tab={tab}
       onTabChange={setTab}
-      onBackToArchives={() => router.push("/deck-archives")}
+      onBackToArchives={() => navigateWithViewTransition(() => router.push("/deck-archives"))}
       onRename={renameDeck}
     >
       {tab === "build" ? (

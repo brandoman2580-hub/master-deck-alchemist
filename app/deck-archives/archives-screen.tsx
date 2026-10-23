@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouteHeadingFocus } from "@/hooks/useRouteHeadingFocus";
+import { navigateWithViewTransition } from "@/lib/motion/view-transition";
 import { useRouter } from "next/navigation";
 import { motion, useReducedMotion } from "framer-motion";
 import { Bell, Gamepad2, Layers, LayoutGrid, List, MoreVertical, Pin, Play, Plus, Rows3, Search, X } from "lucide-react";
@@ -323,6 +325,7 @@ export function ArchivesScreen() {
   const user = useUserStore((state) => state.user);
   const { loadDeck, clearDeck } = useDeck();
   const { decks, isLoading, error, invalidate } = useUserDecks();
+  useRouteHeadingFocus();
 
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<ArchiveDeckSort>("newest");
@@ -451,7 +454,7 @@ export function ArchivesScreen() {
     setActionError(null);
     const live = useLiveDeckStore.getState();
     if (live.currentDeck.id === deck.id) {
-      router.push("/workshop");
+      navigateWithViewTransition(() => router.push("/workshop"));
       return;
     }
     if (live.isDirty && live.currentDeck.name !== "New Deck") {
@@ -464,7 +467,7 @@ export function ArchivesScreen() {
       setActionError(after.error ?? "Could not open this deck.");
       return;
     }
-    router.push("/workshop");
+    navigateWithViewTransition(() => router.push("/workshop"));
   }
 
   async function togglePin(deck: ClientDeck) {
@@ -609,7 +612,7 @@ export function ArchivesScreen() {
   function confirmNewDeck() {
     clearDeck(newFormat);
     closeDialog();
-    router.push(`/workshop?mode=${encodeURIComponent(newFormat)}`);
+    navigateWithViewTransition(() => router.push(`/workshop?mode=${encodeURIComponent(newFormat)}`));
   }
 
   return (
@@ -706,7 +709,7 @@ export function ArchivesScreen() {
             <div id="top" className="scroll-mt-6" />
             <div className="mb-6 flex flex-col justify-between gap-2 border-b border-[#28303b] pb-3 md:flex-row md:items-baseline">
               <div>
-                <h1 className="font-space text-[12px] font-semibold uppercase tracking-wider text-[#8a96a6]">ARCHIVES // DECKLISTS</h1>
+                <h1 data-page-heading tabIndex={-1} className="font-space text-[12px] font-semibold uppercase tracking-wider text-[#8a96a6] outline-none">ARCHIVES // DECKLISTS</h1>
                 <p className="mt-1 text-[15px] font-normal leading-6 text-[#e2e8f0]">Resume editing a decklist or initiate a new build.</p>
               </div>
             </div>

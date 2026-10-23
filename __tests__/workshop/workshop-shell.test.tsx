@@ -91,7 +91,7 @@ describe("WorkshopShell", () => {
     unmount();
 
     renderShell({ deckFormat: "Master Duel", sideCount: 12 });
-    expect(screen.getByText("MD")).toBeInTheDocument();
+    expect(screen.getByText("MASTER DUEL")).toBeInTheDocument();
     expect(screen.queryByText("Side")).not.toBeInTheDocument();
   });
 
@@ -136,6 +136,21 @@ describe("WorkshopShell", () => {
     expect(onRename).toHaveBeenCalledWith("Branded Opening");
   });
 
+  it("draws each pillar on a shared track and clears the marks while loading", () => {
+    renderShell();
+    const consistency = screen.getByText("Consistency").parentElement;
+    expect(consistency?.querySelector("[data-grade-mark]")).toHaveStyle({
+      transform: "scaleX(0.82)",
+    });
+    expect(consistency?.parentElement).toHaveClass("flex-1");
+    expect(screen.getByText("82")).toBeInTheDocument();
+    cleanup();
+
+    renderShell({ gradeLoading: true });
+    expect(screen.getByText("Consistency").parentElement?.querySelector("[data-grade-mark]")).toBeNull();
+    expect(screen.getAllByText("—").length).toBeGreaterThanOrEqual(4);
+  });
+
   it("returns to Archives and moves between modes from the keyboard", () => {
     const onBackToArchives = jest.fn();
     function Harness() {
@@ -162,6 +177,12 @@ describe("WorkshopShell", () => {
       );
     }
     render(<Harness />);
+    const session = screen.getByRole("region", { name: "Deck session" });
+    expect(session).toContainElement(screen.getByRole("tablist", { name: "Workshop mode" }));
+    expect(session).toContainElement(screen.getByText("Grade"));
+    const build = screen.getByRole("tab", { name: "Build" });
+    expect(build.querySelector("[aria-hidden='true']")).toHaveClass("absolute", "inset-x-0", "bottom-0", "h-0.5", "bg-[#bfe5f3]");
+    expect(screen.getByRole("tab", { name: "Matchups" }).querySelector("[aria-hidden='true']")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Archives" }));
     expect(onBackToArchives).toHaveBeenCalledTimes(1);
 
@@ -171,6 +192,6 @@ describe("WorkshopShell", () => {
     expect(screen.getByRole("tab", { name: "Combos" })).toHaveFocus();
     fireEvent.keyDown(screen.getByRole("tab", { name: "Combos" }), { key: "Home" });
     expect(screen.getByRole("tab", { name: "Build" })).toHaveFocus();
-    expect(screen.getByText("Sheet body")).toBeInTheDocument();
+    expect(screen.getAllByText("Sheet body").length).toBeGreaterThan(0);
   });
 });
