@@ -5,6 +5,7 @@ import { Trash2 } from "lucide-react";
 import { FILTER_CONFIGS } from "@/lib/deck/constants";
 import { ToggleFilter } from "@/components/ui/filter-toggle";
 import { MdaCollapse } from "@/components/mda/collapse";
+import { EASE_OUT, FILTER_S } from "@/lib/motion/tokens";
 import { cn } from "@/lib/utils";
 
 export type WorkshopFilterState = {
@@ -52,6 +53,8 @@ export type WorkshopCardFiltersProps = {
   onEffectChange: (event: ChangeEvent<HTMLInputElement>) => void;
   onClear: () => void;
   activeCount: number;
+  shownCount: number;
+  totalCount: number;
 };
 
 /**
@@ -65,25 +68,36 @@ export function WorkshopCardFilters({
   onEffectChange,
   onClear,
   activeCount,
+  shownCount,
+  totalCount,
 }: WorkshopCardFiltersProps): ReactNode {
+  const countLabel = `${shownCount.toLocaleString()} ${shownCount === 1 ? "card" : "cards"}${
+    shownCount !== totalCount ? ` of ${totalCount.toLocaleString()}` : ""
+  }`;
+
   return (
-    <MdaCollapse open={open}>
-      <div className="mb-3 max-h-[min(40vh,360px)] space-y-4 overflow-y-auto border border-mda-ink/15 bg-mda-surface px-3 py-3">
+    <MdaCollapse open={open} duration={FILTER_S} ease={EASE_OUT}>
+      <div className="mb-3 max-h-[min(40vh,360px)] space-y-4 overflow-y-auto border border-mda-ink/15 bg-mda-surface px-3 py-3 font-spaceGrotesk">
         <div className="flex items-center justify-between gap-2">
-          <p className="font-mda text-sm font-bold uppercase tracking-wide text-mda-ink-strong">
-            Filters
-            {activeCount > 0 ? (
-              <span className="ml-2 bg-mda-chrome px-1.5 py-0.5 text-xs font-bold normal-case tracking-normal text-mda-inverse-text">
-                {activeCount}
-              </span>
-            ) : null}
-          </p>
+          <div>
+            <p className="text-sm font-bold uppercase tracking-wide text-mda-ink-strong">
+              Filters
+              {activeCount > 0 ? (
+                <span className="ml-2 bg-mda-chrome px-1.5 py-0.5 text-xs font-bold normal-case tracking-normal text-mda-inverse-text">
+                  {activeCount}
+                </span>
+              ) : null}
+            </p>
+            <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#5b6369]" aria-live="polite">
+              {countLabel}
+            </p>
+          </div>
           <button
             type="button"
             onClick={onClear}
             disabled={activeCount === 0}
             data-magnetic
-            className="inline-flex items-center gap-1.5 border border-mda-chrome/40 bg-transparent px-2 py-1 font-mda text-xs font-bold uppercase text-mda-ink transition-colors hover:bg-mda-chrome hover:text-mda-inverse-text disabled:cursor-not-allowed disabled:opacity-40"
+            className="inline-flex items-center gap-1.5 border border-mda-chrome/40 bg-transparent px-2 py-1 text-xs font-bold uppercase text-mda-ink transition-colors hover:bg-mda-chrome hover:text-mda-inverse-text disabled:cursor-not-allowed disabled:opacity-40"
           >
             <Trash2 className="h-3.5 w-3.5" aria-hidden />
             Reset
@@ -115,7 +129,7 @@ export function WorkshopCardFilters({
         <div className="space-y-2 border-t border-mda-ink/10 pt-4">
           <label
             htmlFor="mda-effect-filter"
-            className="font-mda text-sm font-medium text-mda-ink"
+            className="text-sm font-medium text-mda-ink"
           >
             Effect Text
           </label>
@@ -126,7 +140,7 @@ export function WorkshopCardFilters({
             value={searchParams.effect || ""}
             onChange={onEffectChange}
             placeholder="Search card effects…"
-            className="w-full bg-mda-panel px-3 py-2 font-mda text-sm text-mda-ink placeholder:text-mda-ink-muted ring-1 ring-mda-ink/10 transition-[box-shadow,background-color] duration-200 focus:bg-mda-surface focus:outline-none focus:ring-mda-cyan"
+            className="w-full bg-mda-panel px-3 py-2 font-spaceGrotesk text-sm text-mda-ink placeholder:text-mda-ink-muted ring-1 ring-mda-ink/10 transition-[box-shadow,background-color] duration-200 focus:bg-mda-surface focus:outline-none focus:ring-mda-cyan"
           />
         </div>
       </div>

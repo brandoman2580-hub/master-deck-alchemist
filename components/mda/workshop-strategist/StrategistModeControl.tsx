@@ -18,7 +18,7 @@ interface StrategistModeControlProps {
 }
 
 /**
- * Mode tabs for Strategist — full inverse text on every tab for chrome contrast.
+ * Five-column mode strip from the locked Workshop browser screen.
  */
 export function StrategistModeControl({
   value,
@@ -29,23 +29,27 @@ export function StrategistModeControl({
     <div
       role="tablist"
       aria-label="Strategist mode"
-      className={cn("flex flex-1 gap-1", className)}
+      className={cn(
+        "grid shrink-0 grid-cols-5 border-b border-[#28303b] bg-[#0c0e12]",
+        className,
+      )}
     >
-      {MODES.map((mode) => {
+      {MODES.map((mode, index) => {
         const selected = value === mode.value;
+        const last = index === MODES.length - 1;
         return (
           <button
             key={mode.value}
             type="button"
             role="tab"
             aria-selected={selected}
-            data-magnetic
             onClick={() => onChange(mode.value)}
             className={cn(
-              "min-h-11 flex-1 px-2 font-mda text-xs font-bold uppercase tracking-wide text-mda-inverse-text transition-colors",
+              "flex h-8 items-center justify-center text-[10px] font-semibold uppercase tracking-[0.12em] transition-colors hover:bg-[#e2e8f0] hover:text-[#0c0e12]",
+              !last && "border-r border-[#28303b] hover:border-r-[#e2e8f0]",
               selected
-                ? "bg-mda-chrome-deep"
-                : "bg-mda-chrome hover:bg-mda-chrome-deep/80",
+                ? "border-b-2 border-b-[#bfe5f3] bg-[#14181f] text-[#f7fcff] hover:border-b-[#0c0e12]"
+                : "text-[#8a96a6]",
             )}
           >
             {mode.label}

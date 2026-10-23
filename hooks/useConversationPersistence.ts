@@ -10,7 +10,7 @@ interface UseConversationPersistenceOptions {
 }
 
 function strategistStorageKey(deckId: string | undefined): string {
-  return `strategist-conversation-${deckId || "temp"}`;
+  return `strategist-conversation-v2-${deckId || "temp"}`;
 }
 
 function legacyAssistantStorageKey(deckId: string | undefined): string {
@@ -21,7 +21,7 @@ function readLocalThread(
   deckId: string | undefined,
 ): { messages: StrategistMessage[]; conversationId?: string } | null {
   if (typeof window === "undefined") return null;
-  const keys = [strategistStorageKey(deckId), legacyAssistantStorageKey(deckId)];
+  const keys = [strategistStorageKey(deckId)];
   for (const key of keys) {
     try {
       const saved = localStorage.getItem(key);
@@ -129,6 +129,7 @@ export function useConversationPersistence({
         }),
       );
       localStorage.removeItem(legacyAssistantStorageKey(currentDeckId));
+      localStorage.removeItem(`strategist-conversation-${currentDeckId}`);
     } catch {
       // ignore
     }
@@ -222,6 +223,7 @@ export function useConversationPersistence({
       if (currentDeckId && currentDeckId !== "temp" && currentDeckId !== "") {
         localStorage.removeItem(storageKey);
         localStorage.removeItem(legacyAssistantStorageKey(currentDeckId));
+        localStorage.removeItem(`strategist-conversation-${currentDeckId}`);
       }
     } catch {
       // ignore

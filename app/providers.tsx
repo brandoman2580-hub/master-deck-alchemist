@@ -6,7 +6,6 @@ import { ThemeProvider } from "next-themes";
 import { DeckProvider } from "../context/deck-context";
 import Navbar from "../components/navbar";
 import { useSupabaseUserSync } from "../hooks/useSupabaseUserSync";
-import { MagneticCursor } from "@/components/mda/magnetic-cursor";
 import { AppQueryProvider } from "@/lib/query/client";
 
 function usesMdaShell(pathname: string): boolean {
@@ -21,7 +20,6 @@ function usesMdaShell(pathname: string): boolean {
 export function Providers({ children }: { children: ReactNode }) {
   const pathname = usePathname() ?? "/";
   const hideLegacyNavbar = usesMdaShell(pathname);
-  const showMagneticCursor = hideLegacyNavbar;
   const landingOwnsLandmarks = pathname === "/";
   const archivesOwnsLandmarks = pathname.startsWith("/deck-archives");
   useSupabaseUserSync();
@@ -39,7 +37,6 @@ export function Providers({ children }: { children: ReactNode }) {
         <DeckProvider>
           <div className="relative z-20 flex h-dvh max-h-dvh flex-col overflow-hidden">
             {hideLegacyNavbar ? null : <Navbar />}
-            {showMagneticCursor ? <MagneticCursor /> : null}
             {landingOwnsLandmarks || archivesOwnsLandmarks ? (
               <div
                 id={archivesOwnsLandmarks ? undefined : "main-content"}

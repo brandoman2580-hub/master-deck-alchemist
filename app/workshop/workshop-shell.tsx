@@ -1,8 +1,14 @@
 "use client";
 
 import { useEffect, useId, useRef, useState, type ReactNode, type KeyboardEvent } from "react";
+import { EditorialUserMenu } from "@/components/mda/editorial-user-menu";
+import { FadeSwap } from "@/components/mda/fade-swap";
+import { RollingNumber } from "@/components/mda/rolling-number";
+import { SlidingTabMark } from "@/components/mda/sliding-tab-mark";
 import { CardImage } from "@/components/ui/card-image";
+import { useRouteHeadingFocus } from "@/hooks/useRouteHeadingFocus";
 import { normalizeDeckName } from "@/lib/deck/normalize-deck-name";
+import { GRADE_MS, VIEW_PANEL_S } from "@/lib/motion/tokens";
 import type { Card } from "@/types/card";
 import type { DeckFormat } from "@/types/deck";
 import "./space-grotesk.css";
@@ -39,8 +45,9 @@ const TABS: { id: WorkshopShellTab; label: string }[] = [
 ];
 
 /**
- * Two-plate workshop sleeve: deck identity on the left, grade on the right,
- * with Build / Matchups / Combos opening the work sheet underneath.
+ * Workshop sleeve: wordmark bar, then one deck plate.
+ * Identity sits on the left, the grade on the upper right,
+ * and Build / Matchups / Combos form the plate's bottom edge.
  */
 export function WorkshopShell({
   deckName,
@@ -68,8 +75,9 @@ export function WorkshopShell({
   const moveFromKeyboard = useRef(false);
   const tablistId = useId();
   const panelId = useId();
+  useRouteHeadingFocus();
   const showSide = deckFormat === "TCG";
-  const formatLabel = deckFormat === "TCG" ? "TCG" : "MD";
+  const formatLabel = deckFormat === "TCG" ? "TCG" : "MASTER DUEL";
   const letter = gradeLoading || !gradeLetter ? "—" : gradeLetter;
 
   if (!editing && syncedName !== deckName) {
@@ -123,29 +131,36 @@ export function WorkshopShell({
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden bg-[#0c0e12] font-spaceGrotesk text-[#e2e8f0]">
-      <header className="flex h-16 shrink-0 items-center justify-between border-b border-[#28303b] bg-[#111317] px-6 md:px-8">
-        <p className="font-orbitron select-none text-[14px] font-semibold uppercase tracking-[0.25em] text-[#f1f5f9]">
+      <header className="flex h-16 shrink-0 items-center justify-between border-b border-[#28303b] bg-[#0c0e12] px-8">
+        <p className="select-none text-lg font-medium uppercase tracking-widest text-[#f7fcff]">
           Master Deck Alchemist
         </p>
-        <button
-          type="button"
-          onClick={onBackToArchives}
-          className="flex h-11 min-h-11 items-center gap-3 border border-[#28303b] bg-[#14181f] px-5 text-xs font-semibold uppercase tracking-wider text-[#e2e8f0] transition-colors hover:border-[#bfe5f3] focus-visible:border-[#bfe5f3] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#bfe5f3]"
-        >
-          Archives
-          <span aria-hidden="true" className="inline-block h-[10px] w-[2px] bg-[#bfe5f3]" />
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={onBackToArchives}
+            className="flex h-10 items-center gap-3 border border-[#28303b] bg-[#14181f] px-4 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#e2e2e8] transition-colors hover:border-[#14181f] hover:bg-[#e2e8f0] hover:text-[#14181f] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#bfe5f3]"
+          >
+            <svg aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" strokeLinecap="square" strokeLinejoin="miter" strokeWidth="1.5" viewBox="0 0 24 24">
+              <path d="M19 12H5" />
+              <path d="M11 6L5 12l6 6" />
+            </svg>
+            Archives
+          </button>
+          <EditorialUserMenu />
+        </div>
       </header>
 
-      <div className="mx-auto flex min-h-0 w-full max-w-[1600px] flex-1 flex-col gap-6 p-6 md:p-8">
-        <section aria-label="Deck session" className="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-12">
-          <div className="flex flex-col items-start gap-6 border border-[#28303b] bg-[#14181f] p-4 sm:flex-row sm:items-center lg:col-span-7">
+      <div className="mx-auto flex min-h-0 w-full max-w-[1920px] flex-1 flex-col gap-4 p-6">
+        <section aria-label="Deck session" className="flex shrink-0 flex-col border border-[#28303b] bg-[#14181f]">
+          <div className="flex flex-col gap-5 p-5 lg:flex-row lg:items-center lg:gap-16">
+            <div className="flex w-full min-w-0 flex-col items-start gap-4 sm:flex-row sm:items-center lg:w-auto lg:max-w-[42%] lg:shrink-0">
             {coverCard ? (
-              <div className="relative h-[104px] w-[72px] shrink-0 overflow-hidden border border-[#28303b] bg-[#1b2028]">
-                <CardImage card={coverCard} preferSmall fill sizes="72px" alt={coverCard.name} />
+              <div className="relative h-20 w-14 shrink-0 overflow-hidden border border-[#28303b] bg-[#0c0e12]">
+                <CardImage card={coverCard} preferSmall fill sizes="56px" alt="" />
               </div>
             ) : (
-              <div aria-hidden="true" className="h-[104px] w-[72px] shrink-0 border border-[#28303b] bg-[#1b2028]" />
+              <div aria-hidden="true" className="h-20 w-14 shrink-0 border border-[#28303b] bg-[#0c0e12]" />
             )}
 
             <div className="flex min-w-0 flex-1 flex-col justify-center gap-3">
@@ -171,7 +186,7 @@ export function WorkshopShell({
                     className="h-11 min-w-0 flex-1 border border-[#bfe5f3] bg-[#1b2028] px-3 text-2xl font-bold tracking-tight text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#bfe5f3]"
                   />
                 ) : (
-                  <h1 className="truncate text-2xl font-bold tracking-tight text-white">{deckName}</h1>
+                  <h1 data-page-heading tabIndex={-1} className="truncate text-2xl font-semibold uppercase tracking-tight text-[#f7fcff] outline-none">{deckName}</h1>
                 )}
                 {editing ? null : (
                   <button
@@ -182,7 +197,7 @@ export function WorkshopShell({
                       setDraft(deckName);
                       setEditing(true);
                     }}
-                    className="flex h-11 w-11 shrink-0 items-center justify-center border border-transparent text-[#8a96a6] transition-colors hover:border-[#28303b] hover:text-[#e2e8f0] focus-visible:border-[#bfe5f3] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#bfe5f3]"
+                    className="flex h-11 w-11 shrink-0 items-center justify-center border border-transparent text-[#8a96a6] transition-colors hover:border-[#14181f] hover:bg-[#e2e8f0] hover:text-[#14181f] focus-visible:border-[#bfe5f3] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#bfe5f3]"
                   >
                     <svg aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" strokeLinecap="square" strokeLinejoin="miter" strokeWidth="1.5" viewBox="0 0 24 24">
                       <path d="M16.5 3.5l4 4L7 21H3v-4L16.5 3.5z" />
@@ -191,22 +206,24 @@ export function WorkshopShell({
                 )}
               </div>
 
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-[#28303b] pt-2 text-sm">
-                <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-[#8a96a6]">
-                  Format:
-                  <span className="text-xs font-semibold text-[#e2e8f0]">{formatLabel}</span>
+              <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px] font-medium uppercase tracking-[0.12em]">
+                <p className="flex items-center gap-2 text-[#e2e8f0]">
+                  <span className="border border-[#28303b] px-1.5 py-0.5 font-normal text-[#8a96a6]">Format</span>
+                  {formatLabel}
                 </p>
-                <span aria-hidden="true" className="h-3 w-px bg-[#28303b]" />
-                <p className="flex items-center gap-3 text-xs font-semibold uppercase tracking-widest text-[#8a96a6]">
-                  <span className="flex items-center gap-1">
-                    Main <span className="text-xs font-semibold tabular-nums text-[#e2e8f0]">{mainCount}</span>
+                <p className="flex items-center gap-4 text-[#e2e2e8]">
+                  <span className="flex items-center gap-2">
+                    <span className="border border-[#28303b] px-1.5 py-0.5 font-normal text-[#8a96a6]">Main</span>
+                    <RollingNumber value={mainCount} className="tabular-nums text-[#f7fcff]" />
                   </span>
-                  <span className="flex items-center gap-1">
-                    Extra <span className="text-xs font-semibold tabular-nums text-[#e2e8f0]">{extraCount}</span>
+                  <span className="flex items-center gap-2">
+                    <span className="border border-[#28303b] px-1.5 py-0.5 font-normal text-[#8a96a6]">Extra</span>
+                    <RollingNumber value={extraCount} className="tabular-nums text-[#f7fcff]" />
                   </span>
                   {showSide ? (
-                    <span className="flex items-center gap-1">
-                      Side <span className="text-xs font-semibold tabular-nums text-[#e2e8f0]">{sideCount}</span>
+                    <span className="flex items-center gap-2">
+                      <span className="border border-[#28303b] px-1.5 py-0.5 font-normal text-[#8a96a6]">Side</span>
+                      <RollingNumber value={sideCount} className="tabular-nums text-[#f7fcff]" />
                     </span>
                   ) : null}
                 </p>
@@ -218,63 +235,94 @@ export function WorkshopShell({
                 ) : null}
               </div>
             </div>
+            </div>
+
+            <div className="flex w-full min-w-0 flex-1 items-center gap-5">
+              <div className="flex shrink-0 flex-col">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#8a96a6]">Grade</span>
+                <span className="mt-1 text-[40px] font-semibold leading-none text-[#f7fcff]">{letter}</span>
+              </div>
+              <span aria-hidden="true" className="h-10 w-px shrink-0 bg-[#28303b]" />
+              <dl className="flex min-w-0 flex-1 items-end gap-4">
+                {pillars.map((pillar) => {
+                  const mark = gradeLoading || pillar.value == null
+                    ? null
+                    : Math.min(100, Math.max(0, pillar.value));
+                  return (
+                    <div key={pillar.label} className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-2">
+                      <dt className="col-start-1 row-start-1 truncate text-[11px] font-semibold uppercase tracking-[0.12em] text-[#8a96a6]">{pillar.label}</dt>
+                      <dd className="col-start-2 row-start-1 text-[13px] font-bold tabular-nums text-[#f7fcff]">
+                        {mark == null ? "—" : <RollingNumber value={mark} durationMs={GRADE_MS} />}
+                      </dd>
+                      <div aria-hidden="true" className="col-span-2 row-start-2 mt-1.5 h-2 w-full overflow-hidden bg-[#5b6369]">
+                        {mark == null ? null : (
+                          <span
+                            data-grade-mark
+                            className="block h-full w-full origin-left bg-[#bfe5f3] transition-transform duration-200 ease-out motion-reduce:transition-none"
+                            style={{ transform: `scaleX(${mark / 100})` }}
+                          />
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </dl>
+            </div>
           </div>
 
-          <div className="flex flex-col justify-between border border-[#28303b] bg-[#14181f] p-4 lg:col-span-5">
-            <div className="mb-3 flex items-baseline justify-between border-b border-[#28303b] pb-2">
-              <span className="text-xs font-semibold uppercase tracking-widest text-[#8a96a6]">Grade</span>
-              <span className="text-3xl font-bold leading-none text-[#e2e8f0]">{letter}</span>
-            </div>
-            <dl className="grid grid-cols-2 gap-3 pt-1 sm:grid-cols-4">
-              {pillars.map((pillar) => (
-                <div key={pillar.label} className="flex flex-col">
-                  <dt className="mb-1 text-xs font-semibold uppercase tracking-wider text-[#8a96a6]">{pillar.label}</dt>
-                  <dd className="text-sm font-semibold tabular-nums text-[#e2e8f0]">
-                    {gradeLoading || pillar.value == null ? "—" : pillar.value}
-                  </dd>
-                </div>
-              ))}
-            </dl>
+          <div role="tablist" aria-label="Workshop mode" id={tablistId} className="flex w-full border-t border-[#28303b]">
+            {TABS.map((item) => {
+              const selected = item.id === tab;
+              return (
+                <button
+                  key={item.id}
+                  ref={(node) => {
+                    tabRefs.current[item.id] = node ?? undefined;
+                  }}
+                  type="button"
+                  role="tab"
+                  id={`${tablistId}-${item.id}`}
+                  aria-selected={selected}
+                  aria-controls={panelId}
+                  tabIndex={selected ? 0 : -1}
+                  onClick={() => onTabChange(item.id)}
+                  onKeyDown={onTabKeyDown}
+                  className={
+                    selected
+                      ? "group relative flex h-10 min-h-10 flex-1 items-center justify-center border-r border-[#28303b] bg-[#14181f] px-5 text-xs font-semibold uppercase tracking-widest text-[#e2e8f0] transition-colors last:border-r-0 hover:border-[#14181f] hover:bg-[#e2e8f0] hover:text-[#14181f] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#bfe5f3]"
+                      : "group relative flex h-10 min-h-10 flex-1 items-center justify-center border-r border-[#28303b] bg-[#14181f] px-5 text-xs font-semibold uppercase tracking-widest text-[#8a96a6] transition-colors last:border-r-0 hover:border-[#14181f] hover:bg-[#e2e8f0] hover:text-[#14181f] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#bfe5f3]"
+                  }
+                >
+                  {item.label}
+                  {selected ? (
+                    <SlidingTabMark
+                      layoutId="workshop-view-tab"
+                      className="absolute inset-x-0 bottom-0 h-0.5 bg-[#bfe5f3] group-hover:bg-[#14181f]"
+                    />
+                  ) : null}
+                </button>
+              );
+            })}
           </div>
         </section>
-
-        <div role="tablist" aria-label="Workshop mode" id={tablistId} className="flex items-center gap-1 border-b border-[#28303b]">
-          {TABS.map((item) => {
-            const selected = item.id === tab;
-            return (
-              <button
-                key={item.id}
-                ref={(node) => {
-                  tabRefs.current[item.id] = node ?? undefined;
-                }}
-                type="button"
-                role="tab"
-                id={`${tablistId}-${item.id}`}
-                aria-selected={selected}
-                aria-controls={panelId}
-                tabIndex={selected ? 0 : -1}
-                onClick={() => onTabChange(item.id)}
-                onKeyDown={onTabKeyDown}
-                className={
-                  selected
-                    ? "flex h-11 min-h-11 items-center gap-2 border-t-2 border-[#bfe5f3] bg-[#e2e8f0] px-6 text-xs font-bold uppercase tracking-widest text-[#0c0e12] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#0c0e12]"
-                    : "flex h-11 min-h-11 items-center border border-transparent bg-transparent px-6 text-xs font-medium uppercase tracking-widest text-[#8a96a6] transition-colors hover:text-white focus-visible:border-[#bfe5f3] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#bfe5f3]"
-                }
-              >
-                {item.label}
-                {selected ? <span aria-hidden="true" className="h-[10px] w-[2px] bg-[#bfe5f3]" /> : null}
-              </button>
-            );
-          })}
-        </div>
 
         <div
           role="tabpanel"
           id={panelId}
           aria-labelledby={`${tablistId}-${tab}`}
-          className="flex min-h-0 flex-1 flex-col overflow-hidden border border-[#28303b] bg-[#eef3f6] text-[#0c0e12]"
+          className="flex min-h-0 flex-1 flex-col overflow-hidden"
         >
-          {children}
+          <FadeSwap
+            panelKey={tab}
+            duration={VIEW_PANEL_S}
+            panelClassName={
+              tab === "build"
+                ? undefined
+                : "border border-[#28303b] bg-[#eef3f6] text-[#0c0e12]"
+            }
+          >
+            {children}
+          </FadeSwap>
         </div>
       </div>
     </div>

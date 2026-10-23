@@ -23,6 +23,7 @@ import {
 import type { BanStatus } from "@/types/deck";
 import type { Card } from "@/types/card";
 import { cn } from "@/lib/utils";
+import "./library-add-hint.css";
 
 function banlistLimitLabel(status: BanStatus): string | null {
   if (status === "Limited") return "1";
@@ -36,7 +37,7 @@ function BanlistCornerBadge({ status }: { status: BanStatus }): ReactNode {
   if (!label) return null;
   return (
     <div
-      className="absolute left-1 top-1 z-[3] flex h-6 w-6 items-center justify-center rounded-full border-2 border-red-500 bg-black text-sm font-bold leading-none text-yellow-400 drop-shadow-md"
+      className="absolute left-1 top-1 z-[3] flex h-5 w-5 items-center justify-center rounded-full border border-[#ff2d2d] bg-[#0c0e12] text-[10px] font-bold leading-none text-[#f7fcff] ring-1 ring-[#0c0e12]"
       aria-label={`Ban status: ${status}`}
       title={status}
     >
@@ -66,6 +67,11 @@ export type WorkshopCardLibraryProps = {
   getRemainingCopies: (card: Card) => number;
   onAdd: (card: Card) => void;
   onDragStart: (event: DragEvent<HTMLButtonElement>, card: Card) => void;
+  /**
+   * Hover and keyboard hint on a card that can still be added.
+   * A later user-menu setting can pass false and restore the name tooltip.
+   */
+  showAddHint?: boolean;
 };
 
 /**
@@ -79,6 +85,7 @@ export function WorkshopCardLibrary({
   getRemainingCopies,
   onAdd,
   onDragStart,
+  showAddHint = true,
 }: WorkshopCardLibraryProps): ReactNode {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [columnCount, setColumnCount] = useState(4);
@@ -86,9 +93,18 @@ export function WorkshopCardLibrary({
   const showGrid = cardPoolSize > 0 && cards.length > 0;
 
   const updateLayout = useCallback((): void => {
-    const width = scrollRef.current?.clientWidth ?? 0;
+    const node = scrollRef.current;
+    const clientWidth = node?.clientWidth ?? 0;
     // Skip zero-width measurements (loading branch / pre-flex layout) so we
     // don't lock the grid to a single column after refresh hydrate.
+    if (!node || clientWidth <= 0) return;
+    const styles = window.getComputedStyle(node);
+    const padLeft = Number.parseFloat(styles.paddingLeft);
+    const padRight = Number.parseFloat(styles.paddingRight);
+    const width =
+      clientWidth -
+      (Number.isFinite(padLeft) ? padLeft : 0) -
+      (Number.isFinite(padRight) ? padRight : 0);
     if (width <= 0) return;
     const nextTileWidth = workshopCardTileWidthPx(
       typeof window !== "undefined" ? window.innerWidth : 1024,
@@ -148,35 +164,25 @@ export function WorkshopCardLibrary({
 
   if (cardPoolSize === 0) {
     return (
-      <div className="flex w-full flex-col items-center gap-2 py-10 text-mda-ink-muted">
+      <div className="flex w-full flex-col items-center gap-2 px-3 py-10 font-spaceGrotesk text-[#5b6369]">
         <Search className="h-8 w-8" aria-hidden />
-        <p className="font-mda text-sm">Loading card library…</p>
+        <p className="text-sm">Loading card library…</p>
       </div>
     );
   }
 
   if (cards.length === 0) {
     return (
-      <div className="flex w-full flex-col items-center gap-2 py-10 text-mda-ink-muted">
+      <div className="flex w-full flex-col items-center gap-2 px-3 py-10 font-spaceGrotesk text-[#5b6369]">
         <Search className="h-8 w-8" aria-hidden />
-        <p className="font-mda text-sm">No cards match</p>
+        <p className="text-sm">No cards match</p>
       </div>
     );
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
-      <p
-        className="mb-2 shrink-0 font-mda text-xs font-bold uppercase tracking-wide text-mda-ink-muted"
-        aria-live="polite"
-      >
-        {cards.length.toLocaleString()}{" "}
-        {cards.length === 1 ? "card" : "cards"}
-        {cards.length !== cardPoolSize
-          ? ` of ${cardPoolSize.toLocaleString()}`
-          : null}
-      </p>
-      <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto">
+    <div className="flex h-full min-h-0 flex-col font-spaceGrotesk">
+      <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
         <div
           className="relative w-full"
           style={{ height: `${virtualizer.getTotalSize()}px` }}
@@ -213,6 +219,7 @@ export function WorkshopCardLibrary({
                         onClick={() => onAdd(card)}
                         disabled={disabled}
                         className={cn(
+                          "group focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#bfe5f3]",
                           WORKSHOP_CARD_TILE,
                           disabled && "cursor-not-allowed",
                         )}
@@ -221,7 +228,9 @@ export function WorkshopCardLibrary({
                             ? banStatus !== "Unlimited"
                               ? `${card.name} — ${banStatus}`
                               : `${card.name} — copy limit reached`
-                            : `Add ${card.name}`
+                            : showAddHint
+                              ? undefined
+                              : `Add ${card.name}`
                         }
                         aria-label={
                           disabled
@@ -238,6 +247,15 @@ export function WorkshopCardLibrary({
                           className="object-contain"
                           sizes={WORKSHOP_CARD_SIZES}
                         />
+                        {showAddHint && !disabled ? (
+                          <span
+                            aria-hidden="true"
+                            className="library-add-hint pointer-events-none absolute inset-0 z-[2] flex items-center justify-center bg-[#0c0e12]/80 px-2 text-center text-[11px] font-semibold leading-4 text-[#f7fcff] transition-opacity duration-150"
+                          >
+                            <span className="absolute inset-1 border border-[#bfe5f3]" />
+                            Click to add card to deck
+                          </span>
+                        ) : null}
                         <BanlistCornerBadge status={banStatus} />
                       </button>
                     </div>

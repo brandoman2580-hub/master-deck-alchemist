@@ -171,7 +171,7 @@ export const EditorialTabsTrigger = React.forwardRef<
     ref={ref}
     className={cn(
       editorialButtonClass,
-      "px-3 py-1 data-[state=active]:bg-[#e2e8f0] data-[state=active]:text-[#0c0e12]",
+      "px-3 py-1 hover:border-[#14181f] data-[state=active]:bg-[#e2e8f0] data-[state=active]:text-[#0c0e12] data-[state=active]:hover:border-[#e2e8f0] data-[state=active]:hover:bg-[#14181f] data-[state=active]:hover:text-[#e2e8f0] data-[state=active]:hover:[&_.accent-mark]:bg-[#bfe5f3]",
       className,
     )}
     {...props}

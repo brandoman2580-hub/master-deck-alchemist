@@ -8,13 +8,13 @@ const HINT_TO_TAB: Partial<
 > = {
   workshop_matchups: {
     tab: "matchups",
-    label: "View Matchups",
-    aria: "Open the Workshop Matchups tab for the full readiness snapshot",
+    label: "Matchups",
+    aria: "Open Matchups tab",
   },
   workshop_combos: {
     tab: "combos",
-    label: "View Combos",
-    aria: "Open the Workshop Combos tab for validated lines and endboards",
+    label: "Combos",
+    aria: "Open Combos tab",
   },
 };
 
@@ -24,7 +24,7 @@ export type WorkshopTabCtaProps = {
 };
 
 /**
- * Soft CTA — opens Matchups/Combos without replacing the chat answer.
+ * Steel keycap plus “Open tab” caption inside a Strategist reply.
  */
 export function WorkshopTabCta({
   redirectHint,
@@ -35,15 +35,17 @@ export function WorkshopTabCta({
   if (!mapped) return null;
 
   return (
-    <button
-      type="button"
-      data-testid="workshop-tab-cta"
-      data-magnetic
-      aria-label={mapped.aria}
-      onClick={() => onOpenWorkshopTab(mapped.tab as "matchups" | "combos")}
-      className="mt-1 inline-flex min-h-11 items-center bg-mda-chrome px-3 font-mda text-xs font-bold uppercase tracking-wide text-mda-inverse-text transition-colors hover:bg-mda-chrome-deep"
-    >
-      {mapped.label}
-    </button>
+    <div className="mt-3 flex items-center gap-2 border-t border-[#dce5eb] pt-2.5">
+      <button
+        type="button"
+        data-testid="workshop-tab-cta"
+        aria-label={mapped.aria}
+        onClick={() => onOpenWorkshopTab(mapped.tab as "matchups" | "combos")}
+        className="flex h-6 items-center border border-[#28303b] bg-[#14181f] px-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#e2e2e8] transition-colors hover:border-[#bfe5f3]"
+      >
+        {mapped.label}
+      </button>
+      <span className="text-[11px] text-[#5b6369]">Open tab</span>
+    </div>
   );
 }

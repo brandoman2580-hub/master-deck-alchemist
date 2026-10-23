@@ -86,17 +86,15 @@ describe("Workshop Strategist UI", () => {
     expect(onChange).toHaveBeenCalledWith("tune_copies");
   });
 
-  it("StrategistModeControl uses full inverse-text on every tab", () => {
-    render(<StrategistModeControl value="auto" onChange={jest.fn()} />);
-    for (const label of ["Auto", "Ask", "Tune", "Synergy", "Optimize"]) {
-      expect(screen.getByRole("tab", { name: label })).toHaveClass(
-        "text-mda-inverse-text",
-      );
-    }
+  it("StrategistModeControl marks the active mode with the ice edge", () => {
+    render(<StrategistModeControl value="qa" onChange={jest.fn()} />);
+    expect(screen.getByRole("tab", { name: "Ask" })).toHaveClass("border-b-[#bfe5f3]");
+    expect(screen.getByRole("tab", { name: "Tune" })).toHaveClass("text-[#8a96a6]");
+    expect(screen.getByRole("tab", { name: "Ask" })).toHaveClass("hover:bg-[#e2e8f0]");
   });
 
-  it("StrategistInputBar uses light text, Open Sans body, and cyan-soft send", () => {
-    const { container } = render(
+  it("StrategistInputBar uses the dark field and a send control", () => {
+    render(
       <StrategistInputBar
         value="hello"
         onChange={jest.fn()}
@@ -104,25 +102,41 @@ describe("Workshop Strategist UI", () => {
       />,
     );
     const input = screen.getByLabelText("Ask Strategist about your deck");
-    expect(input).toHaveClass("font-open-sans", "text-mda-inverse-text");
-    expect(input).toHaveClass("placeholder:font-mda");
-    expect(screen.getByLabelText("Send message")).toHaveClass(
-      "text-mda-cyan-soft",
-    );
-    const searchIcon = container.querySelector("svg");
-    expect(searchIcon).toHaveClass("text-mda-inverse-text");
+    expect(input).toHaveAttribute("placeholder", "Ask about this deck...");
+    expect(screen.getByLabelText("Send message")).toBeInTheDocument();
   });
 
-  it("StrategistEmptyState shows logo and deck-focused copy", () => {
-    render(<StrategistEmptyState />);
-    expect(screen.getByTestId("strategist-empty-state")).toBeInTheDocument();
-    expect(screen.getByAltText("Strategist logo")).toHaveAttribute(
-      "src",
-      "/images/ai_strategist_logo.png",
+  it("StrategistEmptyState shows the crucible and deck starters", async () => {
+    const onStarter = jest.fn();
+    const { container } = render(
+      <StrategistEmptyState
+        deckName="Pure Darkness"
+        shortPillar="Resilience"
+        onStarter={onStarter}
+      />,
     );
+    expect(screen.getByTestId("strategist-empty-state")).toBeInTheDocument();
+    const crucible = screen.getByTestId("strategist-crucible");
+    expect(crucible).toBeInTheDocument();
+    expect(crucible.querySelectorAll("path[stroke='#14181f']")).toHaveLength(3);
+    expect(crucible.innerHTML).toContain("M12.24 7.24H51.66L38.35 56.7H25.55Z");
+    expect(crucible.innerHTML).toContain("M31.95 21.98V56.7");
+    expect(crucible).toHaveClass("h-40", "w-40");
+    const status = screen.getByRole("heading", { level: 2, name: /Strategist/ });
+    expect(status).toHaveTextContent(/Online/);
+    expect(status).toHaveClass("text-2xl");
+    expect(screen.getByText("Pure Darkness")).toBeInTheDocument();
+    expect(screen.getByText(/Deck list:/)).toBeInTheDocument();
     expect(
-      screen.getByText(/Ask about your current deck/i),
+      screen.getByText("Ask about this deck list, tune copies, or find a card that fits."),
     ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Why is Resilience the lowest score?" }));
+    expect(onStarter).toHaveBeenCalledWith("Why is Resilience the lowest score?", "qa");
+    fireEvent.click(screen.getByRole("button", { name: "Trim the main deck for consistency" }));
+    expect(onStarter).toHaveBeenCalledWith("Trim the main deck for consistency", "tune_copies");
+    fireEvent.click(screen.getByRole("button", { name: "Find a card this deck list is missing" }));
+    expect(onStarter).toHaveBeenCalledWith("Find a card this deck list is missing", "discover_synergy");
+    expect(await axe(container)).toHaveNoViolations();
   });
 
   it("StrategistThread scrolls to bottom when a new bubble is added", () => {
@@ -147,8 +161,8 @@ describe("Workshop Strategist UI", () => {
     );
 
     expect(screen.getByTestId("strategist-thread-scroll")).toBeInTheDocument();
-    expect(screen.getByText("Strategist")).toBeInTheDocument();
-    expect(screen.getByText("You")).toBeInTheDocument();
+    expect(screen.getByText("Trim to 40")).toBeInTheDocument();
+    expect(screen.queryByText("You")).not.toBeInTheDocument();
     expect(scrollIntoView).toHaveBeenCalled();
 
     scrollIntoView.mockClear();
@@ -167,7 +181,7 @@ describe("Workshop Strategist UI", () => {
         onAddSynergy={jest.fn()}
       />,
     );
-    expect(screen.getAllByText("Strategist").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText("Pitch Crimson Gaia first.")).toBeInTheDocument();
     expect(scrollIntoView).toHaveBeenCalled();
   });
 
@@ -198,7 +212,8 @@ describe("Workshop Strategist UI", () => {
     );
 
     const cta = screen.getByTestId("workshop-tab-cta");
-    expect(cta).toHaveTextContent(/View Combos/i);
+    expect(cta).toHaveTextContent("Combos");
+    expect(screen.getByText("Open tab")).toBeInTheDocument();
     fireEvent.click(cta);
     expect(onOpen).toHaveBeenCalledWith("combos");
   });

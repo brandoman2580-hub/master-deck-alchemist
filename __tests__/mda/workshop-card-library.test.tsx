@@ -75,7 +75,6 @@ describe("WorkshopCardLibrary", () => {
       </div>,
     );
 
-    expect(screen.getByText(/150 cards/i)).toBeInTheDocument();
     expect(screen.getByLabelText("Add Card 121")).toBeInTheDocument();
     expect(screen.getByLabelText("Add Card 150")).toBeInTheDocument();
   });
@@ -93,6 +92,11 @@ describe("WorkshopCardLibrary", () => {
     );
 
     const button = screen.getByLabelText("Add Blue-Eyes White Dragon");
+    expect(button).not.toHaveAttribute("title");
+    const hint = button.querySelector(".library-add-hint");
+    expect(hint).toHaveAttribute("aria-hidden", "true");
+    expect(hint).toHaveTextContent("Click to add card to deck");
+    expect(hint?.querySelector("span")).toHaveClass("border", "border-[#bfe5f3]");
     expect(button.className).toContain("sm:w-[104px]");
     expect(button.className).toContain("aspect-[59/86]");
     expect(button.className).toContain("max-w-[104px]");
@@ -170,5 +174,38 @@ describe("WorkshopCardLibrary", () => {
       expect(rows.length).toBeLessThan(12);
       expect(rows.length).toBeGreaterThan(0);
     });
+  });
+
+  it("hides the add overlay when the hint is off or the card cannot be added", () => {
+    const { rerender } = render(
+      <WorkshopCardLibrary
+        cards={[makeCard(1, "Blue-Eyes White Dragon")]}
+        cardPoolSize={1}
+        banlist={{}}
+        getRemainingCopies={() => 3}
+        onAdd={jest.fn()}
+        onDragStart={jest.fn()}
+        showAddHint={false}
+      />,
+    );
+
+    const named = screen.getByLabelText("Add Blue-Eyes White Dragon");
+    expect(named).toHaveAttribute("title", "Add Blue-Eyes White Dragon");
+    expect(named.querySelector(".library-add-hint")).not.toBeInTheDocument();
+
+    rerender(
+      <WorkshopCardLibrary
+        cards={[makeCard(1, "Blue-Eyes White Dragon")]}
+        cardPoolSize={1}
+        banlist={{ "Blue-Eyes White Dragon": "Forbidden" }}
+        getRemainingCopies={() => 0}
+        onAdd={jest.fn()}
+        onDragStart={jest.fn()}
+      />,
+    );
+
+    const blocked = screen.getByLabelText("Blue-Eyes White Dragon unavailable");
+    expect(blocked.querySelector(".library-add-hint")).not.toBeInTheDocument();
+    expect(blocked).toHaveAttribute("title", "Blue-Eyes White Dragon — Forbidden");
   });
 });
