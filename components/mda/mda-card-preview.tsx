@@ -128,7 +128,12 @@ function PreviewTrigger({
 }): ReactNode {
   return (
     <Tooltip.Trigger asChild>
-      <div ref={triggerRef} className="inline-block max-w-full">
+      <div
+        ref={(node) => {
+          triggerRef.current = node;
+        }}
+        className="inline-block max-w-full"
+      >
         {describedBy ? describeControls(children, describedBy) : children}
       </div>
     </Tooltip.Trigger>
