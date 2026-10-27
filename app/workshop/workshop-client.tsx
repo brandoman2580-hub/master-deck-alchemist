@@ -8,13 +8,21 @@ import { WorkshopCombosPane } from "@/components/mda/workshop-combos-pane";
 import { useDeck } from "@/context/deck-context";
 import { useFormatStore } from "@/store/modeStore";
 import { useWorkshopFacts } from "@/hooks/useWorkshopFacts";
-import { workshopGradeFromAxes } from "@/lib/workshop/grade";
+import { useMetaListBands } from "@/hooks/queries/useMetaListBands";
+import type { EngineFormat } from "@/lib/engine/types";
+import { scoreDeck } from "@/lib/meta/deck-score";
 import { deckHasBanlistFault } from "@/lib/workshop/banlist-fault";
 import type { DeckFormat } from "@/types/deck";
 import { navigateWithViewTransition } from "@/lib/motion/view-transition";
 import { WorkshopShell, type WorkshopShellTab } from "./workshop-shell";
 
-const PILLARS = ["Consistency", "Power", "Resilience", "Disruption"] as const;
+const SCORE_PILLARS = [
+  "Consistency",
+  "Resilience",
+  "Interaction",
+  "Ceiling",
+  "Outing",
+] as const;
 
 export default function WorkshopPage(): ReactNode {
   const router = useRouter();
@@ -24,11 +32,35 @@ export default function WorkshopPage(): ReactNode {
   const setDeckFormat = useFormatStore((state) => state.setDeckFormat);
   const [tab, setTab] = useState<WorkshopShellTab>("build");
   const { facts, loading: factsLoading, error: factsError } = useWorkshopFacts();
-
-  const grade = useMemo(
-    () => (facts ? workshopGradeFromAxes(facts.grade) : null),
-    [facts],
+  const engineFormat: EngineFormat =
+    currentDeck.deckFormat === "TCG" ? "TCG" : "MASTER_DUEL";
+  const {
+    bands: referenceBands,
+    lists: metaLists,
+    loading: bandsLoading,
+    error: bandsError,
+  } = useMetaListBands(engineFormat, banlist);
+  const userCards = useMemo(
+    () => [
+      ...currentDeck.mainDeck.map((card) => ({ name: card.name, zone: "main" as const })),
+      ...currentDeck.extraDeck.map((card) => ({ name: card.name, zone: "extra" as const })),
+      ...currentDeck.sideDeck.map((card) => ({ name: card.name, zone: "side" as const })),
+    ],
+    [currentDeck.extraDeck, currentDeck.mainDeck, currentDeck.sideDeck],
   );
+
+  const deckScore = useMemo(() => {
+    if (!facts || facts.consistency.n <= 0) return null;
+    const mainSize = currentDeck.mainDeck.length;
+    return scoreDeck({
+      format: currentDeck.deckFormat === "TCG" ? "TCG" : "Master Duel",
+      mainSize,
+      starterAccess: facts.consistency.starterAccess,
+      oneInterruptionSurvival: facts.consistency.oneInterruptionSurvival,
+      endboardPieces: facts.diagnostics.roleCoverage.endboardPieces,
+      cards: userCards,
+    });
+  }, [currentDeck.deckFormat, currentDeck.mainDeck.length, facts, userCards]);
 
   useEffect(() => {
     const modeParam = searchParams.get("mode");
@@ -49,9 +81,17 @@ export default function WorkshopPage(): ReactNode {
     [banlist, currentDeck],
   );
 
-  const pillars = PILLARS.map((label) => ({
+  const pillars = SCORE_PILLARS.map((label) => ({
     label,
-    value: grade?.scores.find((score) => score.label === label)?.value ?? null,
+    value: deckScore
+      ? {
+          Consistency: deckScore.consistency,
+          Resilience: deckScore.resilience,
+          Interaction: deckScore.interaction,
+          Ceiling: deckScore.ceiling,
+          Outing: deckScore.outing,
+        }[label]
+      : null,
   }));
 
   return (
@@ -62,7 +102,7 @@ export default function WorkshopPage(): ReactNode {
       extraCount={currentDeck.extraDeck.length}
       sideCount={currentDeck.sideDeck.length}
       coverCard={coverCard}
-      gradeLetter={grade?.letter ?? null}
+      gradeLetter={deckScore?.letter ?? null}
       pillars={pillars}
       gradeLoading={factsLoading}
       banlistFault={banlistFault}
@@ -78,12 +118,28 @@ export default function WorkshopPage(): ReactNode {
       ) : null}
       {tab === "matchups" ? (
         <div className="h-full min-h-0 flex-1 overflow-hidden">
-          <WorkshopMatchupsPane facts={facts} loading={factsLoading} error={factsError} />
+          <WorkshopMatchupsPane
+            facts={facts}
+            loading={factsLoading}
+            error={factsError}
+            referenceBands={referenceBands}
+            bandsLoading={bandsLoading}
+            bandsError={bandsError}
+            userCards={userCards}
+            deckFormat={currentDeck.deckFormat === "TCG" ? "TCG" : "Master Duel"}
+          />
         </div>
       ) : null}
       {tab === "combos" ? (
         <div className="h-full min-h-0 flex-1 overflow-hidden">
-          <WorkshopCombosPane facts={facts} loading={factsLoading} error={factsError} />
+          <WorkshopCombosPane
+            facts={facts}
+            loading={factsLoading}
+            error={factsError}
+            metaLists={metaLists}
+            userCards={userCards}
+            deckFormat={currentDeck.deckFormat === "TCG" ? "TCG" : "Master Duel"}
+          />
         </div>
       ) : null}
     </WorkshopShell>

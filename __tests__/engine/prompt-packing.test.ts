@@ -65,6 +65,9 @@ function makeFacts(overrides: Partial<FactsEnvelope> = {}): FactsEnvelope {
       tagAdvantage: i === 2 ? 0.9 : 0.1 * i,
       starterAccessDelta: 0,
       brickRateDelta: 0,
+      opponentStrategy: i === 2 ? "Combo" : null,
+      disruptionScore: 0,
+      consistencyScore: 0,
       notes: [],
     })),
     combos: {

@@ -125,6 +125,9 @@ export function scoreMatchupReadiness(
       starterAccessDelta: clamp(starterRate - pressure.consistencyPressure, -1, 1),
       brickRateDelta: clamp(pressure.consistencyPressure * 0.4 - brick, -1, 1),
       tagAdvantage,
+      opponentStrategy: template.strategy ?? null,
+      disruptionScore: clamp(disruptionScore, -1, 1),
+      consistencyScore: clamp(consistencyScore, -1, 1),
       notes,
     };
   });

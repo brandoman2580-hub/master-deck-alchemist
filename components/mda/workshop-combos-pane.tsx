@@ -16,6 +16,8 @@ import {
 import type { DeckCard } from "@/types/deck";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { NamedMatchupPlans } from "@/components/mda/named-matchup-plans";
+import type { MetaListRef, UserCardRef } from "@/lib/meta/matchup-plan";
 
 const CARD_SIZES = "(min-width: 576px) 104px, 20vw";
 const CARD_TILE =
@@ -102,12 +104,18 @@ export type WorkshopCombosPaneProps = {
   facts: FactsEnvelope | null;
   loading: boolean;
   error?: string | null;
+  metaLists?: MetaListRef[];
+  userCards?: UserCardRef[];
+  deckFormat?: "Master Duel" | "TCG";
 };
 
 export function WorkshopCombosPane({
   facts,
   loading,
   error = null,
+  metaLists = [],
+  userCards = [],
+  deckFormat = "Master Duel",
 }: WorkshopCombosPaneProps): ReactNode {
   const { currentDeck } = useDeck();
   const lines = facts?.combos.lines ?? [];
@@ -340,6 +348,13 @@ export function WorkshopCombosPane({
             </div>
           </>
         )}
+        {facts ? (
+          <NamedMatchupPlans
+            lists={metaLists}
+            userCards={userCards}
+            deckFormat={deckFormat}
+          />
+        ) : null}
       </div>
     </LayoutGroup>
   );

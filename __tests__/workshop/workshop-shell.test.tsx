@@ -151,6 +151,18 @@ describe("WorkshopShell", () => {
     expect(screen.getAllByText("—").length).toBeGreaterThanOrEqual(4);
   });
 
+  it("explains the score and returns focus to the link", () => {
+    renderShell();
+    const link = screen.getByRole("button", { name: "What this score means" });
+    fireEvent.click(link);
+    expect(screen.getByRole("dialog", { name: "What this score means" })).toBeInTheDocument();
+    expect(screen.getByText(/not a win rate/i)).toBeInTheDocument();
+    expect(screen.getByText(/one interruption/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Close" }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(link).toHaveFocus();
+  });
+
   it("returns to Archives and moves between modes from the keyboard", () => {
     const onBackToArchives = jest.fn();
     function Harness() {

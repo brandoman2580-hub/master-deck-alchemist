@@ -48,7 +48,7 @@ function emptyFacts(overrides: Partial<FactsEnvelope> = {}): FactsEnvelope {
 
 describe("FactsEnvelope contract", () => {
   it("exports a pinned schema version for cache compatibility checks", () => {
-    expect(FACTS_SCHEMA_VERSION).toBe("0.2.0");
+    expect(FACTS_SCHEMA_VERSION).toBe("0.3.0");
   });
 
   it("marks illegal decks as not ok while still returning a full envelope", () => {

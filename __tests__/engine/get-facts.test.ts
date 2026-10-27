@@ -70,7 +70,7 @@ function makeDeck(mainCount: number): DeckType {
 
 function makeFacts(partial?: Partial<FactsEnvelope>): FactsEnvelope {
   return {
-    schemaVersion: "0.2.0",
+    schemaVersion: "0.3.0",
     deckId: "deck-1",
     deckHash: "hash",
     format: "MASTER_DUEL",
@@ -107,6 +107,9 @@ function makeFacts(partial?: Partial<FactsEnvelope>): FactsEnvelope {
         starterAccessDelta: 0,
         brickRateDelta: 0,
         tagAdvantage: 0.2,
+        opponentStrategy: null,
+        disruptionScore: 0.1,
+        consistencyScore: 0.2,
         notes: [],
       },
     ],
@@ -159,6 +162,29 @@ describe("getFacts shared pipeline", () => {
     const result = await getFacts(makeDeck(40), { readCache: true });
     expect(result).toBe(cached);
     expect(mockRunConsistencySimulation).not.toHaveBeenCalled();
+  });
+
+  it("ignores a 0.2.0 cache that predates matchup component scores", async () => {
+    const stale = makeFacts({ schemaVersion: "0.2.0" });
+    mockReadDeckAnalysisCache.mockResolvedValue(stale);
+    const full = makeFacts();
+    mockBuildFactsEnvelope
+      .mockReturnValueOnce(
+        makeFacts({
+          consistency: {
+            n: 0,
+            starterAccess: 0,
+            brickRate: 0,
+            oneInterruptionSurvival: 0,
+          },
+        }),
+      )
+      .mockReturnValueOnce(full);
+
+    const { getFacts } = await import("@/lib/engine/get-facts");
+    const result = await getFacts(makeDeck(40), { readCache: true });
+    expect(result).toBe(full);
+    expect(mockRunConsistencySimulation).toHaveBeenCalled();
   });
 
   it("ignores stale 0.1.0 cache missing grade breakdown", async () => {

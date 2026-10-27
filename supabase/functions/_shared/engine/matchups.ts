@@ -128,6 +128,9 @@ export function scoreMatchupReadiness(
         1,
       ),
       tagAdvantage,
+      opponentStrategy: template.strategy ?? null,
+      disruptionScore: clamp(disruptionScore, -1, 1),
+      consistencyScore: clamp(consistencyScore, -1, 1),
       notes,
     };
   });
