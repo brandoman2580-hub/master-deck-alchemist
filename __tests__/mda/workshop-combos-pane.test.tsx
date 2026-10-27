@@ -1,6 +1,6 @@
 import { readFileSync } from "fs";
 import { join } from "path";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { WorkshopCombosPane } from "@/components/mda/workshop-combos-pane";
 import { FACTS_SCHEMA_VERSION, emptyWorkshopGradeAxes, type FactsEnvelope } from "@/lib/engine";
 
@@ -145,5 +145,44 @@ describe("WorkshopCombosPane", () => {
     expect(
       screen.getByRole("button", { name: /Explain selected combo line/i }),
     ).toBeInTheDocument();
+  });
+
+  it("shows named opponent plans and can hide a tier", () => {
+    render(
+      <WorkshopCombosPane
+        facts={sampleFacts()}
+        loading={false}
+        deckFormat="Master Duel"
+        userCards={[{ name: "Ash Blossom & Joyous Spring", zone: "main" }]}
+        metaLists={[
+          {
+            name: "Dracotail",
+            tier: 3,
+            cards: [
+              { name: "Dracotail Faimena", copies: 3, zone: "main" },
+              { name: "Branded Fusion", copies: 1, zone: "main" },
+              { name: "Mirrorjade the Iceblade Dragon", copies: 1, zone: "extra" },
+            ],
+          },
+          {
+            name: "Branded",
+            tier: 3,
+            cards: [
+              { name: "Branded Fusion", copies: 1, zone: "main" },
+              { name: "Fallen of Albaz", copies: 1, zone: "main" },
+              { name: "Mirrorjade the Iceblade Dragon", copies: 1, zone: "extra" },
+            ],
+          },
+        ]}
+      />,
+    );
+
+    expect(screen.getByRole("heading", { name: "Against these decks" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Branded" })).toBeInTheDocument();
+    expect(screen.getByText(/not a pure Dracotail list/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Ash Blossom can stop Branded Fusion/i).length).toBeGreaterThan(0);
+
+    fireEvent.click(screen.getByRole("checkbox", { name: "Show Tier 3" }));
+    expect(screen.queryByRole("heading", { name: "Branded" })).not.toBeInTheDocument();
   });
 });

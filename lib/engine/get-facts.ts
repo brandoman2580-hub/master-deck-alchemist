@@ -18,8 +18,8 @@ import { FACTS_SCHEMA_VERSION, type FactsEnvelope } from "./types";
 const DEFAULT_ITERATIONS = 3000;
 
 /**
- * Cached envelopes must match the current schema and include grade breakdown
- * (0.2.0+). Stale 0.1.0 rows are ignored so Workshop recompute runs.
+ * Cached envelopes must match the current schema (0.3.0) and include grade
+ * breakdown. Older rows, including 0.2.0, are ignored so Workshop recomputes.
  */
 export function isUsableCachedFacts(
   facts: FactsEnvelope | null | undefined,

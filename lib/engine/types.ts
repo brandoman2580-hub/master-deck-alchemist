@@ -4,8 +4,8 @@
  * Groq may only coach from validated fields present here.
  */
 
-/** Bumped when gradeBreakdown / formatRulePack / synergyFactor land on the envelope. */
-export const FACTS_SCHEMA_VERSION = "0.2.0" as const;
+/** Bumped when matchup rows carry opponent strategy and component scores. */
+export const FACTS_SCHEMA_VERSION = "0.3.0" as const;
 
 /** Active format scoring pack id (never merges TCG ↔ MD banlists). */
 export type FormatRulePackId =
@@ -104,6 +104,12 @@ export interface MatchupReadiness {
   starterAccessDelta: number;
   brickRateDelta: number;
   tagAdvantage: number; // -1..1 rough readiness
+  /** Template strategy used by the scorer. Null when the tier row has none. */
+  opponentStrategy: YugiohPlayStrategy | null;
+  /** Hand-trap and breaker coverage versus this opponent, clamped −1..1. */
+  disruptionScore: number;
+  /** Starter access, brick, and interruption survival versus this opponent, clamped −1..1. */
+  consistencyScore: number;
   notes: string[];
 }
 

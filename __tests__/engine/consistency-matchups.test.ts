@@ -148,6 +148,11 @@ describe("scoreMatchupReadiness + grade", () => {
     });
 
     expect(matchups).toHaveLength(1);
+    expect(matchups[0]!.opponentStrategy).toBe("Combo");
+    expect(matchups[0]!.disruptionScore).toBeGreaterThanOrEqual(-1);
+    expect(matchups[0]!.disruptionScore).toBeLessThanOrEqual(1);
+    expect(matchups[0]!.consistencyScore).toBeGreaterThanOrEqual(-1);
+    expect(matchups[0]!.consistencyScore).toBeLessThanOrEqual(1);
     expect(matchups[0]!.notes.some((n) => /hand-trap/i.test(n))).toBe(true);
     expect(readinessToDisplayWinRate(matchups[0]!.tagAdvantage)).toBeGreaterThanOrEqual(
       28,
@@ -211,6 +216,7 @@ describe("scoreMatchupReadiness + grade", () => {
 
     expect(facts.consistency.n).toBe(1000);
     expect(facts.matchups).toHaveLength(1);
+    expect(facts.matchups[0]!.opponentStrategy).toBe("Control");
     expect(facts.grade.consistency).toBeGreaterThan(50);
     expect(["S", "A", "B", "C", "D", "F"]).toContain(facts.grade.letter);
 

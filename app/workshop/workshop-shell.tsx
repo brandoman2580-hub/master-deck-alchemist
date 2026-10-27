@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, type ReactNode, type KeyboardEvent } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { EditorialUserMenu } from "@/components/mda/editorial-user-menu";
 import { FadeSwap } from "@/components/mda/fade-swap";
 import { RollingNumber } from "@/components/mda/rolling-number";
@@ -10,6 +10,7 @@ import { useRouteHeadingFocus } from "@/hooks/useRouteHeadingFocus";
 import { normalizeDeckName } from "@/lib/deck/normalize-deck-name";
 import { GRADE_MS, VIEW_PANEL_S } from "@/lib/motion/tokens";
 import type { Card } from "@/types/card";
+import { scoreExplanation } from "@/lib/meta/deck-score";
 import type { DeckFormat } from "@/types/deck";
 import "./space-grotesk.css";
 
@@ -67,6 +68,9 @@ export function WorkshopShell({
   children,
 }: WorkshopShellProps): ReactNode {
   const [editing, setEditing] = useState(false);
+  const [scoreOpen, setScoreOpen] = useState(false);
+  const explainRef = useRef<HTMLButtonElement>(null);
+  const pageRef = useRef<HTMLDivElement>(null);
   const [draft, setDraft] = useState(deckName);
   const [syncedName, setSyncedName] = useState(deckName);
   const editingRef = useRef(false);
@@ -76,6 +80,13 @@ export function WorkshopShell({
   const tablistId = useId();
   const panelId = useId();
   useRouteHeadingFocus();
+
+  useEffect(() => {
+    const page = pageRef.current;
+    if (!page) return;
+    if (scoreOpen) page.setAttribute("inert", "");
+    else page.removeAttribute("inert");
+  }, [scoreOpen]);
   const showSide = deckFormat === "TCG";
   const formatLabel = deckFormat === "TCG" ? "TCG" : "MASTER DUEL";
   const letter = gradeLoading || !gradeLetter ? "—" : gradeLetter;
@@ -114,7 +125,7 @@ export function WorkshopShell({
     onRename(next);
   };
 
-  const onTabKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
+  const onTabKeyDown = (event: ReactKeyboardEvent<HTMLButtonElement>) => {
     const index = TABS.findIndex((item) => item.id === tab);
     let nextIndex = index;
     if (event.key === "ArrowRight") nextIndex = (index + 1) % TABS.length;
@@ -131,6 +142,7 @@ export function WorkshopShell({
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden bg-[#0c0e12] font-spaceGrotesk text-[#e2e8f0]">
+      <div ref={pageRef} className="flex min-h-0 flex-1 flex-col overflow-hidden">
       <header className="flex h-16 shrink-0 items-center justify-between border-b border-[#28303b] bg-[#0c0e12] px-8">
         <p className="select-none text-lg font-medium uppercase tracking-widest text-[#f7fcff]">
           Master Deck Alchemist
@@ -241,6 +253,14 @@ export function WorkshopShell({
               <div className="flex shrink-0 flex-col">
                 <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#8a96a6]">Grade</span>
                 <span className="mt-1 text-[40px] font-semibold leading-none text-[#f7fcff]">{letter}</span>
+                <button
+                  ref={explainRef}
+                  type="button"
+                  onClick={() => setScoreOpen(true)}
+                  className="mt-2 text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-[#bfe5f3] underline decoration-[#bfe5f3] underline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#bfe5f3]"
+                >
+                  What this score means
+                </button>
               </div>
               <span aria-hidden="true" className="h-10 w-px shrink-0 bg-[#28303b]" />
               <dl className="flex min-w-0 flex-1 items-end gap-4">
@@ -324,6 +344,96 @@ export function WorkshopShell({
             {children}
           </FadeSwap>
         </div>
+      </div>
+      </div>
+      {scoreOpen ? (
+        <ScoreMeaningDialog
+          format={deckFormat === "TCG" ? "TCG" : "Master Duel"}
+          onClose={() => {
+            pageRef.current?.removeAttribute("inert");
+            setScoreOpen(false);
+            explainRef.current?.focus();
+          }}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function ScoreMeaningDialog({
+  format,
+  onClose,
+}: {
+  format: "Master Duel" | "TCG";
+  onClose: () => void;
+}): ReactNode {
+  const titleId = useId();
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
+  const copy = scoreExplanation(format);
+
+  useEffect(() => {
+    closeRef.current?.focus();
+    const onKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onClose();
+        return;
+      }
+      if (event.key !== "Tab" || !dialogRef.current) return;
+      const focusable = [
+        ...dialogRef.current.querySelectorAll<HTMLElement>("button, [href], [tabindex]:not([tabindex='-1'])"),
+      ];
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement;
+      if (event.shiftKey && active === first) {
+        event.preventDefault();
+        last?.focus();
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault();
+        first?.focus();
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [onClose]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0c0e12]/70 p-4">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className="max-h-[90vh] w-full max-w-lg overflow-y-auto border border-[#28303b] bg-[#0c0e12] p-5 text-[#f7fcff]"
+      >
+        <div className="flex items-start justify-between gap-4">
+          <h2 id={titleId} className="text-lg font-semibold uppercase tracking-wide">
+            {copy.title}
+          </h2>
+          <button
+            ref={closeRef}
+            type="button"
+            onClick={onClose}
+            className="shrink-0 border border-[#28303b] px-2 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-[#bfe5f3] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#bfe5f3]"
+          >
+            Close
+          </button>
+        </div>
+        <p className="mt-3 text-sm text-[#e2e8f0]">{copy.intro}</p>
+        <dl className="mt-4 space-y-3">
+          {copy.lines.map((line) => (
+            <div key={line.label}>
+              <dt className="text-xs font-semibold uppercase tracking-[0.12em] text-[#bfe5f3]">
+                {line.label}
+              </dt>
+              <dd className="mt-1 text-sm text-[#e2e8f0]">{line.text}</dd>
+            </div>
+          ))}
+        </dl>
+        <p className="mt-4 text-sm text-[#e2e8f0]">{copy.weights}</p>
       </div>
     </div>
   );

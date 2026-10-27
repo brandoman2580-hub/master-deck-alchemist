@@ -2,7 +2,7 @@
  * Deno mirror of lib/engine/types.ts — FactsEnvelope contracts.
  */
 
-export const FACTS_SCHEMA_VERSION = "0.2.0" as const;
+export const FACTS_SCHEMA_VERSION = "0.3.0" as const;
 
 export type EngineFormat = "TCG" | "MASTER_DUEL";
 
@@ -78,6 +78,9 @@ export interface MatchupReadiness {
   starterAccessDelta: number;
   brickRateDelta: number;
   tagAdvantage: number;
+  opponentStrategy: YugiohPlayStrategy | null;
+  disruptionScore: number;
+  consistencyScore: number;
   notes: string[];
 }
 
