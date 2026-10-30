@@ -22,6 +22,8 @@ import { MdaGlassPopover } from "@/components/mda/glass-popover";
 export type MdaCardPreviewProps = {
   card: Card;
   children: React.ReactNode;
+  /** Stretch the hover target to its parent. The default trigger shrinks to the card. */
+  triggerClassName?: string;
 };
 
 const TAG_CLASS =
@@ -121,16 +123,18 @@ function PreviewTrigger({
   children,
   describedBy,
   triggerRef,
+  className = "inline-block max-w-full",
 }: {
   children: ReactNode;
   describedBy?: string;
   triggerRef: RefObject<HTMLDivElement | null>;
+  className?: string;
 }): ReactNode {
   return (
     <Tooltip.Trigger asChild>
       <div
         ref={triggerRef as RefObject<HTMLDivElement>}
-        className="inline-block max-w-full"
+        className={className}
       >
         {describedBy ? describeControls(children, describedBy) : children}
       </div>
@@ -157,6 +161,7 @@ function statPairs(card: Card): { label: string; value: string }[] {
 export function MdaCardPreview({
   card,
   children,
+  triggerClassName,
 }: MdaCardPreviewProps): ReactNode {
   const archetype = getArchetypeName(card);
   const tags = categoryTags(card, archetype);
@@ -174,7 +179,7 @@ export function MdaCardPreview({
 
   const preview = (
       <Tooltip.Root onOpenChange={setOpen}>
-        <PreviewTrigger describedBy={describedBy} triggerRef={triggerRef}>
+        <PreviewTrigger describedBy={describedBy} triggerRef={triggerRef} className={triggerClassName}>
           {children}
         </PreviewTrigger>
         <Tooltip.Portal>

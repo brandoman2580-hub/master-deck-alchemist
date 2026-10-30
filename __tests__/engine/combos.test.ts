@@ -1,3 +1,5 @@
+import { readFileSync } from "fs";
+import { join } from "path";
 import {
   compileCombos,
   compileFallbackLine,
@@ -70,6 +72,49 @@ describe("validateComboTemplate", () => {
     expect(line).not.toBeNull();
     expect(line!.name).toBe("Poplar Line");
     expect(line!.nodes.find((n) => n.id === "h1")?.cardIds).toEqual([1000]);
+    expect(line!.nodes.find((n) => n.id === "h1")?.lane).toBe("hand");
+    expect(line!.nodes.some((n) => n.cardName === "Ash Blossom & Joyous Spring" && n.lane === "interrupt")).toBe(true);
+    expect(line!.edges.every((edge) => edge.relation === "play")).toBe(true);
+  });
+
+  it("keeps opponent interruptions when those cards are not in the deck", () => {
+    const line = validateComboTemplate(
+      {
+        ...snakeTemplate,
+        killers: [],
+        graph: {
+          ...snakeTemplate.graph,
+          nodes: [
+            ...snakeTemplate.graph.nodes,
+            {
+              id: "ash",
+              label: "Ash",
+              cardNames: ["Ash Blossom & Joyous Spring"],
+              kind: "interruption",
+              lane: "interrupt",
+              required: false,
+            },
+          ],
+          edges: [
+            ...snakeTemplate.graph.edges,
+            { from: "ash", to: "s1", relation: "interrupts" as const },
+          ],
+        },
+      },
+      deckWith(
+        "Snake-Eye Ash",
+        "Filler A",
+        "Filler B",
+        "Filler C",
+        "Filler D",
+        "Diabellstar the Black Witch",
+      ),
+    );
+    expect(line).not.toBeNull();
+    const ash = line!.nodes.find((node) => node.id === "ash");
+    expect(ash?.cardIds).toEqual([]);
+    expect(ash?.cardName).toBe("Ash Blossom & Joyous Spring");
+    expect(line!.edges.find((edge) => edge.from === "ash")?.relation).toBe("interrupts");
   });
 
   it("rejects a line when a required starter is missing", () => {
@@ -138,6 +183,23 @@ describe("compileCombos", () => {
     });
     expect(result.source).toBe("compiled");
     expect(result.lines[0]!.id).toBe("compiled-fallback");
+  });
+});
+
+describe("Purrely Sleepy Memory migration", () => {
+  const sql = readFileSync(
+    join(process.cwd(), "supabase/migrations/20261028003444_purrely_sleepy_memory_combo_graph.sql"),
+    "utf8",
+  );
+
+  it("rewrites only the Purrely Sleepy Memory line with lanes and relations", () => {
+    expect(sql).toContain("archetype_name = 'Purrely'");
+    expect(sql).toContain("name = 'Purrely Sleepy Memory Line'");
+    expect(sql).toContain('"lane":"material"');
+    expect(sql).toContain('"relation":"interrupts"');
+    expect(sql).toContain('"relation":"material"');
+    expect(sql).toContain("Purrelyeap!?");
+    expect(sql).not.toContain("Snake-Eye");
   });
 });
 

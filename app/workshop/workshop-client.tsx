@@ -9,7 +9,9 @@ import { useDeck } from "@/context/deck-context";
 import { useFormatStore } from "@/store/modeStore";
 import { useWorkshopFacts } from "@/hooks/useWorkshopFacts";
 import { useMetaListBands } from "@/hooks/queries/useMetaListBands";
+import { useDeckComboLines } from "@/hooks/queries/useDeckComboLines";
 import type { EngineFormat } from "@/lib/engine/types";
+import { isDeckPersisted } from "@/lib/engine/legality";
 import { scoreDeck } from "@/lib/meta/deck-score";
 import { deckHasBanlistFault } from "@/lib/workshop/banlist-fault";
 import type { DeckFormat } from "@/types/deck";
@@ -36,7 +38,6 @@ export default function WorkshopPage(): ReactNode {
     currentDeck.deckFormat === "TCG" ? "TCG" : "MASTER_DUEL";
   const {
     bands: referenceBands,
-    lists: metaLists,
     loading: bandsLoading,
     error: bandsError,
   } = useMetaListBands(engineFormat, banlist);
@@ -48,6 +49,28 @@ export default function WorkshopPage(): ReactNode {
     ],
     [currentDeck.extraDeck, currentDeck.mainDeck, currentDeck.sideDeck],
   );
+  const comboDeckCards = useMemo(
+    () => [
+      ...currentDeck.mainDeck.map((card) => ({ id: card.id, name: card.name, zone: "main" as const })),
+      ...currentDeck.extraDeck.map((card) => ({ id: card.id, name: card.name, zone: "extra" as const })),
+      ...currentDeck.sideDeck.map((card) => ({ id: card.id, name: card.name, zone: "side" as const })),
+    ],
+    [currentDeck.extraDeck, currentDeck.mainDeck, currentDeck.sideDeck],
+  );
+  const deckSaved = isDeckPersisted(currentDeck);
+  const comboCardsById = useMemo(() => {
+    const cards = new Map<number, (typeof currentDeck.mainDeck)[number]>();
+    for (const card of [...currentDeck.mainDeck, ...currentDeck.extraDeck, ...currentDeck.sideDeck]) {
+      if (!cards.has(card.id)) cards.set(card.id, card);
+    }
+    return cards;
+  }, [currentDeck.extraDeck, currentDeck.mainDeck, currentDeck.sideDeck]);
+  const comboLines = useDeckComboLines(deckSaved ? currentDeck.id : null, {
+    format: engineFormat,
+    archetype: facts?.diagnostics.strategyFit.primaryArchetype ?? null,
+    deckCards: comboDeckCards,
+    cardsById: comboCardsById,
+  });
 
   const deckScore = useMemo(() => {
     if (!facts || facts.consistency.n <= 0) return null;
@@ -133,11 +156,26 @@ export default function WorkshopPage(): ReactNode {
       {tab === "combos" ? (
         <div className="h-full min-h-0 flex-1 overflow-hidden">
           <WorkshopCombosPane
-            facts={facts}
-            loading={factsLoading}
-            error={factsError}
-            metaLists={metaLists}
-            userCards={userCards}
+            canSave={deckSaved}
+            cards={[
+              ...currentDeck.mainDeck,
+              ...currentDeck.extraDeck,
+              ...currentDeck.sideDeck,
+            ]}
+            sections={[
+              { title: "Main Deck", cards: currentDeck.mainDeck },
+              { title: "Extra Deck", cards: currentDeck.extraDeck },
+              { title: "Side Deck", cards: currentDeck.sideDeck },
+            ]}
+            lines={comboLines.lines}
+            loading={comboLines.loading}
+            error={comboLines.error}
+            saveState={comboLines.saveState}
+            saveError={comboLines.saveError}
+            onCreate={comboLines.createLine}
+            onRename={comboLines.renameLine}
+            onDelete={comboLines.deleteLine}
+            onChangeGraph={comboLines.changeGraph}
             deckFormat={currentDeck.deckFormat === "TCG" ? "TCG" : "Master Duel"}
           />
         </div>

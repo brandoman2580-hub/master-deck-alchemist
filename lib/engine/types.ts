@@ -113,17 +113,45 @@ export interface MatchupReadiness {
   notes: string[];
 }
 
+export type ComboLane =
+  | "hand"
+  | "play"
+  | "interrupt"
+  | "boss"
+  | "material"
+  | "trap"
+  | "spell"
+  | "gy"
+  | "banish";
+
+export type ComboEdgeRelation = "play" | "interrupts" | "material";
+
+export type ComboAnchorSide = "top" | "right" | "bottom" | "left";
+
 export interface ComboNode {
   id: string;
   label: string;
   cardIds: number[];
-  kind: "hand" | "step" | "endboard" | "choke" | "killer";
+  /** Display name when the card is not in the active deck, such as an opponent interruption. */
+  cardName?: string;
+  kind: "hand" | "step" | "endboard" | "choke" | "killer" | "interruption";
+  lane?: ComboLane;
+  order?: number;
+  /** Play-row id for a builder step. Hand and end-board nodes omit it. */
+  rowId?: string;
 }
 
 export interface ComboEdge {
   from: string;
   to: string;
   label?: string;
+  relation?: ComboEdgeRelation;
+  /** Edge of the source card the player drew from. */
+  fromSide?: ComboAnchorSide;
+  /** Edge of the target card the player drew to. */
+  toSide?: ComboAnchorSide;
+  /** The player marked this link as the point where the combo is disrupted. */
+  isDisruption?: boolean;
 }
 
 export interface ComboLine {
