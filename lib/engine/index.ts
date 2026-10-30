@@ -8,7 +8,9 @@ export type {
   CardRoleTag,
   Collision,
   ComboEdge,
+  ComboEdgeRelation,
   ComboGraphSummary,
+  ComboLane,
   ComboLine,
   ComboNode,
   ConsistencyStats,
@@ -81,8 +83,10 @@ export { loadMetaMatchupTemplates } from "./meta-templates";
 export { runConsistencySimulation } from "./worker/client";
 export {
   cardsForNode,
+  comboLane,
   compileCombos,
   compileFallbackLine,
+  projectComboLine,
   selectTemplatesForArchetype,
   validateComboTemplate,
   type ComboTemplateRow,

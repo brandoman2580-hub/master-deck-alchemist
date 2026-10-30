@@ -1,6 +1,7 @@
 import type {
   ComboEdge,
   ComboGraphSummary,
+  ComboLane,
   ComboLine,
   ComboNode,
   EngineFormat,
@@ -13,6 +14,8 @@ export interface ComboTemplateNode {
   /** Preferred match keys — resolved against deck card names (case-insensitive). */
   cardNames: string[];
   kind: ComboNode["kind"];
+  lane?: ComboLane;
+  order?: number;
   /** If true, line is dropped when none of cardNames are in the deck. */
   required?: boolean;
 }
@@ -70,6 +73,100 @@ function resolveCardIds(
   return ids;
 }
 
+function isInterruptKind(kind: ComboNode["kind"]): boolean {
+  return kind === "interruption" || kind === "killer" || kind === "choke";
+}
+
+/** Lane used by the combo board. Explicit lanes win; older kinds map onto the four rows. */
+export function comboLane(node: Pick<ComboNode, "kind" | "lane">): ComboLane {
+  if (node.lane) return node.lane;
+  if (node.kind === "hand") return "hand";
+  if (node.kind === "step") return "play";
+  if (node.kind === "endboard") return "boss";
+  return "interrupt";
+}
+
+/**
+ * One card per node, with lanes and edge relations filled in.
+ * Killer names become interruption nodes when the line has none of its own.
+ * Safe to run more than once.
+ */
+export function projectComboLine(
+  line: ComboLine,
+  namesById: ReadonlyMap<number, string> = new Map(),
+): ComboLine {
+  const emitted = new Map<string, string[]>();
+  const nodes: ComboNode[] = [];
+
+  line.nodes.forEach((node, sourceIndex) => {
+    const lane = comboLane(node);
+    const pieces: ComboNode[] = [];
+    const cardIds = node.cardIds.length > 0 ? node.cardIds : [null];
+    cardIds.forEach((cardId, index) => {
+      if (cardId == null && lane !== "interrupt" && !isInterruptKind(node.kind)) {
+        return;
+      }
+      const cardName =
+        (cardId != null ? namesById.get(cardId) : undefined) ??
+        node.cardName ??
+        node.label;
+      pieces.push({
+        ...node,
+        id: node.cardIds.length > 1 ? `${node.id}~${index}` : node.id,
+        cardIds: cardId == null ? [] : [cardId],
+        cardName,
+        lane,
+        order: (node.order ?? sourceIndex * 100) + index,
+      });
+    });
+    if (pieces.length === 0) return;
+    emitted.set(node.id, pieces.map((piece) => piece.id));
+    nodes.push(...pieces);
+  });
+
+  const edges: ComboEdge[] = [];
+  for (const ids of emitted.values()) {
+    const lane = nodes.find((node) => node.id === ids[0])?.lane;
+    if (ids.length > 1 && lane === "play") {
+      for (let index = 0; index < ids.length - 1; index += 1) {
+        edges.push({
+          from: ids[index]!,
+          to: ids[index + 1]!,
+          relation: "play",
+        });
+      }
+    }
+  }
+  for (const edge of line.edges) {
+    const fromIds = emitted.get(edge.from);
+    const toIds = emitted.get(edge.to);
+    if (!fromIds?.length || !toIds?.length) continue;
+    edges.push({
+      ...edge,
+      from: fromIds[fromIds.length - 1]!,
+      to: toIds[0]!,
+      relation: edge.relation ?? "play",
+    });
+  }
+
+  const hasInterrupt = nodes.some((node) => comboLane(node) === "interrupt");
+  if (!hasInterrupt) {
+    line.killers.forEach((name, index) => {
+      nodes.push({
+        id: `killer-${index}`,
+        label: name,
+        cardName: name,
+        cardIds: [],
+        kind: "interruption",
+        lane: "interrupt",
+        order: 10000 + index,
+      });
+    });
+  }
+
+  return { ...line, nodes, edges };
+}
+
 /**
  * Validate a curated template against the active deck list.
  * Required nodes without a deck match cause the line to be rejected.
@@ -83,38 +180,40 @@ export function validateComboTemplate(
 
   for (const node of template.graph.nodes) {
     const cardIds = resolveCardIds(node.cardNames, byName);
-    if (node.required !== false && cardIds.length === 0) {
-      // Default required=true for hand/step/endboard unless explicitly optional
-      const required =
-        node.required === true ||
-        (node.required === undefined &&
-          (node.kind === "hand" ||
-            node.kind === "step" ||
-            node.kind === "endboard"));
-      if (required) return null;
-    }
+    const lane = node.lane ?? comboLane(node);
+    const interrupt = lane === "interrupt" || isInterruptKind(node.kind);
+    const required =
+      node.required === true ||
+      (node.required === undefined &&
+        !interrupt &&
+        (node.kind === "hand" ||
+          node.kind === "step" ||
+          node.kind === "endboard"));
+    if (required && cardIds.length === 0) return null;
     nodes.push({
       id: node.id,
       label: node.label,
       cardIds,
+      cardName: node.cardNames[0],
       kind: node.kind,
+      lane: node.lane,
+      order: node.order,
     });
   }
 
-  const nodeIds = new Set(nodes.map((n) => n.id));
-  const edges = template.graph.edges.filter(
-    (e) => nodeIds.has(e.from) && nodeIds.has(e.to),
+  const namesById = new Map(deckCards.map((card) => [card.id, card.name]));
+  return projectComboLine(
+    {
+      id: template.id,
+      name: template.name,
+      nodes,
+      edges: template.graph.edges,
+      killers: template.killers,
+      endboardSummary: template.graph.endboardSummary,
+      fallbackSummary: template.graph.fallbackSummary,
+    },
+    namesById,
   );
-
-  return {
-    id: template.id,
-    name: template.name,
-    nodes,
-    edges,
-    killers: template.killers,
-    endboardSummary: template.graph.endboardSummary,
-    fallbackSummary: template.graph.fallbackSummary,
-  };
 }
 
 /**
@@ -198,21 +297,28 @@ export function compileFallbackLine(
     },
   ];
 
-  return {
-    id: "compiled-fallback",
-    name: "Compiled Core Line",
-    nodes,
-    edges: [
-      { from: "hand", to: "line", label: "develop" },
-      { from: "line", to: "end", label: "close" },
-    ],
-    killers: [
-      "Ash Blossom & Joyous Spring",
-      "Infinite Impermanence",
-      "Nibiru, the Primal Being",
-    ],
-    endboardSummary: end.map((c) => c.name).join(" + "),
-  };
+  const namesById = new Map<number, string>();
+  for (const card of deckCards) namesById.set(card.id, card.name);
+  for (const boss of bosses) namesById.set(boss.cardId, boss.name);
+
+  return projectComboLine(
+    {
+      id: "compiled-fallback",
+      name: "Compiled Core Line",
+      nodes,
+      edges: [
+        { from: "hand", to: "line", label: "develop" },
+        { from: "line", to: "end", label: "close" },
+      ],
+      killers: [
+        "Ash Blossom & Joyous Spring",
+        "Infinite Impermanence",
+        "Nibiru, the Primal Being",
+      ],
+      endboardSummary: end.map((c) => c.name).join(" + "),
+    },
+    namesById,
+  );
 }
 
 export interface CompileCombosInput {
