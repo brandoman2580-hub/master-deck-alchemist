@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import { HelpCircle, LogOut } from "lucide-react";
 import { useUserStore } from "@/store/useUserStore";
-import { supabase } from "@/lib/supabaseClient";
+import { createClient } from "@/utils/supabase/client";
 import {
   EditorialMenu,
   EditorialMenuContent,
@@ -11,6 +11,8 @@ import {
   EditorialMenuTrigger,
 } from "@/app/deck-archives/editorial-ui";
 import "@/app/deck-archives/archives-screen.css";
+
+const supabase = createClient();
 
 function getInitials(
   user: { user_metadata?: { name?: string }; email?: string } | null,

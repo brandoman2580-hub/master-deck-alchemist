@@ -1,6 +1,6 @@
 import type { DeckFormat, DeckType } from "@/types/deck";
 import type { DeckCard } from "@/types/deck";
-import { getAccessToken } from "@/lib/supabaseClient";
+import { createClient, getAccessToken } from "@/utils/supabase/client";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
 
@@ -276,7 +276,7 @@ export async function revokeDeckShare(
   }
 
   // Get user ID
-  const { supabase } = await import("@/lib/supabaseClient");
+  const supabase = createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();

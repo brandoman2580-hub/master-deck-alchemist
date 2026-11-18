@@ -1,4 +1,4 @@
-import { getAccessToken } from "../supabaseClient";
+import { createClient, getAccessToken } from "@/utils/supabase/client";
 import type {
   AssistantMode,
   DeckCoachResponse,
@@ -218,7 +218,7 @@ export async function getConversationHistory(
     );
   }
 
-  const { supabase } = await import("../supabaseClient");
+  const supabase = createClient();
 
   let data: Array<{
     id: string;
@@ -330,7 +330,7 @@ export async function updateConversationName(
     );
   }
 
-  const { supabase } = await import("../supabaseClient");
+  const supabase = createClient();
   const { error } = await supabase
     .from("chatbot_conversations")
     .update({ name: name.trim().substring(0, 100) })
@@ -370,7 +370,7 @@ export async function getConversationMessages(
     );
   }
 
-  const { supabase } = await import("../supabaseClient");
+  const supabase = createClient();
   const { data, error } = await supabase
     .from("chatbot_messages")
     .select(

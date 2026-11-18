@@ -26,7 +26,6 @@ interface ComponentRecord {
 }
 
 /**
-/**
  * Determines priority based on component path and type.
  */
 function determinePriority(
@@ -54,7 +53,7 @@ function determinePriority(
     filePath.includes("chatbot") ||
     filePath.includes("dropdown") ||
     filePath.includes("tooltip") ||
-    filePath.includes("deck-builder")
+    filePath.includes("workshop")
   ) {
     return "High";
   }

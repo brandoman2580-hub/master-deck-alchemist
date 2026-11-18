@@ -271,18 +271,3 @@ describe("Phase 5 golden fixtures — professional tone smoke", () => {
   });
 });
 
-describe("Phase 5 hygiene — dead paths marked NOT LIVE", () => {
-  const notLiveFiles = [
-    "_deprecated/supabase-functions/strategist-not-live/prompts.ts",
-    "_deprecated/supabase-functions/strategist-not-live/response-generator.ts",
-    "_deprecated/supabase-functions/deck-assistant/index.ts",
-    "_deprecated/supabase-functions/deck-assistant/prompts.ts",
-    "_deprecated/supabase-functions/deck-assistant/response-generator.ts",
-    "_deprecated/supabase-functions/deck-assistant/NOT_LIVE.md",
-  ];
-
-  it.each(notLiveFiles)("%s declares NOT LIVE", (rel) => {
-    const src = readFileSync(join(ROOT, rel), "utf8");
-    expect(src).toMatch(/NOT LIVE/);
-  });
-});

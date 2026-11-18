@@ -55,7 +55,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     # Requires repo secret CHROMATIC_PROJECT_TOKEN (chromatic.config.json already has projectId).
-    if: ${{ secrets.CHROMATIC_PROJECT_TOKEN != '' }}
+    # NOTE: the `secrets` context is NOT valid in a job-level `if` -- it makes the entire
+    # workflow invalid ("Unrecognized named-value: 'secrets'") so every run fails in 0s
+    # without ever reaching a runner. Map the secret into job-level env and gate the
+    # publishing step on `env` instead (env IS valid in a step-level `if`).
+    env:
+      CHROMATIC_PROJECT_TOKEN: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -66,6 +71,7 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Publish to Chromatic
+        if: ${{ env.CHROMATIC_PROJECT_TOKEN != '' }}
         uses: chromaui/action@latest
         with:
           projectToken: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}

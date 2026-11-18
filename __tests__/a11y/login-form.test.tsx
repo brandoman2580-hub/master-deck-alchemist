@@ -15,8 +15,8 @@ import userEvent from "@testing-library/user-event";
 import { axe, toHaveNoViolations } from "jest-axe";
 import { LoginForm } from "@/components/ui/login-form";
 
-jest.mock("@/lib/supabaseClient", () => ({
-  supabase: {
+jest.mock("@/utils/supabase/client", () => ({
+  createClient: () => ({
     auth: {
       signInWithPassword: jest.fn().mockResolvedValue({
         data: { user: null },
@@ -24,7 +24,7 @@ jest.mock("@/lib/supabaseClient", () => ({
       }),
       resetPasswordForEmail: jest.fn().mockResolvedValue({ error: null }),
     },
-  },
+  }),
 }));
 
 jest.mock("@/store/useLoginModalStore", () => ({

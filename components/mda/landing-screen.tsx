@@ -3,10 +3,12 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { signup } from "@/app/auth/actions";
-import { supabase } from "@/lib/supabaseClient";
+import { createClient } from "@/utils/supabase/client";
 import { useUserStore } from "@/store/useUserStore";
 import { landingMarkup } from "./landing-markup";
 import { startLandingMotion } from "./landing-motion";
+
+const supabase = createClient();
 
 const scriptLoads = new Map<string, Promise<void>>();
 

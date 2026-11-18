@@ -7,12 +7,12 @@ import { EditorialUserMenu } from "@/components/mda/editorial-user-menu";
 
 const mockSignOut = jest.fn().mockResolvedValue({ error: null });
 
-jest.mock("@/lib/supabaseClient", () => ({
-  supabase: {
+jest.mock("@/utils/supabase/client", () => ({
+  createClient: () => ({
     auth: {
       signOut: () => mockSignOut(),
     },
-  },
+  }),
 }));
 
 jest.mock("@/store/useUserStore", () => ({
