@@ -87,3 +87,7 @@ skills-lock.json
 supabase/migrations/*.sql
 !supabase/migrations/*facts_brain*.sql
 !supabase/migrations/*master_rank*.sql
+# Combo graph / deck combo line migrations are asserted by Jest
+# (__tests__/combos, __tests__/engine, __tests__/meta) and must stay in git for CI.
+!supabase/migrations/*combo_graph*.sql
+!supabase/migrations/*deck_combo_lines*.sql
