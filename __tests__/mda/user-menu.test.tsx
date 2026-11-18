@@ -52,9 +52,9 @@ describe("UserMenu", () => {
     expect(menu).toBeInTheDocument();
     // Below magnetic cursor (z≈10000) so the morph ring paints above the glass.
     expect(menu?.className).toMatch(/z-\[1000\]/);
+    expect(trigger.className).toContain("border-mda-cyan");
     expect(menu?.querySelector("[data-mda-glass-popover]")).toBeInTheDocument();
     expect(menu?.querySelector("[data-mda-glass-surface]")).toBeInTheDocument();
-    expect(menu?.querySelectorAll(".border-mda-cyan").length).toBeGreaterThanOrEqual(4);
 
     const logout = screen.getByRole("menuitem", { name: /logout/i });
     expect(logout).toHaveAttribute("data-magnetic");
