@@ -1,11 +1,13 @@
 import type { ClientDeck, DeckFormat, PersistedDeck } from "@/types/deck";
-import { supabase } from "../supabaseClient";
+import { createClient } from "@/utils/supabase/client";
 import {
   DECK_CAP_EXCEEDED_CODE,
   DECK_CAP_HARD,
   deckCapExceededMessage,
   wouldExceedDeckHardCap,
 } from "@/lib/deck/deck-caps";
+
+const supabase = createClient();
 
 type DeckDbRow = {
   id: string;

@@ -4,9 +4,11 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { HelpCircle, LogOut } from "lucide-react";
 import { useUserStore } from "@/store/useUserStore";
-import { supabase } from "@/lib/supabaseClient";
+import { createClient } from "@/utils/supabase/client";
 import { MdaGlassPopover } from "@/components/mda/glass-popover";
 import { cn } from "@/lib/utils";
+
+const supabase = createClient();
 
 function getInitials(
   user: { user_metadata?: { name?: string }; email?: string } | null,

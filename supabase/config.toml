@@ -1,6 +1,7 @@
 # Supabase function config — Phase 1a sanitation
 # Only LIVE product + LIVE/UNKNOWN ops functions. Ghosts and NOT_LIVE removed.
-# Undeploy of retired functions is Phase 5 (see _deprecated/supabase-functions/).
+# Undeploy of retired functions is still pending. The parked sources formerly kept in
+# _deprecated/supabase-functions/ were deleted in Phase A and now live only in git history.
 
 [functions.strategist]
 enabled = true

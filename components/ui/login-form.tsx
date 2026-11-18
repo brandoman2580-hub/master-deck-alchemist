@@ -4,7 +4,9 @@ import { useState } from "react";
 import type { FormEvent } from "react";
 import { useLoginModalStore } from "../../store/useLoginModalStore";
 import { useUserStore } from "../../store/useUserStore";
-import { supabase } from "../../lib/supabaseClient";
+import { createClient } from "@/utils/supabase/client";
+
+const supabase = createClient();
 
 type LoginFormProps = {
   onSignupClick: () => void;

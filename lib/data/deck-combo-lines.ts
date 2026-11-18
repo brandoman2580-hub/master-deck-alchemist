@@ -1,6 +1,8 @@
 import type { ComboFlowPayload, DeckComboGraph, DeckComboLineRecord } from "@/lib/combos/deck-combo-graph";
 import { comboFlowPayload, parseDeckComboGraph, storedBoardGraph } from "@/lib/combos/deck-combo-graph";
-import { supabase } from "@/lib/supabaseClient";
+import { createClient } from "@/utils/supabase/client";
+
+const supabase = createClient();
 
 interface DeckComboLineRow {
   id: string;

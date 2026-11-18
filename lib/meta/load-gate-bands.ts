@@ -1,8 +1,10 @@
-import { supabase } from "@/lib/supabaseClient";
+import { createClient } from "@/utils/supabase/client";
 import type { EngineFormat } from "@/lib/engine/types";
 import { isMetaGateBands, type MetaGateBands } from "./gate-bands";
 import type { MetaListCardRef, MetaListRef } from "./matchup-plan";
 import type { MetaTier } from "./representation-tier";
+
+const supabase = createClient();
 
 /**
  * Current gate bands for a format, only when the snapshot was checked

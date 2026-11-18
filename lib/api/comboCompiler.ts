@@ -1,4 +1,4 @@
-import { getAccessToken } from "../supabaseClient";
+import { getAccessToken } from "@/utils/supabase/client";
 import type { ComboGraphSummary, ComboLine } from "@/lib/engine";
 
 export interface CompileCombosResponse {

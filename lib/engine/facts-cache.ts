@@ -1,9 +1,11 @@
-import { supabase } from "@/lib/supabaseClient";
+import { createClient } from "@/utils/supabase/client";
 import type { EngineFormat, FactsEnvelope } from "./types";
 import type {
   ArchetypeStrategyRow,
   StrategyWeightRow,
 } from "./diagnostics";
+
+const supabase = createClient();
 
 /**
  * Load curated strategy tables for Facts Brain consumers.

@@ -1,7 +1,9 @@
 import { Card, CardSearchParams } from "@/types/card";
 import type { BanStatus } from "@/types/deck";
 import { normalizeCardImages } from "../card/image-url";
-import { supabase } from "../supabaseClient";
+import { createClient } from "@/utils/supabase/client";
+
+const supabase = createClient();
 
 // 2. Card data search, now from Supabase instead of YGOPRODeck
 export async function getCardData(params: CardSearchParams): Promise<Card[]> {

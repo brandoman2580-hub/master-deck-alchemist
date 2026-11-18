@@ -1,6 +1,8 @@
-import { supabase } from "@/lib/supabaseClient";
+import { createClient } from "@/utils/supabase/client";
 import type { EngineFormat, YugiohPlayStrategy } from "./types";
 import type { MetaMatchupTemplate } from "./matchups";
+
+const supabase = createClient();
 
 function normalizeFormat(format: EngineFormat): string[] {
   if (format === "TCG") return ["tcg", "TCG"];

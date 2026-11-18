@@ -16,13 +16,13 @@ jest.mock("next/navigation", () => ({
   useRouter: () => ({ push: mockPush }),
 }));
 
-jest.mock("@/lib/supabaseClient", () => ({
-  supabase: {
+jest.mock("@/utils/supabase/client", () => ({
+  createClient: () => ({
     auth: {
       signInWithPassword: (...args: unknown[]) => mockSignIn(...args),
       resetPasswordForEmail: (...args: unknown[]) => mockReset(...args),
     },
-  },
+  }),
 }));
 
 jest.mock("@/app/auth/actions", () => ({

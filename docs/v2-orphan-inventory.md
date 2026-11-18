@@ -113,7 +113,10 @@ Goal: naming collisions, leftover one-offs, clearer folder boundaries. **Not** P
 | `lib/analysis/cardRoleDetector.ts` | `lib/deck/card-roles.ts` |
 | `lib/analysis/archetypeKnowledge.ts` | `lib/engine/archetype-knowledge.ts` |
 
-**KEEP both** `lib/supabaseClient.ts` and `utils/supabase/*` (Phase 1b).
+**CONSOLIDATED onto `utils/supabase/*`** (Phase B): `lib/supabaseClient.ts` deleted. The legacy
+client persisted sessions to `localStorage`, which desynced from the cookie-based server client
+and broke authenticated server actions. All importers now use `createBrowserClient` from
+`@supabase/ssr` via `utils/supabase/client.ts`.
 
 ### C. `app/`
 

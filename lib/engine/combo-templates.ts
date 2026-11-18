@@ -1,6 +1,8 @@
-import { supabase } from "@/lib/supabaseClient";
+import { createClient } from "@/utils/supabase/client";
 import type { EngineFormat } from "./types";
 import type { ComboTemplateGraph, ComboTemplateRow } from "./combos";
+
+const supabase = createClient();
 
 /**
  * Load curated combo templates for a format (optional archetype filter).

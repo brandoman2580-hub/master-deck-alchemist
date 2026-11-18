@@ -4,7 +4,9 @@ import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { MdaAppHeader } from "@/components/mda/app-header";
 import { ClipButton } from "@/components/mda/clip-button";
-import { supabase } from "@/lib/supabaseClient";
+import { createClient } from "@/utils/supabase/client";
+
+const supabase = createClient();
 
 export default function ResetPasswordPage(): ReactNode {
   const router = useRouter();

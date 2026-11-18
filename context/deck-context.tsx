@@ -19,7 +19,7 @@ import type {
   DeckFormat,
   DeckSection,
 } from "@/types/deck";
-import { supabase } from "../lib/supabaseClient";
+import { createClient } from "@/utils/supabase/client";
 import {
   deleteDeck as deleteDeckFromSupabase,
   loadDeck as loadDeckFromSupabase,
@@ -36,6 +36,8 @@ import {
   readLiveDeckSession,
   writeLiveDeckSession,
 } from "@/lib/deck/live-deck-session";
+
+const supabase = createClient();
 
 interface DeckContextType {
   currentDeck: ClientDeck;
