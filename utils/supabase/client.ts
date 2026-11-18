@@ -1,5 +1,10 @@
 import { createBrowserClient } from "@supabase/ssr";
-import process from "node:process";
+
+// Deliberately no `import process from "node:process"` here. This module is
+// bundled for the browser, where Vite (Storybook/Vitest) and webpack externalise
+// `node:` specifiers and throw on access: "Cannot access node:process.env in
+// client code". Bare `process.env.NEXT_PUBLIC_*` is statically inlined by every
+// bundler in use (Turbopack, webpack, Vite), so it is both correct and portable.
 
 /**
  * Browser Supabase client.
