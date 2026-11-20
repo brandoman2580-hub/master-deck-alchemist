@@ -23,6 +23,9 @@
 .DS_Store
 *.pem
 
+# Local git worktrees (isolated agent/workspaces)
+.worktrees/
+
 # debug
 npm-debug.log*
 yarn-debug.log*

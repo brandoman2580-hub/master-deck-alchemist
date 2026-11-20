@@ -34,6 +34,7 @@ const config = {
           "sans-serif",
         ],
         orbitron: ["var(--font-orbitron)", "Orbitron", "sans-serif"],
+        geist: ["var(--font-geist)", "sans-serif"],
         openSans: ["var(--font-open-sans)", "Open Sans", "sans-serif"],
         spaceGrotesk: ["Space Grotesk", "var(--font-open-sans)", "sans-serif"],
         "share-tech": ['"Orbitron"', "var(--font-orbitron)", "sans-serif"],
