@@ -7,6 +7,18 @@ import { UserMenu } from "@/components/ui/user-menu";
 
 const mockSignOut = jest.fn().mockResolvedValue({ error: null });
 
+jest.mock("next/navigation", () => ({
+  usePathname: () => "/workshop",
+}));
+
+jest.mock("@/context/deck-context", () => ({
+  useDeck: () => ({ currentDeck: { id: "deck-1", deckFormat: "TCG" } }),
+}));
+
+jest.mock("@/app/help/actions", () => ({
+  sendFeedback: jest.fn(),
+}));
+
 jest.mock("@/utils/supabase/client", () => ({
   createClient: () => ({
     auth: {
@@ -58,7 +70,7 @@ describe("UserMenu", () => {
 
     const logout = screen.getByRole("menuitem", { name: /logout/i });
     expect(logout).toHaveAttribute("data-magnetic");
-    expect(screen.getByRole("menuitem", { name: /help/i })).toBeDisabled();
+    expect(screen.getByRole("menuitem", { name: /help/i })).toBeEnabled();
 
     await user.keyboard("{Escape}");
     expect(trigger).toHaveFocus();

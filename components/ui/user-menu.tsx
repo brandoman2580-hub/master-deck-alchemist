@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { HelpCircle, LogOut } from "lucide-react";
 import { useUserStore } from "@/store/useUserStore";
 import { createClient } from "@/utils/supabase/client";
+import { HelpDialog } from "@/components/mda/help/help-dialog";
 import { MdaGlassPopover } from "@/components/mda/glass-popover";
 import { cn } from "@/lib/utils";
 
@@ -37,6 +38,7 @@ const menuItemClass =
 export function UserMenu(): ReactNode {
   const user = useUserStore((state) => state.user);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const [dropdownPosition, setDropdownPosition] = useState({
@@ -157,8 +159,11 @@ export function UserMenu(): ReactNode {
                 type="button"
                 role="menuitem"
                 data-magnetic
-                disabled
                 className={menuItemClass}
+                onClick={() => {
+                  setDropdownOpen(false);
+                  setHelpOpen(true);
+                }}
               >
                 <HelpCircle className="h-4 w-4 shrink-0" aria-hidden />
                 Help
@@ -179,6 +184,7 @@ export function UserMenu(): ReactNode {
           </div>,
           document.body,
         )}
+      <HelpDialog open={helpOpen} onOpenChange={setHelpOpen} returnFocusRef={triggerRef} />
     </div>
   );
 }

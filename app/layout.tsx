@@ -20,6 +20,14 @@ const orbitron = localFont({
   display: "swap",
 });
 
+/** Help dialog body. Headings there stay Orbitron. */
+const geist = localFont({
+  src: "./fonts/Geist-VariableFont_wght.ttf",
+  variable: "--font-geist",
+  weight: "100 900",
+  display: "swap",
+});
+
 /** Readable body face for card effect text and dense copy. */
 const openSans = localFont({
   src: "./fonts/OpenSans-VariableFont_wdth,wght.ttf",
@@ -114,6 +122,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body
         className={`
           ${orbitron.variable}
+          ${geist.variable}
           ${openSans.variable}
           ${orbitron.className}
           min-h-screen

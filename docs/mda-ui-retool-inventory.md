@@ -3,7 +3,7 @@
 ## Architecture
 
 Approval gate for Phase 2 surface retool on branch `MDA-v2-ui-2a-foundation`.  
-**2a** ships foundation atoms only after Batch A approval. **2b** applies surface rows; **2c** Help backend.
+**2a** ships foundation atoms only after Batch A approval. **2b** applies surface rows. **2c** is the Help hub and secure feedback pipeline. **2d** is the final full-app visual fine-tune. 2c and 2d stay separate.
 
 ## Dev Notes
 
@@ -158,13 +158,46 @@ Approval gate for Phase 2 surface retool on branch `MDA-v2-ui-2a-foundation`.
 5. **Batch E — Share + UserMenu + Help stub:** Section G (2b). → **APPROVED**
 6. **Batch F — ui primitives + route shells:** Section H–I. → **APPROVED**
 
-Inventory gate closed for Phase 2a. Surface implementation proceeds on **Phase 2b** (`MDA-v2-ui-2b-surface-a11y`).
+Inventory gate closed for Phase 2a. Editorial surface work for **Phase 2b** is on `develop` (landing, Archives, Workshop shell, Build, Matchups, Combos, Strategist chrome). The only open 2b surface is Share (`components/mda/share/share-deck-client.tsx` is still the slate shell). The disabled Help item is the placeholder; the real dialog is **2c**, not a separate stub pass.
+
+---
+
+## J2. Phase 2c — Help hub + secure feedback
+
+Product work. It is not a visual pass. It does not wait on **2d**, and **2d** does not absorb it.
+
+| | |
+|---|---|
+| Intent | Turn the disabled Help item into a hub: short FAQ, optional diagnostics, and a categorized bug/suggestion form with an optional screenshot. |
+| Entry | `components/ui/user-menu.tsx` Help item. New UI under `components/mda/help/`. |
+| In | Authenticated server action. Private Supabase Storage bucket `feedback-screenshots`. Strip EXIF. Reject oversize and non-image uploads. Rate-limit 5 reports an hour. Notification email via Resend to `FEEDBACK_TO` from `FEEDBACK_FROM` (`RESEND_API_KEY`). The email carries a 7-day signed URL. The client receives only the ticket id. |
+| Out | Visual fine-tune of shipped screens (**2d**). Share restyle (open **2b**). Quota HUD (**Phase 3**). Schema, bucket, and mail-provider env need an explicit OK before they are created. No secrets in the client. |
+| Exit | Logged-in user can submit a bug or suggestion with an optional screenshot and you receive the notification. Logged-out and rate-limited submits fail as expected errors. jest-axe on the dialog. |
+| Branch | `MDA-v2-ui-2c-help-feedback` |
+
+Visual language for the hub follows `brief.md`: dark steel chassis, light diagnostic sheet, pale ice only as the signal. Orbitron for labels, Open Sans for body.
+
+---
+
+## K. Phase 2d — full-app UI fine-tune
+
+Visual work only. It can run before or after **2c**. It does not add product behavior and it does not include the Help pipeline.
+
+| | |
+|---|---|
+| Intent | One pass over every shipped screen so spacing, type, color, hover, glass, and motion agree. Fix drift between surfaces. |
+| Routes | Landing, auth, Archives, Workshop (Build, Matchups, Combos, Library, Strategist), user menu, system states (`loading`, `error`, `not-found`). Share joins this pass only after its 2b restyle exists. |
+| In | Token mismatches, uneven insets, type weight, hover inversion, glass shells, focus order, and motion that fights a locked decision on another surface. |
+| Out | New features, schema, dependencies, Help Storage / Edge / email (**2c**), the Share slate replacement (open **2b**), quota HUD (**Phase 3**), ornament on every virtualized card cell. |
+| Exit | Each shipped route has a closed punch list. Touched text stays WCAG 2.2 AA. `prefers-reduced-motion` still drops travel. |
+| Branch | `MDA-v2-ui-2d-fine-tune` |
 
 ---
 
 ## Out of scope reminders
 
-- Help Storage / Edge / email provider → **2c** only (schema/env OK required then).
+- Help Storage / Edge / email provider → **2c** only (schema/env OK required then). Not part of **2d**.
+- Cross-app visual drift after the editorial surfaces → **2d** only.
 - Quota HUD wiring → **Phase 3** (SegmentedBar is a plug only).
-- Mass Share/UserMenu restyle → **2b**.
+- Share slate replacement → still **2b**, not 2c or 2d.
 - Raster hazard PNGs → **forbidden**.

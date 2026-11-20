@@ -8,6 +8,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import { Bell, Gamepad2, Layers, LayoutGrid, List, MoreVertical, Pin, Play, Plus, Rows3, Search, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { v4 as uuidv4 } from "uuid";
+import { EditorialUserMenu } from "@/components/mda/editorial-user-menu";
 import { useUserDecks } from "@/hooks/useUserDecks";
 import { useUserStore } from "@/store/useUserStore";
 import { useDeck } from "@/context/deck-context";
@@ -617,10 +618,11 @@ export function ArchivesScreen() {
 
   return (
     <div className="archives-shell fixed inset-0 z-20 flex flex-col overflow-hidden bg-[#0c0e12] text-[#e2e8f0]">
-      <header className="z-40 flex h-16 w-full shrink-0 items-center border-b border-[#28303b] bg-[#0c0e12] px-12">
-        <div className="font-orbitron whitespace-nowrap text-left text-[14px] font-semibold uppercase tracking-[0.25em] text-[#f1f5f9]">
+      <header className="z-40 flex h-16 w-full shrink-0 items-center justify-between gap-4 border-b border-[#28303b] bg-[#0c0e12] px-6 sm:px-12">
+        <div className="min-w-0 truncate font-orbitron text-left text-[14px] font-semibold uppercase tracking-[0.25em] text-[#f1f5f9]">
           MASTER DECK ALCHEMIST
         </div>
+        <EditorialUserMenu />
       </header>
       <div className="flex min-h-0 w-full flex-1 flex-row overflow-hidden">
         <aside aria-label="Archives" className="archives-scroll flex h-full w-[260px] min-w-[260px] max-w-[260px] shrink-0 flex-col justify-between overflow-y-auto border-r border-[#28303b] bg-[#0c0e12]">
