@@ -7,7 +7,7 @@
 
 ## Architecture
 
-MDA v2 is a Next.js App Router product: light tactical Workshop (Build / Matchups / Combos), Facts Brain as numeric SSoT, Strategist as Facts-backed coach (hybrid RAG still live until V2-E0 decides otherwise), TanStack Query + IndexedDB for catalog, Zustand for live deck, soft auth, desktop-primary viewport. OCG is a post-v2 format horizon only.
+MDA v2 is a Next.js App Router product: light tactical Workshop (Build / Matchups / Combos), Facts Brain as numeric SSoT, Strategist as Facts-backed coach (hybrid RAG still live until V2-E0 decides otherwise), TanStack Query + IndexedDB for catalog, Zustand for live deck, soft auth, desktop-primary viewport. Platform UX prefers native `<dialog>`, CSS scroll-driven landing motion with fallbacks, Forced Colors support, and opt-in reduced-motion. OCG is a post-v2 format horizon only.
 
 ## Instructions
 
@@ -20,6 +20,7 @@ MDA v2 is a Next.js App Router product: light tactical Workshop (Build / Matchup
 
 - Tokens: `docs/mda-design-tokens.md` / `app/globals.css`. Visual SSoT for surfaces: approved Figma (preferred) / Lovable / Stitch comps.
 - Cache matrix: `docs/v2-client-cache-matrix.md`.
+- Modern web platform rules in §§3.5, 5.1–5.6 supersede older “always hand-roll focus traps / always zero all animation durations” habits.
 - Track this file via `docs/.tracked` + `npm run docs:git-sync`.
 
 ---
@@ -107,7 +108,7 @@ Grounded in NNG heuristics and Hick’s Law: few persistent choices, progressive
 
 | Route | Purpose | Layout notes (≥1280) |
 |-------|---------|----------------------|
-| `/` | Awwwards-caliber narrative landing | Hero: brand + one headline + short support + Login/Sign up. Below fold: scroll chapters for Workshop, Facts, Strategist, Matchups/Combos, Archives/Share. Motion purposeful; reduced-motion path required |
+| `/` | Awwwards-caliber narrative landing | Hero: brand + one headline + short support + Login/Sign up (autofill-correct auth fields). Below fold: scroll chapters for Workshop, Facts, Strategist, Matchups/Combos, Archives/Share. Prefer CSS scroll-driven animations with `@supports` + IntersectionObserver fallback; reduced-motion static chapters; LCP hero not lazy-loaded |
 | `/workshop` | Core JTBD shell | Header + deck chrome + tab body. Build = center deck + right rail (Library \| Strategist) |
 | `/deck-archives` | Saved lists | Header + grid/list; cap banners; mutations auth-gated |
 | `/share/[token]` | Public preview → Import | MDA crop-frame command shell; Import → `/workshop` with deck loaded |
@@ -173,6 +174,8 @@ Source of truth: `app/globals.css` / `docs/mda-design-tokens.md`.
 
 **WCAG 2.2 AA:** body text ≥ 4.5:1; UI/graphics ≥ 3:1. Never use cyan/sky/hazard/danger/success **fills** as body text on the light canvas.
 
+**Forced Colors Mode:** Provide `@media (forced-colors: active)` fallbacks for chrome/borders/focus/loaders (system colors; do not rely on `box-shadow`, gradients, or `url()` backgrounds alone). Focus rings prefer `outline`; if a design uses `box-shadow` for focus, still ship an `outline` fallback under forced colors.
+
 ### 3.4 Typography
 
 - Display / HUD labels: **Orbitron** (`--font-heading` / `--font-mda`) — uppercase tracking on chrome labels.
@@ -182,9 +185,13 @@ Source of truth: `app/globals.css` / `docs/mda-design-tokens.md`.
 
 ### 3.5 Shape, motion, elevation, loaders
 
-- Corners: tech-cut / clip on primary CTAs; restrained radius on panels (no pill-cluster UI).
-- Motion: `--mda-duration-fast|base|enter` = 150 / 200 / 280ms; CSS hover (`ease-out`); JS motion (e.g. Motion/Framer) for enter/exit and landing scroll chapters only; **all travel → 0 under `prefers-reduced-motion`**.
-- Loader default: **`quad`**. `waveform` / `legacy` = Storybook / gallery only.
+- Corners: tech-cut / clip on primary CTAs; restrained radius on panels (no pill-cluster UI). When `clip-path` / mask clips a focusable control, draw the **focus ring on an unclipped parent** (clipping removes the control’s own outline).
+- Motion budget: `--mda-duration-fast|base|enter` = 150 / 200 / 280ms; CSS hover (`ease-out`); animate **`opacity` / `transform`** (compositor-safe). JS motion (Motion/Framer) only for structural enter/exit when CSS is insufficient.
+- **Reduced motion (modern pattern):** default to static; **opt in** to travel/scale/rotation inside `@media (prefers-reduced-motion: no-preference)`. Do **not** globally force `animation-duration: 0` / `0.01ms` as the only strategy — keep non-spatial transitions (color / background-color). When an animation must still run under reduce, soften parameters inside `@media (prefers-reduced-motion: reduce)` instead of canceling blindly.
+- Landing scrollytelling: prefer **CSS Scroll-Driven Animations** (`animation-timeline` / `view-timeline`) with `@supports ((animation-timeline: scroll()) and (animation-range: 0% 100%))`; fallback via IntersectionObserver (not incomplete polyfill packages). Decorative-only effects may progressive-enhance with no JS fallback.
+- Auto-running motion that lasts **> 5s** alongside other content needs a visible **Pause/Stop/Hide** control (WCAG 2.2.2). Never flash more than **3 times/sec** (WCAG 2.3.1).
+- When reduced motion removes an animation that JS awaits via `animationend`/`transitionend`, continue immediately if `getAnimations()` is empty (or keep a short opacity transition).
+- Loader default: **`quad`**. `waveform` / `legacy` = Storybook / gallery only. Loaders must remain visible under Forced Colors (system-color stroke / `forced-color-adjust` strategy).
 - Magnetic cursor: branded shells only — never on virtualized binder cells.
 
 ### 3.6 Z-index stack
@@ -201,10 +208,10 @@ Source of truth: `app/globals.css` / `docs/mda-design-tokens.md`.
 
 ### 3.7 Signature micro-interactions
 
-- ClipButton: hover `scale-[1.01]` / active `scale-[0.99]` @ ~200ms.
-- Card add/remove with aria-live count updates.
+- ClipButton: hover `scale-[1.01]` / active `scale-[0.99]` @ ~200ms (spatial scale only under `prefers-reduced-motion: no-preference`; color/ink hover still allowed under reduce).
+- Card add/remove with aria-live count updates — do not queue live-region messages into `inert`/closed dialog trees.
 - Strategist soft CTA keycaps open Matchups/Combos.
-- Landing: intentional scroll-linked chapter transitions (2–3+ crafted motions), never motion noise.
+- Landing: intentional scroll-linked chapter transitions (2–3+ crafted motions), never motion noise; chapters remain readable when motion is off.
 
 ### 3.8 Strict negative constraints
 
@@ -213,6 +220,9 @@ Source of truth: `app/globals.css` / `docs/mda-design-tokens.md`.
 - No raster hazard PNGs — CSS / SVG first.
 - No Inter / Roboto / Arial as brand display; no emoji-led UI.
 - No full-bleed dark charcoal shell as the default app chrome.
+- No scroll-listener parallax as the primary landing implementation when CSS scroll-driven animations are supported.
+- No custom focus-trap reimplementation for native `<dialog showModal()>` (browser already inerts the page).
+- No `loading="lazy"` / delayed client-only fetch on the Landing LCP hero asset.
 
 ---
 
@@ -392,22 +402,25 @@ type FeedbackTicket = {
 
 ### 5.1 Keyboard & pointer
 
-- **Global:** `Tab` / `Shift+Tab` through header → Workshop chrome → active pane; `Esc` closes modal/drawer/popover and returns focus to opener.
-- **Workshop tabs:** arrow keys within tablist; `Enter` / `Space` activates.
-- **Build DnD:** pointer + KeyboardSensor (Space grab, arrows move, Esc cancel) with **aria-live** announcements.
-- **Library:** type-to-search; `Enter` adds one copy when legal; disabled + explanation at copy/ban limit.
-- **Strategist:** `Enter` sends (Shift+Enter newline); soft CTA controls are real buttons that switch Matchups/Combos.
+- **Global:** `Tab` / `Shift+Tab` through header → Workshop chrome → active pane; `Esc` closes modal/drawer/popover and returns focus to opener. Never use positive `tabindex` values.
+- **Workshop tabs:** `role="tablist"` with `aria-selected` on the active tab; arrow keys move selection; `Enter` / `Space` activates. Initial HTML must mark non-selected panels `hidden` and the selected tab `aria-selected="true"` so panels do not all paint before JS. Style the selected tab from `[aria-selected="true"]`, not a parallel CSS-only class.
+- **Build DnD:** pointer + keyboard path (Space grab, arrows move, Esc cancel) with **aria-live** announcements; preserve accessible order after reorder.
+- **Library:** type-to-search; `Enter` adds one copy when legal; use `aria-disabled` (still focusable) when at copy/ban limit if the reason must be discoverable — otherwise native `disabled` with an adjacent explanation.
+- **Strategist:** `Enter` sends (Shift+Enter newline) **only when `!event.isComposing`** (IME-safe). Soft CTA controls are real buttons that switch Matchups/Combos.
 - **No `⌘K` in v2.** Right-click card context is **out of v2** (post-v2 candidate only).
 
 ### 5.2 Touch targets
 
-Minimum **24×24 CSS px** controls. Desktop-primary; drawer/sheet triggers must remain usable on tablet.
+Minimum **24×24 CSS px** controls. Desktop-primary; drawer/sheet triggers must remain usable on tablet. Do not set `touch-action: none` on Workshop panes (would kill scroll); scope axis restrictions only where a custom gesture requires it.
 
-### 5.3 Asset & media resilience
+### 5.3 Asset, media & landing performance
 
 - Card art: fixed aspect lock; on error → MDA placeholder (name + type visible).
 - CDN/S3 failure: binder stays usable; no layout collapse.
 - Feedback screenshots: type/size validation client + server; EXIF stripped; private bucket only; never public URL-guessable; never log screenshot bytes to client analytics.
+- **Landing LCP:** hero/LCP image in HTML (or preload); `fetchpriority="high"`; never `loading="lazy"` on above-the-fold LCP. Demote below-fold media with `fetchpriority="low"` / lazy as appropriate.
+- **Landing chapters:** off-screen narrative sections may use `content-visibility: auto` with `contain-intrinsic-size` to protect INP/CLS; do not apply to the first viewport.
+- Workshop binder: keep virtualization; avoid layout thrash on rapid add/remove (INP).
 
 ### 5.4 System status & edge states
 
@@ -425,12 +438,20 @@ Minimum **24×24 CSS px** controls. Desktop-primary; drawer/sheet triggers must 
 | Loading | Quad loader sparingly; pane skeletons for Facts/Archives; honor reduced motion |
 | Network / unexpected | Route `error.tsx` with `reset`; expected auth/validation as return values, not throws |
 
-### 5.5 Accessibility gates
+### 5.5 Dialogs, forms & overlays (platform-native first)
 
-- WCAG 2.2 AA contrast per token constitution.
+- **Prefer native `<dialog>` + `showModal()`** for Login, Help, and other modal shells. Browser supplies inert page, focus containment, top layer, `Esc`, and focus return — do **not** add redundant `role="dialog"`, `aria-modal`, or a hand-rolled focus trap on native modals.
+- **Scroll lock:** `dialog:modal { overscroll-behavior: contain; }` and `dialog::backdrop { overflow: hidden; overscroll-behavior: contain; }` so backdrop/dialog scroll does not chain to the page.
+- Light-dismiss (outside click) where product UX expects it; always keep an explicit Close control.
+- If a framework overlay (e.g. Radix) must be kept for an existing surface, it must match native modal semantics: inert outside, focus return, labeled heading (`aria-labelledby` / `aria-label`).
+- **Auth / Help forms:** correct `autocomplete` values (`email` / `username`, `current-password` / `new-password`); never disable paste/autocomplete on auth fields; associate hints with `aria-describedby` **above** the input; style validation with `:user-invalid` (not premature errors on load/while typing).
+
+### 5.6 Accessibility gates
+
+- WCAG 2.2 AA contrast per token constitution + Forced Colors smoke.
 - jest-axe on Workshop Strategist, UserMenu, Help (and other high-interaction surfaces as touched).
-- Focus trap on Login / Help / Share overlays.
-- `prefers-reduced-motion` zeros travel, including landing scroll chapters.
+- Modal overlays use native dialog behavior (§5.5) or equivalent inert semantics — not ad-hoc traps on native dialogs.
+- Reduced-motion strategy per §3.5 (opt-in travel; static landing chapters still complete the product story).
 
 ---
 
@@ -458,8 +479,8 @@ Route files stay thin: compose organisms only. No monolithic page files. No dire
 | **V2-A** As-built freeze | Document current tokens, Workshop IA, Query/Zustand/Facts cache as law | No drive-by refactors |
 | **V2-B0** External UI design | Figma / Lovable / Stitch comps for Landing, Workshop, Archives, Share, Help | No mass restyle until comps approved |
 | **V2-B1** Surface closeout | Share MDA restyle + progressive coaching banners mapped from comps | Match comps → tokens |
-| **V2-B2** Awwwards landing | Scroll narrative + Login/Sign up per comps | Brand-first hero; reduced-motion path; replace thin Stitch dump as long-term SSoT when comps land |
-| **V2-C** Help + feedback | FAQ + diagnostics + auth feedback + private Storage + notify email | Schema/env need explicit OK |
+| **V2-B2** Awwwards landing | Scroll narrative + Login/Sign up per comps | Brand-first hero; CSS scroll-driven + `@supports` fallback; LCP rules; reduced-motion static chapters; replace thin Stitch dump as long-term SSoT when comps land |
+| **V2-C** Help + feedback | FAQ + diagnostics + auth feedback + private Storage + notify email | Native `<dialog>` preferred; `:user-invalid` + autocomplete; schema/env need explicit OK |
 | **V2-D** Visual fine-tune | Spacing/type/hover/glass agreement vs comps | **Zero** new product behavior |
 | **V2-E0** Strategist next-gen design | Inventory hybrid RAG vs Facts-only; define community-shaped UI actionables; choose keep / Facts-only / budgeted hybrid; write dedicated plan | **No rebuild code until that plan is approved** |
 | **V2-E** Coaching quality | Harness completeness, 5-deck scripts, quota HUD; implement E0 outcome only if approved | No LLM-replaces-Monte-Carlo; no speculative de-RAG |
@@ -498,6 +519,9 @@ Do **not** show OCG in the selector until steps 1–3 are ready. RAG retirement 
 - Shipping a de-RAG Strategist rewrite without approved E0 plan
 - Treating unfinished external comps as “done UI”
 - Shipping a thin auth-only landing without scroll narrative
+- Hand-rolled focus traps on native `<dialog showModal()>`
+- Lazy-loading the Landing LCP hero
+- Globally zeroing all CSS animations (including color transitions) as the reduced-motion strategy
 
 ### 6.5 Definition of done (v2)
 
@@ -520,7 +544,7 @@ Gates: lint + unit tests + build green; your phase QA checklists signed; Playwri
 
 1. **Player-first constitution** with dual horizon (v2 ship + OCG platform) — docs/plans are inputs, not locks when they reduce player value.
 2. **Soft auth + progressive coaching** — Facts on incomplete lists; Strategist auth with warn-not-hard-block.
-3. **Desktop-primary light tactical HUD** — tokens in `globals.css`; external Figma/Lovable/Stitch comps gate visual production work.
+3. **Desktop-primary light tactical HUD** — tokens in `globals.css`; external Figma/Lovable/Stitch comps gate visual production work; Forced Colors + native dialog / scroll-driven motion rules are product law.
 4. **Facts Query shared by Matchups/Combos**; Zustand live deck; Query + IDB catalog; soft 60 / hard 75 deck caps.
 5. **Strategist Facts Brain is baseline**; hybrid RAG remains until an approved V2-E0 plan says otherwise — no phantom de-RAG rebuild in the ship train.
 
@@ -535,6 +559,9 @@ Gates: lint + unit tests + build green; your phase QA checklists signed; Playwri
 | “De-RAG plan ready” | Not found / not ready → V2-E0 design gate |
 | Thin landing vs product story | Awwwards scroll narrative + auth CTAs required |
 | Editorial atoms = finished UI | External comps are visual SSoT before surface coding |
+| “Zero all motion under reduced-motion” | Opt-in spatial motion; keep color transitions; static landing chapters still tell the story |
+| Custom focus-trap as default for Login/Help | Prefer native `<dialog showModal()>` (+ overscroll containment); Radix only if semantics match |
+| JS scroll listeners as primary landing motion | CSS scroll-driven animations first; `@supports` + IntersectionObserver fallback |
 
 ---
 
